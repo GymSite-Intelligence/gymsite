@@ -416,12 +416,11 @@ export function NovoRelatorioPage() {
     void handleSubmit(onSubmit)(e)
   }
 
-  // Pronto pra submeter: 3 níveis selecionados
+  // Pronto pra submeter: UF + município + (bairro OU modo cidade inteira)
   const podeSubmeter =
     !!ufSelecionada &&
     !!municipioSelecionado &&
-    !!watchedBairro &&
-    watchedBairro.length >= 2
+    (watchedCidadeInteira || (!!watchedBairro && watchedBairro.length >= 2))
 
   return (
     <div className="container max-w-2xl py-8">
