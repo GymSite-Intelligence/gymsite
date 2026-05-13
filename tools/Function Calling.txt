@@ -1,0 +1,114 @@
+## Function Calling — O que muda no GymSite Intelligence
+
+### O que você já usa (e está correto)
+
+O ADK já implementa function calling internamente — quando você define `tools=[buscar_academias_concorrentes, ...]` no agente, o SDK já converte as funções Python em declarations, detecta quando o modelo quer chamar, executa e devolve o resultado. A feature de **Automatic Function Calling** da documentação é exatamente isso. Você não está fazendo errado — está usando o caminho certo.
+
+---
+
+### 3 Features que mudam o jogo para o projeto
+
+**1. Parallel Function Calling — impacto imediato no A3**
+
+Hoje o A3 chama `buscar_academias_concorrentes` → depois `buscar_reviews_academia` para cada academia, sequencialmente. Com parallel function calling, o modelo pode disparar todas as chamadas de reviews em paralelo num único turno:
+
+```python
+# O modelo hoje faz isso (sequencial — ~15s):
+buscar_reviews_academia("place_id_1", "Smart Fit")
+buscar_reviews_academia("place_id_2", "Top Up CT")
+buscar_reviews_academia("place_id_3", "Bio Ritmo")
+
+# Com parallel function calling, o modelo faz isso (paralelo — ~5s):
+# Turno único → 3 function calls simultâneas → 3 respostas de volta
+# O SDK mapeia cada resultado pelo id da chamada
+```
+
+Na prática, o modelo já faz isso automaticamente quando detecta que as chamadas são independentes. Mas você pode forçar com `mode="ANY"` e garantir que acontece. Para o modo deep com 5 concorrentes, isso reduz o tempo de ~25s para ~8s só nas chamadas de reviews.
+
+**2. Compositional Function Calling — o A0 ContextBuilder vira mais inteligente**
+
+A documentação mostra `get_current_location()` → `get_weather(location)` em sequência automática. Para o GymSite Intelligence, a aplicação direta é o A0:
+
+```
+Input: "Fortaleza, Meireles"
+  ↓
+[A0 decide encadear automaticamente]
+  geocodificar_bairro("Meireles, Fortaleza")
+    → retorna {lat: -3.74, lng: -38.49, pop_estimada: 45000}
+  buscar_dados_ibge(lat=-3.74, lng=-38.49)
+    → retorna dados demográficos
+  rodar_deep_research(cidade="Fortaleza", bairro="Meireles", renda_media=4200)
+    → usa os dados do IBGE como contexto na query
+```
+
+Em vez de cada agente rodar isolado e passar dados via contexto do pipeline, o próprio modelo encadeia as chamadas passando o output de uma como input da próxima. Isso é especialmente poderoso para o A4 FinancialEstimator:
+
+```
+calcular_aluguel_medio(bairro) → R$35/m²
+  ↓ automaticamente alimenta
+calcular_viabilidade_3_cenarios(area=1200, aluguel=42000)
+```
+
+**3. MCP — a killer feature para v1.0**
+
+A documentação confirma que o SDK tem suporte nativo a MCP. Isso abre duas integrações diretas para o GymSite Intelligence:
+
+```python
+# Integração com Notion via MCP (exportar relatório direto)
+from mcp import ClientSession
+
+notion_mcp = StdioServerParameters(
+    command="npx",
+    args=["-y", "@notion/mcp-server"]
+)
+
+# O agente A6 passa a ter acesso direto ao Notion
+# sem você precisar escrever nenhum wrapper
+a6_report_consolidator = Agent(
+    tools=[session],  # MCP session com Notion
+    ...
+)
+```
+
+E o mais relevante para o produto:
+
+```python
+# MCP com Google Maps — acesso oficial via protocolo padrão
+# Em vez dos seus wrappers httpx manuais, o Maps fala MCP nativamente
+```
+
+---
+
+### O que precisa de atenção imediata
+
+**Gemini 3 Flash Preview — IDs obrigatórios nas function responses**
+
+A documentação alerta: *"Gemini 3 now always returns a unique id with every functionCall. Include this exact id in your functionResponse."*
+
+Se você migrar para `gemini-3-flash-preview`, o ADK SDK gerencia isso automaticamente — mas se você fizer chamadas diretas via `genai.Client` (como no A0 com Deep Research), precisa garantir que está passando o `id` de volta. Hoje você não passa, e vai quebrar no Gemini 3.
+
+**`mode="ANY"` para o A5 ContactHunter**
+
+O A5 às vezes "conversa" em vez de chamar a função `gerar_script_abordagem`. Com `tool_config=ToolConfig(function_calling_config=FunctionCallingConfig(mode="ANY"))`, você força o modelo a sempre chamar a função, nunca retornar texto direto. Isso elimina o problema de autonomous execution que você já corrigiu via instruction.
+
+---
+
+### Mapa de impacto — o que implementar em qual versão
+
+| Feature | Onde aplica | Versão | Impacto |
+|---|---|---|---|
+| Parallel function calling | A3 — reviews simultâneas | v0.4 | -70% tempo reviews |
+| `mode="ANY"` | A5 ContactHunter | v0.4 | Elimina respostas textuais indesejadas |
+| `mode="NONE"` | A6 ReportConsolidator | v0.4 | Força relatório direto, sem chamar tools desnecessariamente |
+| Compositional calling | A0 → A2 encadeado | v0.5 | Pipeline mais inteligente |
+| MCP Notion | A6 export | v1.0 | Relatório vai direto ao workspace |
+| MCP Maps | Substituir wrappers httpx | v1.0 | Manutenção zero nos wrappers |
+| Multimodal function response | A7 VisualInspector | v0.5 | Foto do imóvel → análise estruturada |
+
+---
+
+### Resumo executivo
+
+A documentação de Function Calling confirma que a base do GymSite Intelligence está arquitetada corretamente. As três melhorias de maior impacto imediato são: forçar `mode="ANY"` no A5, usar parallel calling no A3 para reduzir latência, e preparar o código para o `id` obrigatório do Gemini 3 quando você fizer o upgrade. MCP é a feature de roadmap mais poderosa — elimina todos os wrappers manuais e abre integração nativa com Notion, Sheets e Maps sem escrever uma linha de código de integração.
+
+Quer que eu gere o bloco para aplicar `mode="ANY"` no A5 e `mode="NONE"` no A6 agora?

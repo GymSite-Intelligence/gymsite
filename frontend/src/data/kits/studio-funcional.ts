@@ -1,0 +1,143 @@
+/**
+ * Kits Studio Funcional / Boutique — PP/P/M/G/GG.
+ *
+ * Modelos: F45, Velocity, MoveStrong. Mix de funcional + small cardio
+ * + livre + grupos. Sem máquinas seletorizadas (HIIT/circuito).
+ */
+import type { KitEquipamentos } from './types'
+
+export const FUNCIONAL_PP: KitEquipamentos = {
+  tipo_negocio: 'studio_funcional',
+  tamanho_preset: 'pp',
+  area_referencia_m2: 150,
+  modelo_operacao: 'Studio boutique micro (1 sala HIIT, ~12 alunos por turma)',
+  desconto_volume_pct: [0.10, 0.20],
+  fontes: ['F45 Training', 'Velocity Performance'],
+  itens: [
+    { cat: 'funcional', nome: 'Rig multi-grip 4 estações', qtd: 1, ref: 'Movement RG400', preco_un: 18500, fornecedor: 'Movement' },
+    { cat: 'funcional', nome: 'Kettlebell kit 4-32kg (16 un)', qtd: 1, ref: 'RHS KB Set', preco_un: 4800, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Halteres pequenos kit (1-15kg)', qtd: 1, ref: 'RHS borracha', preco_un: 8500, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Box jump', qtd: 8, ref: 'RHS BJ60', preco_un: 380, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Medicine ball kit', qtd: 1, ref: 'RHS MB Set', preco_un: 1200, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Cordas naval', qtd: 2, ref: 'RHS BR12', preco_un: 450, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'TRX suspension', qtd: 6, ref: 'TRX Pro 4', preco_un: 1200, fornecedor: 'Generico' },
+    { cat: 'funcional', nome: 'Bolas suíças', qtd: 8, ref: 'RHS Stability', preco_un: 180, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Bandagens / Elásticos', qtd: 12, ref: 'RHS Bands Kit', preco_un: 150, fornecedor: 'RHS' },
+    { cat: 'cardio', nome: 'Bike assault', qtd: 2, ref: 'Assault AirBike Pro', preco_un: 8500, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'Remo ergômetro', qtd: 2, ref: 'Concept2 Model D', preco_un: 8400, fornecedor: 'Concept2' },
+    { cat: 'pesos', nome: 'Barras olímpicas 20kg', qtd: 2, ref: 'Rogue Ohio Bar', preco_un: 2400, fornecedor: 'Rogue' },
+    { cat: 'pesos', nome: 'Bumper plates (300kg)', qtd: 1, ref: 'Eleiko XF', preco_un: 18500, fornecedor: 'Eleiko' },
+    { cat: 'livre', nome: 'Banco supino ajustável', qtd: 2, ref: 'Movement BS300', preco_un: 2800, fornecedor: 'Movement' },
+  ],
+}
+
+export const FUNCIONAL_P: KitEquipamentos = {
+  tipo_negocio: 'studio_funcional',
+  tamanho_preset: 'p',
+  area_referencia_m2: 280,
+  modelo_operacao: 'F45 P / Velocity P (1-2 salas grupais + área cardio)',
+  desconto_volume_pct: [0.12, 0.22],
+  fontes: ['F45 Training BR', 'Velocity Performance'],
+  itens: [
+    { cat: 'funcional', nome: 'Rig multi-grip 6 estações', qtd: 1, ref: 'Rogue Monster Lite 6', preco_un: 28500, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Kettlebell kit 4-32kg (24 un)', qtd: 1, ref: 'RHS KB Set', preco_un: 6500, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Halteres 1-25kg (kit)', qtd: 1, ref: 'RHS borracha', preco_un: 16500, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Box jump', qtd: 14, ref: 'RHS BJ60', preco_un: 380, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Medicine ball kit', qtd: 1, ref: 'RHS MB Set Pro', preco_un: 2200, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Cordas naval', qtd: 4, ref: 'RHS BR12', preco_un: 450, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'TRX suspension', qtd: 10, ref: 'TRX Pro 4', preco_un: 1200, fornecedor: 'Generico' },
+    { cat: 'funcional', nome: 'Bolas suíças', qtd: 14, ref: 'RHS Stability', preco_un: 180, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Foam roller', qtd: 10, ref: 'Stott Foam Roller', preco_un: 280, fornecedor: 'Stott' },
+    { cat: 'cardio', nome: 'Bike assault', qtd: 4, ref: 'Assault AirBike Pro', preco_un: 8500, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'Remo ergômetro', qtd: 4, ref: 'Concept2 Model D', preco_un: 8400, fornecedor: 'Concept2' },
+    { cat: 'cardio', nome: 'Esteira AirRunner', qtd: 1, ref: 'Assault AirRunner', preco_un: 24000, fornecedor: 'Rogue' },
+    { cat: 'pesos', nome: 'Barras olímpicas 20kg', qtd: 6, ref: 'Rogue Ohio Bar', preco_un: 2400, fornecedor: 'Rogue' },
+    { cat: 'pesos', nome: 'Bumper plates (600kg)', qtd: 1, ref: 'Eleiko XF', preco_un: 32000, fornecedor: 'Eleiko' },
+    { cat: 'livre', nome: 'Squat rack', qtd: 2, ref: 'Rogue R-3', preco_un: 12500, fornecedor: 'Rogue' },
+    { cat: 'livre', nome: 'Banco supino ajustável', qtd: 4, ref: 'Rogue AB-3', preco_un: 4500, fornecedor: 'Rogue' },
+  ],
+}
+
+export const FUNCIONAL_M: KitEquipamentos = {
+  tipo_negocio: 'studio_funcional',
+  tamanho_preset: 'm',
+  area_referencia_m2: 500,
+  modelo_operacao: 'F45 padrão / Velocity Standard (multi-salas + cardio + livre)',
+  desconto_volume_pct: [0.15, 0.25],
+  fontes: ['F45 Franchise Brasil', 'Velocity Performance'],
+  itens: [
+    { cat: 'funcional', nome: 'Rig multi-grip 8 estações', qtd: 1, ref: 'Rogue Monster Lite 8', preco_un: 38000, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Kettlebell kit 4-48kg (32 un)', qtd: 1, ref: 'Rogue Kettlebells Pro', preco_un: 18500, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Halteres 1-35kg (kit completo)', qtd: 1, ref: 'RHS borracha', preco_un: 28000, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Box jump pliométrico', qtd: 20, ref: 'Rogue Game Box', preco_un: 850, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Medicine ball kit pro', qtd: 1, ref: 'Rogue Med Balls Pro', preco_un: 2200, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Cordas naval', qtd: 6, ref: 'RHS BR12', preco_un: 450, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'TRX suspension', qtd: 16, ref: 'TRX Pro 4', preco_un: 1200, fornecedor: 'Generico' },
+    { cat: 'funcional', nome: 'Sled (trenó)', qtd: 2, ref: 'Rogue Echo Dog Sled', preco_un: 3200, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Bolas suíças', qtd: 20, ref: 'RHS Stability', preco_un: 180, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Foam roller pro', qtd: 18, ref: 'Stott Foam Roller', preco_un: 280, fornecedor: 'Stott' },
+    { cat: 'cardio', nome: 'Bike assault', qtd: 8, ref: 'Assault AirBike Pro', preco_un: 8500, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'Remo Concept2', qtd: 8, ref: 'Concept2 Model D', preco_un: 8400, fornecedor: 'Concept2' },
+    { cat: 'cardio', nome: 'Esteira AirRunner', qtd: 2, ref: 'Assault AirRunner', preco_un: 24000, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'SkiErg', qtd: 4, ref: 'Concept2 SkiErg', preco_un: 9500, fornecedor: 'Concept2' },
+    { cat: 'pesos', nome: 'Barras olímpicas 20kg', qtd: 12, ref: 'Rogue Ohio Bar', preco_un: 2400, fornecedor: 'Rogue' },
+    { cat: 'pesos', nome: 'Bumper plates (1000kg)', qtd: 1, ref: 'Eleiko XF', preco_un: 52000, fornecedor: 'Eleiko' },
+    { cat: 'pesos', nome: 'Rack porta-anilhas', qtd: 4, ref: 'Rogue PR-3', preco_un: 2800, fornecedor: 'Rogue' },
+    { cat: 'livre', nome: 'Squat rack', qtd: 4, ref: 'Rogue R-3', preco_un: 12500, fornecedor: 'Rogue' },
+    { cat: 'livre', nome: 'Banco supino ajustável', qtd: 6, ref: 'Rogue AB-3', preco_un: 4500, fornecedor: 'Rogue' },
+  ],
+}
+
+export const FUNCIONAL_G: KitEquipamentos = {
+  tipo_negocio: 'studio_funcional',
+  tamanho_preset: 'g',
+  area_referencia_m2: 800,
+  modelo_operacao: 'Funcional grande / multi-aula simultânea',
+  desconto_volume_pct: [0.18, 0.28],
+  fontes: ['Velocity Performance Centers', 'F45 Studio G'],
+  itens: [
+    { cat: 'funcional', nome: 'Rig 12 estações', qtd: 1, ref: 'Rogue Monster Lite 12', preco_un: 58000, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Kettlebell pro', qtd: 1, ref: 'Rogue Kettlebells Pro', preco_un: 32000, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Halteres 1-50kg', qtd: 1, ref: 'RHS borracha', preco_un: 42000, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'Box jump', qtd: 30, ref: 'Rogue Game Box', preco_un: 850, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Medicine ball', qtd: 2, ref: 'Rogue Med Balls Pro', preco_un: 2200, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Cordas naval', qtd: 10, ref: 'RHS BR12', preco_un: 450, fornecedor: 'RHS' },
+    { cat: 'funcional', nome: 'TRX suspension', qtd: 24, ref: 'TRX Pro 4', preco_un: 1200, fornecedor: 'Generico' },
+    { cat: 'funcional', nome: 'Sled', qtd: 4, ref: 'Rogue Echo Dog Sled', preco_un: 3200, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'Bike assault', qtd: 12, ref: 'Assault AirBike Pro', preco_un: 8500, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'Remo Concept2', qtd: 14, ref: 'Concept2 Model D', preco_un: 8400, fornecedor: 'Concept2' },
+    { cat: 'cardio', nome: 'Esteira AirRunner', qtd: 4, ref: 'Assault AirRunner', preco_un: 24000, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'SkiErg + BikeErg', qtd: 12, ref: 'Concept2 SkiErg/BikeErg', preco_un: 9500, fornecedor: 'Concept2' },
+    { cat: 'pesos', nome: 'Barras olímpicas competição', qtd: 20, ref: 'Eleiko IWF Comp', preco_un: 5500, fornecedor: 'Eleiko' },
+    { cat: 'pesos', nome: 'Bumpers (1800kg)', qtd: 1, ref: 'Eleiko XF', preco_un: 95000, fornecedor: 'Eleiko' },
+    { cat: 'livre', nome: 'Squat rack premium', qtd: 8, ref: 'Rogue R-6', preco_un: 18500, fornecedor: 'Rogue' },
+    { cat: 'livre', nome: 'Power rack', qtd: 2, ref: 'Rogue Monster Lite', preco_un: 18500, fornecedor: 'Rogue' },
+    { cat: 'crossfit', nome: 'GHD', qtd: 4, ref: 'Rogue GHD 2.0', preco_un: 8500, fornecedor: 'Rogue' },
+  ],
+}
+
+export const FUNCIONAL_GG: KitEquipamentos = {
+  tipo_negocio: 'studio_funcional',
+  tamanho_preset: 'gg',
+  area_referencia_m2: 1500,
+  modelo_operacao: 'Centro funcional + cardio + recuperação (multi-marca premium)',
+  desconto_volume_pct: [0.20, 0.32],
+  fontes: ['Velocity Premium', 'Rogue commercial'],
+  itens: [
+    { cat: 'funcional', nome: 'Rig 16 estações', qtd: 1, ref: 'Rogue Monster Lite 16', preco_un: 78000, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Kettlebell completo', qtd: 1, ref: 'Rogue Kettlebells Pro', preco_un: 65000, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'Halteres 1-70kg', qtd: 1, ref: 'Eleiko Hex', preco_un: 95000, fornecedor: 'Eleiko' },
+    { cat: 'funcional', nome: 'Box jump', qtd: 50, ref: 'Rogue Game Box', preco_un: 850, fornecedor: 'Rogue' },
+    { cat: 'funcional', nome: 'TRX suspension', qtd: 40, ref: 'TRX Pro 4', preco_un: 1200, fornecedor: 'Generico' },
+    { cat: 'funcional', nome: 'Sled', qtd: 8, ref: 'Rogue Echo Dog Sled', preco_un: 3200, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'Bike assault', qtd: 20, ref: 'Assault AirBike Pro', preco_un: 8500, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'Remo Concept2', qtd: 24, ref: 'Concept2 Dynamic', preco_un: 14500, fornecedor: 'Concept2' },
+    { cat: 'cardio', nome: 'Esteira AirRunner', qtd: 8, ref: 'Assault AirRunner', preco_un: 24000, fornecedor: 'Rogue' },
+    { cat: 'cardio', nome: 'SkiErg + BikeErg', qtd: 24, ref: 'Concept2 mix', preco_un: 9500, fornecedor: 'Concept2' },
+    { cat: 'pesos', nome: 'Barras competição', qtd: 30, ref: 'Eleiko IWF Comp', preco_un: 5500, fornecedor: 'Eleiko' },
+    { cat: 'pesos', nome: 'Bumpers (3000kg)', qtd: 1, ref: 'Eleiko XF', preco_un: 175000, fornecedor: 'Eleiko' },
+    { cat: 'livre', nome: 'Squat rack', qtd: 14, ref: 'Rogue R-6', preco_un: 18500, fornecedor: 'Rogue' },
+    { cat: 'livre', nome: 'Power rack', qtd: 4, ref: 'Rogue Monster Lite', preco_un: 18500, fornecedor: 'Rogue' },
+    { cat: 'crossfit', nome: 'GHD', qtd: 8, ref: 'Rogue GHD 2.0', preco_un: 8500, fornecedor: 'Rogue' },
+  ],
+}

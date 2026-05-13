@@ -1,0 +1,41 @@
+=== GOOGLE MAPS ===
+Total aria-labels na página: 84
+Aria-labels relacionados a horário/movimento: 4
+
+--- AMOSTRA DE TODOS ARIA-LABELS (primeiros 30) ---
+[DIV] role='' visible=True :: 'Google Maps'
+[SPAN] role='' visible=False :: ' estrelas'
+[BUTTON] role='' visible=False :: 'Recolher painel lateral'
+[BUTTON] role='' visible=False :: 'Recolher painel lateral'
+[BUTTON] role='' visible=False :: 'Recolher painel lateral'
+[DIV] role='application' visible=True :: 'Mapa·Use as teclas de seta para mover o mapa.·Veja os detalhes de um lugar pressionando a tecla de número correspondente.'
+[BUTTON] role='' visible=True :: 'Pesquisar'
+[BUTTON] role='' visible=True :: 'Fechar'
+[BUTTON] role='' visible=False :: 'Recolher painel lateral'
+[A] role='button' visible=True :: 'Show the Input Tools menu'
+[DIV] role='region' visible=True :: 'Opções de pesquisa disponíveis para essa área'
+[BUTTON] role='' visible=True :: 'Próxima página'
+[BUTTON] role='' visible=False :: 'Recolher painel lateral'
+[BUTTON] role='' visible=True :: 'Menu'
+[DIV] role='main' visible=True :: 'Iguatemi Bosque'
+[BUTTON] role='' visible=True :: 'Foto de Iguatemi Bosque'
+[SPAN] role='img' visible=True :: '4,7 estrelas '
+[SPAN] role='img' visible=True :: 'Entrada acessível para pessoas em cadeira de rodas'
+[BUTTON] role='tab' visible=True :: 'Visão geral de Iguatemi Bosque'
+[BUTTON] role='tab' visible=True :: 'Sobre Iguatemi Bosque'
+[DIV] role='region' visible=True :: 'Ações em Iguatemi Bosque'
+[BUTTON] role='' visible=True :: 'Rotas'
+[BUTTON] role='' visible=True :: 'Salvar'
+[BUTTON] role='' visible=True :: 'Próximo'
+[BUTTON] role='' visible=True :: 'Enviar para o smartphone'
+[BUTTON] role='' visible=True :: 'Compartilhar'
+[DIV] role='region' visible=True :: 'Sobre Iguatemi Bosque'
+[DIV] role='region' visible=True :: 'Informações de Iguatemi Bosque'
+[BUTTON] role='' visible=True :: 'Endereço: Av. Washington Soares, 85 - Edson Queiroz, Fortaleza - CE, 60811-341 '
+[BUTTON] role='' visible=True :: 'Copiar endereço'
+
+--- ARIA-LABELS RELEVANTES (filtrados) ---
+[SPAN] role='img' visible=True :: 'Horário de funcionamento'
+[SPAN] role='img' visible=True :: 'Mostrar horário de funcionamento da semana'
+[BUTTON] role='' visible=False :: 'sexta-feira, 10:00 a 22:00, Copiar horário de funcionamento'
+[BUTTON] role='' visible=False :: 'Sugerir uma edição para o horário de funcionamento'

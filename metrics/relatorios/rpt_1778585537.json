@@ -1,0 +1,384 @@
+{
+  "id": "rpt_1778585537",
+  "tipo_relatorio": "prospeccao_academia",
+  "data_execucao": "2026-05-12T08:32:17",
+  "input_canonico": {
+    "cidade": "",
+    "bairro": "",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "tipo_negocio": "academia"
+  },
+  "output_consolidado": {
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 6.0,
+    "score_top1_candidato": 6.0,
+    "scores_regionais": {
+      "demografico": 10.0,
+      "competitivo": 7.0,
+      "viabilidade": 1.0
+    },
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 0.0,
+    "top_3_candidatos": [],
+    "competitors_set": [],
+    "dores_dominantes": [],
+    "servicos_nao_oferecidos": [],
+    "distribuicao_geografica": [],
+    "bairros_alternativos": [
+      {
+        "bairro": "Centro Expandido",
+        "motivo": "Alta densidade comercial e fluxo garantido",
+        "bairro_principal_busca": "Centro Expandido",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "fallback distribuicao_geografica (busca falhou: RuntimeError)"
+      },
+      {
+        "bairro": "Bairros em expansão imobiliária recente",
+        "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada",
+        "bairro_principal_busca": "Bairros em expansão imobiliária recente",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "fallback distribuicao_geografica (busca falhou: RuntimeError)"
+      }
+    ],
+    "aviso_geografico": null,
+    "cidade_efetiva": "",
+    "cidade_foi_corrigida": false,
+    "viabilidade_3_cenarios": {
+      "low": {
+        "modelo": "Low Cost",
+        "ticket_medio": 89.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 1500,
+            "matr_por_m2": 1.5,
+            "premissa": "academia regional nova, 60% benchmark Smart Fit"
+          },
+          "realista": {
+            "valor": 2200,
+            "matr_por_m2": 2.2,
+            "premissa": "benchmark Smart Fit/Bluefit/Selfit (ACAD 2024)"
+          },
+          "agressivo": {
+            "valor": 3000,
+            "matr_por_m2": 3,
+            "premissa": "Smart Fit top performers (>3.000 alunos/unidade)"
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "capacidade_simultanea_pico": 550,
+        "frequencia_semanal_aluno": 2.5,
+        "alunos_pico_calculado": 196,
+        "folga_capacidade_pct": 64.4,
+        "ticket_realizado_estimado": 84.51,
+        "taxa_inadimplencia": 0.06,
+        "taxa_cancelamento_mensal": 0.1,
+        "receita_mensal": 185913.2,
+        "custos_detalhados": {
+          "aluguel": 108440,
+          "condominio": 16266,
+          "iptu": 2000,
+          "energia": 12000,
+          "agua": 2000,
+          "internet": 800,
+          "folha": 18000,
+          "manutencao": 3470.6,
+          "contabilidade": 1300,
+          "sistema_gestao": 800,
+          "seguro": 1388.24,
+          "outros": 3718.26
+        },
+        "custos_fixos_total": 170183.1,
+        "marketing_pct_faturamento": 0.06,
+        "marketing_mensal": 11154.79,
+        "custos_totais": 181337.89,
+        "lucro_mensal_estimado": 4575.31,
+        "margem_percentual": 2.5,
+        "alunos_break_even": 2146,
+        "capex_detalhado": {
+          "equipamentos": 402288,
+          "obra_adaptacao": 200000,
+          "projeto_arquitetonico": 15000,
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 63101.77,
+          "total": 694119.49
+        },
+        "capex_total": 694119.49,
+        "capital_giro_meses": 3,
+        "capital_giro": 544013.67,
+        "investimento_total": 1238133.16,
+        "payback_meses": 270,
+        "tir_anual_pct": 0,
+        "vpl_5_anos": -1040217.54,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -13394.43,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -45249.43,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -18477.93,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "viabilidade": "INVIAVEL",
+        "justificativa": "Payback 270m inviável"
+      },
+      "mid": {
+        "modelo": "Mid Market",
+        "ticket_medio": 149.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 1000,
+            "matr_por_m2": 1,
+            "premissa": "Bodytech entry sub-performante"
+          },
+          "realista": {
+            "valor": 1400,
+            "matr_por_m2": 1.4,
+            "premissa": "Bodytech entry / regional premium consolidada"
+          },
+          "agressivo": {
+            "valor": 1800,
+            "matr_por_m2": 1.8,
+            "premissa": "Bodytech entry top, mercado em expansão"
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "capacidade_simultanea_pico": 400,
+        "frequencia_semanal_aluno": 2,
+        "alunos_pico_calculado": 100,
+        "folga_capacidade_pct": 75,
+        "ticket_realizado_estimado": 143.9,
+        "taxa_inadimplencia": 0.04,
+        "taxa_cancelamento_mensal": 0.07,
+        "receita_mensal": 201465.6,
+        "custos_detalhados": {
+          "aluguel": 108440,
+          "condominio": 16266,
+          "iptu": 2000,
+          "energia": 12000,
+          "agua": 2000,
+          "internet": 800,
+          "folha": 32000,
+          "manutencao": 5383.18,
+          "contabilidade": 1300,
+          "sistema_gestao": 800,
+          "seguro": 2153.27,
+          "outros": 4029.31
+        },
+        "custos_fixos_total": 187171.76,
+        "marketing_pct_faturamento": 0.08,
+        "marketing_mensal": 16117.25,
+        "custos_totais": 203289.01,
+        "lucro_mensal_estimado": -1823.41,
+        "margem_percentual": -0.9,
+        "alunos_break_even": 1413,
+        "capex_detalhado": {
+          "equipamentos": 600030,
+          "obra_adaptacao": 350000,
+          "projeto_arquitetonico": 15000,
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 97875.97,
+          "total": 1076635.69
+        },
+        "capex_total": 1076635.69,
+        "capital_giro_meses": 3,
+        "capital_giro": 609867.03,
+        "investimento_total": 1686502.72,
+        "payback_meses": 999,
+        "tir_anual_pct": null,
+        "vpl_5_anos": -1686502.72,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -23511.41,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -57560.31,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -29625.66,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "viabilidade": "INVIAVEL",
+        "justificativa": "Prejuízo mensal de R$ 1,823"
+      },
+      "premium": {
+        "modelo": "Premium",
+        "ticket_medio": 299.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 400,
+            "matr_por_m2": 0.4,
+            "premissa": "boutique nicho, demanda local moderada"
+          },
+          "realista": {
+            "valor": 600,
+            "matr_por_m2": 0.6,
+            "premissa": "Bodytech / Bio Ritmo média (~600 alunos/unidade)"
+          },
+          "agressivo": {
+            "valor": 900,
+            "matr_por_m2": 0.9,
+            "premissa": "premium em bairro de alta renda, alto perfil"
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "capacidade_simultanea_pico": 250,
+        "frequencia_semanal_aluno": 1.8,
+        "alunos_pico_calculado": 38,
+        "folga_capacidade_pct": 84.8,
+        "ticket_realizado_estimado": 292.4,
+        "taxa_inadimplencia": 0.025,
+        "taxa_cancelamento_mensal": 0.04,
+        "receita_mensal": 175441.5,
+        "custos_detalhados": {
+          "aluguel": 108440,
+          "condominio": 16266,
+          "iptu": 2000,
+          "energia": 18000,
+          "agua": 2000,
+          "internet": 800,
+          "folha": 55000,
+          "manutencao": 13298.54,
+          "contabilidade": 1300,
+          "sistema_gestao": 800,
+          "seguro": 5319.42,
+          "outros": 3508.83
+        },
+        "custos_fixos_total": 226732.79,
+        "marketing_pct_faturamento": 0.12,
+        "marketing_mensal": 21052.98,
+        "custos_totais": 247785.77,
+        "lucro_mensal_estimado": -72344.27,
+        "margem_percentual": -41.2,
+        "alunos_break_even": 848,
+        "capex_detalhado": {
+          "equipamentos": 1788648,
+          "obra_adaptacao": 600000,
+          "projeto_arquitetonico": 15000,
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 241791.63,
+          "total": 2659707.91
+        },
+        "capex_total": 2659707.91,
+        "capital_giro_meses": 3,
+        "capital_giro": 743357.31,
+        "investimento_total": 3403065.22,
+        "payback_meses": 999,
+        "tir_anual_pct": null,
+        "vpl_5_anos": -3403065.22,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -96407.48,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -120323.47,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -97521.47,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "viabilidade": "INVIAVEL",
+        "justificativa": "Prejuízo mensal de R$ 72,344"
+      }
+    },
+    "modelo_recomendado": "Nenhum",
+    "aluguel_mensal": 108440.0,
+    "alertas_financeiros": [
+      "⚠️ Inviável — modelo não fecha conta: Todos os cenários resultam em prejuízo ou payback superior a 22 anos.",
+      "⚠️ Aluguel compromete viabilidade: O custo do aluguel representa 58% do faturamento no cenário Low Cost, muito acima do benchmark sustentável de 15% da ACAD.",
+      "⚠️ Margem apertada, sem espaço pra imprevistos: No único cenário com lucro (Low Cost), a margem é de apenas 2.5%, insuficiente para cobrir riscos operacionais."
+    ],
+    "posicionamento_recomendado": "Devido à indisponibilidade de dados detalhados sobre concorrentes na análise automática, sugere-se um posicionamento inicial focado na identificação de nichos de mercado e diferenciais competitivos através de pesquisa de campo aprofundada. O bairro Batel, com sua população de alta renda e tendência de valorização imobiliária, indica potencial para uma academia premium com serviços personalizados e modalidades inovadoras que atendam a um público que busca experiências de fitness exclusivas e de alta qualidade. A baixa saturação aparente (devido à falta de dados) pode representar uma oportunidade para uma entrada forte no mercado.",
+    "contato_decisor": {
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "decisor_identificado": "proprietário(a)",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "email": "N/A",
+      "whatsapp_link": "N/A",
+      "canal_recomendado": "WHATSAPP",
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , região alvo, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "nivel_confianca_contato": "BAIXO",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6
+      }
+    },
+    "market_context": {},
+    "cobertura_redes_a0": {
+      "redes_solicitadas": [],
+      "redes_cobertas": [],
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": [],
+      "tem_redes_fantasma": false
+    }
+  },
+  "metadata_execucao": {
+    "fonte_market_context": "",
+    "data_coleta_market_context": "",
+    "cached_market_context": null,
+    "redes_a0_solicitadas": [],
+    "schema_version": "1.5"
+  }
+}

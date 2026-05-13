@@ -1,0 +1,190 @@
+{
+  "academia": {
+    "pp": {
+      "bruto": 228950,
+      "estimado_min": 183160,
+      "estimado_max": 206055,
+      "mediana_real": 194608,
+      "itens_count": 19,
+      "desconto_min": 0.1,
+      "desconto_max": 0.2
+    },
+    "p": {
+      "bruto": 502860,
+      "estimado_min": 377145,
+      "estimado_max": 427431,
+      "mediana_real": 402288,
+      "itens_count": 35,
+      "desconto_min": 0.15,
+      "desconto_max": 0.25
+    },
+    "m": {
+      "bruto": 800040,
+      "estimado_min": 560028,
+      "estimado_max": 640032,
+      "mediana_real": 600030,
+      "itens_count": 50,
+      "desconto_min": 0.2,
+      "desconto_max": 0.3
+    },
+    "g": {
+      "bruto": 2467100,
+      "estimado_min": 1603615,
+      "estimado_max": 1973680,
+      "mediana_real": 1788648,
+      "itens_count": 58,
+      "desconto_min": 0.2,
+      "desconto_max": 0.35
+    },
+    "gg": {
+      "bruto": 5671480,
+      "estimado_min": 3402888,
+      "estimado_max": 4253610,
+      "mediana_real": 3828249,
+      "itens_count": 66,
+      "desconto_min": 0.25,
+      "desconto_max": 0.4
+    }
+  },
+  "crossfit_box": {
+    "pp": {
+      "bruto": 150060,
+      "estimado_min": 120048,
+      "estimado_max": 135054,
+      "mediana_real": 127551,
+      "itens_count": 14,
+      "desconto_min": 0.1,
+      "desconto_max": 0.2
+    },
+    "p": {
+      "bruto": 275500,
+      "estimado_min": 206625,
+      "estimado_max": 234175,
+      "mediana_real": 220400,
+      "itens_count": 15,
+      "desconto_min": 0.15,
+      "desconto_max": 0.25
+    },
+    "m": {
+      "bruto": 553260,
+      "estimado_min": 398347,
+      "estimado_max": 453673,
+      "mediana_real": 426010,
+      "itens_count": 19,
+      "desconto_min": 0.18,
+      "desconto_max": 0.28
+    },
+    "g": {
+      "bruto": 1209200,
+      "estimado_min": 846440,
+      "estimado_max": 967360,
+      "mediana_real": 906900,
+      "itens_count": 21,
+      "desconto_min": 0.2,
+      "desconto_max": 0.3
+    },
+    "gg": {
+      "bruto": 2301400,
+      "estimado_min": 1495910,
+      "estimado_max": 1795092,
+      "mediana_real": 1645501,
+      "itens_count": 18,
+      "desconto_min": 0.22,
+      "desconto_max": 0.35
+    }
+  },
+  "studio_pilates": {
+    "pp": {
+      "bruto": 57900,
+      "estimado_min": 49215,
+      "estimado_max": 55005,
+      "mediana_real": 52110,
+      "itens_count": 8,
+      "desconto_min": 0.05,
+      "desconto_max": 0.15
+    },
+    "p": {
+      "bruto": 171790,
+      "estimado_min": 137432,
+      "estimado_max": 154611,
+      "mediana_real": 146022,
+      "itens_count": 11,
+      "desconto_min": 0.1,
+      "desconto_max": 0.2
+    },
+    "m": {
+      "bruto": 323900,
+      "estimado_min": 252642,
+      "estimado_max": 285032,
+      "mediana_real": 268837,
+      "itens_count": 15,
+      "desconto_min": 0.12,
+      "desconto_max": 0.22
+    },
+    "g": {
+      "bruto": 691340,
+      "estimado_min": 518505,
+      "estimado_max": 587639,
+      "mediana_real": 553072,
+      "itens_count": 14,
+      "desconto_min": 0.15,
+      "desconto_max": 0.25
+    },
+    "gg": {
+      "bruto": 1431000,
+      "estimado_min": 1001700,
+      "estimado_max": 1173420,
+      "mediana_real": 1087560,
+      "itens_count": 12,
+      "desconto_min": 0.18,
+      "desconto_max": 0.3
+    }
+  },
+  "studio_funcional": {
+    "pp": {
+      "bruto": 110080,
+      "estimado_min": 88064,
+      "estimado_max": 99072,
+      "mediana_real": 93568,
+      "itens_count": 14,
+      "desconto_min": 0.1,
+      "desconto_max": 0.2
+    },
+    "p": {
+      "bruto": 259140,
+      "estimado_min": 202129,
+      "estimado_max": 228043,
+      "mediana_real": 215086,
+      "itens_count": 16,
+      "desconto_min": 0.12,
+      "desconto_max": 0.22
+    },
+    "m": {
+      "bruto": 530840,
+      "estimado_min": 398130,
+      "estimado_max": 451214,
+      "mediana_real": 424672,
+      "itens_count": 19,
+      "desconto_min": 0.15,
+      "desconto_max": 0.25
+    },
+    "g": {
+      "bruto": 1061600,
+      "estimado_min": 764352,
+      "estimado_max": 870512,
+      "mediana_real": 817432,
+      "itens_count": 17,
+      "desconto_min": 0.18,
+      "desconto_max": 0.28
+    },
+    "gg": {
+      "bruto": 2033100,
+      "estimado_min": 1382508,
+      "estimado_max": 1626480,
+      "mediana_real": 1504494,
+      "itens_count": 15,
+      "desconto_min": 0.2,
+      "desconto_max": 0.32
+    }
+  }
+}

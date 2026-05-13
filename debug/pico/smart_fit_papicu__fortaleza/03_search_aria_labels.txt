@@ -1,0 +1,7 @@
+=== GOOGLE SEARCH ===
+Total aria-labels na página: 0
+Aria-labels relacionados a horário/movimento: 0
+
+--- AMOSTRA DE TODOS ARIA-LABELS (primeiros 30) ---
+
+--- ARIA-LABELS RELEVANTES (filtrados) ---

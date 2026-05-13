@@ -1,0 +1,941 @@
+{
+  "id": "rpt_1778585958",
+  "tipo_relatorio": "prospeccao_academia",
+  "data_execucao": "2026-05-12T08:39:18",
+  "input_canonico": {
+    "cidade": "",
+    "bairro": "",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "tipo_negocio": "academia"
+  },
+  "output_consolidado": {
+    "veredito": "INVESTIGAR MAIS",
+    "score_bairro": 4.94,
+    "score_top1_candidato": 5.71,
+    "scores_regionais": {
+      "demografico": 10.0,
+      "competitivo": 3.82,
+      "viabilidade": 1.0
+    },
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 4.46,
+    "top_3_candidatos": [
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1000,
+        "avenida_principal": true,
+        "business_status": "OPERATIONAL",
+        "endereco": "Av. do Batel, 1137 - Batel, Curitiba - PR, 80420-090, Brasil",
+        "estimativa_visibilidade": "alta",
+        "horarios": [
+          "segunda-feira: 08:00 – 18:30",
+          "terça-feira: 08:00 – 18:30",
+          "quarta-feira: 08:00 – 18:30",
+          "quinta-feira: 08:00 – 18:30",
+          "sexta-feira: 08:00 – 18:30",
+          "sábado: 08:00 – 12:30",
+          "domingo: Fechado"
+        ],
+        "lat": -25.4413719,
+        "lng": -49.2840766,
+        "motivo": "Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos",
+        "nome": "Honda Ecosul Motos",
+        "num_avaliacoes": 4359,
+        "place_id": "ChIJo7GkIHbk3JQRS5ti2SK2dsk",
+        "polos_geradores": [
+          "Estação Tubo Bento Viana 413m",
+          "Av. do Batel, 1614 432m",
+          "Praça Oswaldo Cruz 813m"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 4.7,
+        "score_ancoragem": 10,
+        "score_geoscout": 8,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-25.4413719,-49.2840766&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(41) 3029-9929",
+        "telefone_intl": "+55 41 3029-9929",
+        "tem_24h": false,
+        "tipos": [
+          "car_dealer",
+          "store",
+          "point_of_interest",
+          "establishment"
+        ],
+        "website": "http://www.hondaecosul.com.br/"
+      },
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1000,
+        "avenida_principal": true,
+        "business_status": "OPERATIONAL",
+        "endereco": "Av. do Batel, 1684 - Batel, Curitiba - PR, 80420-090, Brasil",
+        "estimativa_visibilidade": "alta",
+        "horarios": [
+          "segunda-feira: 08:00 – 19:00",
+          "terça-feira: 08:00 – 19:00",
+          "quarta-feira: 08:00 – 19:00",
+          "quinta-feira: 08:00 – 19:00",
+          "sexta-feira: 08:00 – 19:00",
+          "sábado: 08:00 – 18:00",
+          "domingo: Fechado"
+        ],
+        "lat": -25.442892200000003,
+        "lng": -49.2892516,
+        "motivo": "Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos",
+        "nome": "CCV GWM Batel",
+        "num_avaliacoes": 127,
+        "place_id": "ChIJhXNLVAHj3JQR9jvOjfLwoLc",
+        "polos_geradores": [
+          "Av. do Batel, 1614 114m",
+          "Estação Tubo Bento Viana 441m",
+          "Praça Oswaldo Cruz 1.4km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 4.6,
+        "score_ancoragem": 10,
+        "score_geoscout": 7,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-25.442892200000003,-49.2892516&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(41) 2112-8500",
+        "telefone_intl": "+55 41 2112-8500",
+        "tem_24h": false,
+        "tipos": [
+          "car_dealer",
+          "store",
+          "point_of_interest",
+          "establishment"
+        ],
+        "website": "https://www.ccvgwm.com.br/"
+      },
+      {
+        "aberto_agora": false,
+        "area_estimada_m2": 1000,
+        "avenida_principal": true,
+        "business_status": "OPERATIONAL",
+        "endereco": "Av. do Batel, 1684 - Batel, Curitiba - PR, 80420-090, Brasil",
+        "estimativa_visibilidade": "alta",
+        "horarios": [
+          "segunda-feira: 09:00 – 19:00",
+          "terça-feira: 09:00 – 19:00",
+          "quarta-feira: 09:00 – 19:00",
+          "quinta-feira: 09:00 – 19:00",
+          "sexta-feira: 09:00 – 19:00",
+          "sábado: 09:00 – 18:00",
+          "domingo: Fechado"
+        ],
+        "lat": -25.442905,
+        "lng": -49.2892624,
+        "motivo": "Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos",
+        "nome": "Vendedor",
+        "num_avaliacoes": 3,
+        "place_id": "ChIJg4aeSEnj3JQRNFfFkKp5wlA",
+        "polos_geradores": [
+          "Av. do Batel, 1614 115m",
+          "Estação Tubo Bento Viana 441m",
+          "Praça Oswaldo Cruz 1.4km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 3.3,
+        "score_ancoragem": 10,
+        "score_geoscout": 7,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-25.442905,-49.2892624&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(47) 99658-8775",
+        "telefone_intl": "+55 47 99658-8775",
+        "tem_24h": false,
+        "tipos": [
+          "car_dealer",
+          "store",
+          "point_of_interest",
+          "establishment"
+        ],
+        "website": ""
+      }
+    ],
+    "competitors_set": [
+      {
+        "nome": "Pestana Curitiba",
+        "rating_geral": 4.6,
+        "num_avaliacoes": 5111,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Fiquei neste hotel com a minha família por quatro dias e mais um dia depois. A propriedade beneficia de uma excelente localização, que foi um dos principais destaques da nossa estadia. [original em inglês]",
+            "quote_original": "I stayed at this hotel with my family for four days and one more day afterwards. The property benefits from an excellent location, which was one of the main highlights of our stay.",
+            "idioma_original": "inglês",
+            "autor": "Edu777",
+            "rating": 3,
+            "data_relativa": "7 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Reformas extremamente barulhentas e não anunciadas acontecendo. Impossível sentar na recepção ou na área do lounge. Não consigo trabalhar do quarto devido à queda constante do WiFi. O Negócio [original em inglês]",
+            "quote_original": "Extremely noisy and unannounced renovations taking place. Impossible to sit in reception or the lounge area. Cannot work from room due to WiFi constantly dropping out. The Business",
+            "idioma_original": "inglês",
+            "autor": "Peter Coxall",
+            "rating": 2,
+            "data_relativa": "4 months ago",
+            "categoria_dor": "ruido_alto"
+          },
+          {
+            "quote_pt_br": "Excelente serviço, Gustavo e Roseli tornaram a nossa hora do pequeno-almoço um verdadeiro prazer. O Paulinho também foi super prestativo. Obrigado! [original em inglês]",
+            "quote_original": "Excellent service, Gustavo and Roseli made our breakfast time a real pleasure. Paulinho was also super helpful. Thank you!",
+            "idioma_original": "inglês",
+            "autor": "Raquel Reynolds",
+            "rating": 5,
+            "data_relativa": "4 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Fiquei apenas alguns dias, mas tudo superou as minhas expectativas. O hotel era acolhedor e bem cuidado, e o serviço foi excelente. Um agradecimento especial ao Alejo por ser tão atencioso [original em inglês]",
+            "quote_original": "I only stayed a few days, but everything exceeded my expectations. The hotel was cozy and well-kept, and the service was outstanding. A special thanks to Alejo for being so attenti",
+            "idioma_original": "inglês",
+            "autor": "Julieta Díaz",
+            "rating": 5,
+            "data_relativa": "8 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Tive uma estadia incrível no Pestana Hotel! Desde o momento em que entrei, o serviço foi excepcional. O Alejo na recepção foi incrivelmente acolhedor, profissional e sempre pronto para [original em inglês]",
+            "quote_original": "I had an amazing stay at Pestana Hotel! From the moment I walked in, the service was exceptional. Alejo at the front desk was incredibly welcoming, professional, and always ready t",
+            "idioma_original": "inglês",
+            "autor": "Jonathan Pintos",
+            "rating": 5,
+            "data_relativa": "8 months ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Smart Fit - Shopping Estação",
+        "rating_geral": 4.3,
+        "num_avaliacoes": 2190,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "A academia é muito boa. No entanto, fazer exercícios durante a semana à tarde é muito desconfortável (lotado) [original em inglês]",
+            "quote_original": "The gym is really good. However, working out during the week in the afternoons is very uncomfortable (crowded)",
+            "idioma_original": "inglês",
+            "autor": "Carlos Alberto Castro Hoyos",
+            "rating": 4,
+            "data_relativa": "4 years ago",
+            "categoria_dor": "lotacao"
+          },
+          {
+            "quote_pt_br": "Boa academia de rede com funcionários que realmente tentam ajudar. O lado negativo é que sempre parece excessivamente movimentada. [original em inglês]",
+            "quote_original": "Good chain gym with staff that really try to help. It's downside is that it always seems overly busy.",
+            "idioma_original": "inglês",
+            "autor": "Paul Riley",
+            "rating": 5,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "lotacao"
+          },
+          {
+            "quote_pt_br": "Ok [original em inglês]",
+            "quote_original": "Ok",
+            "idioma_original": "inglês",
+            "autor": "Thiago Wendling",
+            "rating": 4,
+            "data_relativa": "2 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top.. [original em inglês]",
+            "quote_original": "Top..",
+            "idioma_original": "inglês",
+            "autor": "Andre Luis",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "é muito bom... [original em inglês]",
+            "quote_original": "it is very good...",
+            "idioma_original": "inglês",
+            "autor": "Wesley Felipe",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Smart Fit - Batel",
+        "rating_geral": 4.5,
+        "num_avaliacoes": 1768,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Eles pegam seu dinheiro mesmo quando estão fechados [original em inglês]",
+            "quote_original": "They take your money even when they are closed",
+            "idioma_original": "inglês",
+            "autor": "Ahmed Alkmeshi",
+            "rating": 2,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "contrato_abusivo"
+          },
+          {
+            "quote_pt_br": "SmartFit Completa! Gym + Box + Shape [original em inglês]",
+            "quote_original": "Full SmartFit! Gym + Box + Shape",
+            "idioma_original": "inglês",
+            "autor": "CXFit Consultoria - Vini Dias",
+            "rating": 5,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top 10 [original em inglês]",
+            "quote_original": "Top 10",
+            "idioma_original": "inglês",
+            "autor": "Neia Fonseca",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top top [original em inglês]",
+            "quote_original": "Top top",
+            "idioma_original": "inglês",
+            "autor": "MM fashionrj",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Bom lugar para treinar [original em inglês]",
+            "quote_original": "Nice place to workout",
+            "idioma_original": "inglês",
+            "autor": "Jean Pierre Rodríguez Guzmán",
+            "rating": 5,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Smart Fit - Água Verde",
+        "rating_geral": 4.5,
+        "num_avaliacoes": 1555,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Top! [original em inglês]",
+            "quote_original": "Top!",
+            "idioma_original": "inglês",
+            "autor": "Roberto Crancio Maciel",
+            "rating": 5,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top! [original em inglês]",
+            "quote_original": "Top!",
+            "idioma_original": "inglês",
+            "autor": "david silva",
+            "rating": 5,
+            "data_relativa": "7 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top! [original em inglês]",
+            "quote_original": "Top!",
+            "idioma_original": "inglês",
+            "autor": "Rodrigo Rocha",
+            "rating": 5,
+            "data_relativa": "7 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Topper 👏 [original em inglês]",
+            "quote_original": "Topper 👏",
+            "idioma_original": "inglês",
+            "autor": "Ton Teixeira",
+            "rating": 5,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top [original em inglês]",
+            "quote_original": "Top",
+            "idioma_original": "inglês",
+            "autor": "Godgrego30 Coach",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Smart Fit - Champagnat",
+        "rating_geral": 4.4,
+        "num_avaliacoes": 1366,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Limpo, acessível, mas a mentalidade da gerência no Peru é bastante limitada. Pedindo para um visitante ter seu passaporte quando a imigração do país permite que você entre no país [original em inglês]",
+            "quote_original": "Clean, affordable, but the management mentality in Peru is quite limited. Asking for a visitor to have their passport when the country’s immigration allow you to come into the coun",
+            "idioma_original": "inglês",
+            "autor": "JOAO PAULO MIRANDA",
+            "rating": 1,
+            "data_relativa": "a year ago",
+            "categoria_dor": "atendimento_ruim"
+          },
+          {
+            "quote_pt_br": "É uma boa academia, os equipamentos são todos novos e bons. No entanto, fica muito lotado à noite. Se puder, evite ir lá entre as 17h e 21h. [original em inglês]",
+            "quote_original": "It's a good gym, the equipment is all new and good. However, it's too crowded in the evening. If you can, avoid going there between 5-9pm.",
+            "idioma_original": "inglês",
+            "autor": "Adelar Rudi Lüdke Junior",
+            "rating": 4,
+            "data_relativa": "7 years ago",
+            "categoria_dor": "lotacao"
+          },
+          {
+            "quote_pt_br": "Academia incrível, muito espaço. Mas muita burocracia para conseguir um passe de um dia... [original em inglês]",
+            "quote_original": "Amazing gym, lots of space. But too much bureaucracy to get a one-day pass...",
+            "idioma_original": "inglês",
+            "autor": "Sebastian Perez",
+            "rating": 3,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "atendimento_ruim"
+          },
+          {
+            "quote_pt_br": "A melhor unidade Smart fit da cidade [original em inglês]",
+            "quote_original": "The best Smart fit unit in town",
+            "idioma_original": "inglês",
+            "autor": "mtakeguma",
+            "rating": 5,
+            "data_relativa": "a year ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "É um trabalho em andamento, eles precisam trabalhar nas suas habilidades interpessoais. [original em inglês]",
+            "quote_original": "It's a work in progress, they need to work on their people skills.",
+            "idioma_original": "inglês",
+            "autor": "Adriana A. C. Da Silva",
+            "rating": 2,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "atendimento_ruim"
+          }
+        ]
+      }
+    ],
+    "dores_dominantes": [],
+    "servicos_nao_oferecidos": [
+      "danca",
+      "lutas",
+      "vestiario",
+      "muay thai",
+      "spinning",
+      "sauna",
+      "personal trainer",
+      "natação"
+    ],
+    "distribuicao_geografica": [
+      {
+        "bairro": "Centro",
+        "count": 2,
+        "academias": [
+          "Pestana Curitiba",
+          "Academia Smart Fit - Shopping Estação"
+        ]
+      },
+      {
+        "bairro": "Água Verde",
+        "count": 2,
+        "academias": [
+          "Academia Smart Fit - Batel",
+          "Academia Smart Fit - Água Verde"
+        ]
+      },
+      {
+        "bairro": "Campina do Siqueira",
+        "count": 1,
+        "academias": [
+          "Academia Smart Fit - Champagnat"
+        ]
+      }
+    ],
+    "bairros_alternativos": [
+      {
+        "bairro": "Centro Expandido",
+        "motivo": "Alta densidade comercial e fluxo garantido",
+        "bairro_principal_busca": "Centro Expandido",
+        "concorrentes_no_bairro": 4,
+        "academias_existentes": [
+          "Br br br",
+          "Fazenda cifra",
+          "Maues Amazonas",
+          "Moviment"
+        ],
+        "status": "🔴 saturado",
+        "prioridade_ajustada": "BAIXA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      },
+      {
+        "bairro": "Bairros em expansão imobiliária recente",
+        "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada",
+        "bairro_principal_busca": "Bairros em expansão imobiliária recente",
+        "concorrentes_no_bairro": 4,
+        "academias_existentes": [
+          "Br br br",
+          "Fazenda cifra",
+          "Maues Amazonas",
+          "Moviment"
+        ],
+        "status": "🔴 saturado",
+        "prioridade_ajustada": "BAIXA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      }
+    ],
+    "aviso_geografico": null,
+    "cidade_efetiva": "",
+    "cidade_foi_corrigida": false,
+    "viabilidade_3_cenarios": {
+      "low": {
+        "alunos_break_even": 2125,
+        "alunos_pico_calculado": 196,
+        "alunos_projetados": 2200,
+        "capacidade_maxima_alunos": 550,
+        "capacidade_simultanea_pico": 550,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 63115.47,
+          "equipamentos": 402288,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 418.3,
+              "eixos": 5,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 2810.98,
+              "piso_total": 4888.89,
+              "retorno_vazio": true,
+              "rkm_carregado": 6.72,
+              "rkm_vazio": 4.36,
+              "tipo_carga": "geral",
+              "volta_vazia": 1823.79
+            },
+            "distancia_km": 418.3,
+            "eixos": 5,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 5866.67,
+            "frete_piso_antt": 4888.89,
+            "margem_broker_pct": 0.2,
+            "tipo_veiculo": "Carreta simples (5 eixos)"
+          },
+          "frete_equipamentos": 5866.67,
+          "obra_adaptacao": 200000,
+          "projeto_arquitetonico": 15000,
+          "total": 694270.14
+        },
+        "capex_estimado": 694270.14,
+        "capex_total": 694270.14,
+        "capital_giro": 538565.82,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 2000,
+          "aluguel": 106860,
+          "condominio": 16029,
+          "contabilidade": 1300,
+          "energia": 12000,
+          "folha": 18000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 3471.35,
+          "outros": 3718.26,
+          "seguro": 1388.54,
+          "sistema_gestao": 800
+        },
+        "custos_fixos": 168367.15,
+        "custos_fixos_total": 168367.15,
+        "custos_totais": 179521.94,
+        "descricao": "Modelo econômico 24h, sem personal, autoatendimento",
+        "exemplos_redes": "Smart Fit, Bluefit, Selfit",
+        "folga_capacidade_pct": 64.4,
+        "frequencia_semanal_aluno": 2.5,
+        "investimento_total": 1232835.96,
+        "justificativa": "Payback 192m inviável",
+        "lucro_mensal_estimado": 6391.26,
+        "margem_percentual": 3.4,
+        "marketing_mensal": 11154.79,
+        "marketing_pct_faturamento": 0.06,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 3,
+            "premissa": "Smart Fit top performers (>3.000 alunos/unidade)",
+            "valor": 3000
+          },
+          "conservador": {
+            "matr_por_m2": 1.5,
+            "premissa": "academia regional nova, 60% benchmark Smart Fit",
+            "valor": 1500
+          },
+          "realista": {
+            "matr_por_m2": 2.2,
+            "premissa": "benchmark Smart Fit/Bluefit/Selfit (ACAD 2024)",
+            "valor": 2200
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Low Cost",
+        "modelo_key": "low",
+        "payback_meses": 192,
+        "pico_share": 0.25,
+        "receita_mensal": 185913.2,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -11262.48,
+            "margem_percentual": -5.9,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -43433.48,
+            "margem_percentual": -32.7,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -16661.98,
+            "margem_percentual": -10.3,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.1,
+        "taxa_inadimplencia": 0.06,
+        "ticket_medio": 89.9,
+        "ticket_realizado_estimado": 84.51,
+        "tir_anual_pct": 0,
+        "viabilidade": "INVIAVEL",
+        "vpl_5_anos": -956367.22
+      },
+      "mid": {
+        "alunos_break_even": 1401,
+        "alunos_pico_calculado": 100,
+        "alunos_projetados": 1400,
+        "capacidade_maxima_alunos": 400,
+        "capacidade_simultanea_pico": 400,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 97889.67,
+          "equipamentos": 600030,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 418.3,
+              "eixos": 5,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 2810.98,
+              "piso_total": 4888.89,
+              "retorno_vazio": true,
+              "rkm_carregado": 6.72,
+              "rkm_vazio": 4.36,
+              "tipo_carga": "geral",
+              "volta_vazia": 1823.79
+            },
+            "distancia_km": 418.3,
+            "eixos": 5,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 5866.67,
+            "frete_piso_antt": 4888.89,
+            "margem_broker_pct": 0.2,
+            "tipo_veiculo": "Carreta simples (5 eixos)"
+          },
+          "frete_equipamentos": 5866.67,
+          "obra_adaptacao": 350000,
+          "projeto_arquitetonico": 15000,
+          "total": 1076786.34
+        },
+        "capex_estimado": 1076786.34,
+        "capex_total": 1076786.34,
+        "capital_giro": 604419.18,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 2000,
+          "aluguel": 106860,
+          "condominio": 16029,
+          "contabilidade": 1300,
+          "energia": 12000,
+          "folha": 32000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 5383.93,
+          "outros": 4029.31,
+          "seguro": 2153.57,
+          "sistema_gestao": 800
+        },
+        "custos_fixos": 185355.81,
+        "custos_fixos_total": 185355.81,
+        "custos_totais": 201473.06,
+        "descricao": "Modelo intermediário com aulas em grupo e suporte",
+        "exemplos_redes": "Bodytech entry, academias regionais premium",
+        "folga_capacidade_pct": 75,
+        "frequencia_semanal_aluno": 2,
+        "investimento_total": 1681205.52,
+        "justificativa": "Prejuízo mensal de R$ 7",
+        "lucro_mensal_estimado": -7.46,
+        "margem_percentual": 0,
+        "marketing_mensal": 16117.25,
+        "marketing_pct_faturamento": 0.08,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 1.8,
+            "premissa": "Bodytech entry top, mercado em expansão",
+            "valor": 1800
+          },
+          "conservador": {
+            "matr_por_m2": 1,
+            "premissa": "Bodytech entry sub-performante",
+            "valor": 1000
+          },
+          "realista": {
+            "matr_por_m2": 1.4,
+            "premissa": "Bodytech entry / regional premium consolidada",
+            "valor": 1400
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Mid Market",
+        "modelo_key": "mid",
+        "payback_meses": 999,
+        "pico_share": 0.25,
+        "receita_mensal": 201465.6,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -21379.46,
+            "margem_percentual": -10.6,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -55744.36,
+            "margem_percentual": -39.6,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -27809.71,
+            "margem_percentual": -16.2,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.07,
+        "taxa_inadimplencia": 0.04,
+        "ticket_medio": 149.9,
+        "ticket_realizado_estimado": 143.9,
+        "tir_anual_pct": null,
+        "viabilidade": "INVIAVEL",
+        "vpl_5_anos": -1681205.52
+      },
+      "premium": {
+        "alunos_break_even": 842,
+        "alunos_pico_calculado": 38,
+        "alunos_projetados": 600,
+        "capacidade_maxima_alunos": 250,
+        "capacidade_simultanea_pico": 250,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 241806.68,
+          "equipamentos": 1788648,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 418.3,
+              "eixos": 6,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 3091.24,
+              "piso_total": 5349.02,
+              "retorno_vazio": true,
+              "rkm_carregado": 7.39,
+              "rkm_vazio": 4.79,
+              "tipo_carga": "geral",
+              "volta_vazia": 2003.66
+            },
+            "distancia_km": 418.3,
+            "eixos": 6,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 6418.82,
+            "frete_piso_antt": 5349.02,
+            "margem_broker_pct": 0.2,
+            "tipo_veiculo": "Bitrem (6 eixos)"
+          },
+          "frete_equipamentos": 6418.82,
+          "obra_adaptacao": 600000,
+          "projeto_arquitetonico": 15000,
+          "total": 2659873.5
+        },
+        "capex_estimado": 2659873.5,
+        "capex_total": 2659873.5,
+        "capital_giro": 737909.79,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 2000,
+          "aluguel": 106860,
+          "condominio": 16029,
+          "contabilidade": 1300,
+          "energia": 18000,
+          "folha": 55000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 13299.37,
+          "outros": 3508.83,
+          "seguro": 5319.75,
+          "sistema_gestao": 800
+        },
+        "custos_fixos": 224916.95,
+        "custos_fixos_total": 224916.95,
+        "custos_totais": 245969.93,
+        "descricao": "Modelo completo com personal, nutrição e experiência",
+        "exemplos_redes": "Bodytech, Bio Ritmo, academias boutique",
+        "folga_capacidade_pct": 84.8,
+        "frequencia_semanal_aluno": 1.8,
+        "investimento_total": 3397783.29,
+        "justificativa": "Prejuízo mensal de R$ 70,528",
+        "lucro_mensal_estimado": -70528.43,
+        "margem_percentual": -40.2,
+        "marketing_mensal": 21052.98,
+        "marketing_pct_faturamento": 0.12,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 0.9,
+            "premissa": "premium em bairro de alta renda, alto perfil",
+            "valor": 900
+          },
+          "conservador": {
+            "matr_por_m2": 0.4,
+            "premissa": "boutique nicho, demanda local moderada",
+            "valor": 400
+          },
+          "realista": {
+            "matr_por_m2": 0.6,
+            "premissa": "Bodytech / Bio Ritmo média (~600 alunos/unidade)",
+            "valor": 600
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Premium",
+        "modelo_key": "premium",
+        "payback_meses": 999,
+        "pico_share": 0.25,
+        "receita_mensal": 175441.5,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -94275.64,
+            "margem_percentual": -54.6,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -118507.63,
+            "margem_percentual": -98,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -95705.63,
+            "margem_percentual": -65.2,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.04,
+        "taxa_inadimplencia": 0.025,
+        "ticket_medio": 299.9,
+        "ticket_realizado_estimado": 292.4,
+        "tir_anual_pct": null,
+        "viabilidade": "INVIAVEL",
+        "vpl_5_anos": -3397783.29
+      }
+    },
+    "modelo_recomendado": "Nenhum",
+    "aluguel_mensal": 106860.0,
+    "alertas_financeiros": [
+      "⚠️ Inviável — modelo não fecha conta em nenhum dos 3 cenários (payback de 192 a 999 meses).",
+      "⚠️ Aluguel compromete viabilidade: Custo de ocupação representa mais de 50% do faturamento projetado em todos os cenários, muito acima do benchmark sustentável de 15% (ACAD).",
+      "⚠️ Margem apertada, sem espaço pra imprevistos no cenário Low Cost (3.4%) e negativa nos demais."
+    ],
+    "posicionamento_recomendado": "Considerando a predominância de grandes redes e a identificação de dores relacionadas à lotação e atendimento, o posicionamento ideal para uma nova academia no Batel seria focar em um serviço premium e personalizado, com ambiente menos massificado. Há uma clara oportunidade para oferecer modalidades de dança, lutas (como Muay Thai) e natação, que não foram identificadas nos concorrentes diretos. A inclusão de um vestiário de alta qualidade e um serviço de personal trainer diferenciado também seriam pontos fortes, atraindo o público de maior poder aquisitivo do bairro Batel que busca exclusividade e conveniência.",
+    "contato_decisor": {
+      "tipo_ponto": "CONCESSIONARIA",
+      "decisor_identificado": "proprietário(a)",
+      "empresa": "N/A",
+      "telefone": "(41) 3029-9929",
+      "email": "N/A",
+      "whatsapp_link": "https://wa.me/554130299929?text=Ol%C3%A1%21%20Identificamos%20seu%20im%C3%B3vel%20como%20ponto%20estrat%C3%A9gico.",
+      "canal_recomendado": "LIGACAO",
+      "observacao_canal": "Proprietário marca local ou holding regional",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Honda Ecosul Motos — Av. do Batel, 1137 - Batel, Curitiba - PR, 80420-090, Brasil\n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em Av. do Batel, 1137 - Batel, Curitiba - PR, 80420-090, Brasil, região alvo, como um ponto com potencial excelente\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "nivel_confianca_contato": "ALTO",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Honda Ecosul Motos' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "top_candidato_referencia": {
+        "nome": "Honda Ecosul Motos",
+        "endereco": "Av. do Batel, 1137 - Batel, Curitiba - PR, 80420-090, Brasil",
+        "tipo_ponto": "CONCESSIONARIA",
+        "score_geoscout": 8
+      }
+    },
+    "market_context": {},
+    "cobertura_redes_a0": {
+      "redes_solicitadas": [],
+      "redes_cobertas": [],
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": [],
+      "tem_redes_fantasma": false
+    }
+  },
+  "metadata_execucao": {
+    "fonte_market_context": "",
+    "data_coleta_market_context": "",
+    "cached_market_context": null,
+    "redes_a0_solicitadas": [],
+    "schema_version": "1.5"
+  }
+}

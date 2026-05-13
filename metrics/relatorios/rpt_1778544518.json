@@ -1,0 +1,432 @@
+{
+  "id": "rpt_1778544518",
+  "tipo_relatorio": "prospeccao_academia",
+  "data_execucao": "2026-05-11T21:08:38",
+  "input_canonico": {
+    "cidade": "Curitiba",
+    "bairro": "Batel",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "tipo_negocio": "academia"
+  },
+  "output_consolidado": {
+    "veredito": "INVESTIGAR MAIS",
+    "score_bairro": 5.67,
+    "score_top1_candidato": 5.67,
+    "scores_regionais": {
+      "demografico": 10.0,
+      "competitivo": 7.0,
+      "viabilidade": 0.0
+    },
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 0.0,
+    "top_3_candidatos": [],
+    "competitors_set": [],
+    "dores_dominantes": [],
+    "servicos_nao_oferecidos": [],
+    "distribuicao_geografica": [],
+    "bairros_alternativos": [
+      {
+        "bairro": "Batel / Água Verde",
+        "motivo": "Alto poder aquisitivo, demanda premium",
+        "bairro_principal_busca": "Batel",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "fallback distribuicao_geografica (busca falhou: RuntimeError)"
+      },
+      {
+        "bairro": "Cabral / Juvevê",
+        "motivo": "Classe média consolidada",
+        "bairro_principal_busca": "Cabral",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "fallback distribuicao_geografica (busca falhou: RuntimeError)"
+      }
+    ],
+    "aviso_geografico": null,
+    "cidade_efetiva": "Curitiba",
+    "cidade_foi_corrigida": false,
+    "viabilidade_3_cenarios": {
+      "low": {
+        "modelo": "Low Cost",
+        "ticket_medio": 89.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 1875,
+            "matr_por_m2": 1.5,
+            "premissa": "academia regional nova, 60% benchmark Smart Fit"
+          },
+          "realista": {
+            "valor": 2750,
+            "matr_por_m2": 2.2,
+            "premissa": "benchmark Smart Fit/Bluefit/Selfit (ACAD 2024)"
+          },
+          "agressivo": {
+            "valor": 3750,
+            "matr_por_m2": 3,
+            "premissa": "Smart Fit top performers (>3.000 alunos/unidade)"
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "capacidade_simultanea_pico": 687,
+        "frequencia_semanal_aluno": 2.5,
+        "alunos_pico_calculado": 245,
+        "folga_capacidade_pct": 64.3,
+        "ticket_realizado_estimado": 84.51,
+        "taxa_inadimplencia": 0.06,
+        "taxa_cancelamento_mensal": 0.1,
+        "receita_mensal": 232391.5,
+        "custos_detalhados": {
+          "aluguel": 147240,
+          "condominio": 22086,
+          "iptu": 2000,
+          "energia": 15000,
+          "agua": 2500,
+          "internet": 800,
+          "folha": 18000,
+          "manutencao": 3745.6,
+          "contabilidade": 1300,
+          "sistema_gestao": 800,
+          "seguro": 1498.24,
+          "outros": 4647.83
+        },
+        "custos_fixos_total": 219617.67,
+        "marketing_pct_faturamento": 0.06,
+        "marketing_mensal": 13943.49,
+        "custos_totais": 233561.16,
+        "lucro_mensal_estimado": -1169.66,
+        "margem_percentual": -0.5,
+        "alunos_break_even": 2764,
+        "capex_detalhado": {
+          "equipamentos": 402288,
+          "obra_adaptacao": 250000,
+          "projeto_arquitetonico": 15000,
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 68101.77,
+          "total": 749119.49,
+          "frete_equipamentos": 5729.72
+        },
+        "capex_total": 749119.49,
+        "capital_giro_meses": 3,
+        "capital_giro": 700683.48,
+        "investimento_total": 1449802.97,
+        "payback_meses": 999,
+        "tir_anual_pct": null,
+        "vpl_5_anos": -1449802.97,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -25969.83,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -63531.71,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -29986.21,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "viabilidade": "INVIAVEL",
+        "justificativa": "Prejuízo mensal de R$ 1,170"
+      },
+      "mid": {
+        "modelo": "Mid Market",
+        "ticket_medio": 149.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 1250,
+            "matr_por_m2": 1,
+            "premissa": "Bodytech entry sub-performante"
+          },
+          "realista": {
+            "valor": 1750,
+            "matr_por_m2": 1.4,
+            "premissa": "Bodytech entry / regional premium consolidada"
+          },
+          "agressivo": {
+            "valor": 2250,
+            "matr_por_m2": 1.8,
+            "premissa": "Bodytech entry top, mercado em expansão"
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "capacidade_simultanea_pico": 500,
+        "frequencia_semanal_aluno": 2,
+        "alunos_pico_calculado": 125,
+        "folga_capacidade_pct": 75,
+        "ticket_realizado_estimado": 143.9,
+        "taxa_inadimplencia": 0.04,
+        "taxa_cancelamento_mensal": 0.07,
+        "receita_mensal": 251832,
+        "custos_detalhados": {
+          "aluguel": 147240,
+          "condominio": 22086,
+          "iptu": 2000,
+          "energia": 15000,
+          "agua": 2500,
+          "internet": 800,
+          "folha": 32000,
+          "manutencao": 5864.43,
+          "contabilidade": 1300,
+          "sistema_gestao": 800,
+          "seguro": 2345.77,
+          "outros": 5036.64
+        },
+        "custos_fixos_total": 236972.84,
+        "marketing_pct_faturamento": 0.08,
+        "marketing_mensal": 20146.56,
+        "custos_totais": 257119.4,
+        "lucro_mensal_estimado": -5287.4,
+        "margem_percentual": -2.1,
+        "alunos_break_even": 1787,
+        "capex_detalhado": {
+          "equipamentos": 600030,
+          "obra_adaptacao": 437500,
+          "projeto_arquitetonico": 15000,
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 106625.97,
+          "total": 1172885.69,
+          "frete_equipamentos": 5729.72
+        },
+        "capex_total": 1172885.69,
+        "capital_giro_meses": 3,
+        "capital_giro": 771358.2,
+        "investimento_total": 1944243.89,
+        "payback_meses": 999,
+        "tir_anual_pct": null,
+        "vpl_5_anos": -1944243.89,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -34735.4,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -74793.03,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -40040.22,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "viabilidade": "INVIAVEL",
+        "justificativa": "Prejuízo mensal de R$ 5,287"
+      },
+      "premium": {
+        "modelo": "Premium",
+        "ticket_medio": 299.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 500,
+            "matr_por_m2": 0.4,
+            "premissa": "boutique nicho, demanda local moderada"
+          },
+          "realista": {
+            "valor": 750,
+            "matr_por_m2": 0.6,
+            "premissa": "Bodytech / Bio Ritmo média (~600 alunos/unidade)"
+          },
+          "agressivo": {
+            "valor": 1125,
+            "matr_por_m2": 0.9,
+            "premissa": "premium em bairro de alta renda, alto perfil"
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "capacidade_simultanea_pico": 312,
+        "frequencia_semanal_aluno": 1.8,
+        "alunos_pico_calculado": 48,
+        "folga_capacidade_pct": 84.6,
+        "ticket_realizado_estimado": 292.4,
+        "taxa_inadimplencia": 0.025,
+        "taxa_cancelamento_mensal": 0.04,
+        "receita_mensal": 219301.87,
+        "custos_detalhados": {
+          "aluguel": 147240,
+          "condominio": 22086,
+          "iptu": 2000,
+          "energia": 22500,
+          "agua": 2500,
+          "internet": 800,
+          "folha": 55000,
+          "manutencao": 14123.54,
+          "contabilidade": 1300,
+          "sistema_gestao": 800,
+          "seguro": 5649.42,
+          "outros": 4386.04
+        },
+        "custos_fixos_total": 278385,
+        "marketing_pct_faturamento": 0.12,
+        "marketing_mensal": 26316.22,
+        "custos_totais": 304701.22,
+        "lucro_mensal_estimado": -85399.35,
+        "margem_percentual": -38.9,
+        "alunos_break_even": 1043,
+        "capex_detalhado": {
+          "equipamentos": 1788648,
+          "obra_adaptacao": 750000,
+          "projeto_arquitetonico": 15000,
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 256791.63,
+          "total": 2824707.91,
+          "frete_equipamentos": 6268.28
+        },
+        "capex_total": 2824707.91,
+        "capital_giro_meses": 3,
+        "capital_giro": 914103.66,
+        "investimento_total": 3738811.57,
+        "payback_meses": 999,
+        "tir_anual_pct": null,
+        "vpl_5_anos": -3738811.57,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -117816.36,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -145373.35,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -116870.86,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "viabilidade": "INVIAVEL",
+        "justificativa": "Prejuízo mensal de R$ 85,399"
+      }
+    },
+    "modelo_recomendado": "Nenhum",
+    "aluguel_mensal": 147240.0,
+    "alertas_financeiros": [
+      "⚠️ Inviável — modelo não fecha conta",
+      "⚠️ Aluguel compromete viabilidade",
+      "Payback > 60 meses"
+    ],
+    "posicionamento_recomendado": "Considerando a aparente ausência de concorrentes diretos identificados por esta busca no Batel, e o perfil do bairro com alta renda e população mais madura, recomenda-se um posicionamento premium. A oferta deve focar em conveniência, acompanhamento personalizado, tecnologia integrada e um ambiente que se diferencie de academias de massa, com modalidades que promovam bem-estar e saúde para diversas faixas etárias, inclusive programas adaptados para um público mais sênior e de alta exigência.",
+    "contato_decisor": {
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "decisor_identificado": "proprietário(a)",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "email": "N/A",
+      "whatsapp_link": "N/A",
+      "canal_recomendado": "WHATSAPP",
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Curitiba, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "nivel_confianca_contato": "BAIXO",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6
+      }
+    },
+    "market_context": {
+      "cidade": "Curitiba",
+      "bairro": "Batel",
+      "ticket_medio_mercado": "R$ 79,90 a R$ 250/mês",
+      "aluguel_medio_m2": "dados_nao_disponiveis",
+      "renda_media_bairro": "R$ 2.115",
+      "faixa_etaria_predominante": "idosos (60+), menor proporção de jovens (até 14)",
+      "genero_alvo": "misto",
+      "tamanho_preset": "m",
+      "tipo_negocio": "academia",
+      "principais_redes_concorrentes": [
+        "Smart Fit",
+        "Bluefit",
+        "WePlay Academia",
+        "Pantheon Academia",
+        "Tonus Gym"
+      ],
+      "tendencia_mercado": "crescimento",
+      "regulamentacao_resumo": "Alvará de Funcionamento da Prefeitura e registro no CREF9/PR são obrigatórios. Exige Alvará dos Bombeiros e Vigilância Sanitária.",
+      "insights_estrategicos": [
+        "O Batel é um bairro de alta renda com forte valorização imobiliária, indicando potencial para ticket médio elevado e foco em público premium.",
+        "A presença de diversas redes já estabelecidas e a expansão de outras grandes redes em Curitiba indicam um mercado competitivo, exigindo um diferencial claro para a nova academia.",
+        "A população mais envelhecida e a busca por modalidades diversas sugerem a inclusão de atividades com foco em bem-estar e saúde para todas as idades, além das tradicionais de alta intensidade."
+      ],
+      "fonte": "Deep Research Gemini",
+      "data_coleta": "2024-05-16",
+      "cached": false
+    },
+    "cobertura_redes_a0": {
+      "redes_solicitadas": [
+        "Smart Fit",
+        "Bluefit",
+        "WePlay Academia",
+        "Pantheon Academia",
+        "Tonus Gym"
+      ],
+      "redes_cobertas": [],
+      "redes_nao_encontradas": [
+        "Smart Fit",
+        "Bluefit",
+        "WePlay Academia",
+        "Pantheon Academia",
+        "Tonus Gym"
+      ],
+      "concorrentes_excluidos": [],
+      "tem_redes_fantasma": true
+    }
+  },
+  "metadata_execucao": {
+    "fonte_market_context": "Deep Research Gemini",
+    "data_coleta_market_context": "2024-05-16",
+    "cached_market_context": false,
+    "redes_a0_solicitadas": [
+      "Smart Fit",
+      "Bluefit",
+      "WePlay Academia",
+      "Pantheon Academia",
+      "Tonus Gym"
+    ],
+    "schema_version": "1.5"
+  }
+}

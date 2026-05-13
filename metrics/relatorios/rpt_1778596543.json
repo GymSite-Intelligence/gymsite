@@ -1,0 +1,946 @@
+{
+  "id": "rpt_1778596543",
+  "tipo_relatorio": "prospeccao_academia",
+  "data_execucao": "2026-05-12T11:35:43",
+  "input_canonico": {
+    "cidade": "Blumenau",
+    "bairro": "Velha",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "tipo_negocio": "academia"
+  },
+  "output_consolidado": {
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 6.58,
+    "score_top1_candidato": 6.44,
+    "scores_regionais": {
+      "demografico": 7.0,
+      "competitivo": 3.74,
+      "viabilidade": 9.0
+    },
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 4.66,
+    "top_3_candidatos": [
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1200,
+        "avenida_principal": false,
+        "business_status": "OPERATIONAL",
+        "endereco": "R. Gen. Osório, 1490 - Velha, Blumenau - SC, 89041-000, Brasil",
+        "estimativa_visibilidade": "média",
+        "horarios": [
+          "segunda-feira: 08:00 – 22:00",
+          "terça-feira: 08:00 – 22:00",
+          "quarta-feira: 08:00 – 22:00",
+          "quinta-feira: 08:00 – 22:00",
+          "sexta-feira: 08:00 – 22:00",
+          "sábado: 08:00 – 22:00",
+          "domingo: 08:00 – 21:00"
+        ],
+        "lat": -26.9139731,
+        "lng": -49.110220299999995,
+        "motivo": "Supermercado — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "Rede TOP - Velha",
+        "num_avaliacoes": 2039,
+        "place_id": "ChIJ97lJOLIe35QRaOeixyAhllg",
+        "polos_geradores": [
+          "UniBox Atacarejo - Água Verde 1.4km",
+          "Atacadão de Sorvetes Eskimó 1.8km",
+          "Komprão Koch Atacadista - Água Verde 2.2km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 4.2,
+        "score_ancoragem": 2,
+        "score_geoscout": 6,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-26.9139731,-49.110220299999995&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(47) 3038-4606",
+        "telefone_intl": "+55 47 3038-4606",
+        "tem_24h": false,
+        "tipos": [
+          "supermarket",
+          "grocery_store",
+          "food_store",
+          "store",
+          "food",
+          "point_of_interest",
+          "establishment"
+        ],
+        "website": "http://www.redetop.com.br/"
+      },
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1200,
+        "avenida_principal": false,
+        "business_status": "OPERATIONAL",
+        "endereco": "R. José Reuter, 961 - Velha Central, Blumenau - SC, 89046-000, Brasil",
+        "estimativa_visibilidade": "média",
+        "horarios": [
+          "segunda-feira: 08:00 – 22:00",
+          "terça-feira: 08:00 – 22:00",
+          "quarta-feira: 08:00 – 22:00",
+          "quinta-feira: 08:00 – 22:00",
+          "sexta-feira: 08:00 – 22:00",
+          "sábado: 08:00 – 22:00",
+          "domingo: 08:00 – 21:00"
+        ],
+        "lat": -26.9330623,
+        "lng": -49.13736910000001,
+        "motivo": "Supermercado — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "Rede TOP - Velha Central",
+        "num_avaliacoes": 2478,
+        "place_id": "ChIJ9w6-_fMb35QRWrC5K1LffcA",
+        "polos_geradores": [
+          "UniBox Atacarejo - Velha 661m",
+          "Atacadão da Manicure 1.0km",
+          "Komprão Koch Atacadista - Água Verde 2.5km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 4.2,
+        "score_ancoragem": 3,
+        "score_geoscout": 6,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-26.9330623,-49.13736910000001&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(47) 3212-7110",
+        "telefone_intl": "+55 47 3212-7110",
+        "tem_24h": false,
+        "tipos": [
+          "supermarket",
+          "grocery_store",
+          "food_store",
+          "store",
+          "food",
+          "point_of_interest",
+          "establishment"
+        ],
+        "website": "http://www.redetop.com.br/"
+      },
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1200,
+        "avenida_principal": false,
+        "business_status": "OPERATIONAL",
+        "endereco": "R. João Pessoa, 2920 - Velha, Blumenau - SC, 89036-256, Brasil",
+        "estimativa_visibilidade": "média",
+        "horarios": [
+          "segunda-feira: 07:30 – 21:00",
+          "terça-feira: 07:30 – 21:00",
+          "quarta-feira: 07:30 – 21:00",
+          "quinta-feira: 07:30 – 21:00",
+          "sexta-feira: 07:30 – 21:00",
+          "sábado: 07:30 – 18:00",
+          "domingo: 07:30 – 18:00"
+        ],
+        "lat": -26.9224869,
+        "lng": -49.0990732,
+        "motivo": "Supermercado — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "Supermercado Capri",
+        "num_avaliacoes": 445,
+        "place_id": "ChIJ8THLUksd35QRgMTyGHGd_mI",
+        "polos_geradores": [
+          "UniBox Atacarejo - Água Verde 1.2km",
+          "Sam's Club 2.0km",
+          "McDonald's 2.1km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 4.1,
+        "score_ancoragem": 1,
+        "score_geoscout": 6,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-26.9224869,-49.0990732&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(47) 3288-3594",
+        "telefone_intl": "+55 47 3288-3594",
+        "tem_24h": false,
+        "tipos": [
+          "supermarket",
+          "grocery_store",
+          "food_store",
+          "store",
+          "food",
+          "point_of_interest",
+          "establishment"
+        ],
+        "website": "https://www.facebook.com/capriblumenau?__cft__[0]=AZUq3MDvnx1JZPrh722aQ0moXciIzsxNnrutUS8Z8OSDw6xxBJpqMzyR3lqL2LCq9RJtPl5Kgf2ABRxhFHFW2tZAApZwl2m3xpCMexIOoPXhkw&__tn__=R]-R"
+      }
+    ],
+    "competitors_set": [
+      {
+        "nome": "CrossFit Blumenau",
+        "rating_geral": 4.7,
+        "num_avaliacoes": 119,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Instalações muito boas e ótimos treinadores",
+            "quote_original": "Very good facilities and great coaches",
+            "idioma_original": "inglês",
+            "autor": "Vladimir Moura",
+            "rating": 5,
+            "data_relativa": "7 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top!",
+            "quote_original": "Top!",
+            "idioma_original": "português",
+            "autor": "Mike",
+            "rating": 5,
+            "data_relativa": "4 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "💪🏻",
+            "quote_original": "💪🏻",
+            "idioma_original": "português",
+            "autor": "Matheus F Klauberg",
+            "rating": 4,
+            "data_relativa": "9 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Demorei muito tempo para relatar minha experiência na Crossfit Blumenau, mais finalmente chegou o dia..sempre fui um aluno que pagava minha mensalidade em dia, fiz um ano de Crossf",
+            "quote_original": "Demorei muito tempo para relatar minha experiência na Crossfit Blumenau, mais finalmente chegou o dia..sempre fui um aluno que pagava minha mensalidade em dia, fiz um ano de Crossf",
+            "idioma_original": "português",
+            "autor": "Bruno Rodrigues",
+            "rating": 1,
+            "data_relativa": "10 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Ótimo local para a prática de crossfit, com profissionais muito bem qualificados, sempre prezando pela qualidade antes da quantidade. #familia #cfblumenau #blumenau",
+            "quote_original": "Ótimo local para a prática de crossfit, com profissionais muito bem qualificados, sempre prezando pela qualidade antes da quantidade. #familia #cfblumenau #blumenau",
+            "idioma_original": "português",
+            "autor": "Dante Tomaselli dos Santos",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Force One Academia - Blumenau",
+        "rating_geral": 4.2,
+        "num_avaliacoes": 667,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Uau! Que pequeno. Não dá para treinar sem o suor dos outros pingando em você. As máquinas eram melhores que as da Smart Fit, mas não há como eu malhar lá. As pessoas...",
+            "quote_original": "Wow! Talk about small. You cant work out without other peoples sweat dripping on you. The machines were better than smart fit, but there is no way I could work out there. People w",
+            "idioma_original": "inglês",
+            "autor": "Puma",
+            "rating": 3,
+            "data_relativa": "a year ago",
+            "categoria_dor": "lotacao"
+          },
+          {
+            "quote_pt_br": "sempre muito lotado... super apertado, você tem que tomar cuidado para não acertar alguém ou ser atingido ao fazer seus exercícios",
+            "quote_original": "always way too crowded… super tight, u gotta watch out to not hit someone or being hit performing your exercises",
+            "idioma_original": "inglês",
+            "autor": "A320 heavy",
+            "rating": 3,
+            "data_relativa": "2 years ago",
+            "categoria_dor": "lotacao"
+          },
+          {
+            "quote_pt_br": "Top!!",
+            "quote_original": "Top!!",
+            "idioma_original": "português",
+            "autor": "ellen Daiane",
+            "rating": 5,
+            "data_relativa": "a year ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "top",
+            "quote_original": "top",
+            "idioma_original": "português",
+            "autor": "Gustavo Schorr Guarienti",
+            "rating": 5,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Show",
+            "quote_original": "Show",
+            "idioma_original": "português",
+            "autor": "beto teixeira",
+            "rating": 5,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Due FitClub - Vila Nova | Blumenau",
+        "rating_geral": 4.9,
+        "num_avaliacoes": 35,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Rogerio Pretel",
+            "rating": 5,
+            "data_relativa": "4 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Eu estava de passagem por Blumenau e fiz uma assinatura de academia de um mês. A equipe da recepção foi incrivelmente útil e deu excelentes conselhos (eles até me deixaram experimentar o primeiro dia de graça)",
+            "quote_original": "I was passing through Blumenau and got a one-month gym membership. The reception staff were incredibly helpful and provided excellent advice (they even let me try the first day for",
+            "idioma_original": "inglês",
+            "autor": "Joha Acha",
+            "rating": 5,
+            "data_relativa": "3 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Aqui encontrei tudo o que precisava: disponibilidade de horários, incluindo finais de semana, aulas de corrida e excelente suporte na musculação, além da diversidade de equipamento",
+            "quote_original": "Aqui encontrei tudo o que precisava: disponibilidade de horários, incluindo finais de semana, aulas de corrida e excelente suporte na musculação, além da diversidade de equipamento",
+            "idioma_original": "português",
+            "autor": "Nicolle Formento",
+            "rating": 5,
+            "data_relativa": "2 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Academia bonita por fora, mas falta qualidade no acompanhamento. Poucos professores para uma academia enorme e cheia. Daí os professores que tem, eles ficam parados no balcão de en",
+            "quote_original": "Academia bonita por fora, mas falta qualidade no acompanhamento. Poucos professores para uma academia enorme e cheia. Daí os professores que tem, eles ficam parados no balcão de en",
+            "idioma_original": "português",
+            "autor": "Jay",
+            "rating": 1,
+            "data_relativa": "2 months ago",
+            "categoria_dor": "atendimento_ruim"
+          },
+          {
+            "quote_pt_br": "Amo! Quase desisti qdo fui fazer a matrícula devido o mau atendimento na recepção. Estavam em horário de troca de turno e a garota só faltou me mandar embora de tanta má vontade. A",
+            "quote_original": "Amo! Quase desisti qdo fui fazer a matrícula devido o mau atendimento na recepção. Estavam em horário de troca de turno e a garota só faltou me mandar embora de tanta má vontade. A",
+            "idioma_original": "português",
+            "autor": "Gi P.",
+            "rating": 5,
+            "data_relativa": "5 months ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Energia",
+        "rating_geral": 4.7,
+        "num_avaliacoes": 304,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "I L",
+            "rating": 5,
+            "data_relativa": "2 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top!!!",
+            "quote_original": "Top!!!",
+            "idioma_original": "português",
+            "autor": "Curt barbearia estúdio tattoo",
+            "rating": 5,
+            "data_relativa": "4 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Aline Borba",
+            "rating": 5,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Melhor academia do bairro🤩🤩🤩. Excelentes professores. Estrutura ótima. A galera se ajuda bastante🎧🎧🎧. Aparelhos bem posicionados⚖️. Se algum da defeito, no outro dia já está arruma",
+            "quote_original": "Melhor academia do bairro🤩🤩🤩. Excelentes professores. Estrutura ótima. A galera se ajuda bastante🎧🎧🎧. Aparelhos bem posicionados⚖️. Se algum da defeito, no outro dia já está arruma",
+            "idioma_original": "português",
+            "autor": "Jonathan Negredo",
+            "rating": 5,
+            "data_relativa": "6 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Muito BOA! Fui bem atendida e os profissionais da Musculação sempre estão me ajudando e auxiliando, eles me explicam sobre os aparelhos e também como devo fazer os exercícios bem c",
+            "quote_original": "Muito BOA! Fui bem atendida e os profissionais da Musculação sempre estão me ajudando e auxiliando, eles me explicam sobre os aparelhos e também como devo fazer os exercícios bem c",
+            "idioma_original": "português",
+            "autor": "Jane Ethel",
+            "rating": 5,
+            "data_relativa": "6 months ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Physicus Academia",
+        "rating_geral": 4.8,
+        "num_avaliacoes": 237,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Cristian Stribel",
+            "rating": 5,
+            "data_relativa": "2 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Camila Garcia do Nascimento",
+            "rating": 5,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top 💪🦵🏋️‍♀️",
+            "quote_original": "Top 💪🦵🏋️‍♀️",
+            "idioma_original": "português",
+            "autor": "Fabiana Terezinha Gomes",
+            "rating": 5,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Luka bala",
+            "rating": 5,
+            "data_relativa": "4 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Joarez Machado",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      }
+    ],
+    "dores_dominantes": [],
+    "servicos_nao_oferecidos": [
+      "danca",
+      "funcional",
+      "avaliacao fisica",
+      "24 horas",
+      "plano mensal",
+      "vestiário",
+      "lutas",
+      "boxe"
+    ],
+    "distribuicao_geografica": [
+      {
+        "bairro": "Vila Nova",
+        "count": 2,
+        "academias": [
+          "CrossFit Blumenau",
+          "Academia Due FitClub - Vila Nova | Blumenau"
+        ]
+      },
+      {
+        "bairro": "Velha",
+        "count": 2,
+        "academias": [
+          "Academia Energia",
+          "Physicus Academia"
+        ]
+      },
+      {
+        "bairro": "Centro",
+        "count": 1,
+        "academias": [
+          "Force One Academia - Blumenau"
+        ]
+      }
+    ],
+    "bairros_alternativos": [
+      {
+        "bairro": "Centro Expandido",
+        "motivo": "Alta densidade comercial e fluxo garantido",
+        "bairro_principal_busca": "Centro Expandido",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      },
+      {
+        "bairro": "Bairros em expansão imobiliária recente",
+        "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada",
+        "bairro_principal_busca": "Bairros em expansão imobiliária recente",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      }
+    ],
+    "aviso_geografico": null,
+    "cidade_efetiva": "Blumenau",
+    "cidade_foi_corrigida": false,
+    "viabilidade_3_cenarios": {
+      "low": {
+        "alunos_break_even": 1578,
+        "alunos_pico_calculado": 196,
+        "alunos_projetados": 2200,
+        "capacidade_maxima_alunos": 550,
+        "capacidade_simultanea_pico": 550,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 63427.92,
+          "equipamentos": 402288,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 653.3,
+              "eixos": 5,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 4390.18,
+              "piso_total": 7492.69,
+              "retorno_vazio": true,
+              "rkm_carregado": 6.72,
+              "rkm_vazio": 4.36,
+              "tipo_carga": "geral",
+              "volta_vazia": 2848.39
+            },
+            "distancia_km": 653.3,
+            "eixos": 5,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 8991.23,
+            "frete_piso_antt": 7492.69,
+            "margem_broker_pct": 0.2,
+            "pct_do_capex_equipamentos": 2.2,
+            "tipo_veiculo": "Carreta simples (5 eixos)"
+          },
+          "frete_equipamentos": 8991.23,
+          "obra_adaptacao": 200000,
+          "projeto_arquitetonico": 15000,
+          "total": 697707.15
+        },
+        "capex_total": 697707.15,
+        "capital_giro": 399982.5,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 2000,
+          "aluguel": 66670,
+          "condominio": 10000.5,
+          "contabilidade": 1300,
+          "energia": 12000,
+          "folha": 18000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 3488.54,
+          "outros": 3718.26,
+          "seguro": 1395.41,
+          "sistema_gestao": 800
+        },
+        "custos_fixos_total": 122172.71,
+        "custos_totais": 133327.5,
+        "folga_capacidade_pct": 64.4,
+        "frequencia_semanal_aluno": 2.5,
+        "investimento_total": 1097689.65,
+        "justificativa": "Margem 28.3% + payback 20m",
+        "lucro_mensal_estimado": 52585.7,
+        "margem_percentual": 28.3,
+        "marketing_mensal": 11154.79,
+        "marketing_pct_faturamento": 0.06,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 3,
+            "premissa": "Smart Fit top performers (>3.000 alunos/unidade)",
+            "valor": 3000
+          },
+          "conservador": {
+            "matr_por_m2": 1.5,
+            "premissa": "academia regional nova, 60% benchmark Smart Fit",
+            "valor": 1500
+          },
+          "realista": {
+            "matr_por_m2": 2.2,
+            "premissa": "benchmark Smart Fit/Bluefit/Selfit (ACAD 2024)",
+            "valor": 2200
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Low Cost",
+        "payback_meses": 20,
+        "receita_mensal": 185913.2,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": 42969.96,
+            "margem_percentual": 22.6,
+            "payback_meses": 25,
+            "viabilidade": "ALTO"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": 2760.96,
+            "margem_percentual": 2.1,
+            "payback_meses": 397,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": 29532.46,
+            "margem_percentual": 18.3,
+            "payback_meses": 37,
+            "viabilidade": "MEDIO"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.1,
+        "taxa_inadimplencia": 0.06,
+        "ticket_medio": 89.9,
+        "ticket_realizado_estimado": 84.51,
+        "tir_anual_pct": 49.9,
+        "viabilidade": "ALTO",
+        "vpl_5_anos": 1177026.51
+      },
+      "mid": {
+        "alunos_break_even": 1080,
+        "alunos_pico_calculado": 100,
+        "alunos_projetados": 1400,
+        "capacidade_maxima_alunos": 400,
+        "capacidade_simultanea_pico": 400,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 98202.12,
+          "equipamentos": 600030,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 653.3,
+              "eixos": 5,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 4390.18,
+              "piso_total": 7492.69,
+              "retorno_vazio": true,
+              "rkm_carregado": 6.72,
+              "rkm_vazio": 4.36,
+              "tipo_carga": "geral",
+              "volta_vazia": 2848.39
+            },
+            "distancia_km": 653.3,
+            "eixos": 5,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 8991.23,
+            "frete_piso_antt": 7492.69,
+            "margem_broker_pct": 0.2,
+            "pct_do_capex_equipamentos": 1.5,
+            "tipo_veiculo": "Carreta simples (5 eixos)"
+          },
+          "frete_equipamentos": 8991.23,
+          "obra_adaptacao": 350000,
+          "projeto_arquitetonico": 15000,
+          "total": 1080223.35
+        },
+        "capex_total": 1080223.35,
+        "capital_giro": 465835.89,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 2000,
+          "aluguel": 66670,
+          "condominio": 10000.5,
+          "contabilidade": 1300,
+          "energia": 12000,
+          "folha": 32000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 5401.12,
+          "outros": 4029.31,
+          "seguro": 2160.45,
+          "sistema_gestao": 800
+        },
+        "custos_fixos_total": 139161.38,
+        "custos_totais": 155278.63,
+        "folga_capacidade_pct": 75,
+        "frequencia_semanal_aluno": 2,
+        "investimento_total": 1546059.24,
+        "justificativa": "Margem 22.9% + payback 33m",
+        "lucro_mensal_estimado": 46186.97,
+        "margem_percentual": 22.9,
+        "marketing_mensal": 16117.25,
+        "marketing_pct_faturamento": 0.08,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 1.8,
+            "premissa": "Bodytech entry top, mercado em expansão",
+            "valor": 1800
+          },
+          "conservador": {
+            "matr_por_m2": 1,
+            "premissa": "Bodytech entry sub-performante",
+            "valor": 1000
+          },
+          "realista": {
+            "matr_por_m2": 1.4,
+            "premissa": "Bodytech entry / regional premium consolidada",
+            "valor": 1400
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Mid Market",
+        "payback_meses": 33,
+        "receita_mensal": 201465.6,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": 32852.97,
+            "margem_percentual": 16.3,
+            "payback_meses": 47,
+            "viabilidade": "MEDIO"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -9549.93,
+            "margem_percentual": -6.8,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": 18384.72,
+            "margem_percentual": 10.7,
+            "payback_meses": 84,
+            "viabilidade": "BAIXO"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.07,
+        "taxa_inadimplencia": 0.04,
+        "ticket_medio": 149.9,
+        "ticket_realizado_estimado": 143.9,
+        "tir_anual_pct": 23.2,
+        "viabilidade": "ALTO",
+        "vpl_5_anos": 451865.04
+      },
+      "premium": {
+        "alunos_break_even": 684,
+        "alunos_pico_calculado": 38,
+        "alunos_projetados": 600,
+        "capacidade_maxima_alunos": 250,
+        "capacidade_simultanea_pico": 250,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 242150.16,
+          "equipamentos": 1788648,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 653.3,
+              "eixos": 6,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 4827.89,
+              "piso_total": 8211.32,
+              "retorno_vazio": true,
+              "rkm_carregado": 7.39,
+              "rkm_vazio": 4.79,
+              "tipo_carga": "geral",
+              "volta_vazia": 3129.31
+            },
+            "distancia_km": 653.3,
+            "eixos": 6,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 9853.58,
+            "frete_piso_antt": 8211.32,
+            "margem_broker_pct": 0.2,
+            "pct_do_capex_equipamentos": 0.6,
+            "tipo_veiculo": "Bitrem (6 eixos)"
+          },
+          "frete_equipamentos": 9853.58,
+          "obra_adaptacao": 600000,
+          "projeto_arquitetonico": 15000,
+          "total": 2663651.74
+        },
+        "capex_total": 2663651.74,
+        "capital_giro": 599333.61,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 2000,
+          "aluguel": 66670,
+          "condominio": 10000.5,
+          "contabilidade": 1300,
+          "energia": 18000,
+          "folha": 55000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 13318.26,
+          "outros": 3508.83,
+          "seguro": 5327.3,
+          "sistema_gestao": 800
+        },
+        "custos_fixos_total": 178724.89,
+        "custos_totais": 199777.87,
+        "folga_capacidade_pct": 84.8,
+        "frequencia_semanal_aluno": 1.8,
+        "investimento_total": 3262985.35,
+        "justificativa": "Prejuízo mensal de R$ 24,336",
+        "lucro_mensal_estimado": -24336.37,
+        "margem_percentual": -13.9,
+        "marketing_mensal": 21052.98,
+        "marketing_pct_faturamento": 0.12,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 0.9,
+            "premissa": "premium em bairro de alta renda, alto perfil",
+            "valor": 900
+          },
+          "conservador": {
+            "matr_por_m2": 0.4,
+            "premissa": "boutique nicho, demanda local moderada",
+            "valor": 400
+          },
+          "realista": {
+            "matr_por_m2": 0.6,
+            "premissa": "Bodytech / Bio Ritmo média (~600 alunos/unidade)",
+            "valor": 600
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Premium",
+        "payback_meses": 999,
+        "receita_mensal": 175441.5,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -40045.58,
+            "margem_percentual": -23.2,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -72315.57,
+            "margem_percentual": -59.8,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -49513.57,
+            "margem_percentual": -33.7,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.04,
+        "taxa_inadimplencia": 0.025,
+        "ticket_medio": 299.9,
+        "ticket_realizado_estimado": 292.4,
+        "tir_anual_pct": null,
+        "viabilidade": "INVIAVEL",
+        "vpl_5_anos": -3262985.35
+      }
+    },
+    "modelo_recomendado": "Low Cost",
+    "aluguel_mensal": 66670.0,
+    "alertas_financeiros": [
+      "⚠️ Aluguel compromete viabilidade: O custo do aluguel (R$ 66.670,00) representa 35.8% da receita projetada no cenário Low Cost, bem acima do benchmark de 15% recomendado pela ACAD, pressionando a margem operacional.",
+      "⚠️ Modelo só funciona com execução no benchmark Smart Fit; abaixo disso, prejuízo: O teste de sensibilidade indica que uma queda de 30% nas matrículas torna a operação inviável, exigindo alta performance na aquisição e retenção de alunos."
+    ],
+    "posicionamento_recomendado": "Aproveitar a baixa saturação do mercado na Velha, Blumenau, posicionando-se como uma academia moderna e completa que oferece serviços como dança, treinamento funcional e avaliações físicas detalhadas, suprindo as lacunas identificadas nos concorrentes. Deve-se focar em um ambiente com espaço adequado para evitar a superlotação percebida em outras academias e manter um alto padrão de atendimento e instalações, condizente com a alta média de avaliação dos estabelecimentos locais.",
+    "contato_decisor": {},
+    "market_context": {
+      "cidade": "Blumenau",
+      "bairro": "Velha",
+      "ticket_medio_mercado": "R$ 70 a R$ 200/mês",
+      "aluguel_medio_m2": "R$ 22 a R$ 66,67/m²",
+      "renda_media_bairro": "dados_nao_disponiveis",
+      "faixa_etaria_predominante": "dados_nao_disponiveis",
+      "genero_alvo": "misto",
+      "tamanho_preset": "m",
+      "tipo_negocio": "academia",
+      "principais_redes_concorrentes": [
+        "Smart Fit",
+        "CrossFit Blumenau",
+        "Force One",
+        "Due FitClub",
+        "Skyfit Academias"
+      ],
+      "tendencia_mercado": "crescimento",
+      "regulamentacao_resumo": "Academias devem ter responsável técnico e instrutores registrados no CREF-SC; observar Leis nº 10.361/97 e 3.150/98, e fiscalização da Vigilância Sanitária.",
+      "insights_estrategicos": [
+        "Considerar a forte presença do CrossFit na cidade e no estado, avaliando a possibilidade de incorporar elementos ou ter um posicionamento que dialogue com essa modalidade.",
+        "Apesar da renda média do bairro não estar disponível, a cidade de Blumenau possui uma renda média domiciliar considerável, o que pode indicar um público com poder aquisitivo para serviços fitness.",
+        "O bairro Velha apresentou crescimento populacional notável, especialmente na Velha Central, indicando um mercado em expansão e potencial de clientes."
+      ],
+      "fonte": "Deep Research Gemini",
+      "data_coleta": "2024-06-25",
+      "cached": false
+    },
+    "cobertura_redes_a0": {
+      "redes_solicitadas": [
+        "Smart Fit",
+        "CrossFit Blumenau",
+        "Force One",
+        "Due FitClub",
+        "Skyfit Academias"
+      ],
+      "redes_cobertas": [
+        "CrossFit Blumenau",
+        "Force One",
+        "Due FitClub"
+      ],
+      "redes_nao_encontradas": [
+        "Smart Fit",
+        "Skyfit Academias"
+      ],
+      "concorrentes_excluidos": [],
+      "tem_redes_fantasma": true
+    }
+  },
+  "metadata_execucao": {
+    "fonte_market_context": "Deep Research Gemini",
+    "data_coleta_market_context": "2024-06-25",
+    "cached_market_context": false,
+    "redes_a0_solicitadas": [
+      "Smart Fit",
+      "CrossFit Blumenau",
+      "Force One",
+      "Due FitClub",
+      "Skyfit Academias"
+    ],
+    "schema_version": "1.5"
+  }
+}

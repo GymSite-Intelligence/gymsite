@@ -1,0 +1,826 @@
+{
+  "id": "rpt_1778604273",
+  "tipo_relatorio": "prospeccao_academia",
+  "data_execucao": "2026-05-12T13:44:33",
+  "input_canonico": {
+    "cidade": "",
+    "bairro": "",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "tipo_negocio": "academia"
+  },
+  "output_consolidado": {
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 7.8,
+    "score_top1_candidato": 7.85,
+    "scores_regionais": {
+      "demografico": 10.0,
+      "competitivo": 3.91,
+      "viabilidade": 9.5
+    },
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 4.43,
+    "top_3_candidatos": [
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1200,
+        "avenida_principal": true,
+        "business_status": "OPERATIONAL",
+        "endereco": "Av. Central Ewerton Xavier, 115 - Itaipu, Niterói - RJ, 24340-105, Brasil",
+        "estimativa_visibilidade": "alta",
+        "horarios": [
+          "segunda-feira: 07:00 – 21:30",
+          "terça-feira: 07:00 – 21:30",
+          "quarta-feira: 07:00 – 21:30",
+          "quinta-feira: 07:00 – 21:30",
+          "sexta-feira: 07:00 – 21:30",
+          "sábado: 07:00 – 21:30",
+          "domingo: 07:00 – 19:00"
+        ],
+        "lat": -22.942890400000003,
+        "lng": -43.0298655,
+        "motivo": "Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "Supermarket Itaipú",
+        "num_avaliacoes": 2526,
+        "place_id": "ChIJ42lEHEmHmQARLokqGNWlvgE",
+        "polos_geradores": [
+          "Rede Economia. 302m",
+          "Atacadão Saara 674m",
+          "Atacadão do construtor 1.4km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 3.8,
+        "score_ancoragem": 6,
+        "score_geoscout": 8,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.942890400000003,-43.0298655&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(21) 2584-1572",
+        "telefone_intl": "+55 21 2584-1572",
+        "tem_24h": false,
+        "tipos": [
+          "supermarket",
+          "grocery_store",
+          "food_store",
+          "store",
+          "point_of_interest",
+          "food",
+          "establishment"
+        ],
+        "website": "https://www.redesupermarket.com.br/"
+      },
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1200,
+        "avenida_principal": true,
+        "business_status": "OPERATIONAL",
+        "endereco": "Av. Central Ewerton Xavier, 1635 - Maravista, Niterói - RJ, 24330-285, Brasil",
+        "estimativa_visibilidade": "alta",
+        "horarios": [
+          "segunda-feira: 07:00 – 21:30",
+          "terça-feira: 07:00 – 21:30",
+          "quarta-feira: 07:00 – 21:30",
+          "quinta-feira: 07:00 – 21:30",
+          "sexta-feira: 07:00 – 21:30",
+          "sábado: 07:00 – 21:30",
+          "domingo: 07:00 – 20:00"
+        ],
+        "lat": -22.944789099999998,
+        "lng": -43.0312564,
+        "motivo": "Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "Real Supermercados",
+        "num_avaliacoes": 3058,
+        "place_id": "ChIJhXmR0_2FmQARayov0sxZ2bE",
+        "polos_geradores": [
+          "Rede Economia. 556m",
+          "Atacadão Saara 929m",
+          "Atacadão do construtor 1.6km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 4.4,
+        "score_ancoragem": 5,
+        "score_geoscout": 7,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.944789099999998,-43.0312564&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(21) 2608-1291",
+        "telefone_intl": "+55 21 2608-1291",
+        "tem_24h": false,
+        "tipos": [
+          "grocery_store",
+          "supermarket",
+          "liquor_store",
+          "food_store",
+          "store",
+          "point_of_interest",
+          "food",
+          "establishment"
+        ],
+        "website": "https://www.supermercadosreal.com.br/"
+      },
+      {
+        "aberto_agora": true,
+        "area_estimada_m2": 1200,
+        "avenida_principal": true,
+        "business_status": "OPERATIONAL",
+        "endereco": "Av. Central Ewerton Xavier - Itaipu, Niterói - RJ, 24340-105, Brasil",
+        "estimativa_visibilidade": "alta",
+        "horarios": [
+          "segunda-feira: 07:00 – 20:00",
+          "terça-feira: 07:00 – 20:00",
+          "quarta-feira: 07:00 – 20:00",
+          "quinta-feira: 07:00 – 20:00",
+          "sexta-feira: 07:00 – 20:00",
+          "sábado: 07:00 – 20:00",
+          "domingo: 07:30 – 14:00"
+        ],
+        "lat": -22.9373914,
+        "lng": -43.0260088,
+        "motivo": "Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "SUPERMERCADO GOLDEN MARKET",
+        "num_avaliacoes": 15,
+        "place_id": "ChIJ49hpXQCFmQARA4thC5wsBew",
+        "polos_geradores": [
+          "Atacadão Saara 62m",
+          "Rede Economia. 430m",
+          "Atacadão do construtor 677m"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "rating": 4.8,
+        "score_ancoragem": 9,
+        "score_geoscout": 7,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.9373914,-43.0260088&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "telefone": "(21) 99058-7846",
+        "telefone_intl": "+55 21 99058-7846",
+        "tem_24h": false,
+        "tipos": [
+          "supermarket",
+          "convenience_store",
+          "grocery_store",
+          "market",
+          "food_store",
+          "store",
+          "point_of_interest",
+          "food",
+          "establishment"
+        ],
+        "website": "https://golden-market-8bigo5u.gamma.site/"
+      }
+    ],
+    "competitors_set": [
+      {
+        "nome": "Academia New Shape - Em Itaipu Niterói",
+        "rating_geral": 4.8,
+        "num_avaliacoes": 430,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Show",
+            "quote_original": "Show",
+            "idioma_original": "português",
+            "autor": "Michelle Coelho",
+            "rating": 5,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Treinar na Academia NewShape tem sido uma experiência incrível! Ambiente super organizado, aparelhos modernos, limpeza impecável e uma equipe de profissionais atenciosos e preparad",
+            "quote_original": "Treinar na Academia NewShape tem sido uma experiência incrível! Ambiente super organizado, aparelhos modernos, limpeza impecável e uma equipe de profissionais atenciosos e preparad",
+            "idioma_original": "português",
+            "autor": "cleyton cavalcante",
+            "rating": 5,
+            "data_relativa": "9 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Ter vivido uma boa experiência em uma academia vai muito além dos resultados físicos. Desde os primeiros dias, o ambiente acolhedor e o apoio dos profissionais fizeram toda a difer",
+            "quote_original": "Ter vivido uma boa experiência em uma academia vai muito além dos resultados físicos. Desde os primeiros dias, o ambiente acolhedor e o apoio dos profissionais fizeram toda a difer",
+            "idioma_original": "português",
+            "autor": "Larissa Pereira",
+            "rating": 5,
+            "data_relativa": "3 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Sou tão satisfeita com a academia e o astral que há dentro dela que fui e voltei duas vezes por mudança de moradia/trabalho! Amo as aulas da professora Jess de Fitdance, amo dançar",
+            "quote_original": "Sou tão satisfeita com a academia e o astral que há dentro dela que fui e voltei duas vezes por mudança de moradia/trabalho! Amo as aulas da professora Jess de Fitdance, amo dançar",
+            "idioma_original": "português",
+            "autor": "Andressa Soares",
+            "rating": 5,
+            "data_relativa": "10 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Todos são muito atenciosos e nos incentivam a fazer exercícios, sempre com segurança. Tem vários equipamentos disponíveis.",
+            "quote_original": "Todos são muito atenciosos e nos incentivam a fazer exercícios, sempre com segurança. Tem vários equipamentos disponíveis.",
+            "idioma_original": "português",
+            "autor": "Márcia Rodrigues de Sousa",
+            "rating": 5,
+            "data_relativa": "5 months ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Halternativa Itaipu",
+        "rating_geral": 4.0,
+        "num_avaliacoes": 405,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Se você está procurando uma academia que realmente tem de tudo – desde equipamentos que fazem você se sentir como um hamster correndo (correndo no lugar, alguém?) até máquinas que facilmente",
+            "quote_original": "If you're looking for a fitness center that truly has it all – from equipment that makes you feel like a hamster on speed (running in place, anyone?) to machines that could easily",
+            "idioma_original": "inglês",
+            "autor": "Ulf R",
+            "rating": 5,
+            "data_relativa": "a year ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top.",
+            "quote_original": "Top.",
+            "idioma_original": "português",
+            "autor": "Helena Elias",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Normal",
+            "quote_original": "Normal",
+            "idioma_original": "português",
+            "autor": "Luciana Rodrigues",
+            "rating": 2,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Show",
+            "quote_original": "Show",
+            "idioma_original": "português",
+            "autor": "Bambu E Parquinhos rj Búzios",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top!",
+            "quote_original": "Top!",
+            "idioma_original": "português",
+            "autor": "Beatriz Rodrigues",
+            "rating": 5,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Best Fitness",
+        "rating_geral": 4.5,
+        "num_avaliacoes": 314,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Funcionários super amigáveis. Os equipamentos poderiam ser atualizados, mas isso é muito caro no Brasil.",
+            "quote_original": "Super friendly staff. The equipment could use updated but that is very expensive in Brazil.",
+            "idioma_original": "inglês",
+            "autor": "Michael",
+            "rating": 4,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "estrutura_envelhecida"
+          },
+          {
+            "quote_pt_br": "Top!!",
+            "quote_original": "Top!!",
+            "idioma_original": "português",
+            "autor": "Beto Lemos Broker",
+            "rating": 5,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Ok",
+            "quote_original": "Ok",
+            "idioma_original": "português",
+            "autor": "Caroline Glatthardt dos Santos Gomes",
+            "rating": 4,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Academia Top!",
+            "quote_original": "Academia Top!",
+            "idioma_original": "português",
+            "autor": "Trilhas e Diafragma",
+            "rating": 5,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Academia top",
+            "quote_original": "Academia top",
+            "idioma_original": "português",
+            "autor": "Igor Lima",
+            "rating": 5,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Body Intensity Academia - Itaipu",
+        "rating_geral": 0.0,
+        "num_avaliacoes": 0,
+        "reviews_traduzidas": []
+      }
+    ],
+    "dores_dominantes": [],
+    "servicos_nao_oferecidos": [
+      "24h",
+      "natacao",
+      "avaliacao fisica",
+      "jiu-jitsu",
+      "avaliação física",
+      "24 horas",
+      "area kids",
+      "plano mensal"
+    ],
+    "distribuicao_geografica": [
+      {
+        "bairro": "Itaipu",
+        "count": 3,
+        "academias": [
+          "Academia New Shape - Em Itaipu Niterói",
+          "Academia Halternativa Itaipu",
+          "Body Intensity Academia - Itaipu"
+        ]
+      },
+      {
+        "bairro": "Av. Central Ewerton Xavier - Itaipu",
+        "count": 1,
+        "academias": [
+          "Academia Best Fitness"
+        ]
+      }
+    ],
+    "bairros_alternativos": [
+      {
+        "bairro": "Centro Expandido",
+        "motivo": "Alta densidade comercial e fluxo garantido",
+        "bairro_principal_busca": "Centro Expandido",
+        "concorrentes_no_bairro": 4,
+        "academias_existentes": [
+          "Br br br",
+          "Fazenda cifra",
+          "Maues Amazonas",
+          "Moviment"
+        ],
+        "status": "🔴 saturado",
+        "prioridade_ajustada": "BAIXA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      },
+      {
+        "bairro": "Bairros em expansão imobiliária recente",
+        "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada",
+        "bairro_principal_busca": "Bairros em expansão imobiliária recente",
+        "concorrentes_no_bairro": 4,
+        "academias_existentes": [
+          "Br br br",
+          "Fazenda cifra",
+          "Maues Amazonas",
+          "Moviment"
+        ],
+        "status": "🔴 saturado",
+        "prioridade_ajustada": "BAIXA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      }
+    ],
+    "aviso_geografico": null,
+    "cidade_efetiva": "",
+    "cidade_foi_corrigida": false,
+    "viabilidade_3_cenarios": {
+      "low": {
+        "alunos_break_even": 813,
+        "alunos_pico_calculado": 117,
+        "alunos_projetados": 1320,
+        "capacidade_maxima_alunos": 330,
+        "capacidade_simultanea_pico": 330,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 34324.93,
+          "equipamentos": 194608,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 454.7,
+              "eixos": 4,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 2696.37,
+              "piso_total": 4701.1,
+              "retorno_vazio": true,
+              "rkm_carregado": 5.93,
+              "rkm_vazio": 3.85,
+              "tipo_carga": "geral",
+              "volta_vazia": 1750.6
+            },
+            "distancia_km": 454.7,
+            "eixos": 4,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 5641.32,
+            "frete_piso_antt": 4701.1,
+            "margem_broker_pct": 0.2,
+            "pct_do_capex_equipamentos": 2.9,
+            "tipo_veiculo": "Truck 4 eixos"
+          },
+          "frete_equipamentos": 5641.32,
+          "obra_adaptacao": 120000,
+          "projeto_arquitetonico": 15000,
+          "total": 377574.25
+        },
+        "capex_total": 377574.25,
+        "capital_giro": 206255.34,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 1200,
+          "aluguel": 22500,
+          "condominio": 3375,
+          "contabilidade": 1300,
+          "energia": 7200,
+          "folha": 18000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 1887.87,
+          "outros": 2233.44,
+          "seguro": 755.15,
+          "sistema_gestao": 800
+        },
+        "custos_fixos_total": 62051.46,
+        "custos_totais": 68751.78,
+        "frequencia_semanal_aluno": 2.5,
+        "investimento_total": 583829.59,
+        "justificativa": "Margem 38.4% + payback 13m",
+        "lucro_mensal_estimado": 42920.22,
+        "margem_percentual": 38.4,
+        "marketing_mensal": 6700.32,
+        "marketing_pct_faturamento": 0.06,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 3,
+            "premissa": "Smart Fit top performers (>3.000 alunos/unidade)",
+            "valor": 1800
+          },
+          "conservador": {
+            "matr_por_m2": 1.5,
+            "premissa": "academia regional nova, 60% benchmark Smart Fit",
+            "valor": 900
+          },
+          "realista": {
+            "matr_por_m2": 2.2,
+            "premissa": "benchmark Smart Fit/Bluefit/Selfit (ACAD 2024)",
+            "valor": 1320
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Low Cost",
+        "payback_meses": 13,
+        "receita_mensal": 111672,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": 40653.66,
+            "payback_meses": 14,
+            "viabilidade": "ALTO"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": 12910.91,
+            "payback_meses": 45,
+            "viabilidade": "MEDIO"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": 29072.89,
+            "payback_meses": 20,
+            "viabilidade": "ALTO"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.1,
+        "taxa_inadimplencia": 0.06,
+        "ticket_medio": 90,
+        "ticket_realizado_estimado": 84.6,
+        "tir_anual_pct": 84,
+        "viabilidade": "ALTO",
+        "vpl_5_anos": 1272783.86
+      },
+      "mid": {
+        "alunos_break_even": 619,
+        "alunos_pico_calculado": 60,
+        "alunos_projetados": 840,
+        "capacidade_maxima_alunos": 240,
+        "capacidade_simultanea_pico": 240,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 64163.87,
+          "equipamentos": 402288,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 454.7,
+              "eixos": 5,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 3055.58,
+              "piso_total": 5292.21,
+              "retorno_vazio": true,
+              "rkm_carregado": 6.72,
+              "rkm_vazio": 4.36,
+              "tipo_carga": "geral",
+              "volta_vazia": 1982.49
+            },
+            "distancia_km": 454.7,
+            "eixos": 5,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 6350.65,
+            "frete_piso_antt": 5292.21,
+            "margem_broker_pct": 0.2,
+            "pct_do_capex_equipamentos": 1.6,
+            "tipo_veiculo": "Carreta simples (5 eixos)"
+          },
+          "frete_equipamentos": 6350.65,
+          "obra_adaptacao": 210000,
+          "projeto_arquitetonico": 15000,
+          "total": 705802.52
+        },
+        "capex_total": 705802.52,
+        "capital_giro": 264256.86,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 1200,
+          "aluguel": 22500,
+          "condominio": 3375,
+          "contabilidade": 1300,
+          "energia": 7200,
+          "folha": 32000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 3529.01,
+          "outros": 2394,
+          "seguro": 1411.61,
+          "sistema_gestao": 800
+        },
+        "custos_fixos_total": 78509.62,
+        "custos_totais": 88085.62,
+        "frequencia_semanal_aluno": 2,
+        "investimento_total": 970059.38,
+        "justificativa": "Margem 26.4% + payback 30m",
+        "lucro_mensal_estimado": 31614.38,
+        "margem_percentual": 26.4,
+        "marketing_mensal": 9576,
+        "marketing_pct_faturamento": 0.08,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 1.8,
+            "premissa": "Bodytech entry top, mercado em expansão",
+            "valor": 1080
+          },
+          "conservador": {
+            "matr_por_m2": 1,
+            "premissa": "Bodytech entry sub-performante",
+            "valor": 600
+          },
+          "realista": {
+            "matr_por_m2": 1.4,
+            "premissa": "Bodytech entry / regional premium consolidada",
+            "valor": 840
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Mid Market",
+        "payback_meses": 30,
+        "receita_mensal": 119700,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": 28273.58,
+            "payback_meses": 34,
+            "viabilidade": "ALTO"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -611.38,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": 16081.1,
+            "payback_meses": 60,
+            "viabilidade": "MEDIO"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.07,
+        "taxa_inadimplencia": 0.05,
+        "ticket_medio": 150,
+        "ticket_realizado_estimado": 142.5,
+        "tir_anual_pct": 27.5,
+        "viabilidade": "ALTO",
+        "vpl_5_anos": 397493.8
+      },
+      "premium": {
+        "alunos_break_even": 490,
+        "alunos_pico_calculado": 23,
+        "alunos_projetados": 360,
+        "capacidade_maxima_alunos": 150,
+        "capacidade_simultanea_pico": 150,
+        "capex_detalhado": {
+          "alvara_e_taxas": 8000,
+          "contingencia_pct": 0.1,
+          "contingencia_valor": 98938.07,
+          "equipamentos": 600030,
+          "fonte_equipamentos": "kit detalhado v1.5",
+          "fonte_frete": "ANTT 6.034/2024 + margem broker",
+          "frete_detalhes": {
+            "aviso": "Frete estimado: piso ANTT + 20% margem típica de broker. Cotação real pode variar conforme volume, sazonalidade e roteiro. Para cotação executiva, consultar Vectra Cargo (especializada em frete fitness no Brasil).",
+            "breakdown_antt": {
+              "aviso": "Piso MÍNIMO legal. Brokers de frete fitness (Vectra Cargo, JadLog) cobram margem sobre este valor — espere 15-30% acima.",
+              "carga_descarga": 254.13,
+              "distancia_km": 454.7,
+              "eixos": 5,
+              "fonte": "Piso mínimo Resolução ANTT 6.034/2024",
+              "ida_carregado": 3055.58,
+              "piso_total": 5292.21,
+              "retorno_vazio": true,
+              "rkm_carregado": 6.72,
+              "rkm_vazio": 4.36,
+              "tipo_carga": "geral",
+              "volta_vazia": 1982.49
+            },
+            "distancia_km": 454.7,
+            "eixos": 5,
+            "fonte": "Resolução ANTT 6.034/2024 + margem broker fitness",
+            "fonte_distancia": "cache",
+            "fornecedor_principal": "default",
+            "frete_estimado_real": 6350.65,
+            "frete_piso_antt": 5292.21,
+            "margem_broker_pct": 0.2,
+            "pct_do_capex_equipamentos": 1.1,
+            "tipo_veiculo": "Carreta simples (5 eixos)"
+          },
+          "frete_equipamentos": 6350.65,
+          "obra_adaptacao": 360000,
+          "projeto_arquitetonico": 15000,
+          "total": 1088318.72
+        },
+        "capex_total": 1088318.72,
+        "capital_giro": 352467.69,
+        "capital_giro_meses": 3,
+        "custos_detalhados": {
+          "agua": 1200,
+          "aluguel": 22500,
+          "condominio": 3375,
+          "contabilidade": 1300,
+          "energia": 10800,
+          "folha": 55000,
+          "internet": 800,
+          "iptu": 2000,
+          "manutencao": 5441.59,
+          "outros": 1728,
+          "seguro": 2176.64,
+          "sistema_gestao": 800
+        },
+        "custos_fixos_total": 107121.23,
+        "custos_totais": 117489.23,
+        "frequencia_semanal_aluno": 1.8,
+        "investimento_total": 1440786.41,
+        "justificativa": "Prejuízo mensal de R$ 31,089",
+        "lucro_mensal_estimado": -31089.23,
+        "margem_percentual": -36,
+        "marketing_mensal": 10368,
+        "marketing_pct_faturamento": 0.12,
+        "matriculas": {
+          "agressivo": {
+            "matr_por_m2": 0.9,
+            "premissa": "premium em bairro de alta renda, alto perfil",
+            "valor": 540
+          },
+          "conservador": {
+            "matr_por_m2": 0.4,
+            "premissa": "boutique nicho, demanda local moderada",
+            "valor": 240
+          },
+          "realista": {
+            "matr_por_m2": 0.6,
+            "premissa": "Bodytech / Bio Ritmo média (~600 alunos/unidade)",
+            "valor": 360
+          }
+        },
+        "matriculas_recomendada": "realista",
+        "modelo": "Premium",
+        "payback_meses": 999,
+        "receita_mensal": 86400,
+        "sensibilidade": [
+          {
+            "id": "aluguel_mais_20pct",
+            "label": "Aluguel +20%",
+            "lucro_mensal": -35589.23,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "matriculas_menos_30pct",
+            "label": "Matrículas -30%",
+            "lucro_mensal": -54110.03,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          },
+          {
+            "id": "ticket_menos_15pct",
+            "label": "Ticket -15%",
+            "lucro_mensal": -42494.03,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL"
+          }
+        ],
+        "taxa_cancelamento_mensal": 0.04,
+        "taxa_inadimplencia": 0.04,
+        "ticket_medio": 250,
+        "ticket_realizado_estimado": 240,
+        "tir_anual_pct": null,
+        "viabilidade": "INVIAVEL",
+        "vpl_5_anos": -1440786.41
+      }
+    },
+    "modelo_recomendado": "Low Cost",
+    "aluguel_mensal": 22500.0,
+    "alertas_financeiros": [
+      "⚠️ O custo do aluguel representa 20.1% do faturamento projetado no cenário Low Cost (recomendado), acima do benchmark de 15% da ACAD. Recomenda-se forte negociação do valor ou busca por um ponto com custo de locação menor para não comprometer a viabilidade.",
+      "⚠️ O modelo Mid Market torna-se inviável com uma queda de 30% nas matrículas, indicando alta sensibilidade à performance comercial e risco elevado caso a densidade de alunos/m² do benchmark não seja atingida.",
+      "⚠️ O modelo Premium é inviável na área e com os custos projetados, resultando em prejuízo mensal significativo. A baixa densidade de alunos do benchmark não cobre o CAPEX e os custos operacionais elevados."
+    ],
+    "posicionamento_recomendado": "Considerando o baixo nível de saturação e a presença de concorrentes com ratings médios sólidos, mas com oportunidades claras em serviços, o posicionamento ideal seria focar em um centro de fitness completo que ofereça conveniência (24h), serviços complementares (natação, avaliação física, área kids) e atendimento personalizado. A qualidade dos equipamentos pode ser um diferencial, já que um concorrente mencionou que os equipamentos poderiam ser atualizados. A oferta de planos flexíveis, incluindo opções mensais, também pode atrair um público amplo na faixa etária de 25-40 anos. Destacar a segurança e o incentivo aos exercícios, pontos fortes mencionados em reviews dos concorrentes, pode reforçar a proposta de valor.",
+    "contato_decisor": {
+      "tipo_ponto": "SUPERMERCADO_VAGO",
+      "decisor_identificado": "proprietário(a)",
+      "empresa": "N/A",
+      "telefone": "(21) 2584-1572",
+      "email": "N/A",
+      "whatsapp_link": "https://wa.me/552125841572?text=Ol%C3%A1%21%20Identificamos%20seu%20im%C3%B3vel%20como%20ponto%20estrat%C3%A9gico.",
+      "canal_recomendado": "WHATSAPP",
+      "observacao_canal": "Contato direto rede (RH/expansão)",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Supermarket Itaipú — Av. Central Ewerton Xavier, 115 - Itaipu, Niterói - RJ, 24340-105, Brasil\n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em Av. Central Ewerton Xavier, 115 - Itaipu, Niterói - RJ, 24340-105, Brasil, região alvo, como um ponto com potencial excelente\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "nivel_confianca_contato": "ALTO",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Supermarket Itaipú' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "top_candidato_referencia": {
+        "nome": "Supermarket Itaipú",
+        "endereco": "Av. Central Ewerton Xavier, 115 - Itaipu, Niterói - RJ, 24340-105, Brasil",
+        "tipo_ponto": "SUPERMERCADO_VAGO",
+        "score_geoscout": 8
+      }
+    },
+    "market_context": {},
+    "cobertura_redes_a0": {
+      "redes_solicitadas": [],
+      "redes_cobertas": [],
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": [
+        {
+          "nome": "Aquafish | Academia e Fisioterapia Itaipu Niterói RJ",
+          "motivo": "type forte: physiotherapist"
+        }
+      ],
+      "tem_redes_fantasma": false
+    }
+  },
+  "metadata_execucao": {
+    "fonte_market_context": "",
+    "data_coleta_market_context": "",
+    "cached_market_context": null,
+    "redes_a0_solicitadas": [],
+    "schema_version": "1.5"
+  }
+}

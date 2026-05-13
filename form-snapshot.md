@@ -1,0 +1,141 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "GymSite Intelligence" [ref=e6] [cursor=pointer]:
+        - /url: /relatorios
+        - generic [ref=e7]: 🏋️
+        - generic [ref=e8]: GymSite Intelligence
+      - navigation [ref=e9]:
+        - link "Relatórios" [ref=e10] [cursor=pointer]:
+          - /url: /relatorios
+          - text: Relatórios
+        - link "Mapa" [ref=e12] [cursor=pointer]:
+          - /url: /mapa
+        - link "Comparar" [ref=e13] [cursor=pointer]:
+          - /url: /comparar
+        - link "Demo" [ref=e14] [cursor=pointer]:
+          - /url: /demo
+      - button "VC Vectra Cargo org" [ref=e16] [cursor=pointer]:
+        - generic [ref=e18]: VC
+        - generic [ref=e19]:
+          - generic [ref=e20]: Vectra Cargo
+          - generic [ref=e21]: org
+        - img [ref=e22]
+  - main [ref=e24]:
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - heading "Novo Relatório" [level=1] [ref=e27]
+        - paragraph [ref=e28]: Defina o estado, município e bairro alvo. O pipeline produz o relatório completo de viabilidade comercial.
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - heading "Localização alvo" [level=2] [ref=e31]
+          - generic [ref=e32]:
+            - text: Estado
+            - combobox [ref=e33]:
+              - option "— Selecione um estado —" [selected]
+              - option "ES — Espírito Santo"
+              - option "MG — Minas Gerais"
+              - option "RJ — Rio de Janeiro"
+              - option "SP — São Paulo"
+              - option "PR — Paraná"
+              - option "RS — Rio Grande do Sul"
+              - option "SC — Santa Catarina"
+              - option "AL — Alagoas"
+              - option "BA — Bahia"
+              - option "CE — Ceará"
+              - option "MA — Maranhão"
+              - option "PB — Paraíba"
+              - option "PE — Pernambuco"
+              - option "PI — Piauí"
+              - option "RN — Rio Grande do Norte"
+              - option "SE — Sergipe"
+              - option "DF — Distrito Federal"
+              - option "GO — Goiás"
+              - option "MT — Mato Grosso"
+              - option "MS — Mato Grosso do Sul"
+              - option "AC — Acre"
+              - option "AP — Amapá"
+              - option "AM — Amazonas"
+              - option "PA — Pará"
+              - option "RO — Rondônia"
+              - option "RR — Roraima"
+              - option "TO — Tocantins"
+          - generic [ref=e34]:
+            - text: Município
+            - generic [ref=e36]:
+              - textbox "Aguardando estado" [disabled] [ref=e37]
+              - generic:
+                - img
+            - paragraph [ref=e38]: Selecione um estado primeiro
+          - generic [ref=e39]:
+            - text: Bairro
+            - generic [ref=e41]:
+              - textbox "Aguardando município" [disabled] [ref=e42]
+              - generic:
+                - img
+            - paragraph [ref=e43]: Selecione um município primeiro
+        - generic [ref=e44]:
+          - heading "Parâmetros do imóvel" [level=2] [ref=e45]
+          - generic [ref=e46]:
+            - text: Tipo de negócio
+            - combobox [ref=e47]:
+              - option "Academia tradicional" [selected]
+              - option "CrossFit / Box"
+              - option "Estúdio Pilates"
+              - option "Studio Funcional"
+              - option "Outro"
+          - generic [ref=e48]:
+            - text: Tamanho (benchmark de mercado)
+            - generic [ref=e49]:
+              - button "PP 250–400 m²" [ref=e50] [cursor=pointer]:
+                - generic [ref=e51]: PP
+                - generic [ref=e52]: 250–400 m²
+              - button "P 400–800 m²" [ref=e53] [cursor=pointer]:
+                - generic [ref=e54]: P
+                - generic [ref=e55]: 400–800 m²
+              - button "M 800–1.500 m² ★ mais comum" [ref=e56] [cursor=pointer]:
+                - generic [ref=e57]: M
+                - generic [ref=e58]: 800–1.500 m²
+                - generic [ref=e59]: ★ mais comum
+              - button "G 1.500–2.500 m²" [ref=e60] [cursor=pointer]:
+                - generic [ref=e61]: G
+                - generic [ref=e62]: 1.500–2.500 m²
+              - button "GG 2.500–5.000 m²" [ref=e63] [cursor=pointer]:
+                - generic [ref=e64]: GG
+                - generic [ref=e65]: 2.500–5.000 m²
+            - paragraph [ref=e66]: "Padrão de mercado (mais comum) · ex: Smart Fit Standard, Bluefit"
+            - paragraph [ref=e67]: "Clique pra preencher área automaticamente · inferido: M"
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - text: Área mínima (m²)
+              - spinbutton [ref=e70]: "800"
+              - paragraph [ref=e71]: Override manual do preset acima
+            - generic [ref=e72]:
+              - text: Área máxima (m²)
+              - spinbutton [ref=e73]: "1500"
+              - paragraph [ref=e74]: Override manual do preset acima
+          - generic [ref=e75]:
+            - generic [ref=e76]:
+              - text: Público-alvo (idade)
+              - combobox [ref=e77]:
+                - option "18–29 anos"
+                - option "25–40 anos" [selected]
+                - option "30–50 anos"
+                - option "40+ anos"
+            - generic [ref=e78]:
+              - text: Gênero alvo
+              - combobox [ref=e79]:
+                - option "Misto (50/50)" [selected]
+                - option "Predominantemente feminino"
+                - option "Predominantemente masculino"
+                - option "Exclusivamente feminino (academia para mulheres)"
+                - option "Exclusivamente masculino"
+              - paragraph [ref=e80]: Calibra ticket e mix de serviços (Pilates ↑ feminino, CrossFit ↑ masculino)
+          - generic [ref=e81]:
+            - checkbox "Estacionamento obrigatório no imóvel" [checked] [ref=e82]
+            - text: Estacionamento obrigatório no imóvel
+        - generic [ref=e83]:
+          - button "Iniciar análise" [disabled]:
+            - text: Iniciar análise
+            - img
+          - paragraph [ref=e84]: Pipeline ~5min · custo estimado R$ 1,30

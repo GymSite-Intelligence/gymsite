@@ -1,0 +1,527 @@
+/**
+ * RelatorioViewerPage — Tela 3 do GymSite (completa).
+ *
+ * Renderiza 12 seções a partir do JSON canônico v1.1:
+ *  1. Header (cidade, bairro, tipo, área, veredito)
+ *  2. Scores Regionais (3 dim + 2 cards Score Bairro / Top 1)
+ *  3. Contexto de Mercado (metadados Deep Research A0)
+ *  4. Resumo Executivo
+ *  5. Top 3 Candidatos (CandidatoCard com street view)
+ *  6. Viabilidade Financeira 3 Cenários (low/mid/premium)
+ *  7. Posicionamento Recomendado
+ *  8. Inteligência Competitiva (CompetidorGroup + Dores Dominantes)
+ *  9. Distribuição Geográfica dos Concorrentes
+ * 10. Bairros Alternativos
+ * 11. Script de Abordagem (com botão copiar)
+ * 12. Alertas Globais + Decisão
+ */
+import { useState } from 'react'
+import { Link, useParams } from '@tanstack/react-router'
+import { ArrowLeft, ChevronDown, MapPin } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { Separator } from '@/components/ui/separator'
+import { useRelatorioDetail } from '@/hooks/useRelatorioDetail'
+import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
+import { ScoresDimensionais } from '@/components/domain/ScoresDimensionais'
+import { ContextoMercadoCard } from '@/components/domain/ContextoMercadoCard'
+import { CandidatoCard } from '@/components/domain/CandidatoCard'
+import { CenarioFinanceiroTable } from '@/components/domain/CenarioFinanceiroTable'
+import { KitEquipamentosTable } from '@/components/domain/KitEquipamentosTable'
+import {
+  getKit,
+  getKitParaModeloFinanceiro,
+  getTamanhoParaModeloFinanceiro,
+  faixaCustoReal,
+} from '@/data/kits'
+import type { ModeloNegocio, TamanhoCodigo } from '@/data/tamanhos-por-modelo'
+import { recalcularCenariosComKit } from '@/lib/recalcula-cenario-com-kit'
+import { CompetidorGroup } from '@/components/domain/CompetidorGroup'
+import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
+import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
+import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairrosTable'
+import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativosTable'
+import { TextoSecao } from '@/components/domain/TextoSecao'
+import { AlertasGlobais } from '@/components/domain/AlertasGlobais'
+import { ScriptCard } from '@/components/domain/ScriptCard'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { SectionHeader } from '@/components/ui/section-header'
+
+const TIPO_NEGOCIO_LABEL: Record<string, string> = {
+  academia: 'Academia',
+  crossfit_box: 'Box CrossFit',
+  studio_pilates: 'Studio Pilates',
+  studio_funcional: 'Studio Funcional',
+  outro: 'Outro',
+}
+
+interface MetadataExecucaoShape {
+  fonte_market_context?: string
+  data_coleta_market_context?: string
+  cached_market_context?: boolean
+  redes_a0_solicitadas?: string[]
+  schema_version?: string
+}
+
+export function RelatorioViewerPage() {
+  const { relatorioId } = useParams({ from: '/relatorios/$relatorioId' })
+  const { data, isLoading, error } = useRelatorioDetail(relatorioId)
+
+  if (isLoading) return <ViewerSkeleton />
+  if (error || !data) return <ViewerError message={error?.message} />
+
+  const inp = data.input_canonico
+  const out = data.output_consolidado
+  const meta = (data.metadata_execucao ?? {}) as MetadataExecucaoShape
+
+  // Schema v1.5: kit detalhado vira fonte da verdade pra "Equipamentos".
+  // Kit DIFERE por modelo financeiro: Low usa tamanho-1 (econômico),
+  // Mid usa tamanho selecionado, Premium usa tamanho+1 (robusto).
+  // Cascateia recalculo nos 3 cenários (capex → manutenção → seguro →
+  // contingência → capital giro → investimento → payback → margem → TIR/VPL).
+  const tipoNegocio = (data.input_canonico.tipo_negocio || 'academia') as ModeloNegocio
+  const tamanhoPreset = (data.input_canonico.tamanho_preset || 'm') as TamanhoCodigo
+
+  // Helper: mediana da faixa real de um kit
+  const medianaKit = (k: ReturnType<typeof getKit>) =>
+    k ? (faixaCustoReal(k)[0] + faixaCustoReal(k)[1]) / 2 : null
+
+  // Map de equipamentos por modelo financeiro
+  const equipamentosPorModelo: Record<string, number | null> = {
+    low: medianaKit(getKitParaModeloFinanceiro(tipoNegocio, tamanhoPreset, 'low')),
+    mid: medianaKit(getKitParaModeloFinanceiro(tipoNegocio, tamanhoPreset, 'mid')),
+    premium: medianaKit(getKitParaModeloFinanceiro(tipoNegocio, tamanhoPreset, 'premium')),
+  }
+
+  const cenariosRecalc = recalcularCenariosComKit(
+    out.viabilidade_3_cenarios,
+    equipamentosPorModelo,
+  )
+
+  // Tamanhos usados por cenário (pra exibir hint na UI)
+  const tamanhosPorModelo = {
+    low: getTamanhoParaModeloFinanceiro(tamanhoPreset, 'low'),
+    mid: getTamanhoParaModeloFinanceiro(tamanhoPreset, 'mid'),
+    premium: getTamanhoParaModeloFinanceiro(tamanhoPreset, 'premium'),
+  }
+
+  // Score Geral por candidato (4 dim) = (geoscout + 3 regionais) / 4
+  const scoreRegional = (() => {
+    const dim = out.scores_regionais
+    const valores = [
+      dim?.demografico,
+      dim?.competitivo ?? dim?.concorrencia,
+      dim?.viabilidade,
+    ].filter((v): v is number => typeof v === 'number')
+    if (valores.length === 0) return null
+    return valores.reduce((a, b) => a + b, 0) / valores.length
+  })()
+
+  return (
+    <div className="space-y-8">
+      {/* 1. Header (UI Lote 4): Breadcrumb + Título com veredito inline */}
+      <header className="space-y-3">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/relatorios">Relatórios</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link
+                  to="/relatorios"
+                  search={{
+                    cidade: inp.cidade,
+                    veredito: undefined,
+                    since: undefined,
+                  }}
+                >
+                  {inp.cidade}
+                </Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{inp.bairro}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3 flex-wrap">
+            <span>{inp.bairro}</span>
+            <span className="text-muted-foreground font-normal">·</span>
+            <span className="text-muted-foreground font-normal text-2xl">
+              {inp.cidade}
+            </span>
+            {/* Veredito INLINE ao título (não flutuando isolado no canto) */}
+            <VeredictoBadge veredito={out.veredito} />
+          </h1>
+          <p className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+            <MapPin size={12} />
+            <span>
+              {TIPO_NEGOCIO_LABEL[inp.tipo_negocio ?? 'academia'] ?? inp.tipo_negocio}
+              {' · '}
+              <span className="font-mono">
+                {inp.area_m2_min}-{inp.area_m2_max} m²
+              </span>
+              {' · '}
+              público {inp.publico_alvo ?? '25-40'}
+            </span>
+          </p>
+        </div>
+      </header>
+
+      {/* 2. Scores Regionais */}
+      <Section title="Scores Regionais">
+        <ScoresDimensionais
+          scoreBairro={out.score_bairro}
+          scoreTop1={out.score_top1_candidato}
+          scoresRegionais={out.scores_regionais}
+        />
+      </Section>
+
+      {/* 3. Contexto de Mercado (schema v1.2 → market_context completo; v1.1 → fallback) */}
+      {(out.market_context || meta.fonte_market_context) && (
+        <Section title="🔬 Contexto de Mercado">
+          <ContextoMercadoCard
+            marketContext={out.market_context}
+            fonte={meta.fonte_market_context}
+            dataColeta={meta.data_coleta_market_context}
+            cached={meta.cached_market_context}
+            redesA0={meta.redes_a0_solicitadas}
+            totalConcorrentesAnalisados={out.total_concorrentes_analisados}
+            nivelSaturacao={out.nivel_saturacao}
+            aluguelMedianaM2={out.aluguel_mediana_m2_observado}
+            fonteAluguel={out.fonte_aluguel}
+          />
+        </Section>
+      )}
+
+      {/* 4. Resumo Executivo */}
+      {out.resumo_executivo && (
+        <TextoSecao
+          title="🎯 Resumo Executivo"
+          texto={out.resumo_executivo}
+          variant="highlight"
+        />
+      )}
+
+      {/* 5. Top 3 Candidatos */}
+      {out.top_3_candidatos && out.top_3_candidatos.length > 0 && (
+        <Section title="🏆 Top 3 Candidatos">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {out.top_3_candidatos.slice(0, 3).map((cand, i) => {
+              const scoreGeral =
+                cand.score_geoscout != null && scoreRegional != null
+                  ? (cand.score_geoscout + scoreRegional * 3) / 4
+                  : null
+              return (
+                <CandidatoCard
+                  key={cand.place_id ?? `${cand.nome}-${i}`}
+                  candidato={cand}
+                  posicao={i + 1}
+                  scoreGeral={scoreGeral}
+                />
+              )
+            })}
+          </div>
+        </Section>
+      )}
+
+      {/* 6. Viabilidade Financeira (collapsible) */}
+      <Section
+        title="💰 Viabilidade Financeira — 3 Cenários"
+        collapsible
+        suffix={
+          out.fonte_aluguel ? (
+            <p className="text-[10px] text-muted-foreground font-mono">
+              fonte aluguel: {out.fonte_aluguel}
+              {out.aluguel_mediana_m2_observado != null && (
+                <> {' · '} R$ {out.aluguel_mediana_m2_observado.toFixed(2)}/m²</>
+              )}
+            </p>
+          ) : null
+        }
+      >
+        <CenarioFinanceiroTable
+          cenarios={cenariosRecalc ?? out.viabilidade_3_cenarios}
+          modeloRecomendado={out.modelo_recomendado}
+          areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
+        />
+        {cenariosRecalc && (
+          <p className="mt-2 text-[10px] text-muted-foreground font-mono">
+            ⚙ Valores recalculados via kit detalhado v1.5. Equipamentos
+            diferentes por modelo: Low usa kit{' '}
+            <strong>{tamanhosPorModelo.low.toUpperCase()}</strong> (econômico),
+            Mid usa <strong>{tamanhosPorModelo.mid.toUpperCase()}</strong>{' '}
+            (selecionado), Premium usa{' '}
+            <strong>{tamanhosPorModelo.premium.toUpperCase()}</strong>{' '}
+            (robusto). Cascata aplicada em manutenção (0,5%/mês CAPEX), seguro
+            (0,2%/mês), contingência (10%), capital de giro (3 meses) e
+            investimento total.
+          </p>
+        )}
+      </Section>
+
+      {/* 6.5 Kit Equipamentos Detalhado (schema v1.5)
+         Só renderiza quando o pipeline gerou veredito + cenários financeiros.
+         Sem essa guarda, em relatórios `failed` a tabela de equipamentos
+         (hardcoded em frontend/src/data/kits/) seria exibida e revelaria que
+         o kit não vem da análise — só esconder pra preservar a percepção
+         de que tudo é gerado pelo pipeline. */}
+      {(() => {
+        const cenariosOk =
+          !!out.viabilidade_3_cenarios?.low ||
+          !!out.viabilidade_3_cenarios?.mid ||
+          !!out.viabilidade_3_cenarios?.premium
+        if (!out.veredito || !cenariosOk) return null
+        const tipo = (data.input_canonico.tipo_negocio || 'academia') as ModeloNegocio
+        const tamanho = (data.input_canonico.tamanho_preset || 'm') as TamanhoCodigo
+        const kit = getKit(tipo, tamanho)
+        if (!kit) return null
+        return (
+          <Section title="🏋️ Kit de Equipamentos" collapsible>
+            <KitEquipamentosTable kit={kit} />
+          </Section>
+        )
+      })()}
+
+      {/* 7. Posicionamento Recomendado (collapsible) */}
+      {out.posicionamento_recomendado && (
+        <TextoSecao
+          title="💡 Posicionamento Recomendado"
+          texto={out.posicionamento_recomendado}
+          collapsible
+        />
+      )}
+
+      {/* 7.5 Cobertura Deep Research (schema v1.4) */}
+      {out.cobertura_redes_a0 && out.cobertura_redes_a0.redes_solicitadas?.length > 0 && (
+        <Section title="🔍 Cobertura Deep Research" collapsible>
+          <CoberturaRedesA0Card
+            cobertura={out.cobertura_redes_a0}
+            bairroAlvo={data.input_canonico?.bairro || data.input_canonico?.cidade}
+          />
+        </Section>
+      )}
+
+      {/* 8. Inteligência Competitiva — tabela por concorrente substituindo Dores Dominantes */}
+      {out.competitors_set && out.competitors_set.length > 0 && (
+        <Section title="🥊 Inteligência Competitiva" collapsible>
+          <CompetidorGroup competidores={out.competitors_set} />
+          <div className="mt-4">
+            <CompetidoresDoresTable
+              competidores={out.competitors_set}
+              servicosNaoOferecidos={out.servicos_nao_oferecidos}
+            />
+          </div>
+        </Section>
+      )}
+
+      {/* 9. Distribuição Geográfica */}
+      {out.distribuicao_geografica && out.distribuicao_geografica.length > 0 && (
+        <Section title="📍 Distribuição Geográfica dos Concorrentes" collapsible>
+          <DistribuicaoBairrosTable
+            distribuicao={out.distribuicao_geografica}
+            bairroAlvo={inp.bairro}
+          />
+        </Section>
+      )}
+
+      {/* 10. Bairros Alternativos (com aviso geográfico v1.5) */}
+      {out.bairros_alternativos && out.bairros_alternativos.length > 0 && (
+        <Section title="🗺️ Bairros Alternativos Recomendados" collapsible>
+          {out.aviso_geografico && (
+            <div className="mb-4 rounded-md border-l-2 border-veredito-ressalvas bg-veredito-ressalvas/5 p-3 text-xs leading-relaxed">
+              <strong className="text-veredito-ressalvas">
+                ⚠ Correção geográfica detectada
+              </strong>
+              <p className="mt-1 text-foreground/90">{out.aviso_geografico}</p>
+              {out.cidade_efetiva && (
+                <p className="mt-1 text-muted-foreground font-mono text-[10px]">
+                  Município efetivo usado pra derivar bairros alternativos:{' '}
+                  <span className="text-foreground font-semibold">
+                    {out.cidade_efetiva}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
+          <BairrosAlternativosTable bairros={out.bairros_alternativos} />
+        </Section>
+      )}
+
+      {/* 11. Script de Abordagem — só renderiza se A5 conseguiu extrair algo útil.
+          Quando A5 falha, contato_decisor vem como {} e a section ficaria vazia. */}
+      {(() => {
+        const c = out.contato_decisor as Record<string, unknown> | undefined
+        const temScript = !!(c && (c.script_abordagem || c.canal_recomendado))
+        if (!temScript) return null
+        return (
+          <Section title="📞 Script de Abordagem — Top 1" collapsible>
+            <ScriptCard contato={c as Parameters<typeof ScriptCard>[0]['contato']} />
+          </Section>
+        )
+      })()}
+
+      {/* 12. Alertas + Decisão (collapsible) */}
+      {out.alertas_financeiros && out.alertas_financeiros.length > 0 && (
+        <Section
+          title={
+            out.veredito === 'REPROVADO'
+              ? `⚠️ Alertas Críticos (${out.alertas_financeiros.length})`
+              : `⚠️ Alertas e Ressalvas (${out.alertas_financeiros.length})`
+          }
+          collapsible
+        >
+          <AlertasGlobais
+            alertas={out.alertas_financeiros}
+            veredito={out.veredito}
+            hideHeader
+          />
+        </Section>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Section — wrapper que usa SectionHeader por baixo pra consistência visual.
+ *
+ * UI Lote 1: Separator embaixo do título + escala tipográfica uniforme.
+ * UI Lote 5: prop `collapsible` habilita colapsar/expandir clicando no header
+ * (chevron rotativo 180°). Mantém a API antiga estática quando omitido.
+ */
+function Section({
+  title,
+  suffix,
+  children,
+  collapsible = false,
+  defaultOpen = true,
+}: {
+  title: string
+  suffix?: React.ReactNode
+  children: React.ReactNode
+  collapsible?: boolean
+  defaultOpen?: boolean
+}) {
+  if (collapsible) {
+    return (
+      <CollapsibleSection title={title} suffix={suffix} defaultOpen={defaultOpen}>
+        {children}
+      </CollapsibleSection>
+    )
+  }
+  return (
+    <section className="space-y-4">
+      <SectionHeader title={title} suffix={suffix} />
+      {children}
+    </section>
+  )
+}
+
+/**
+ * CollapsibleSection — variante colapsável do Section.
+ *
+ * Substitui o SectionHeader por um header custom com o título dentro de um
+ * <button> (CollapsibleTrigger) + chevron rotativo, mantendo o Separator
+ * embaixo pra preservar o ritmo visual. O suffix (ex: fonte aluguel) é
+ * renderizado fora do botão pra evitar HTML inválido (p dentro de button).
+ */
+function CollapsibleSection({
+  title,
+  suffix,
+  defaultOpen,
+  children,
+}: {
+  title: string
+  suffix?: React.ReactNode
+  defaultOpen: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} asChild>
+      <section className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                aria-expanded={open}
+              >
+                <span>{title}</span>
+                <ChevronDown
+                  size={14}
+                  aria-hidden
+                  className={cn(
+                    'transition-transform',
+                    open ? 'rotate-180' : 'rotate-0',
+                  )}
+                />
+              </button>
+            </CollapsibleTrigger>
+            {suffix && <div className="flex items-center gap-2">{suffix}</div>}
+          </div>
+          <Separator className="mt-3" />
+        </div>
+        <CollapsibleContent className="space-y-4 data-[state=closed]:hidden">
+          {children}
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
+  )
+}
+
+function ViewerSkeleton() {
+  return (
+    <div className="space-y-8">
+      <Skeleton className="h-12 w-2/3" />
+      <Skeleton className="h-48 w-full" />
+      <div className="grid grid-cols-3 gap-4">
+        <Skeleton className="h-72" />
+        <Skeleton className="h-72" />
+        <Skeleton className="h-72" />
+      </div>
+      <Skeleton className="h-96 w-full" />
+    </div>
+  )
+}
+
+function ViewerError({ message }: { message?: string }) {
+  return (
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" asChild>
+        <Link to="/relatorios">
+          <ArrowLeft size={14} /> Voltar
+        </Link>
+      </Button>
+      <div className="rounded-lg border border-veredito-reprovado/40 bg-veredito-reprovado/5 p-6">
+        <h2 className="font-semibold text-veredito-reprovado mb-1">
+          Não foi possível carregar o relatório
+        </h2>
+        <p className="text-sm text-muted-foreground font-mono">
+          {message ?? 'Erro desconhecido'}
+        </p>
+      </div>
+    </div>
+  )
+}

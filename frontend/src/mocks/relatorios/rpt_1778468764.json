@@ -1,0 +1,556 @@
+{
+  "id": "rpt_1778468764",
+  "tipo_relatorio": "prospeccao_academia",
+  "data_execucao": "2026-05-11T00:06:04",
+  "input_canonico": {
+    "cidade": "Itajai",
+    "bairro": "Cordeiros",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "estacionamento_obrigatorio": true,
+    "tipo_negocio": "academia"
+  },
+  "output_consolidado": {
+    "veredito": "REPROVADO",
+    "score_bairro": 1.88,
+    "score_top1_candidato": 3.58,
+    "scores_regionais": {
+      "demografico": 0.0,
+      "competitivo": 3.75,
+      "viabilidade": 0.0
+    },
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 4.62,
+    "top_3_candidatos": [
+      {
+        "area_estimada_m2": 1000,
+        "avenida_principal": true,
+        "endereco": "Av. Mario Uriarte, 360 - Cordeiros, Itajaí - SC, 88310-696, Brasil",
+        "estimativa_visibilidade": "alta",
+        "lat": -26.8991682,
+        "lng": -48.702517699999994,
+        "motivo": "Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos",
+        "nome": "CiaCar Automóveis - Comércio de automóveis em Itajaí",
+        "place_id": "ChIJiXG96dzM2JQRwhv32Mk4k4E",
+        "polos_geradores": [
+          "Atacadão Brus Móveis 318m",
+          "Rei Atacado 1.1km",
+          "Fort Atacadista | Cordeiros 1.8km"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "score_ancoragem": 10,
+        "score_geoscout": 7,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-26.8991682,-48.702517699999994&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "tipos": [
+          "car_dealer",
+          "store",
+          "point_of_interest",
+          "establishment"
+        ]
+      },
+      {
+        "area_estimada_m2": 1200,
+        "avenida_principal": false,
+        "endereco": "R. Dr. Reinaldo Schmithausen, 1249 - Cordeiros, Itajaí - SC, 88310-004, Brasil",
+        "estimativa_visibilidade": "média",
+        "lat": -26.8846053,
+        "lng": -48.6947933,
+        "motivo": "Supermercado — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "Fort Atacadista | Cordeiros",
+        "place_id": "ChIJUQh4jsjN2JQR2zdH0EdXi24",
+        "polos_geradores": [
+          "Fort Atacadista | Cordeiros 0m",
+          "Atacadão Da Moda Itajaí 103m",
+          "Terminal Cordeiros 169m"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "score_ancoragem": 10,
+        "score_geoscout": 5,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-26.8846053,-48.6947933&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "tipos": [
+          "wholesaler",
+          "liquor_store",
+          "supermarket",
+          "grocery_store",
+          "food_store",
+          "point_of_interest",
+          "food",
+          "store",
+          "establishment"
+        ]
+      },
+      {
+        "area_estimada_m2": 1200,
+        "avenida_principal": false,
+        "endereco": "R. Santo Agostinho, 570 - Cordeiros, Itajaí - SC, 88310-200, Brasil",
+        "estimativa_visibilidade": "média",
+        "lat": -26.8887575,
+        "lng": -48.6943783,
+        "motivo": "Supermercado — investigar disponibilidade ou imóveis vizinhos",
+        "nome": "Supermercado Ronchi",
+        "place_id": "ChIJdePyieHM2JQRqrH5C3kffic",
+        "polos_geradores": [
+          "Fort Atacadista | Cordeiros 463m",
+          "Atacadão Da Moda Itajaí 552m",
+          "Terminal Cordeiros 580m"
+        ],
+        "qualidade_sinal": "indireto-heuristico",
+        "score_ancoragem": 10,
+        "score_geoscout": 5,
+        "status": "OPERATIONAL",
+        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-26.8887575,-48.6943783&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "tipos": [
+          "supermarket",
+          "grocery_store",
+          "food_store",
+          "point_of_interest",
+          "food",
+          "store",
+          "establishment"
+        ]
+      }
+    ],
+    "competitors_set": [
+      {
+        "nome": "Academia Smart Fit - Itajaí",
+        "rating_geral": 4.4,
+        "num_avaliacoes": 1488,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "A maior Smart Fit que já treinei até agora. Muito organizada e limpa. [original em inglês]",
+            "quote_original": "The biggest Smart Fit that I have worked out untill now. Very organized and clean.",
+            "idioma_original": "inglês",
+            "autor": "Givaldo Gomes",
+            "rating": 5,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Melhor lugar. Bom professor! [original em inglês]",
+            "quote_original": "Best place. Good teacher!",
+            "idioma_original": "inglês",
+            "autor": "Lisandra Faustino",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top.",
+            "quote_original": "Top.",
+            "idioma_original": "português",
+            "autor": "Antônio Carlos Freitas da Silva",
+            "rating": 5,
+            "data_relativa": "4 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top...",
+            "quote_original": "Top...",
+            "idioma_original": "português",
+            "autor": "João Paulo Dourado",
+            "rating": 5,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top!",
+            "quote_original": "Top!",
+            "idioma_original": "português",
+            "autor": "Wellington Vieira",
+            "rating": 5,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Selfit Academias Itajaí",
+        "rating_geral": 4.5,
+        "num_avaliacoes": 16,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Não faz sentido aceitar só o plano Silver pra cima do Welhhub (GYmpass) se o preço direto na academia fica mais barato que no Welhhub e fora que suas concorrentes, da região AD3, E",
+            "quote_original": "Não faz sentido aceitar só o plano Silver pra cima do Welhhub (GYmpass) se o preço direto na academia fica mais barato que no Welhhub e fora que suas concorrentes, da região AD3, E",
+            "idioma_original": "português",
+            "autor": "michel alves",
+            "rating": 3,
+            "data_relativa": "5 months ago",
+            "categoria_dor": "preco_alto"
+          },
+          {
+            "quote_pt_br": "Professores sem educação, economia de ar condicionado, os alunos ficam sentindo mal lá dentro. Horrível, procurem outra academia",
+            "quote_original": "Professores sem educação, economia de ar condicionado, os alunos ficam sentindo mal lá dentro. Horrível, procurem outra academia",
+            "idioma_original": "português",
+            "autor": "Eu Sou",
+            "rating": 1,
+            "data_relativa": "2 months ago",
+            "categoria_dor": "climatizacao"
+          },
+          {
+            "quote_pt_br": "Muito top. Dgoayei do ambiente, dos aparelhos, td novo, colaboradores educados, ambiente muito agradável para um bom treino. Gostei muito!",
+            "quote_original": "Muito top. Dgoayei do ambiente, dos aparelhos, td novo, colaboradores educados, ambiente muito agradável para um bom treino. Gostei muito!",
+            "idioma_original": "português",
+            "autor": "Ivan “Ivan” Borges de Almeida do Nascimento",
+            "rating": 5,
+            "data_relativa": "4 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "A melhor professora se encontra nesta academia, Prof.Tamy meiga educada paciente e inteligente ,com certeza a melhor.",
+            "quote_original": "A melhor professora se encontra nesta academia, Prof.Tamy meiga educada paciente e inteligente ,com certeza a melhor.",
+            "idioma_original": "português",
+            "autor": "Claudina De Jesus",
+            "rating": 5,
+            "data_relativa": "3 months ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Amei a academia, espaço gostoso equipamentos que se encaixam, ambiente climatizado, iluminação correta. Amei vale a pena demais",
+            "quote_original": "Amei a academia, espaço gostoso equipamentos que se encaixam, ambiente climatizado, iluminação correta. Amei vale a pena demais",
+            "idioma_original": "português",
+            "autor": "Bianca Regina Bianchi",
+            "rating": 5,
+            "data_relativa": "5 months ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "CT Mapfit - Cordeiros",
+        "rating_geral": 4.9,
+        "num_avaliacoes": 331,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Academia top",
+            "quote_original": "Academia top",
+            "idioma_original": "português",
+            "autor": "Agata Tiara",
+            "rating": 5,
+            "data_relativa": "in the last week",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Berto leal de oliveira",
+            "rating": 5,
+            "data_relativa": "in the last week",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Academia top",
+            "quote_original": "Academia top",
+            "idioma_original": "português",
+            "autor": "Katia Regina Tomaz",
+            "rating": 5,
+            "data_relativa": "in the last week",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "top",
+            "quote_original": "top",
+            "idioma_original": "português",
+            "autor": "João Dimas",
+            "rating": 5,
+            "data_relativa": "3 weeks ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Mto top",
+            "quote_original": "Mto top",
+            "idioma_original": "português",
+            "autor": "Tiago Moraes",
+            "rating": 5,
+            "data_relativa": "3 weeks ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Mega Academia",
+        "rating_geral": 4.7,
+        "num_avaliacoes": 268,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Ótimo lugar para construir sua forma. Experiência e conhecimento você encontrará aqui. [original em inglês]",
+            "quote_original": "Great place to build your shape. Experience and knowledge you will find here.",
+            "idioma_original": "inglês",
+            "autor": "Gabriel Padilha Martins",
+            "rating": 5,
+            "data_relativa": "4 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Academia top!!",
+            "quote_original": "Academia top!!",
+            "idioma_original": "português",
+            "autor": "Adriano Jackson",
+            "rating": 5,
+            "data_relativa": "a year ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "juninho fdm",
+            "rating": 5,
+            "data_relativa": "6 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Segundo lar [original em inglês]",
+            "quote_original": "Second home",
+            "idioma_original": "inglês",
+            "autor": "Cristhian Katzwinckel",
+            "rating": 5,
+            "data_relativa": "4 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Agradeço até hoje por nunca ter desistido de treinar, e tudo isso graças a Mega academia. Quando eu comecei a treinar eu tinha chegado no meu ápice até então, 96kg de pura gordura",
+            "quote_original": "Agradeço até hoje por nunca ter desistido de treinar, e tudo isso graças a Mega academia. Quando eu comecei a treinar eu tinha chegado no meu ápice até então, 96kg de pura gordura",
+            "idioma_original": "português",
+            "autor": "Adriel Carlos",
+            "rating": 5,
+            "data_relativa": "a year ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      },
+      {
+        "nome": "Academia Atitude Fitness Navegantes",
+        "rating_geral": 4.6,
+        "num_avaliacoes": 231,
+        "reviews_traduzidas": [
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Silvio Douglas",
+            "rating": 5,
+            "data_relativa": "2 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Legal",
+            "quote_original": "Legal",
+            "idioma_original": "português",
+            "autor": "Thamylly Neto",
+            "rating": 5,
+            "data_relativa": "2 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Iarley Santos",
+            "rating": 5,
+            "data_relativa": "5 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Show",
+            "quote_original": "Show",
+            "idioma_original": "português",
+            "autor": "Mayckon José Coppi",
+            "rating": 4,
+            "data_relativa": "3 years ago",
+            "categoria_dor": "outra"
+          },
+          {
+            "quote_pt_br": "Top",
+            "quote_original": "Top",
+            "idioma_original": "português",
+            "autor": "Nando",
+            "rating": 5,
+            "data_relativa": "8 years ago",
+            "categoria_dor": "outra"
+          }
+        ]
+      }
+    ],
+    "dores_dominantes": [
+      {
+        "dor": "climatizacao",
+        "mencoes": 1,
+        "mencionado_por": [
+          {
+            "academia": "Selfit Academias Itajaí",
+            "vezes": 1
+          }
+        ]
+      },
+      {
+        "dor": "preco_alto",
+        "mencoes": 1,
+        "mencionado_por": [
+          {
+            "academia": "Selfit Academias Itajaí",
+            "vezes": 1
+          }
+        ]
+      }
+    ],
+    "servicos_nao_oferecidos": [
+      "sauna",
+      "plano trimestral",
+      "área kids",
+      "app próprio",
+      "jiu-jitsu",
+      "pilates"
+    ],
+    "distribuicao_geografica": [
+      {
+        "bairro": "São Vicente",
+        "count": 2,
+        "academias": [
+          "Selfit Academias Itajaí",
+          "Mega Academia"
+        ]
+      },
+      {
+        "bairro": "Centro",
+        "count": 1,
+        "academias": [
+          "Academia Smart Fit - Itajaí"
+        ]
+      },
+      {
+        "bairro": "Galpão 01 - Cordeiros",
+        "count": 1,
+        "academias": [
+          "CT Mapfit - Cordeiros"
+        ]
+      },
+      {
+        "bairro": "São Domingos",
+        "count": 1,
+        "academias": [
+          "Academia Atitude Fitness Navegantes"
+        ]
+      }
+    ],
+    "bairros_alternativos": [
+      {
+        "bairro": "Centro Expandido",
+        "motivo": "Alta densidade comercial e fluxo garantido",
+        "bairro_principal_busca": "Centro Expandido",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      },
+      {
+        "bairro": "Bairros em expansão imobiliária recente",
+        "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada",
+        "bairro_principal_busca": "Bairros em expansão imobiliária recente",
+        "concorrentes_no_bairro": 0,
+        "academias_existentes": [],
+        "status": "🟢 sem concorrentes mapeados",
+        "prioridade_ajustada": "ALTA",
+        "metodologia": "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
+      }
+    ],
+    "viabilidade_3_cenarios": {
+      "low": {
+        "ticket_medio": 89.9,
+        "alunos_projetados": 515,
+        "lucro_mensal_estimado": -64486.63,
+        "payback_meses": 999,
+        "viabilidade": "INVIAVEL"
+      },
+      "mid": {
+        "ticket_medio": 149.9,
+        "alunos_projetados": 350,
+        "lucro_mensal_estimado": -58813.45,
+        "payback_meses": 999,
+        "viabilidade": "INVIAVEL"
+      },
+      "premium": {
+        "ticket_medio": 299.9,
+        "alunos_projetados": 202,
+        "lucro_mensal_estimado": -53771.03,
+        "payback_meses": 999,
+        "viabilidade": "INVIAVEL"
+      }
+    },
+    "modelo_recomendado": "Nenhum",
+    "aluguel_mensal": 59375.0,
+    "alertas_financeiros": [
+      "⚠️ Inviável — modelo não fecha conta",
+      "⚠️ Margem apertada, sem espaço pra imprevistos",
+      "⚠️ Aluguel compromete viabilidade"
+    ],
+    "posicionamento_recomendado": "Com baixa saturação e alto potencial de mercado em Cordeiros, Itajaí, um posicionamento estratégico deve focar na diferenciação e na experiência do cliente. Priorize uma infraestrutura impecável, com especial atenção à limpeza (principalmente dos banheiros) e à climatização eficiente, pois são pontos de dor identificados nos concorrentes. Ofereça um mix de modalidades atraente, incluindo Pilates e, se possível, Jiu-Jitsu ou uma área kids. Considere também planos flexíveis, como o trimestral, e invista em um aplicativo próprio para aprimorar a experiência digital e de agendamento, alinhado ao público-alvo de 25-40 anos. A precificação deve ser competitiva, especialmente em relação a plataformas como Gympass, para evitar percepção de preço alto.",
+    "contato_decisor": {
+      "canal_recomendado": "LIGACAO",
+      "decisor_identificado": "proprietário(a)",
+      "email": "N/A",
+      "empresa": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "nivel_confianca_contato": "MEDIO",
+      "observacao_canal": "Proprietário marca local ou holding regional",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'CiaCar Automóveis - Comércio de automóveis em Itajaí' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: CiaCar Automóveis - Comércio de automóveis em Itajaí — Av. Mario Uriarte, 360 - Cordeiros, Itajaí - SC, 88310-696, Brasil\n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em Av. Mario Uriarte, 360 - Cordeiros, Itajaí - SC, 88310-696, Brasil, Itajai, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "telefone": "N/A",
+      "tipo_ponto": "CONCESSIONARIA",
+      "top_candidato_referencia": {
+        "endereco": "Av. Mario Uriarte, 360 - Cordeiros, Itajaí - SC, 88310-696, Brasil",
+        "nome": "CiaCar Automóveis - Comércio de automóveis em Itajaí",
+        "score_geoscout": 7,
+        "tipo_ponto": "CONCESSIONARIA"
+      },
+      "whatsapp_link": "N/A"
+    },
+    "market_context": {
+      "cidade": "Itajai",
+      "bairro": "Cordeiros",
+      "ticket_medio_mercado": "R$ 89,90 a R$ 219,90/mês",
+      "aluguel_medio_m2": "R$ 30 a R$ 67,24/m²",
+      "renda_media_bairro": "dados_nao_disponiveis",
+      "faixa_etaria_predominante": "dados_nao_disponiveis",
+      "principais_redes_concorrentes": [
+        "UFit Academia",
+        "Academia Inova",
+        "Mormaii Studio",
+        "Selfit",
+        "Smart Fit"
+      ],
+      "tendencia_mercado": "crescimento",
+      "regulamentacao_resumo": "Alvará de Funcionamento emitido pela prefeitura de Itajaí é obrigatório. Registro no CREF-SC é mandatório para todos os profissionais de Educação Física.",
+      "insights_estrategicos": [
+        "Apesar da renda média do bairro não estar disponível, a cidade de Itajaí apresenta um crescimento populacional e imobiliário significativo, indicando um mercado em expansão.",
+        "A diversidade de modalidades oferecidas pelos concorrentes sugere a importância de um portfólio variado para atrair diferentes perfis de clientes.",
+        "Considerar a possível demanda por modelos premium ou com diferenciais, visto o crescimento e valorização imobiliária da cidade."
+      ],
+      "fonte": "Deep Research Gemini",
+      "data_coleta": "2026-05-07",
+      "cached": true
+    }
+  },
+  "metadata_execucao": {
+    "fonte_market_context": "Deep Research Gemini",
+    "data_coleta_market_context": "2026-05-07",
+    "cached_market_context": true,
+    "redes_a0_solicitadas": [
+      "UFit Academia",
+      "Academia Inova",
+      "Mormaii Studio",
+      "Selfit",
+      "Smart Fit"
+    ],
+    "schema_version": "1.2"
+  }
+}

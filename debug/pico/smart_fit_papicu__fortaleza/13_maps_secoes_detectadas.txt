@@ -1,0 +1,12 @@
+=== SEÇÕES ESTRATÉGICAS DETECTADAS — Smart Fit Papicu ===
+
+  ✗  resumo avaliacoes ia
+  ✗  preco por pessoa
+  ✗  horarios populares
+  ✓  highlights acessibilidade
+  ✗  highlights wifi
+  ✓  highlights estacionamento
+  ✗  n avaliacoes
+  ✗  fotos qtd
+  ✗  site oficial
+  ✗  telefone

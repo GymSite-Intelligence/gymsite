@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tokens semânticos de status — fundação do design system.
+   * Usar via classes Tailwind (bg-status-good, text-status-warning, etc.)
+   * ou direto via hsl(var(--status-good)) em styles inline.
+   *
+   * Sempre prefira tokens sobre cores hardcoded (text-emerald-500 etc.).
+   */
+  :root {
+    --status-good: 142 76% 36%;       /* verde — APROVADO, alto score */
+    --status-warning: 45 93% 47%;     /* amarelo — RESSALVAS, médio */
+    --status-investigate: 217 91% 60%; /* azul — INVESTIGAR */
+    --status-critical: 0 84% 60%;      /* vermelho — REPROVADO, crítico */
+    --status-neutral: 220 10% 50%;     /* cinza — INDETERMINADO */
+
+    /* Aliases legacy mapeando tokens v0 → semânticos (transição) */
+    --veredito-aprovado: var(--status-good);
+    --veredito-ressalvas: var(--status-warning);
+    --veredito-investigar: var(--status-investigate);
+    --veredito-reprovado: var(--status-critical);
+  }
+
+  html {
+    font-family: theme('fontFamily.sans');
+    /* Diz ao browser pra renderizar UI nativa (scrollbar, select popup,
+       date picker, autofill) em tema escuro. Chrome Windows ignorava nosso
+       background-color em <option> — color-scheme resolve. */
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  code,
+  pre,
+  .font-mono {
+    font-family: theme('fontFamily.mono');
+  }
+
+  /**
+   * <select> nativo no tema dark.
+   * Com `color-scheme: dark` no html acima, o Chrome já renderiza o popup
+   * em tema escuro. As regras abaixo afinam pra usar nossos tokens
+   * semânticos (background/foreground) em vez do dark genérico do browser.
+   */
+  option {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  optgroup {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+    font-weight: 600;
+    font-style: normal;
+  }
+  /* Select fechado também herda fundo dark padrão do browser quando
+     usamos `bg-transparent` — explicitar dá consistência. */
+  select {
+    color-scheme: dark;
+  }
+}

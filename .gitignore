@@ -1,0 +1,53 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+credentials/
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# ADK
+.adk/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Vite
+node_modules/
+frontend/dist/
+.pnpm-store/
+
+# Playwright runtime
+.playwright-mcp/
+
+# Logs e backups locais
+*.log
+*.bak
+
+# Screenshots de debug (não versionar — usar Linear/Notion se precisar guardar)
+*.png
+
+# Deep Research cache (estrutura versionada via .gitkeep, conteúdo ignorado)
+market_context/*.md
+
+# Token telemetry (estrutura versionada via .gitkeep, dados ignorados)
+metrics/*.csv
+
+# Popular times cache (estrutura versionada via .gitkeep, conteúdo ignorado)
+competitor_cache/*.json
+competitor_cache/*.md
