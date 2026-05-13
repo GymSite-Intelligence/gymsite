@@ -67,7 +67,7 @@ Cada agente é um `LlmAgent` do Google ADK com **macro-tools consolidadas** (A1,
 | Compute LLM | Vertex AI `us-central1` (cobrança em `gen-lang-client-0662901510`) |
 | Backend     | FastAPI + Uvicorn, Python 3.12                                |
 | Banco       | Supabase Postgres (mesmo cluster do CFN), RLS multi-org       |
-| Dados ext.  | Google Maps Platform (Places, Distance Matrix, Street View) · IBGE Censo 2022 (REST `servicodados`) · PNAD/Atlas via Search Grounding · SearchAPI Tier 0 (horários de pico) · **OLX + ImovelWeb** (listings comerciais via `httpx`+`bs4` — ver [docs/listing_sources.md](docs/listing_sources.md)) |
+| Dados ext.  | Google Maps Platform (Places, Distance Matrix, Street View) · IBGE Censo 2022 (REST `servicodados`) · PNAD/Atlas via Search Grounding · SearchAPI Tier 0 (horários de pico) · **OLX + ImovelWeb** (listings comerciais via Playwright headless — ver [docs/listing_sources.md](docs/listing_sources.md)) |
 | Frontend    | Vite 6 + React 18 + TypeScript + Tailwind + shadcn/ui + TanStack Router/Query |
 | Mapas UI    | `pigeon-maps` (OSM tiles, sem chave)                          |
 | Forms       | React Hook Form + Zod                                         |
@@ -213,7 +213,7 @@ Cada agente combina dados estruturados (APIs com schema fixo) com **Search Groun
 | Benchmarks setoriais    | Panorama ACAD / IHRSA / SEBRAE                          | Search Grounding (LLM) | `tools/benchmarks_tool.py`             |
 | Aluguel mediano         | Anúncios e portais imobiliários ao vivo                 | 3 queries Search Grounding paralelas | A4 `financial_estimator`          |
 | Concorrentes            | Google Places API (New) — Search Nearby + Reviews       | API REST              | `tools/competitor_tools.py`            |
-| Listings comerciais      | OLX (Lojas/Salas + Galpões) + ImovelWeb (Comerciais)    | Scraping `httpx`+`bs4` | `tools/listing_tools.py` *(planejado — ver [docs/listing_sources.md](docs/listing_sources.md))* |
+| Listings comerciais      | OLX (Lojas/Salas + Galpões) + ImovelWeb (Comerciais)    | Playwright Chromium headless (`page.evaluate`) | `tools/listing_tools.py` + `tools/imobiliaria_scraper.py` — ver [docs/listing_sources.md](docs/listing_sources.md) |
 | Horários de pico        | SearchAPI free tier (Tier 0) → lib → Playwright         | Cascata               | `tools/popular_times_tool.py`          |
 | CAPEX equipamentos       | `tools/kits_totais.json` (catálogo estático)            | JSON local            | `tools/kits_equipamentos.py`           |
 | Frete equipamentos       | ANTT Resolução 6.034 com origem heurística              | Tabela local          | `tools/antt_tools.py`                  |

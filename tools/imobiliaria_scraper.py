@@ -1,276 +1,264 @@
-# tools/imobiliaria_scraper.py
 """
-Scraper VivaReal para aluguel comercial — substitui o default R$35/m² hardcoded
-do BENCHMARKS_ALUGUEL pela mediana real do mercado por bairro.
+tools/imobiliaria_scraper.py — runner Playwright async pra portais imobiliários.
 
-Estratégia idêntica ao playwright_enrichment:
-sync_api em thread separada via asyncio.to_thread (compatível Windows + ADK).
+⚠️ Histórico: este arquivo era um scraper VivaReal sync. Em 2026-05-13 foi
+re-proposto como abordagem httpx+bs4 contra OLX+ImovelWeb (ver docs/listing_sources.md),
+mas testes ao vivo mostraram 403 nos 2 portais (TLS fingerprinting). Playwright
+voltou a ser necessário — não pra VivaReal (continua aposentado por instabilidade),
+mas pra OLX e ImovelWeb.
 
-Fonte: VivaReal (público, listings comerciais filtráveis por área).
-URL pattern: https://www.vivareal.com.br/aluguel/<uf-nome>/<cidade-slug>/bairros/<bairro-slug>/imoveis-comerciais/
+Estratégia atual:
+- **OLX**: Next.js com SSR. `__NEXT_DATA__` está embedded mas hydration JS aplica
+  o filtro de categoria. Esperamos `totalOfAds > 0` e extraímos via `page.evaluate()`.
+- **ImovelWeb**: stack legada (naventcdn) sem Next. JSON-LD `RealEstateListing`
+  tem url+description+location dos 30 itens; preço e área ficam só no DOM. Merge
+  por índice posicional.
+
+Consumido por `tools/listing_tools.py` (wrapper sync + orquestração + dedup).
 """
-import asyncio
+from __future__ import annotations
+
+import logging
 import re
-from typing import Optional
+from typing import Any
 
-try:
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
-    PLAYWRIGHT_AVAILABLE = True
-except ImportError:
-    PLAYWRIGHT_AVAILABLE = False
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 
+from models.schemas import ListingResult
 
-# UF (sigla) → nome usado no path do VivaReal
-UF_NOMES = {
-    "AC": "acre", "AL": "alagoas", "AP": "amapa", "AM": "amazonas",
-    "BA": "bahia", "CE": "ceara", "DF": "distrito-federal",
-    "ES": "espirito-santo", "GO": "goias", "MA": "maranhao",
-    "MT": "mato-grosso", "MS": "mato-grosso-do-sul", "MG": "minas-gerais",
-    "PA": "para", "PB": "paraiba", "PR": "parana", "PE": "pernambuco",
-    "PI": "piaui", "RJ": "rio-de-janeiro", "RN": "rio-grande-do-norte",
-    "RS": "rio-grande-do-sul", "RO": "rondonia", "RR": "roraima",
-    "SC": "santa-catarina", "SP": "sao-paulo", "SE": "sergipe",
-    "TO": "tocantins",
-}
+logger = logging.getLogger(__name__)
 
 
-def _slug(s: str) -> str:
-    """Normaliza para URL do VivaReal: lowercase, sem acento, hifen."""
-    s = (s or "").lower()
-    s = re.sub(r"[áàâãä]", "a", s)
-    s = re.sub(r"[éèêë]", "e", s)
-    s = re.sub(r"[íìîï]", "i", s)
-    s = re.sub(r"[óòôõö]", "o", s)
-    s = re.sub(r"[úùûü]", "u", s)
-    s = re.sub(r"[ç]", "c", s)
-    s = re.sub(r"[^a-z0-9]+", "-", s)
-    return s.strip("-")
+# ─────────────────────────────────────────────────────────────────────────────
+# Helpers (duplicam parsing puro de listing_tools.py pra evitar import circular)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _extract_id(url: str) -> str:
+    m = re.search(r"(\d{9,})", url or "")
+    return m.group(1) if m else ""
 
 
-def _build_vivareal_url(bairro: str, cidade: str, uf: str,
-                         area_min: int, area_max: int) -> str:
-    """
-    Pattern search-based — URLs path-based dão 403 Cloudflare.
-    Fonte do filtro de tipo comercial: filtramos no client side via texto do card.
-    """
-    bairro_q = bairro.replace(" ", "+")
-    cidade_q = cidade.replace(" ", "+")
-    return (
-        f"https://www.vivareal.com.br/aluguel/?"
-        f"onde={bairro_q}+-+{cidade_q}+-+{uf.upper()}"
+def _parse_area_m2(text: str) -> int:
+    if not text:
+        return 0
+    m = re.search(r"(\d[\d\.]*)\s*m[²2]?", text)
+    if not m:
+        m = re.search(r"(\d[\d\.]+)", text)
+    if not m:
+        return 0
+    try:
+        return int(m.group(1).replace(".", ""))
+    except (ValueError, AttributeError):
+        return 0
+
+
+def _olx_properties_lookup(properties: list[dict], key: str) -> str:
+    """OLX retorna properties=[{name, value, label}, ...]. Acha por name."""
+    for p in properties or []:
+        if p.get("name") == key:
+            return p.get("value", "") or p.get("label", "")
+    return ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OLX — extrai __NEXT_DATA__ pós-hydration
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def fetch_olx_nextdata(
+    cidade_slug: str,           # "fortaleza-e-regiao"
+    estado_sigla: str,          # "ce" (lowercase)
+    category: str = "lojas",    # "lojas" | "galpoes"
+    timeout_ms: int = 45000,
+) -> list[ListingResult]:
+    """Extrai listings da OLX via __NEXT_DATA__ no Chromium após hydration."""
+    olx_cats = {
+        "lojas": "lojas-salas-e-pontos-comerciais",
+        "galpoes": "galpoes-e-depositos",
+    }
+    cat = olx_cats.get(category, olx_cats["lojas"])
+    url = (
+        f"https://www.olx.com.br/imoveis/aluguel/{cat}/"
+        f"{cidade_slug}/estado-{estado_sigla}"
     )
 
-
-def _parse_preco(texto: str) -> Optional[int]:
-    """Extrai inteiro de R$ em '$ 25.000/mês', 'R$ 30.500', etc."""
-    if not texto:
-        return None
-    primeira_parte = texto.split("/")[0]
-    nums = re.sub(r"[^\d]", "", primeira_parte)
-    if not nums:
-        return None
-    try:
-        return int(nums)
-    except ValueError:
-        return None
-
-
-def _parse_area(texto: str) -> Optional[float]:
-    """Extrai m² de '1.200 m²' ou '1200m²'."""
-    if not texto:
-        return None
-    t = texto.lower().replace(".", "").replace(",", ".")
-    m = re.search(r"(\d+(?:\.\d+)?)\s*m", t)
-    if not m:
-        return None
-    try:
-        v = float(m.group(1))
-        return v if 100 <= v <= 50000 else None  # sanity check
-    except ValueError:
-        return None
-
-
-def _scrape_sync(bairro: str, cidade: str, uf: str,
-                  area_min: int, area_max: int, max_listings: int) -> dict:
-    """Versão sync — roda em thread separada via asyncio.to_thread."""
-    base = {
-        "bairro": bairro, "cidade": cidade, "uf": uf,
-        "area_filtro_min": area_min, "area_filtro_max": area_max,
-        "fonte": "VivaReal",
-        "url_consultada": "",
-        "n_amostra": 0,
-        "listings": [],
-        "min_aluguel_m2": None,
-        "mediana_aluguel_m2": None,
-        "max_aluguel_m2": None,
-        "min_aluguel_mensal": None,
-        "mediana_aluguel_mensal": None,
-        "max_aluguel_mensal": None,
-        "status": "ok",
-    }
-
-    if not PLAYWRIGHT_AVAILABLE:
-        base["status"] = "playwright_nao_instalado"
-        return base
-
-    # URL search-based (única que não dá 403 Cloudflare)
-    url = _build_vivareal_url(bairro, cidade, uf, area_min, area_max)
-    base["url_consultada"] = url
-
-    # Keywords pra identificar listings COMERCIAIS no texto do card
-    # (a URL search-based traz comercial + residencial; filtramos aqui)
-    PALAVRAS_COMERCIAIS = [
-        "comercial", "loja", "sala", "galpão", "galpao", "ponto comercial",
-        "área comercial", "area comercial", "kitnet comercial",
-        "imóvel comercial", "imovel comercial", "salão", "salao",
-    ]
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/121.0.0.0 Safari/537.36"
-                ),
-                locale="pt-BR",
-                viewport={"width": 1280, "height": 900},
-            )
-            page = context.new_page()
-
-            try:
-                page.goto(url, timeout=30000, wait_until="networkidle")
-            except PlaywrightTimeout:
-                page.goto(url, timeout=30000, wait_until="domcontentloaded")
-
-            page.wait_for_timeout(3000)
-
-            # Seletor que funciona na URL search-based (descoberto empiricamente)
-            cards = page.locator("article")
-            if cards.count() == 0:
-                cards = page.locator("[data-cy*='property']")
-
-            if not cards or cards.count() == 0:
-                base["status"] = "selectors_falharam_ou_sem_listings"
-                browser.close()
-                return base
-
-            count = min(cards.count(), max_listings)
-            listings = []
-
-            for i in range(count):
-                card = cards.nth(i)
-                try:
-                    # Texto integral do card — mais confiável que seletores específicos
-                    full_text = card.inner_text(timeout=1500) or ""
-                    full_text_low = full_text.lower()
-
-                    # Filtra só comerciais — pula apartamentos/casas residenciais
-                    is_comercial = any(p in full_text_low for p in PALAVRAS_COMERCIAIS)
-                    is_residencial = any(p in full_text_low for p in [
-                        "quarto", "dormitório", "dormitorio", "apartamento", "apto",
-                        "casa", "kitnet residencial", "studio residencial"
-                    ])
-                    if is_residencial and not is_comercial:
-                        continue
-
-                    # Extrai preço (linha que tem "R$" e geralmente é a maior)
-                    precos_match = re.findall(r"R\$\s*[\d.,]+", full_text)
-                    preco = None
-                    for pm in precos_match:
-                        v = _parse_preco(pm)
-                        # Pula valores baixos que são IPTU/condomínio (geralmente <2k)
-                        if v and v >= 800:
-                            preco = v
-                            break
-
-                    # Extrai área
-                    area = _parse_area(full_text)
-
-                    # Endereço — tipicamente em h2/h3 ou span com "endereço"
-                    endereco_txt = ""
-                    for sel in ["h2", "h3", "[class*='address']", "[class*='location']"]:
-                        loc = card.locator(sel).first
-                        if loc.count() > 0:
-                            try:
-                                endereco_txt = (loc.text_content(timeout=500) or "").strip()
-                                if endereco_txt and len(endereco_txt) > 5:
-                                    break
-                            except Exception:
-                                pass
-
-                    if preco and area and area > 0 and preco > 500:
-                        # Filtra por range de área se especificado
-                        if area_min <= area <= area_max or area_min == 0:
-                            listings.append({
-                                "preco_mensal": preco,
-                                "area_m2": area,
-                                "preco_m2": round(preco / area, 2),
-                                "endereco": endereco_txt[:200],
-                                "comercial_confirmado": is_comercial,
-                            })
-                except Exception:
-                    continue
-
-            browser.close()
-
-            if listings:
-                # Estatísticas
-                precos_m2 = sorted([l["preco_m2"] for l in listings])
-                precos_total = sorted([l["preco_mensal"] for l in listings])
-                meio = len(precos_m2) // 2
-                base["listings"] = sorted(listings, key=lambda x: x["preco_m2"])[:5]
-                base["n_amostra"] = len(listings)
-                base["min_aluguel_m2"] = precos_m2[0]
-                base["mediana_aluguel_m2"] = precos_m2[meio]
-                base["max_aluguel_m2"] = precos_m2[-1]
-                base["min_aluguel_mensal"] = precos_total[0]
-                base["mediana_aluguel_mensal"] = precos_total[meio]
-                base["max_aluguel_mensal"] = precos_total[-1]
-            else:
-                base["status"] = "extracao_falhou_zero_listings_validos"
-
-    except Exception as e:
-        base["status"] = f"error: {str(e)[:300]}"
-
-    return base
-
-
-async def buscar_aluguel_comercial(
-    bairro: str,
-    cidade: str,
-    uf: str,
-    area_min: int = 1000,
-    area_max: int = 1500,
-) -> dict:
-    """
-    Pesquisa aluguel comercial real no VivaReal para o bairro/cidade especificados.
-
-    Retorna estatísticas R$/m² mensal e top 5 listings (sempre — mesmo se falhar
-    retorna dict com status). Usar `mediana_aluguel_m2` como input pro
-    cálculo de viabilidade financeira em vez do default R$35/m².
-
-    Args:
-        bairro: ex "Meireles"
-        cidade: ex "Fortaleza"
-        uf: sigla, ex "CE"
-        area_min: filtro área mínima em m² (default 1000)
-        area_max: filtro área máxima em m² (default 1500)
-
-    Returns:
-        dict com chaves: bairro, cidade, uf, mediana_aluguel_m2,
-        min_aluguel_m2, max_aluguel_m2, n_amostra, listings, status
-    """
-    try:
-        return await asyncio.to_thread(
-            _scrape_sync, bairro, cidade, uf, area_min, area_max, 20
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/126.0.0.0 Safari/537.36"
+            ),
+            locale="pt-BR",
         )
-    except Exception as e:
-        return {
-            "bairro": bairro, "cidade": cidade, "uf": uf,
-            "status": f"thread_error: {str(e)[:200]}",
-            "n_amostra": 0,
-            "listings": [],
-            "mediana_aluguel_m2": None,
-        }
+        page = await context.new_page()
+        try:
+            # `domcontentloaded` é mais rápido que `networkidle` — basta o
+            # script `__NEXT_DATA__` ter aparecido pra extrair.
+            await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            await page.wait_for_function(
+                "window.__NEXT_DATA__?.props?.pageProps?.totalOfAds > 0",
+                timeout=timeout_ms,
+            )
+            page_props: dict[str, Any] = await page.evaluate(
+                "() => window.__NEXT_DATA__.props.pageProps"
+            )
+        except PlaywrightTimeout as e:
+            logger.warning("olx: timeout esperando hydration em %s — %s", url, e)
+            await browser.close()
+            return []
+        except Exception as e:
+            logger.warning("olx: falha %s — %s", url, e)
+            await browser.close()
+            return []
+        finally:
+            await browser.close()
+
+    ads = page_props.get("ads", []) or []
+    results: list[ListingResult] = []
+
+    for ad in ads:
+        try:
+            list_id = str(ad.get("listId", "") or "")
+            friendly_url = ad.get("friendlyUrl") or ad.get("url") or ""
+            props = ad.get("properties", []) or []
+
+            area_raw = _olx_properties_lookup(props, "size")
+            area_m2 = _parse_area_m2(area_raw)
+
+            location = ad.get("locationDetails", {}) or {}
+            bairro = location.get("neighbourhood") or ""
+            cidade = location.get("municipality") or ""
+            uf = location.get("uf") or ""
+            address = ", ".join([x for x in (bairro, cidade, uf) if x])
+
+            price_value = ad.get("priceValue") or ad.get("price") or ""
+            price_raw = str(price_value)
+
+            re_type = _olx_properties_lookup(props, "re_type")
+            property_type = "loja" if "loja" in re_type.lower() else (
+                "galpao" if "galp" in re_type.lower() else "comercial"
+            )
+
+            results.append(ListingResult(
+                source="olx",
+                title=str(ad.get("subject", "")),
+                price_raw=price_raw,
+                area_m2=area_m2,
+                address=address,
+                listing_url=friendly_url,
+                listing_id=list_id or _extract_id(friendly_url),
+                source_url=url,
+                property_type=property_type,
+            ))
+        except Exception as e:
+            logger.debug("olx: ad ignorado — %s", e)
+            continue
+
+    logger.info("olx: %s/%s/%s → %d ads", cidade_slug, estado_sigla, category, len(results))
+    return results
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ImovelWeb — JSON-LD + DOM merge
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def fetch_imovelweb_jsonld(
+    cidade_slug: str,           # "fortaleza"
+    estado_slug: str,           # "ceara"
+    timeout_ms: int = 30000,
+) -> list[ListingResult]:
+    """Extrai listings do ImovelWeb via DOM dos cards (atributos data-* + features).
+
+    Inspeção 2026-05-13 mostrou: o JSON-LD na página tem só 30 itens parciais,
+    mas o DOM tem ~420 cards visíveis (incluindo "patrocinados"). Cada card
+    expõe atributos estáveis:
+      - data-id="3032295652"               → listing_id
+      - data-to-posting="/propriedades/..."  → URL relativa do anúncio
+      - data-qa="posting PROPERTY"          → seletor estável
+      - [class*='features'] → "988 m² tot."  → área
+      - [class*='price']    → "R$ 9.500"     → preço
+      - [class*='location'] → endereço
+    """
+    url = (
+        f"https://www.imovelweb.com.br/comerciais-aluguel-"
+        f"{estado_slug}-{cidade_slug}.html"
+    )
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/126.0.0.0 Safari/537.36"
+            ),
+            locale="pt-BR",
+        )
+        page = await context.new_page()
+        try:
+            await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            try:
+                await page.wait_for_selector(
+                    "[data-qa*='posting']", timeout=timeout_ms,
+                )
+            except PlaywrightTimeout:
+                logger.warning("imovelweb: timeout esperando posting em %s", url)
+
+            cards: list[dict] = await page.evaluate("""() => {
+                const out = [];
+                document.querySelectorAll(
+                    "[data-qa*='posting'][data-id]"
+                ).forEach(card => {
+                    out.push({
+                        data_id:    card.getAttribute('data-id') || '',
+                        data_href:  card.getAttribute('data-to-posting') || '',
+                        title:      card.querySelector('h2, h3, [class*="title"]')?.innerText || '',
+                        price:      card.querySelector('[class*="price"], [class*="Price"]')?.innerText || '',
+                        features:   card.querySelector('[class*="features"], [class*="Features"]')?.innerText || '',
+                        address:    card.querySelector('[class*="location"], [class*="Location"]')?.innerText || '',
+                        description: card.querySelector('h3 + p, [class*="description"]')?.innerText || '',
+                    });
+                });
+                return out;
+            }""")
+        except Exception as e:
+            logger.warning("imovelweb: falha %s — %s", url, e)
+            await browser.close()
+            return []
+        finally:
+            await browser.close()
+
+    results: list[ListingResult] = []
+    for c in cards:
+        href_raw = c.get("data_href") or ""
+        # data-to-posting tem query params (?n_src=Listado...) — strip pra URL limpa
+        href_clean = href_raw.split("?")[0]
+        listing_url = (
+            f"https://www.imovelweb.com.br{href_clean}"
+            if href_clean.startswith("/") else href_clean
+        )
+
+        listing_id = c.get("data_id") or _extract_id(listing_url)
+        area_m2 = _parse_area_m2(c.get("features", ""))
+
+        if not listing_url and area_m2 == 0:
+            continue
+
+        results.append(ListingResult(
+            source="imovelweb",
+            title=str(c.get("title", "")),
+            price_raw=str(c.get("price", "")),
+            area_m2=area_m2,
+            address=str(c.get("address", "")),
+            listing_url=listing_url,
+            listing_id=str(listing_id),
+            source_url=url,
+            description=str(c.get("description", ""))[:300],
+        ))
+
+    logger.info(
+        "imovelweb: %s/%s → cards=%d → %d listings",
+        cidade_slug, estado_slug, len(cards), len(results),
+    )
+    return results

@@ -5,7 +5,9 @@
 
 ## TL;DR
 
-Adotar **OLX + ImovelWeb** via `httpx` + `BeautifulSoup` como fontes primárias de listings. Aposentar `tools/imobiliaria_scraper.py` (VivaReal via Playwright) — site instável e estoque sobreposto ao ZAP do mesmo grupo.
+Adotar **OLX + ImovelWeb** como fontes primárias de listings via **Playwright async** (Chromium headless). Aposentar o conteúdo VivaReal de `tools/imobiliaria_scraper.py` mas **manter o arquivo** como runner Playwright unificado dos 2 portais novos.
+
+**Atualização 2026-05-13 (pivô):** o plano inicial era usar `httpx`+`BeautifulSoup`, mas teste ao vivo mostrou HTTP 403 nos 2 portais por **TLS fingerprinting** (mesmo com headers Chrome completos). A 1ª camada de extração tem que ser Chromium real — não há escape. `httpx`+`bs4` foram revertidos em favor de Playwright. Smoke test final em Fortaleza/CE retorna 15 listings reais (incl. prédio 988m² R$ 9.500 Centro de Fortaleza, id `3032295652`).
 
 ---
 
@@ -96,11 +98,65 @@ Exemplo testado: prédio comercial 988m², Centro de Fortaleza, R$ 9.500/mês �
 
 ---
 
-## 3. Implementação proposta
+## 3. Implementação entregue (commit pós-pivô)
 
-### 3.1 Novo `tools/listing_tools.py`
+### Arquitetura final
+
+```
+tools/listing_tools.py            (parsing puro + orquestrador async)
+    ↓ asyncio.gather
+tools/imobiliaria_scraper.py      (runner Playwright unificado)
+    ├── fetch_olx_nextdata()       → extrai __NEXT_DATA__ pós-hydration
+    └── fetch_imovelweb_jsonld()   → extrai DOM via [data-qa*='posting']
+```
+
+### Por que Playwright e não httpx
+
+| Tentativa                          | HTTP    | Resultado |
+|-----------------------------------|---------|-----------|
+| httpx + User-Agent simples         | 403     | Bloqueado |
+| httpx + 12 headers Chrome (Sec-Ch-Ua, Sec-Fetch-*, etc) | 403 | Bloqueado |
+| Playwright Chromium headless       | 200     | ✅ Funciona |
+
+TLS fingerprint do `python-httpx` é detectável; só Chromium real (ou `curl_cffi` que imita o TLS handshake) passa. Playwright já é dependência do projeto (`playwright_enrichment.py`), custo zero adicionar mais 2 funções.
+
+### Extração por portal
+
+**OLX** (Next.js com SSR):
+- Aguardar `__NEXT_DATA__.props.pageProps.totalOfAds > 0` pós-hydration
+- `page.evaluate()` retorna `pageProps.ads[]` direto
+- Cada ad tem `listId`, `subject`, `priceValue`, `friendlyUrl`, `locationDetails`, `properties[]` (size, re_type)
+
+**ImovelWeb** (stack legada naventcdn):
+- Aguardar `[data-qa*='posting'][data-id]` aparecer no DOM (timeout 30s)
+- Atributos estáveis no card:
+  - `data-id="3032295652"` → `listing_id`
+  - `data-to-posting="/propriedades/..."` → URL relativa
+  - `[class*='features']` → "988 m² tot." (área — não é `surface`!)
+  - `[class*='price']` → "R$ 9.500"
+  - `[class*='location']` → endereço
+
+### Helpers de parsing puro (em `listing_tools.py`)
 
 ```python
+_slug("São Paulo")           # → "sao-paulo"
+_extract_id(".../-3032295652.html")  # → "3032295652"
+_parse_area_m2("988 m² tot.")        # → 988
+```
+
+### Dedup + filtros
+
+```python
+_dedup_and_filter(listings, area_min, area_max)
+# Chave dupla: listing_id (preferido) + endereço normalizado primeiros 40 chars
+# Filtra fora da faixa [area_min, area_max]
+# Ordena por área decrescente
+```
+
+### Trecho legado (versão httpx descartada após pivô)
+
+```python
+# (Mantido por referência histórica — NÃO usar em produção.)
 """
 tools/listing_tools.py — scraper de listings comerciais OLX + ImovelWeb.
 Substitui tools/imobiliaria_scraper.py (VivaReal/Playwright) — ver docs/listing_sources.md.
@@ -293,12 +349,16 @@ for listing in listings:
         candidates.append(PlaceCandidate.from_listing(listing, coords))
 ```
 
-### 3.4 Dependência nova
+### 3.4 Dependência (final)
 
 `requirements.txt`:
 ```
-beautifulsoup4>=4.12.0
+playwright>=1.40.0
 ```
+
+`beautifulsoup4` foi removido — Playwright extrai via `page.evaluate()` no DOM
+real, sem precisar parser HTML em Python. Chromium já estava instalado no
+`.venv` por outras tools (`playwright_enrichment.py`).
 
 ---
 
@@ -314,13 +374,13 @@ beautifulsoup4>=4.12.0
 
 ---
 
-## 5. Plano de migração
+## 5. Status de execução
 
-1. ✅ Decisão registrada (este doc + comentário VEC-386 em 2026-05-13)
-2. ⏳ Adicionar `beautifulsoup4` ao `requirements.txt`
-3. ⏳ Criar `ListingResult` em `models/schemas.py`
-4. ⏳ Implementar `tools/listing_tools.py`
-5. ⏳ Marcar `tools/imobiliaria_scraper.py` com header `# DEPRECATED — ver docs/listing_sources.md`
-6. ⏳ Modificar `agents/a1_geoscout.py` pra usar 3 estágios (zonas + listings + cruzamento)
-7. ⏳ Teste E2E: rodar pipeline em Fortaleza/Centro, validar top 3 candidatos com `listing_url` clicáveis
-8. ⏳ Remover `imobiliaria_scraper.py` quando o E2E passar 3 vezes consecutivas
+1. ✅ Decisão registrada — este doc + 2 comentários VEC-386 (proposta inicial httpx + pivô Playwright)
+2. ✅ `playwright>=1.40.0` em `requirements.txt` (`beautifulsoup4` revertido após pivô)
+3. ✅ `ListingResult` criado em `models/schemas.py` (dataclass, padrão da casa)
+4. ✅ `tools/listing_tools.py` implementado — parsing puro + orquestrador async com `asyncio.gather` das 3 fontes
+5. ✅ `tools/imobiliaria_scraper.py` reescrito como runner Playwright unificado (`fetch_olx_nextdata` + `fetch_imovelweb_jsonld`)
+6. ✅ Smoke test ao vivo Fortaleza/CE: 144 brutos → 15 únicos após dedup+filtro, incluindo prédio 988m² R$ 9.500 Centro (id 3032295652)
+7. ⏳ Modificar `agents/a1_geoscout.py` pra usar 3 estágios (zonas Places + listings + cruzamento via geocode)
+8. ⏳ Teste E2E full pipeline em Fortaleza/Centro, validar top 3 candidatos com `listing_url` clicáveis
