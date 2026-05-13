@@ -231,9 +231,14 @@ Cada agente combina dados estruturados (APIs com schema fixo) com **Search Groun
 | Vitalidade econômica regional não considerada         | **PIB municipal SIDRA 2023**     | proposto como extensão da [VEC-421](https://linear.app/vectra-cargo/issue/VEC-421) |
 | Concorrentes mapeados só via Places (caro em rajada)  | **CEMPRE/CNAE 9313-1/00** (SIDRA) pré-triagem | proposto como extensão da [VEC-378](https://linear.app/vectra-cargo/issue/VEC-378) |
 | POIs/rotas só via Google (custo recorrente)           | **OpenStreetMap / Overpass API** | proposto como extensão da [VEC-378](https://linear.app/vectra-cargo/issue/VEC-378) |
+| Sem validação de zoneamento do candidato              | **Plano Diretor municipal** (geosampa, pcrj, mapas fortaleza, ippuc) | proposto como extensão da [VEC-378](https://linear.app/vectra-cargo/issue/VEC-378) |
+| Score regional sem panorama socioeconômico amplo       | **Portal Cidades@ IBGE** + **Atlas Desenvolvimento Humano** | proposto como extensão da [VEC-421](https://linear.app/vectra-cargo/issue/VEC-421) |
+| Vitalidade comercial regional não captada              | **PAC 2023** (Pesquisa Anual Comércio) + **PAS 2023** (Serviços) — SIDRA | proposto como extensão da [VEC-421](https://linear.app/vectra-cargo/issue/VEC-421) |
+| Censo 2022 por setor censitário publicação progressiva | Tabelas SIDRA saindo escalonadas (Trabalho/Rendimento out/2025, Favelas dez/2025, Etnias 2025) — A2 consulta API REST que reflete o publicado | limitação intrínseca (não há mitigação) |
 | "Crescimento do bairro" sem fonte projetiva           | Estimativas IBGE 2025 + Censo 2010↔2022 diff | sem VEC ativa                          |
 | `score_acessibilidade` heurístico                     | GTFS municipal (SPTrans, BNTU)   | sem VEC ativa                                       |
-| A5 ContactHunter sem sócios formais                   | JUCESP/JUCERJ + CNPJ.ws          | sem VEC ativa                                       |
+| A5 ContactHunter sem sócios formais                   | JUCESP/JUCERJ + **CNPJ.ws** (fallback Receita) | sem VEC ativa                              |
+| A5 ContactHunter sem histórico de propriedade          | **Registro de Imóveis / CNJ** (`registrodeimoveis.org.br`) | sem VEC ativa                                  |
 
 Pra granularidade por setor censitário do Censo 2022, a publicação SIDRA está progressiva: Trabalho e Rendimento saiu out/2025; Favelas e Comunidades dez/2025; Etnias 2025. O A2 (DemoAnalyst) consulta a API REST do IBGE que reflete o que estiver publicado no momento.
 

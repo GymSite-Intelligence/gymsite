@@ -362,6 +362,20 @@ real, sem precisar parser HTML em Python. Chromium já estava instalado no
 
 ---
 
+## 3.5 Cobertura observada por cidade (smoke test 2026-05-13)
+
+| Cidade        | OLX (ads brutos) | ImovelWeb (cards) | Após dedup+filtro | Observações                          |
+|---------------|------------------|--------------------|--------------------|--------------------------------------|
+| Fortaleza/CE  | 0 (timeout 1ª run, refatoração corrigiu) | 144 | 15 | Funcionou após corrigir seletor `features` |
+| Curitiba/PR   | 57 + 57           | 30                 | 16                 | Comportamento esperado                |
+| São Paulo/SP  | 57 + 57           | **0 (Cloudflare)** | 10                 | ImovelWeb bloqueado por challenge JS  |
+
+**Cloudflare em SP**: o ImovelWeb ativa challenge anti-bot nas capitais top. Página inicial retorna HTTP 403 com `title="Just a moment..."` e parâmetro `__cf_chl_rt_tk` na URL final. Playwright headless padrão tem `navigator.webdriver=true`, detectável por challenge.
+
+**Mitigação atual:** detecção graciosa no `fetch_imovelweb_jsonld` — se challenge detectado, log warning e retorna `[]`. A1 GeoScout continua com OLX como fonte única naquela cidade.
+
+**Solução futura** (não bloqueante pra MVP): `playwright-stealth` ou `patchright` — patches que mascaram fingerprints do Chromium headless. Investigar quando ImovelWeb virar bloqueante em mais cidades.
+
 ## 4. Riscos e mitigação
 
 | Risco                                              | Mitigação                                                                                  |

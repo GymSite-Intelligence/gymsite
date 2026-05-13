@@ -198,6 +198,20 @@ async def fetch_imovelweb_jsonld(
         page = await context.new_page()
         try:
             await page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+
+            # Cloudflare challenge — observado em SP capital, não em CE/PR.
+            # Playwright headless padrão tem navigator.webdriver=true, detectável.
+            # Falha graciosa: retorna [] e A1 segue com OLX como fonte única.
+            page_title = (await page.title()) or ""
+            if "Just a moment" in page_title or "cf_chl_" in page.url:
+                logger.warning(
+                    "imovelweb: Cloudflare challenge bloqueou %s — "
+                    "fallback pra OLX-only (considerar playwright-stealth)",
+                    url,
+                )
+                await browser.close()
+                return []
+
             try:
                 await page.wait_for_selector(
                     "[data-qa*='posting']", timeout=timeout_ms,
