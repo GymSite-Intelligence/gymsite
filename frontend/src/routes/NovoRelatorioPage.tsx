@@ -152,12 +152,21 @@ export function NovoRelatorioPage() {
     fonte: fonteMun,
   } = useMunicipioAutocomplete(debouncedMunicipio, ufSelecionada?.sigla ?? '')
 
+  // State local pra controlar fetches Places. Espelha o flag do react-hook-form,
+  // mas precisa existir ANTES do useForm pra alimentar o useBairrosDoMunicipio
+  // (hooks têm que rodar em ordem fixa). Sincronizado em toggleCidadeInteira().
+  const [cidadeInteiraFlag, setCidadeInteiraFlag] = useState(
+    retrySearch.bairro === BAIRRO_CIDADE_INTEIRA,
+  )
+
   // Bairros — lista COMPLETA pré-carregada ao selecionar município
-  // (multi-letter Places, ~12 chamadas paralelas, cache infinito).
+  // (multi-letter Places, ~22 chamadas paralelas, cache infinito).
+  // SKIP quando cidadeInteira está marcado — economiza quota Places API.
   const { data: bairrosDoMunicipio = [], isFetching: loadingBai } =
     useBairrosDoMunicipio(
       municipioSelecionado?.nome ?? '',
       municipioSelecionado?.uf ?? '',
+      { enabled: !cidadeInteiraFlag },
     )
 
   // Filtro client-side por texto digitado (caller ainda pode digitar pra refinar)
@@ -224,6 +233,7 @@ export function NovoRelatorioPage() {
    */
   function toggleCidadeInteira(checked: boolean) {
     setValue('cidadeInteira', checked, { shouldValidate: true })
+    setCidadeInteiraFlag(checked) // sincroniza com hook enabled
     if (checked) {
       setBairroQuery('')
       setValue('bairro', '', { shouldValidate: true })

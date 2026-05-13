@@ -90,8 +90,15 @@ async function fetchTodosBairros(
   )
 }
 
-export function useBairrosDoMunicipio(municipio: string, uf: string) {
-  const enabled = municipio.length >= 2 && uf.length === 2
+export function useBairrosDoMunicipio(
+  municipio: string,
+  uf: string,
+  options: { enabled?: boolean } = {},
+) {
+  // Hook só dispara quando município/UF estão setados E o caller não desativou.
+  // Caller desativa em modo "cidade inteira" pra não queimar quota Places.
+  const externalEnabled = options.enabled ?? true
+  const enabled = externalEnabled && municipio.length >= 2 && uf.length === 2
   return useQuery({
     queryKey: ['bairros-municipio', municipio.toLowerCase(), uf.toLowerCase()],
     queryFn: () => fetchTodosBairros(municipio, uf),
