@@ -133,7 +133,23 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
         app_name="gymsite",
         user_id=user_id,
         session_id=session_id,
-        state={"relatorio_id": relatorio_id},
+        state={
+            "relatorio_id": relatorio_id,
+            # Params estruturados acessíveis via tool_context.state em qualquer
+            # tool — usado por A1 GeoScout (listings OLX+ImovelWeb filtra por
+            # area_min/max) e potencialmente A4 (estacionamento, tipo_negocio).
+            "input_params": {
+                "cidade": payload.cidade,
+                "uf": payload.uf,
+                "bairro": payload.bairro,
+                "area_m2_min": payload.area_m2_min,
+                "area_m2_max": payload.area_m2_max,
+                "tipo_negocio": payload.tipo_negocio,
+                "publico_alvo": payload.publico_alvo,
+                "genero_alvo": payload.genero_alvo,
+                "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
+            },
+        },
     )
 
     runner = Runner(

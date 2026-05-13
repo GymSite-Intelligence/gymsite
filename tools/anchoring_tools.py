@@ -442,12 +442,31 @@ def analisar_pontos_comerciais_completo(
         except Exception:
             pass  # best-effort — não bloqueia pipeline
 
+    # 10. Listings reais (OLX + ImovelWeb via Playwright)
+    # Adicionados como candidatos extras com qualidade_sinal="direto-listing"
+    # — oferta concreta vale mais que sinal indireto de zona âncora.
+    # Geocode em batch p/ ter lat/lng (custo ~$0.05 USD por relatório).
+    listings_candidatos = _fetch_listings_como_candidatos(
+        cidade=cidade,
+        uf=uf,
+        tool_context=tool_context,
+        lat_fallback=lat,
+        lng_fallback=lng,
+    )
+    candidatos_final = top_10 + listings_candidatos
+    candidatos_final.sort(key=lambda x: x.get("score_geoscout", 0), reverse=True)
+
     return {
-        "total_candidatos": len(top_10),
-        "estrategia": "âncoras comerciais para field research — não imóveis garantidamente vagos",
-        "qualidade_sinal": "indireto-heuristico",
+        "total_candidatos": len(candidatos_final),
+        "ancoras_heuristicas": len(top_10),
+        "listings_reais": len(listings_candidatos),
+        "estrategia": (
+            "âncoras comerciais para field research + listings reais "
+            "(OLX/ImovelWeb) quando disponíveis — verificar listing_url"
+        ),
+        "qualidade_sinal": "misto-heuristico+direto-listing",
         "checklist_diligencia": list(CHECKLIST_DILIGENCIA),
-        "candidatos": top_10,
+        "candidatos": candidatos_final,
         "lat_centro": lat,
         "lng_centro": lng,
         "polos_geradores_count": len(polos),
@@ -455,7 +474,122 @@ def analisar_pontos_comerciais_completo(
             "Macro-tool determinística: geocode + nearby search + text search "
             "(supermercado, concessionária) + filtro blacklist + score "
             "GeoScout + score ancoragem (polos geradores) + visibilidade + "
-            "avenida + street view. Tudo em 1 chamada — sem function_calls "
-            "grandes que provocavam MALFORMED."
+            "avenida + street view + listings OLX/ImovelWeb (Playwright). "
+            "Tudo em 1 chamada — sem function_calls grandes que provocavam MALFORMED."
         ),
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: listings reais como candidatos
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _fetch_listings_como_candidatos(
+    cidade: str,
+    uf: str,
+    tool_context,
+    lat_fallback: float,
+    lng_fallback: float,
+) -> list[dict]:
+    """Puxa listings OLX+ImovelWeb e converte pra schema de candidato do A1.
+
+    Lê area_min/area_max do `tool_context.state.input_params` quando disponível;
+    defaults razoáveis pra academia M (800-1500m²) com folga.
+
+    Roda o scraper async em thread isolada com loop próprio — evita conflito
+    com o event loop do ADK Runner que executa esta macro.
+
+    Falha silenciosa: se scraper retornar [], A1 segue só com âncoras. Não
+    bloqueia o pipeline.
+    """
+    import asyncio
+    import concurrent.futures
+    import logging
+    log = logging.getLogger(__name__)
+
+    state = getattr(tool_context, "state", None) if tool_context else None
+    params = (state.get("input_params") if state else None) or {}
+    area_min = int(params.get("area_m2_min", 500))
+    area_max = int(params.get("area_m2_max", 5000))
+
+    # Importa só agora pra evitar custo de import (playwright) quando A1 não
+    # usa listings (ex: testes unitários focados em âncoras).
+    try:
+        from tools.listing_tools import fetch_commercial_listings_async
+        from tools.maps_tools import geocode_endereco
+    except Exception as e:
+        log.warning("listings: imports falharam — %s", e)
+        return []
+
+    def _runner():
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(
+                fetch_commercial_listings_async(cidade, uf, area_min, area_max)
+            )
+        finally:
+            loop.close()
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            listings = ex.submit(_runner).result(timeout=180)
+    except Exception as e:
+        log.warning("listings: scraper falhou — %s", e)
+        return []
+
+    if not listings:
+        return []
+
+    # Limita aos top 15 por área pra controlar custo de geocode
+    listings = listings[:15]
+
+    candidatos: list[dict] = []
+    for l in listings:
+        # Geocode best-effort. Se falhar, usa centro da cidade (fallback útil
+        # pra A4 mas ruim pra distância — log explícito pra auditoria).
+        c_lat, c_lng = lat_fallback, lng_fallback
+        geocoded = False
+        if l.address:
+            try:
+                g = geocode_endereco(l.address)
+                if isinstance(g, dict) and g.get("lat") and g.get("lng"):
+                    c_lat = float(g["lat"])
+                    c_lng = float(g["lng"])
+                    geocoded = True
+            except Exception:
+                pass
+
+        candidatos.append({
+            "place_id": f"listing_{l.source}_{l.listing_id or len(candidatos)}",
+            "nome": f"Imóvel anunciado · {l.area_m2}m² · {l.source.upper()}",
+            "endereco": l.address or "Endereço não disponível",
+            "lat": c_lat,
+            "lng": c_lng,
+            "tipos": ["imovel_anunciado", "comercial", l.source],
+            "area_estimada_m2": l.area_m2,
+            # Score base alto — oferta real é sinal direto, não heurístico
+            "score_geoscout": 8.5,
+            "qualidade_sinal": "direto-listing",
+            "fonte": "listing",
+            "source": l.source,
+            "listing_url": l.listing_url,
+            "listing_id": l.listing_id,
+            "price_raw": l.price_raw,
+            "geocoded": geocoded,
+            "motivo": (
+                f"Imóvel anunciado para aluguel em {l.source.upper()} — "
+                f"{l.price_raw or 'preço a confirmar'}. Acessar listing_url "
+                f"pra contato direto com a imobiliária."
+            ),
+            # Campos esperados pelo enriquecimento que NÃO rodam pra listings
+            # (Place Details, polos geradores). A5 ContactHunter usa listing_url.
+            "score_ancoragem": 0.0,
+            "polos_geradores": [],
+            "estimativa_visibilidade": "a_confirmar_no_field",
+            "avenida_principal": False,
+            "street_view_url": "",
+            "telefone": "",
+            "website": l.listing_url,
+        })
+
+    return candidatos

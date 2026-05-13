@@ -62,6 +62,9 @@ A macro-tool já executa internamente:
 - Detecção de avenida principal
 - URL Street View
 - Checklist de diligência fixo (6 itens)
+- **Listings reais de OLX + ImovelWeb (Playwright)** com `listing_url`,
+  `listing_id`, `price_raw`, `source` — oferta concreta marcada com
+  `qualidade_sinal: "direto-listing"` (vs heurísticas com "indireto-heuristico")
 
 NÃO chame ferramentas separadas — todas foram consolidadas. Uma única
 chamada à macro-tool é suficiente E obrigatória.
@@ -69,15 +72,19 @@ chamada à macro-tool é suficiente E obrigatória.
 ## SAÍDA ESPERADA (JSON)
 
 Cole o resultado da macro-tool no formato abaixo (TODOS os campos
-vêm prontos da função, basta copiar):
+vêm prontos da função, basta copiar). Preserve `listing_url`, `listing_id`,
+`price_raw` e `source` nos candidatos que tiverem `fonte: "listing"` —
+A5 ContactHunter usa esses campos:
 
 ```json
 {
   "total_candidatos": <N retornado pela macro>,
-  "estrategia": "âncoras comerciais para field research — não imóveis garantidamente vagos",
-  "qualidade_sinal": "indireto-heuristico",
+  "ancoras_heuristicas": <N de zonas-âncora>,
+  "listings_reais": <N de listings OLX/ImovelWeb>,
+  "estrategia": "<copiar da macro>",
+  "qualidade_sinal": "<copiar da macro>",
   "checklist_diligencia": [<6 itens>],
-  "candidatos": [<lista top-10 vinda da macro>]
+  "candidatos": [<lista ordenada por score_geoscout, mistura âncoras + listings>]
 }
 ```
 
