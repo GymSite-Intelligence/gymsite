@@ -43,12 +43,19 @@ import {
   type TamanhoCodigo,
 } from '@/data/tamanhos-por-modelo'
 
+// Sentinela acordada com o backend (api.py:_build_prompt) — quando o usuário
+// marca "rodar pela cidade inteira", o bairro fica com esse valor. Backend
+// detecta e amplia o escopo pra o município todo. Evita migrar coluna NOT NULL
+// no DB enquanto se mantém a UX clara na listagem.
+const BAIRRO_CIDADE_INTEIRA = '(cidade inteira)'
+
 const formSchema = z
   .object({
     uf: z.string().length(2, 'Selecione um estado'),
     municipio: z.string().min(2, 'Selecione um município'),
     codigoIbge: z.number().int().positive('Selecione um município válido'),
-    bairro: z.string().min(2, 'Selecione um bairro'),
+    cidadeInteira: z.boolean().default(false),
+    bairro: z.string().default(''),
     bairroPlaceId: z.string().optional(),
     areaMin: z
       .number({ invalid_type_error: 'Área mínima inválida' })
@@ -85,6 +92,16 @@ const formSchema = z
   .refine((d) => d.areaMax >= d.areaMin, {
     message: 'Área máxima deve ser >= mínima',
     path: ['areaMax'],
+  })
+  .superRefine((d, ctx) => {
+    // Bairro só é obrigatório quando NÃO está em modo "cidade inteira".
+    if (!d.cidadeInteira && d.bairro.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['bairro'],
+        message: 'Selecione um bairro ou marque "rodar pela cidade inteira"',
+      })
+    }
   })
 
 type FormData = z.infer<typeof formSchema>
@@ -173,7 +190,11 @@ export function NovoRelatorioPage() {
       // Search params (retry) sobrescrevem quando presentes.
       uf: retrySearch.uf,
       municipio: retrySearch.cidade,
-      bairro: retrySearch.bairro,
+      bairro:
+        retrySearch.bairro === BAIRRO_CIDADE_INTEIRA
+          ? ''
+          : (retrySearch.bairro ?? ''),
+      cidadeInteira: retrySearch.bairro === BAIRRO_CIDADE_INTEIRA,
       areaMin: retrySearch.area_m2_min ?? 800,
       areaMax: retrySearch.area_m2_max ?? 1500,
       publicoAlvo: (retrySearch.publico_alvo as FormData['publicoAlvo']) ?? '25-40',
@@ -190,9 +211,25 @@ export function NovoRelatorioPage() {
     !!(retrySearch.cidade || retrySearch.bairro || retrySearch.uf)
 
   const watchedBairro = watch('bairro')
+  const watchedCidadeInteira = watch('cidadeInteira')
   const watchedTipoNegocio = watch('tipoNegocio') as ModeloNegocio
   const watchedAreaMin = watch('areaMin')
   const watchedAreaMax = watch('areaMax')
+
+  /**
+   * Toggle "rodar pela cidade inteira" — desabilita o campo bairro e limpa
+   * seleção. O valor real do bairro vai pro payload como sentinela
+   * `(cidade inteira)` no momento do submit, não enquanto o user edita,
+   * pra não atrapalhar caso ele desmarque depois.
+   */
+  function toggleCidadeInteira(checked: boolean) {
+    setValue('cidadeInteira', checked, { shouldValidate: true })
+    if (checked) {
+      setBairroQuery('')
+      setValue('bairro', '', { shouldValidate: true })
+      setValue('bairroPlaceId', '', { shouldValidate: false })
+    }
+  }
 
   // Inferência reversa: quando user mexe areaMin/areaMax manualmente, descobre
   // qual tamanho preset corresponde — exibido como hint, sem alterar o select
@@ -289,8 +326,12 @@ export function NovoRelatorioPage() {
     prompt: string
     structured_params: Record<string, unknown>
   } {
+    const bairroEfetivo = data.cidadeInteira ? BAIRRO_CIDADE_INTEIRA : data.bairro
+    const escopo = data.cidadeInteira
+      ? `em toda a cidade de ${data.municipio}/${data.uf} (sem restrição de bairro)`
+      : `em ${data.bairro}, ${data.municipio}/${data.uf}`
     const prompt = [
-      `Análise de viabilidade para academia em ${data.bairro}, ${data.municipio}/${data.uf}.`,
+      `Análise de viabilidade para academia ${escopo}.`,
       `Parâmetros:`,
       `- area_min: ${data.areaMin} m²`,
       `- area_max: ${data.areaMax} m²`,
@@ -307,8 +348,8 @@ export function NovoRelatorioPage() {
       cidade: data.municipio,
       uf: data.uf,
       codigo_ibge: data.codigoIbge,
-      bairro: data.bairro,
-      bairro_place_id: data.bairroPlaceId || null,
+      bairro: bairroEfetivo,
+      bairro_place_id: data.cidadeInteira ? null : (data.bairroPlaceId || null),
       area_m2_min: data.areaMin,
       area_m2_max: data.areaMax,
       tamanho_preset: data.tamanho, // pp|p|m|g|gg — facilita debug/audit
@@ -507,11 +548,13 @@ export function NovoRelatorioPage() {
             hint={
               !municipioSelecionado
                 ? 'Selecione um município primeiro'
-                : loadingBai
-                  ? 'Carregando bairros (Google Places)…'
-                  : bairrosDoMunicipio.length === 0
-                    ? 'Nenhum bairro encontrado — digite manualmente'
-                    : `${bairrosDoMunicipio.length} bairros em ${municipioSelecionado.nome} · clique pra abrir`
+                : watchedCidadeInteira
+                  ? 'Modo cidade inteira ativo — bairro desabilitado'
+                  : loadingBai
+                    ? 'Carregando bairros (Google Places)…'
+                    : bairrosDoMunicipio.length === 0
+                      ? 'Nenhum bairro encontrado — digite manualmente'
+                      : `${bairrosDoMunicipio.length} bairros em ${municipioSelecionado.nome} · clique pra abrir`
             }
             error={errors.bairro?.message}
           >
@@ -528,11 +571,13 @@ export function NovoRelatorioPage() {
               onSelect={selecionarBairro}
               isLoading={loadingBai}
               placeholder={
-                municipioSelecionado
-                  ? 'Clique pra abrir lista ou digite pra filtrar'
-                  : 'Aguardando município'
+                watchedCidadeInteira
+                  ? '— pipeline rodará pela cidade inteira —'
+                  : municipioSelecionado
+                    ? 'Clique pra abrir lista ou digite pra filtrar'
+                    : 'Aguardando município'
               }
-              disabled={!municipioSelecionado}
+              disabled={!municipioSelecionado || watchedCidadeInteira}
               ariaInvalid={!!errors.bairro}
               minChars={0}
               emptyMessage={
@@ -557,6 +602,28 @@ export function NovoRelatorioPage() {
                 </span>
               }
             />
+
+            {/* Checkbox: cidade inteira (libera submit sem bairro) */}
+            <label
+              className={`mt-2.5 flex items-start gap-2 cursor-pointer text-sm select-none ${
+                !municipioSelecionado ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-primary"
+                checked={watchedCidadeInteira}
+                disabled={!municipioSelecionado}
+                onChange={(e) => toggleCidadeInteira(e.target.checked)}
+              />
+              <span className="leading-tight">
+                <span className="font-medium">Rodar pela cidade inteira</span>
+                <span className="block text-xs text-muted-foreground">
+                  Sem filtro de bairro. Pipeline varre todos os bairros do
+                  município — custo e tempo de execução maiores.
+                </span>
+              </span>
+            </label>
           </Field>
         </section>
 

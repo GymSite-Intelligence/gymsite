@@ -304,9 +304,18 @@ def _build_pipeline_prompt(p: NovoRelatorioInput) -> str:
     """
     uf_str = f"/{p.uf}" if p.uf else ""
     estac = "sim" if p.estacionamento_obrigatorio else "não"
+    # Modo "cidade inteira" — sentinela acordada com o frontend pra evitar
+    # migração de coluna NOT NULL no banco. A1 GeoScout interpreta isso como
+    # "varrer todos os bairros do município, sem restrição".
+    cidade_inteira = (p.bairro or "").strip().lower() == "(cidade inteira)"
+    escopo = (
+        f"em toda a cidade de {p.cidade}{uf_str} (sem restrição de bairro)"
+        if cidade_inteira
+        else f"em {p.bairro}, {p.cidade}{uf_str}"
+    )
     lines = [
         f"Análise de viabilidade para {p.tipo_negocio.replace('_', ' ')} "
-        f"em {p.bairro}, {p.cidade}{uf_str}.",
+        f"{escopo}.",
         "Parâmetros:",
         f"- area_min: {p.area_m2_min} m²",
         f"- area_max: {p.area_m2_max} m²",
