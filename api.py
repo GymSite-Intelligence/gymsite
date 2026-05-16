@@ -57,9 +57,21 @@ def _supabase_client():
 
 app = FastAPI(title="GymSite Intelligence API", version="1.0.0")
 
+# CORS: dev libera localhost:* via regex; producao vem de CORS_ORIGINS (.env),
+# comma-separated. Ex: CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
+_cors_origins = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
+]
+if _cors_origins:
+    logger.info("CORS origins from env: %s", _cors_origins)
+else:
+    logger.warning(
+        "CORS_ORIGINS nao definida em .env — somente localhost:* via regex liberado"
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    # Vite dev pode escolher qualquer porta — em dev, libera localhost:* via regex
+    allow_origins=_cors_origins,
     allow_origin_regex=r"http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
