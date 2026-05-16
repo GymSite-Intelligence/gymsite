@@ -51,3 +51,11 @@ metrics/*.csv
 # Popular times cache (estrutura versionada via .gitkeep, conteúdo ignorado)
 competitor_cache/*.json
 competitor_cache/*.md
+
+# Serena MCP — estado local do assistente, nao versionar
+.serena/
+
+# OpenClaw edge — sandbox local de runtime (Dockerfile sandbox, openclaw.json
+# com tokens locais, .env, browser profile, sessions, cache). Decisao
+# pendente sobre versionar openclaw.example.json quando promover.
+.openclaw-edge/
