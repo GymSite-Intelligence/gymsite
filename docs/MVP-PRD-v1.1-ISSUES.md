@@ -159,12 +159,13 @@ CORS_ORIGINS=https://gymsite.vectracargo.com.br,https://www.vectracargo.com.br,h
 
 **vectraclaw-backend/.env (acrescentar):**
 ```
-SMTP_HOST=smtpout.secureserver.net
-SMTP_PORT=465
-SMTP_USER=<email-godaddy>
-SMTP_PASS=<senha-mailbox-41229009>
-NAVI_BASE_URL=https://<url-do-navi>
-NAVI_SERVICE_KEY=<service-key-do-navi>
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=...
+NAVI_API_BASE=...
+NAVI_API_TOKEN=...
 ```
 
 **Aceite:**
@@ -404,30 +405,30 @@ VALUES (
 - **Owner:** `agente-3`
 - **Labels:** `OpenClaw` `NAVI` `integração`
 - **Arquivo:** `src/services/navi_client.py` (novo)
-- **Blocked by:** GYM-04 (env vars NAVI_*)
+- **Blocked by:** GYM-04 (env vars NAVI_API_*)
 
 **Spec:**
 
 ```python
 import os, httpx, logging
 logger = logging.getLogger("VectraClawAPI")
-NAVI_BASE_URL = os.getenv("NAVI_BASE_URL", "")
-NAVI_SERVICE_KEY = os.getenv("NAVI_SERVICE_KEY", "")
+NAVI_API_BASE = os.getenv("NAVI_API_BASE", "")
+NAVI_API_TOKEN = os.getenv("NAVI_API_TOKEN", "")
 
 async def create_gymsite_deal(nome, cnpj, email, telefone, access_code) -> dict:
     """Best-effort — nunca raise."""
-    if not NAVI_BASE_URL or not NAVI_SERVICE_KEY:
+    if not NAVI_API_BASE or not NAVI_API_TOKEN:
         logger.warning("NAVI vars ausentes — deal não criado")
         return {}
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.post(
-                f"{NAVI_BASE_URL}/api/deals",
+                f"{NAVI_API_BASE}/api/deals",
                 json={"title": f"GymSite Lead — {cnpj}", "contact_name": nome,
                       "contact_email": email, "contact_phone": telefone,
                       "source": "gymsite_lead_form", "tags": ["gymsite", "lead"],
                       "metadata": {"access_code": access_code}},
-                headers={"Authorization": f"Bearer {NAVI_SERVICE_KEY}"}
+                headers={"Authorization": f"Bearer {NAVI_API_TOKEN}"}
             )
             r.raise_for_status()
             return r.json()
@@ -578,14 +579,17 @@ COMMENT ON COLUMN relatorios.access_code_used_at IS 'Timestamp da primeira utili
 
 ## Env vars consolidadas
 
-### gymsite/.env (raiz)
+### gymsite_intelligence/.env (raiz, runtime local e Cloudflare Tunnel)
 ```
-SUPABASE_URL=...              # já existe
-SUPABASE_KEY=...              # já existe (service role)
-GOOGLE_MAPS_API_KEY=...       # já existe
-VERTEX_AI_PROJECT=...         # já existe
-CORS_ORIGINS=https://gymsite.vectracargo.com.br,https://www.vectracargo.com.br,http://localhost:5174
+SUPABASE_URL=https://epgedaiukjippepujuzc.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+GEMINI_API_KEY=...
+GOOGLE_API_KEY=...
+MAPS_API_KEY=...
+CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
 ```
+
+> O regex `http://localhost:\d+` em `api.py` cobre dev local — não precisa estar em `CORS_ORIGINS`.
 
 ### gymsite/frontend/.env.local
 ```
@@ -595,14 +599,15 @@ VITE_API_BASE_URL=https://gymsite-api.vectracargo.com.br
 VITE_USE_MOCKS=false
 ```
 
-### vectraclaw-backend/.env
+### vectraclaw-backend/.env (M2/M3)
 ```
-SMTP_HOST=smtpout.secureserver.net
-SMTP_PORT=465
-SMTP_USER=<email-godaddy>
-SMTP_PASS=<senha-mailbox-41229009>
-NAVI_BASE_URL=https://<url-do-navi>
-NAVI_SERVICE_KEY=<service-key-do-navi>
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=...
+NAVI_API_BASE=...
+NAVI_API_TOKEN=...
 ```
 
 ### vectracargo/.env.local
