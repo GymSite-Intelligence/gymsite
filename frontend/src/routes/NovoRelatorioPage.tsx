@@ -495,6 +495,10 @@ export function NovoRelatorioPage() {
                   setMunicipioSelecionado(null)
                   setValue('municipio', '')
                   setValue('codigoIbge', 0)
+                  // Se o município deixou de ser válido, o bairro também não é mais confiável.
+                  setBairroQuery('')
+                  setValue('bairro', '')
+                  setValue('bairroPlaceId', '')
                 }
               }}
               options={municipioOptions}
