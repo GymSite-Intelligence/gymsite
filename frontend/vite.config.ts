@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv, type Connect } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
 /**
@@ -10,19 +11,20 @@ import path from 'node:path'
  * - Dar uma camada de cache/rate-limit local em dev
  * - Servir como dev-time stand-in da futura Edge Function Supabase
  *
- * Em produção, esse mesmo path deve apontar pra uma Edge Function
- * `/functions/v1/places-autocomplete` no Supabase (mesmo contrato).
+ * Em produção/dev com API rodando, o frontend chama
+ * `${VITE_API_BASE}/api/places-autocomplete` (FastAPI em api.py).
+ * Este middleware permanece como fallback local se alguém usar fetch relativo.
  */
 function placesAutocompletePlugin() {
   return {
     name: 'places-autocomplete-proxy',
     configureServer(server: { middlewares: Connect.Server }) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const env = loadEnv('development', process.cwd(), '') as any
-      const apiKey =
-        env.GOOGLE_MAPS_API_KEY ||
-        env.VITE_GOOGLE_MAPS_API_KEY ||
-        process.env.GOOGLE_MAPS_API_KEY
+      const repoRoot = path.resolve(__dirname, '..')
+      const env = {
+        ...loadEnv('development', repoRoot, ''),
+        ...loadEnv('development', process.cwd(), ''),
+      }
+      const apiKey = env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY
 
       server.middlewares.use(
         '/api/places-autocomplete',
@@ -37,7 +39,7 @@ function placesAutocompletePlugin() {
             res.end(
               JSON.stringify({
                 error:
-                  'GOOGLE_MAPS_API_KEY não definida no .env (raiz do frontend)',
+                  'GOOGLE_MAPS_API_KEY não definida — use .env na raiz do repo ou frontend/.env (mesma chave do FastAPI)',
               }),
             )
             return
@@ -154,11 +156,10 @@ function placesAutocompletePlugin() {
               .filter((s) => {
                 if (!s) return false
                 if (!municipioNorm) return true
-                const ctxNorm = normalize(s.contexto)
-                return (
-                  ctxNorm.includes(municipioNorm) &&
-                  (!ufNorm || ctxNorm.includes(ufNorm))
-                )
+                const fullNorm = normalize(`${s.contexto} ${s.textoCompleto}`)
+                if (!fullNorm.includes(municipioNorm)) return false
+                // UF é hint; Places costuma retornar "Ceará" em vez de "CE".
+                return true
               })
 
             console.log(
@@ -183,7 +184,7 @@ function placesAutocompletePlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), placesAutocompletePlugin()],
+  plugins: [react(), tailwindcss(), placesAutocompletePlugin()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

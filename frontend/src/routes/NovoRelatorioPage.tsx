@@ -21,7 +21,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ArrowRight, Clock, Loader2, RefreshCw } from 'lucide-react'
-import { API_BASE, supabase } from '@/lib/supabase'
+import { trackPipeline } from '@/lib/pipeline-tracker'
+import {
+  pipelineLabelFromPayload,
+  submitPipelineReport,
+} from '@/lib/submit-pipeline'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import { SelectGrouped } from '@/components/ui/select-grouped'
 import { Button } from '@/components/ui/button'
@@ -43,10 +47,7 @@ import {
   type TamanhoCodigo,
 } from '@/data/tamanhos-por-modelo'
 
-// Sentinela acordada com o backend (api.py:_build_prompt) — quando o usuário
-// marca "rodar pela cidade inteira", o bairro fica com esse valor. Backend
-// detecta e amplia o escopo pra o município todo. Evita migrar coluna NOT NULL
-// no DB enquanto se mantém a UX clara na listagem.
+/** Valor legado em relatórios antigos — não permitir novo disparo no MVP. */
 const BAIRRO_CIDADE_INTEIRA = '(cidade inteira)'
 
 const formSchema = z
@@ -54,8 +55,7 @@ const formSchema = z
     uf: z.string().length(2, 'Selecione um estado'),
     municipio: z.string().min(2, 'Selecione um município'),
     codigoIbge: z.number().int().positive('Selecione um município válido'),
-    cidadeInteira: z.boolean().default(false),
-    bairro: z.string().default(''),
+    bairro: z.string().min(2, 'Selecione um bairro específico'),
     bairroPlaceId: z.string().optional(),
     areaMin: z
       .number({ invalid_type_error: 'Área mínima inválida' })
@@ -92,16 +92,6 @@ const formSchema = z
   .refine((d) => d.areaMax >= d.areaMin, {
     message: 'Área máxima deve ser >= mínima',
     path: ['areaMax'],
-  })
-  .superRefine((d, ctx) => {
-    // Bairro só é obrigatório quando NÃO está em modo "cidade inteira".
-    if (!d.cidadeInteira && d.bairro.trim().length < 2) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['bairro'],
-        message: 'Selecione um bairro ou marque "rodar pela cidade inteira"',
-      })
-    }
   })
 
 type FormData = z.infer<typeof formSchema>
@@ -152,22 +142,18 @@ export function NovoRelatorioPage() {
     fonte: fonteMun,
   } = useMunicipioAutocomplete(debouncedMunicipio, ufSelecionada?.sigla ?? '')
 
-  // State local pra controlar fetches Places. Espelha o flag do react-hook-form,
-  // mas precisa existir ANTES do useForm pra alimentar o useBairrosDoMunicipio
-  // (hooks têm que rodar em ordem fixa). Sincronizado em toggleCidadeInteira().
-  const [cidadeInteiraFlag, setCidadeInteiraFlag] = useState(
-    retrySearch.bairro === BAIRRO_CIDADE_INTEIRA,
-  )
+  const retryEraCidadeInteira = retrySearch.bairro === BAIRRO_CIDADE_INTEIRA
 
   // Bairros — lista COMPLETA pré-carregada ao selecionar município
-  // (multi-letter Places, ~22 chamadas paralelas, cache infinito).
-  // SKIP quando cidadeInteira está marcado — economiza quota Places API.
-  const { data: bairrosDoMunicipio = [], isFetching: loadingBai } =
-    useBairrosDoMunicipio(
-      municipioSelecionado?.nome ?? '',
-      municipioSelecionado?.uf ?? '',
-      { enabled: !cidadeInteiraFlag },
-    )
+  const {
+    data: bairrosDoMunicipio = [],
+    isFetching: loadingBai,
+    isError: bairrosErro,
+    error: bairrosErrorObj,
+  } = useBairrosDoMunicipio(
+    municipioSelecionado?.nome ?? '',
+    municipioSelecionado?.uf ?? '',
+  )
 
   // Filtro client-side por texto digitado (caller ainda pode digitar pra refinar)
   const bairrosSugeridos = useMemo(() => {
@@ -199,11 +185,7 @@ export function NovoRelatorioPage() {
       // Search params (retry) sobrescrevem quando presentes.
       uf: retrySearch.uf,
       municipio: retrySearch.cidade,
-      bairro:
-        retrySearch.bairro === BAIRRO_CIDADE_INTEIRA
-          ? ''
-          : (retrySearch.bairro ?? ''),
-      cidadeInteira: retrySearch.bairro === BAIRRO_CIDADE_INTEIRA,
+      bairro: retryEraCidadeInteira ? '' : (retrySearch.bairro ?? ''),
       areaMin: retrySearch.area_m2_min ?? 800,
       areaMax: retrySearch.area_m2_max ?? 1500,
       publicoAlvo: (retrySearch.publico_alvo as FormData['publicoAlvo']) ?? '25-40',
@@ -218,28 +200,15 @@ export function NovoRelatorioPage() {
   // re-disparando um relatório que falhou antes.
   const veioDeRetry =
     !!(retrySearch.cidade || retrySearch.bairro || retrySearch.uf)
+  const veioDeEdicao = !!retrySearch.edit_relatorio_id
 
   const watchedBairro = watch('bairro')
-  const watchedCidadeInteira = watch('cidadeInteira')
   const watchedTipoNegocio = watch('tipoNegocio') as ModeloNegocio
+  const watchedTamanho = watch('tamanho')
   const watchedAreaMin = watch('areaMin')
   const watchedAreaMax = watch('areaMax')
-
-  /**
-   * Toggle "rodar pela cidade inteira" — desabilita o campo bairro e limpa
-   * seleção. O valor real do bairro vai pro payload como sentinela
-   * `(cidade inteira)` no momento do submit, não enquanto o user edita,
-   * pra não atrapalhar caso ele desmarque depois.
-   */
-  function toggleCidadeInteira(checked: boolean) {
-    setValue('cidadeInteira', checked, { shouldValidate: true })
-    setCidadeInteiraFlag(checked) // sincroniza com hook enabled
-    if (checked) {
-      setBairroQuery('')
-      setValue('bairro', '', { shouldValidate: true })
-      setValue('bairroPlaceId', '', { shouldValidate: false })
-    }
-  }
+  const faixasTamanho = TAMANHOS_POR_MODELO[watchedTipoNegocio] ?? []
+  const faixaTamanhoAtiva = faixasTamanho.find((f) => f.codigo === watchedTamanho)
 
   // Inferência reversa: quando user mexe areaMin/areaMax manualmente, descobre
   // qual tamanho preset corresponde — exibido como hint, sem alterar o select
@@ -258,21 +227,21 @@ export function NovoRelatorioPage() {
    * → areaMin vai pra 150, areaMax pra 280, tamanho fica "m".
    */
   function selecionarTipoNegocio(novoTipo: ModeloNegocio) {
-    setValue('tipoNegocio', novoTipo, { shouldValidate: true })
+    setValue('tipoNegocio', novoTipo, { shouldValidate: true, shouldDirty: true })
     const ancora = getTamanhoAncora(novoTipo)
-    setValue('tamanho', ancora.codigo, { shouldValidate: true })
-    setValue('areaMin', ancora.min, { shouldValidate: true })
-    setValue('areaMax', ancora.max, { shouldValidate: true })
+    setValue('tamanho', ancora.codigo, { shouldValidate: true, shouldDirty: true })
+    setValue('areaMin', ancora.min, { shouldValidate: true, shouldDirty: true })
+    setValue('areaMax', ancora.max, { shouldValidate: true, shouldDirty: true })
   }
 
   function selecionarTamanho(novoTamanho: TamanhoCodigo) {
-    setValue('tamanho', novoTamanho, { shouldValidate: true })
+    setValue('tamanho', novoTamanho, { shouldValidate: true, shouldDirty: true })
     const faixa = TAMANHOS_POR_MODELO[watchedTipoNegocio]?.find(
       (f) => f.codigo === novoTamanho,
     )
     if (faixa) {
-      setValue('areaMin', faixa.min, { shouldValidate: true })
-      setValue('areaMax', faixa.max, { shouldValidate: true })
+      setValue('areaMin', faixa.min, { shouldValidate: true, shouldDirty: true })
+      setValue('areaMax', faixa.max, { shouldValidate: true, shouldDirty: true })
     }
   }
 
@@ -336,15 +305,13 @@ export function NovoRelatorioPage() {
     prompt: string
     structured_params: Record<string, unknown>
   } {
-    const bairroEfetivo = data.cidadeInteira ? BAIRRO_CIDADE_INTEIRA : data.bairro
-    const escopo = data.cidadeInteira
-      ? `em toda a cidade de ${data.municipio}/${data.uf} (sem restrição de bairro)`
-      : `em ${data.bairro}, ${data.municipio}/${data.uf}`
+    const escopo = `em ${data.bairro}, ${data.municipio}/${data.uf}`
     const prompt = [
-      `Análise de viabilidade para academia ${escopo}.`,
+      `Análise de viabilidade para ${data.tipoNegocio.replace(/_/g, ' ')} ${escopo}.`,
       `Parâmetros:`,
       `- area_min: ${data.areaMin} m²`,
       `- area_max: ${data.areaMax} m²`,
+      `- tamanho_preset: ${data.tamanho}`,
       `- publico_alvo: ${data.publicoAlvo}`,
       `- genero_alvo: ${data.generoAlvo}`,
       `- tipo_negocio: ${data.tipoNegocio}`,
@@ -358,8 +325,8 @@ export function NovoRelatorioPage() {
       cidade: data.municipio,
       uf: data.uf,
       codigo_ibge: data.codigoIbge,
-      bairro: bairroEfetivo,
-      bairro_place_id: data.cidadeInteira ? null : (data.bairroPlaceId || null),
+      bairro: data.bairro,
+      bairro_place_id: data.bairroPlaceId || null,
       area_m2_min: data.areaMin,
       area_m2_max: data.areaMax,
       tamanho_preset: data.tamanho, // pp|p|m|g|gg — facilita debug/audit
@@ -379,38 +346,29 @@ export function NovoRelatorioPage() {
     const { structured_params } = buildPipelinePayload(data)
 
     try {
-      // Envia o JWT do user pro backend — em breve o FastAPI vai exigir
-      // auth e amarrar o relatório à org_id do user.
-      const { data: { session } } = await supabase.auth.getSession()
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`
-      }
-      const res = await fetch(`${API_BASE}/api/relatorios`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          cidade: structured_params.cidade,
-          uf: structured_params.uf,
-          bairro: structured_params.bairro,
-          area_m2_min: structured_params.area_m2_min,
-          area_m2_max: structured_params.area_m2_max,
-          tamanho_preset: structured_params.tamanho_preset,
-          publico_alvo: structured_params.publico_alvo,
-          genero_alvo: structured_params.genero_alvo,
-          tipo_negocio: structured_params.tipo_negocio,
-          estacionamento_obrigatorio: structured_params.estacionamento_obrigatorio,
-        }),
+      const { id } = await submitPipelineReport({
+        cidade: structured_params.cidade as string,
+        uf: structured_params.uf as string,
+        bairro: structured_params.bairro as string,
+        area_m2_min: structured_params.area_m2_min as number,
+        area_m2_max: structured_params.area_m2_max as number,
+        tamanho_preset: structured_params.tamanho_preset as string,
+        publico_alvo: structured_params.publico_alvo as string,
+        genero_alvo: structured_params.genero_alvo as string,
+        tipo_negocio: structured_params.tipo_negocio as string,
+        estacionamento_obrigatorio: structured_params.estacionamento_obrigatorio as boolean,
       })
 
-      if (!res.ok) {
-        const body = await res.text().catch(() => '')
-        throw new Error(`API ${res.status}: ${body.slice(0, 200)}`)
-      }
+      trackPipeline(
+        id,
+        pipelineLabelFromPayload({
+          cidade: structured_params.cidade as string,
+          bairro: structured_params.bairro as string,
+          area_m2_min: structured_params.area_m2_min as number,
+          area_m2_max: structured_params.area_m2_max as number,
+        }),
+      )
 
-      const { id } = (await res.json()) as { id: string }
-
-      // Redirect pra status page que polla até pipeline completar
       navigate({
         to: '/relatorios/$relatorioId/aguardando',
         params: { relatorioId: id },
@@ -426,11 +384,11 @@ export function NovoRelatorioPage() {
     void handleSubmit(onSubmit)(e)
   }
 
-  // Pronto pra submeter: UF + município + (bairro OU modo cidade inteira)
   const podeSubmeter =
     !!ufSelecionada &&
     !!municipioSelecionado &&
-    (watchedCidadeInteira || (!!watchedBairro && watchedBairro.length >= 2))
+    !!watchedBairro &&
+    watchedBairro.length >= 2
 
   return (
     <div className="container max-w-2xl py-8">
@@ -445,21 +403,35 @@ export function NovoRelatorioPage() {
       </header>
 
       {/* Aviso de retry quando user veio da tela de falha */}
-      {veioDeRetry ? (
+      {retryEraCidadeInteira && (
+        <div className="mb-6 rounded-lg border border-status-warning/40 bg-status-warning/5 p-3.5 text-xs space-y-1">
+          <p className="font-medium text-foreground">
+            Modo &quot;cidade inteira&quot; não está disponível no MVP
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Selecione um <strong>bairro específico</strong> abaixo. Relatórios
+            antigos nesse modo não retornam candidatos nem concorrentes.
+          </p>
+        </div>
+      )}
+
+      {veioDeRetry && !retryEraCidadeInteira ? (
         <div className="mb-6 rounded-lg border border-status-warning/40 bg-status-warning/5 p-3.5 flex items-start gap-3 text-xs">
           <RefreshCw size={14} className="text-status-warning flex-shrink-0 mt-0.5" />
           <div className="space-y-0.5 leading-relaxed">
             <p className="text-foreground font-medium">
-              Tentando novamente com os mesmos parâmetros
+              {veioDeEdicao
+                ? 'Editando parâmetros do relatório'
+                : 'Tentando novamente com os mesmos parâmetros'}
             </p>
             <p className="text-muted-foreground">
-              Os campos foram preenchidos automaticamente. Revise se algo precisa
-              mudar antes de gerar. Vai criar um relatório novo — o falho continua
-              no histórico pra auditoria.
+              Os campos foram preenchidos automaticamente. Revise e ajuste o que
+              precisar antes de gerar. Vai criar um relatório novo — o original
+              continua no histórico pra auditoria.
             </p>
           </div>
         </div>
-      ) : (
+      ) : !veioDeRetry ? (
         <div className="mb-6 rounded-lg border border-border bg-card/60 p-3.5 flex items-start gap-3 text-xs">
           <Clock size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
           <div className="space-y-0.5 leading-relaxed">
@@ -473,7 +445,7 @@ export function NovoRelatorioPage() {
             </p>
           </div>
         </div>
-      )}
+      ) : null}
 
       <form onSubmit={handleSubmitWrapper} className="space-y-6">
         {/* Localização (árvore Estado → Município → Bairro) */}
@@ -557,13 +529,17 @@ export function NovoRelatorioPage() {
             hint={
               !municipioSelecionado
                 ? 'Selecione um município primeiro'
-                : watchedCidadeInteira
-                  ? 'Modo cidade inteira ativo — bairro desabilitado'
+                : bairrosErro
+                  ? `Erro ao carregar bairros (Google Places): ${
+                      bairrosErrorObj instanceof Error
+                        ? bairrosErrorObj.message
+                        : 'verifique GOOGLE_MAPS_API_KEY / billing'
+                    }`
                   : loadingBai
                     ? 'Carregando bairros (Google Places)…'
                     : bairrosDoMunicipio.length === 0
                       ? 'Nenhum bairro encontrado — digite manualmente'
-                      : `${bairrosDoMunicipio.length} bairros em ${municipioSelecionado.nome} · clique pra abrir`
+                      : `${bairrosDoMunicipio.length} bairros em ${municipioSelecionado.nome} · obrigatório no MVP`
             }
             error={errors.bairro?.message}
           >
@@ -580,13 +556,11 @@ export function NovoRelatorioPage() {
               onSelect={selecionarBairro}
               isLoading={loadingBai}
               placeholder={
-                watchedCidadeInteira
-                  ? '— pipeline rodará pela cidade inteira —'
-                  : municipioSelecionado
-                    ? 'Clique pra abrir lista ou digite pra filtrar'
-                    : 'Aguardando município'
+                municipioSelecionado
+                  ? 'Ex: Aldeota, Meireles — clique pra abrir lista'
+                  : 'Aguardando município'
               }
-              disabled={!municipioSelecionado || watchedCidadeInteira}
+              disabled={!municipioSelecionado}
               ariaInvalid={!!errors.bairro}
               minChars={0}
               emptyMessage={
@@ -612,27 +586,11 @@ export function NovoRelatorioPage() {
               }
             />
 
-            {/* Checkbox: cidade inteira (libera submit sem bairro) */}
-            <label
-              className={`mt-2.5 flex items-start gap-2 cursor-pointer text-sm select-none ${
-                !municipioSelecionado ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 accent-primary"
-                checked={watchedCidadeInteira}
-                disabled={!municipioSelecionado}
-                onChange={(e) => toggleCidadeInteira(e.target.checked)}
-              />
-              <span className="leading-tight">
-                <span className="font-medium">Rodar pela cidade inteira</span>
-                <span className="block text-xs text-muted-foreground">
-                  Sem filtro de bairro. Pipeline varre todos os bairros do
-                  município — custo e tempo de execução maiores.
-                </span>
-              </span>
-            </label>
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              O MVP exige um <strong className="text-foreground">bairro específico</strong>{' '}
+              para geocoding, candidatos e concorrentes. Varredura por cidade inteira
+              será habilitada em versão futura.
+            </p>
           </Field>
         </section>
 
@@ -664,8 +622,8 @@ export function NovoRelatorioPage() {
             error={errors.tamanho?.message}
           >
             <div className="grid grid-cols-5 gap-2">
-              {TAMANHOS_POR_MODELO[watchedTipoNegocio]?.map((faixa) => {
-                const ativo = watch('tamanho') === faixa.codigo
+              {faixasTamanho.map((faixa) => {
+                const ativo = watchedTamanho === faixa.codigo
                 return (
                   <button
                     type="button"
@@ -692,17 +650,12 @@ export function NovoRelatorioPage() {
                 )
               })}
             </div>
-            {watchedTipoNegocio && (
+            {faixaTamanhoAtiva && (
               <p className="text-[10px] text-muted-foreground mt-1.5">
-                {TAMANHOS_POR_MODELO[watchedTipoNegocio]?.find(
-                  (f) => f.codigo === watch('tamanho'),
-                )?.descricao}
-                {(() => {
-                  const f = TAMANHOS_POR_MODELO[watchedTipoNegocio]?.find(
-                    (f) => f.codigo === watch('tamanho'),
-                  )
-                  return f?.exemploRede ? ` · ex: ${f.exemploRede}` : ''
-                })()}
+                {faixaTamanhoAtiva.descricao}
+                {faixaTamanhoAtiva.exemploRede
+                  ? ` · ex: ${faixaTamanhoAtiva.exemploRede}`
+                  : ''}
               </p>
             )}
           </Field>
@@ -715,6 +668,7 @@ export function NovoRelatorioPage() {
               error={errors.areaMin?.message}
             >
               <Input
+                key={`areaMin-${watchedAreaMin}`}
                 type="number"
                 min={50}
                 max={10000}
@@ -728,6 +682,7 @@ export function NovoRelatorioPage() {
               error={errors.areaMax?.message}
             >
               <Input
+                key={`areaMax-${watchedAreaMax}`}
                 type="number"
                 min={50}
                 max={10000}

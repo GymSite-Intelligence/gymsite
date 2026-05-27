@@ -20,6 +20,10 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { notify } from '@/lib/notify'
+import {
+  isPasswordExpired,
+  passwordExpiryErrorMessage,
+} from '@/lib/password-expiry'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -57,11 +61,14 @@ function mensagemErroAmigavel(raw: string): string {
   if (lower.includes('email not confirmed')) {
     return 'Email ainda não confirmado. Verifique sua caixa de entrada ou peça pro admin confirmar.'
   }
+  if (lower.includes('expirou') || lower.includes('expired')) {
+    return 'Sua senha de teste expirou. Use "Código no email" ou peça nova senha ao administrador.'
+  }
   return raw
 }
 
 export function LoginPage() {
-  const { session } = useAuth()
+  const { session, mockAuth, signInDev } = useAuth()
   const navigate = useNavigate()
   const [aba, setAba] = useState<Aba>('senha')
 
@@ -88,13 +95,19 @@ export function LoginPage() {
     if (!email || !senha) return
     setLoadingSenha(true)
     setErroSenha(null)
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password: senha,
     })
     setLoadingSenha(false)
     if (error) {
       setErroSenha(mensagemErroAmigavel(error.message))
+      return
+    }
+    if (data.user && isPasswordExpired(data.user)) {
+      await supabase.auth.signOut()
+      setErroSenha(passwordExpiryErrorMessage(data.user))
+      setAba('codigo')
       return
     }
     // onAuthStateChange dispara useAuth → useEffect manda pra /relatorios
@@ -179,6 +192,35 @@ export function LoginPage() {
           </h1>
         </header>
 
+        {mockAuth && (
+          <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <p className="text-xs text-muted-foreground text-center">
+              Modo dev — Supabase não configurado. Sessão mock automática.
+            </p>
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => {
+                signInDev()
+                navigate({ to: '/dashboard', replace: true })
+              }}
+            >
+              Entrar como dev → Dashboard
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                signInDev()
+                navigate({ to: '/relatorios', replace: true })
+              }}
+            >
+              Entrar como dev → Relatórios
+            </Button>
+          </div>
+        )}
+
         {/* Tabs */}
         <div role="tablist" className="flex border-b border-border">
           <TabBtn ativo={aba === 'senha'} onClick={() => setAba('senha')}>
@@ -247,6 +289,17 @@ export function LoginPage() {
                 <AlertDescription>{erroSenha}</AlertDescription>
               </Alert>
             )}
+            <p className="text-[11px] text-center text-muted-foreground leading-relaxed">
+              Conta de teste? Primeiro acesso via{' '}
+              <button
+                type="button"
+                onClick={() => trocarParaCodigo(emailSenha)}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                código no email
+              </button>
+              . Depois o admin libera senha temporária.
+            </p>
             <button
               type="button"
               onClick={() => trocarParaCodigo(emailSenha)}

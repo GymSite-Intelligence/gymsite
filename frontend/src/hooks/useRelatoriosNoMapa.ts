@@ -11,6 +11,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useRelatorios, type RelatoriosFilters } from './useRelatorios'
 import { useAuth } from '@/lib/auth'
+import { filterRelatorioUuids } from '@/lib/relatorio-id'
 import { supabase } from '@/lib/supabase'
 import { RAW_MOCKS, USE_MOCKS } from '@/mocks'
 import type { Veredito } from '@/types/domain'
@@ -44,7 +45,7 @@ interface TopCandidatoRow {
 export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
   const { user } = useAuth()
   const { data: resumos, isLoading: loadingResumos } = useRelatorios(filters)
-  const ids = useMemo(() => (resumos ?? []).map((r) => r.id), [resumos])
+  const ids = useMemo(() => filterRelatorioUuids((resumos ?? []).map((r) => r.id)), [resumos])
 
   // Top 1 candidato (posicao=1) de cada relatório visível — só os com lat/lng.
   // Query rola só quando temos IDs e estamos logados (RLS filtra por org).

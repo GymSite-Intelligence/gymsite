@@ -4,12 +4,17 @@
  * Mostra header (cidade/bairro, tipo, área) + veredito + score top1 +
  * status pipeline + ações.
  */
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { useState, type MouseEvent } from 'react'
+import { Pencil } from 'lucide-react'
 import { VeredictoBadge } from './VeredictoBadge'
 import { StatusPipelineBadge } from './StatusPipelineBadge'
 import { DeleteRelatorioButton } from './DeleteRelatorioButton'
+import { RerunPipelineButton } from './RerunPipelineButton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { fetchRelatorioInputsForRerun } from '@/lib/submit-pipeline'
+import { notify } from '@/lib/notify'
 import type { RelatorioResumo } from '@/types/domain'
 
 function formatData(iso: string | null): string {
@@ -45,6 +50,8 @@ export interface RelatorioCardProps {
 }
 
 export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
+  const navigate = useNavigate()
+  const [editando, setEditando] = useState(false)
   const score = relatorio.score_top1_candidato
   const scoreColor =
     score == null
@@ -103,7 +110,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Score Top 1 */}
-      <div className="col-span-3 sm:col-span-2 text-right">
+      <div className="col-span-6 sm:col-span-2 text-right sm:text-right">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
           Top 1
         </div>
@@ -113,14 +120,66 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Ação */}
-      <div className="col-span-3 sm:col-span-2 flex justify-end items-center gap-1">
+      <div className="col-span-12 sm:col-span-2 flex flex-wrap justify-end items-center gap-1">
         {relatorio.status === 'failed' && (
           <DeleteRelatorioButton
             relatorioId={relatorio.id}
             label={`${relatorio.bairro} · ${relatorio.cidade}`}
           />
         )}
-        <Button variant="outline" size="sm" asChild>
+        {(relatorio.status === 'done' || relatorio.status === 'failed') && (
+          <RerunPipelineButton
+            relatorioId={relatorio.id}
+            status={relatorio.status}
+            label="Gerar novamente"
+            stopPropagation
+          />
+        )}
+        {(relatorio.status === 'done' || relatorio.status === 'failed') && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 shrink-0"
+            disabled={editando}
+            onClick={async (e: MouseEvent) => {
+              e.stopPropagation()
+              if (editando) return
+              setEditando(true)
+              const t = notify.loading('Carregando parâmetros do relatório…')
+              try {
+                const inputs = await fetchRelatorioInputsForRerun(relatorio.id)
+                t.success('Parâmetros carregados')
+                navigate({
+                  to: '/relatorios/new',
+                  search: {
+                    cidade: inputs.cidade,
+                    uf: inputs.uf ?? undefined,
+                    bairro: inputs.bairro,
+                    area_m2_min: inputs.area_m2_min,
+                    area_m2_max: inputs.area_m2_max,
+                    tamanho_preset: inputs.tamanho_preset ?? undefined,
+                    publico_alvo: inputs.publico_alvo ?? undefined,
+                    genero_alvo: inputs.genero_alvo ?? undefined,
+                    tipo_negocio: inputs.tipo_negocio ?? undefined,
+                    estacionamento_obrigatorio:
+                      inputs.estacionamento_obrigatorio ?? undefined,
+                    edit_relatorio_id: relatorio.id,
+                  },
+                })
+              } catch (err) {
+                t.error(err)
+              } finally {
+                setEditando(false)
+              }
+            }}
+            title="Editar parâmetros e gerar uma nova versão"
+          >
+            <Pencil size={14} />
+            Editar
+          </Button>
+        )}
+        <Button variant="outline" size="sm" asChild className="shrink-0">
           <Link to="/relatorios/$relatorioId" params={{ relatorioId: relatorio.id }}>
             Ver
           </Link>

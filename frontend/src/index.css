@@ -1,65 +1,196 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+/**
+ * Tokens semânticos de status — fundação do design system GymSite.
+ * Triplets HSL para uso com hsl(var(--status-good)).
+ */
+:root {
+  --status-good: 142 76% 36%;
+  --status-warning: 45 93% 47%;
+  --status-investigate: 217 91% 60%;
+  --status-critical: 0 84% 60%;
+  --status-neutral: 220 10% 50%;
+
+  --veredito-aprovado: var(--status-good);
+  --veredito-ressalvas: var(--status-warning);
+  --veredito-investigar: var(--status-investigate);
+  --veredito-reprovado: var(--status-critical);
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --color-status-good: hsl(var(--status-good));
+  --color-status-warning: hsl(var(--status-warning));
+  --color-status-investigate: hsl(var(--status-investigate));
+  --color-status-critical: hsl(var(--status-critical));
+  --color-status-neutral: hsl(var(--status-neutral));
+  --color-veredito-aprovado: hsl(var(--veredito-aprovado));
+  --color-veredito-ressalvas: hsl(var(--veredito-ressalvas));
+  --color-veredito-investigar: hsl(var(--veredito-investigar));
+  --color-veredito-reprovado: hsl(var(--veredito-reprovado));
+  --color-dor-lotacao: hsl(25 90% 55%);
+  --color-dor-equipamento: hsl(0 75% 55%);
+  --color-dor-climatizacao: hsl(195 80% 55%);
+  --color-dor-limpeza: hsl(165 60% 50%);
+  --color-dor-atendimento: hsl(280 65% 60%);
+  --color-dor-preco: hsl(50 90% 55%);
+  --color-dor-contrato: hsl(330 70% 55%);
+  --color-dor-estacionamento: hsl(210 50% 55%);
+  --color-dor-estrutura: hsl(15 65% 50%);
+  --color-dor-ruido: hsl(260 60% 60%);
+  --color-dor-horarios: hsl(180 50% 50%);
+  --color-dor-servico: hsl(85 55% 50%);
+  --color-dor-seguranca: hsl(0 85% 45%);
+  --color-dor-outra: hsl(220 10% 50%);
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
 
 @layer base {
-  /**
-   * Tokens semânticos de status — fundação do design system.
-   * Usar via classes Tailwind (bg-status-good, text-status-warning, etc.)
-   * ou direto via hsl(var(--status-good)) em styles inline.
-   *
-   * Sempre prefira tokens sobre cores hardcoded (text-emerald-500 etc.).
-   */
-  :root {
-    --status-good: 142 76% 36%;       /* verde — APROVADO, alto score */
-    --status-warning: 45 93% 47%;     /* amarelo — RESSALVAS, médio */
-    --status-investigate: 217 91% 60%; /* azul — INVESTIGAR */
-    --status-critical: 0 84% 60%;      /* vermelho — REPROVADO, crítico */
-    --status-neutral: 220 10% 50%;     /* cinza — INDETERMINADO */
-
-    /* Aliases legacy mapeando tokens v0 → semânticos (transição) */
-    --veredito-aprovado: var(--status-good);
-    --veredito-ressalvas: var(--status-warning);
-    --veredito-investigar: var(--status-investigate);
-    --veredito-reprovado: var(--status-critical);
+  * {
+    @apply border-border outline-ring/50;
   }
 
   html {
-    font-family: theme('fontFamily.sans');
-    /* Diz ao browser pra renderizar UI nativa (scrollbar, select popup,
-       date picker, autofill) em tema escuro. Chrome Windows ignorava nosso
-       background-color em <option> — color-scheme resolve. */
+    font-family: var(--font-sans);
     color-scheme: dark;
+    @apply font-sans;
   }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply antialiased bg-background text-foreground;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
+
   code,
   pre,
   .font-mono {
-    font-family: theme('fontFamily.mono');
+    font-family: var(--font-mono);
   }
 
-  /**
-   * <select> nativo no tema dark.
-   * Com `color-scheme: dark` no html acima, o Chrome já renderiza o popup
-   * em tema escuro. As regras abaixo afinam pra usar nossos tokens
-   * semânticos (background/foreground) em vez do dark genérico do browser.
-   */
   option {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: var(--background);
+    color: var(--foreground);
   }
+
   optgroup {
-    background-color: hsl(var(--muted));
-    color: hsl(var(--muted-foreground));
+    background-color: var(--muted);
+    color: var(--muted-foreground);
     font-weight: 600;
     font-style: normal;
   }
-  /* Select fechado também herda fundo dark padrão do browser quando
-     usamos `bg-transparent` — explicitar dá consistência. */
+
   select {
     color-scheme: dark;
+  }
+
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', sans-serif;
   }
 }

@@ -18,7 +18,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router'
-import { AppShell } from '@/components/layout/AppShell'
+import { AuthenticatedSidebarLayout } from '@/components/layout/AuthenticatedSidebarLayout'
 import { RequireAuth } from '@/components/layout/RequireAuth'
 import { RelatoriosListPage } from '@/routes/RelatoriosListPage'
 import { RelatorioViewerPage } from '@/routes/RelatorioViewerPage'
@@ -31,6 +31,7 @@ import { PerfilPage } from '@/routes/PerfilPage'
 import { LoginPage } from '@/routes/LoginPage'
 import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
 import { PrivacidadePage } from '@/routes/PrivacidadePage'
+import { DashboardPage } from '@/routes/DashboardPage'
 import type { Veredito } from '@/types/domain'
 
 const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade'])
@@ -42,7 +43,7 @@ function RootLayout() {
   }
   return (
     <RequireAuth>
-      <AppShell />
+      <AuthenticatedSidebarLayout />
     </RequireAuth>
   )
 }
@@ -74,7 +75,7 @@ const privacidadeRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => <Navigate to="/relatorios" replace />,
+  component: () => <Navigate to="/dashboard" replace />,
 })
 
 interface RelatoriosSearch {
@@ -113,39 +114,52 @@ interface NovoRelatorioSearch {
   genero_alvo?: string
   tipo_negocio?: string
   estacionamento_obrigatorio?: boolean
+  /** Quando veio do "Editar" da listagem. */
+  edit_relatorio_id?: string
 }
 const novoRelatorioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/relatorios/new',
-  validateSearch: (search: Record<string, unknown>): NovoRelatorioSearch => ({
-    cidade: typeof search.cidade === 'string' ? search.cidade : undefined,
-    uf: typeof search.uf === 'string' ? search.uf : undefined,
-    bairro: typeof search.bairro === 'string' ? search.bairro : undefined,
-    area_m2_min:
-      typeof search.area_m2_min === 'number'
-        ? search.area_m2_min
-        : typeof search.area_m2_min === 'string'
-          ? Number(search.area_m2_min) || undefined
+  validateSearch: (search: Record<string, unknown>): NovoRelatorioSearch => {
+    const estacionamentoObrigatorioRaw = search.estacionamento_obrigatorio
+    return {
+      cidade: typeof search.cidade === 'string' ? search.cidade : undefined,
+      uf: typeof search.uf === 'string' ? search.uf : undefined,
+      bairro: typeof search.bairro === 'string' ? search.bairro : undefined,
+      area_m2_min:
+        typeof search.area_m2_min === 'number'
+          ? search.area_m2_min
+          : typeof search.area_m2_min === 'string'
+            ? Number(search.area_m2_min) || undefined
+            : undefined,
+      area_m2_max:
+        typeof search.area_m2_max === 'number'
+          ? search.area_m2_max
+          : typeof search.area_m2_max === 'string'
+            ? Number(search.area_m2_max) || undefined
+            : undefined,
+      tamanho_preset:
+        typeof search.tamanho_preset === 'string'
+          ? search.tamanho_preset
           : undefined,
-    area_m2_max:
-      typeof search.area_m2_max === 'number'
-        ? search.area_m2_max
-        : typeof search.area_m2_max === 'string'
-          ? Number(search.area_m2_max) || undefined
+      publico_alvo:
+        typeof search.publico_alvo === 'string' ? search.publico_alvo : undefined,
+      genero_alvo:
+        typeof search.genero_alvo === 'string' ? search.genero_alvo : undefined,
+      tipo_negocio:
+        typeof search.tipo_negocio === 'string' ? search.tipo_negocio : undefined,
+      estacionamento_obrigatorio:
+        typeof estacionamentoObrigatorioRaw === 'boolean'
+          ? estacionamentoObrigatorioRaw
+          : typeof estacionamentoObrigatorioRaw === 'string'
+            ? estacionamentoObrigatorioRaw === 'true'
+            : undefined,
+      edit_relatorio_id:
+        typeof search.edit_relatorio_id === 'string'
+          ? search.edit_relatorio_id
           : undefined,
-    tamanho_preset:
-      typeof search.tamanho_preset === 'string' ? search.tamanho_preset : undefined,
-    publico_alvo:
-      typeof search.publico_alvo === 'string' ? search.publico_alvo : undefined,
-    genero_alvo:
-      typeof search.genero_alvo === 'string' ? search.genero_alvo : undefined,
-    tipo_negocio:
-      typeof search.tipo_negocio === 'string' ? search.tipo_negocio : undefined,
-    estacionamento_obrigatorio:
-      typeof search.estacionamento_obrigatorio === 'boolean'
-        ? search.estacionamento_obrigatorio
-        : undefined,
-  }),
+    }
+  },
   component: NovoRelatorioPage,
 })
 
@@ -207,6 +221,12 @@ const perfilRoute = createRoute({
   component: PerfilPage,
 })
 
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard',
+  component: DashboardPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
@@ -220,6 +240,7 @@ const routeTree = rootRoute.addChildren([
   mapaRoute,
   custosRoute,
   perfilRoute,
+  dashboardRoute,
 ])
 
 export const router = createRouter({ routeTree })

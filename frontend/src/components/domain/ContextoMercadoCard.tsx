@@ -9,10 +9,13 @@
  * renderiza só os metadados básicos + métricas derivadas do output.
  */
 import { CheckCircle, Database, Lightbulb, TrendingDown, TrendingUp, Minus, ScrollText } from 'lucide-react'
+import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { cn } from '@/lib/utils'
 import type { MarketContextJSON } from '@/hooks/useRelatorioDetail'
 
 export interface ContextoMercadoCardProps {
+  /** UUID do relatório — habilita botão "Gerar novamente" no aviso v1.1. */
+  relatorioId?: string
   /** Schema v1.2: market_context completo. Em v1.1, undefined → modo legacy. */
   marketContext?: MarketContextJSON
   /** Fallback v1.1 vindo de metadata_execucao */
@@ -56,6 +59,7 @@ const TENDENCIA_CONFIG: Record<
 }
 
 export function ContextoMercadoCard({
+  relatorioId,
   marketContext,
   fonte,
   dataColeta,
@@ -296,11 +300,21 @@ export function ContextoMercadoCard({
 
         {/* Aviso quando schema v1.1 (sem dados ricos) */}
         {!temMarketContextRico && (
-          <p className="text-[10px] font-mono text-muted-foreground/60 border-t border-border pt-3">
-            ⚠ Este relatório foi gerado com schema v1.1. Indicadores ricos (ticket, renda,
-            tendência, regulamentação, insights) só aparecem em relatórios v1.2+.
-            Rode o pipeline novamente pra gerar versão atualizada.
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-border pt-3">
+            <p className="text-[10px] font-mono text-muted-foreground/60">
+              ⚠ Este relatório foi gerado com schema v1.1. Indicadores ricos (ticket, renda,
+              tendência, regulamentação, insights) só aparecem em relatórios v1.2+.
+            </p>
+            {relatorioId && (
+              <RerunPipelineButton
+                relatorioId={relatorioId}
+                label="Atualizar relatório"
+                variant="secondary"
+                size="sm"
+                className="shrink-0"
+              />
+            )}
+          </div>
         )}
       </div>
     </div>

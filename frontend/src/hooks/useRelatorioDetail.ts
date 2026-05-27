@@ -13,6 +13,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getMockRelatorioRaw, USE_MOCKS } from '@/mocks'
 import { useAuth } from '@/lib/auth'
+import { resolveRelatorioUuid } from '@/lib/relatorio-id'
 import { supabase } from '@/lib/supabase'
 
 /**
@@ -147,6 +148,12 @@ export interface CandidatoJSON {
   telefone?: string
   website?: string
   tem_24h?: boolean
+  /** Listing imobiliário (OLX / ImovelWeb) */
+  listing_url?: string
+  listing_id?: string
+  price_raw?: string
+  listing_source?: string
+  fonte?: string
 }
 
 export interface CompetidorJSON {
@@ -360,6 +367,58 @@ function _num(v: unknown): number {
   return Number.isFinite(n) ? n : 0
 }
 
+/** A6 grava resumo só no markdown; extrai quando a coluna DB veio null. */
+function extractResumoFromMarkdown(markdown: unknown): string | null {
+  if (typeof markdown !== 'string' || !markdown.trim()) return null
+  const match = markdown.match(
+    /##\s*🎯\s*Resumo Executivo\s*\n([\s\S]*?)\n---/,
+  )
+  const text = match?.[1]?.trim()
+  return text || null
+}
+
+function mapCandidatoRow(row: Record<string, unknown>): CandidatoJSON {
+  const listingUrl =
+    typeof row.listing_url === 'string' ? row.listing_url : undefined
+  const website =
+    (typeof row.website === 'string' ? row.website : undefined) || listingUrl
+  const polos = row.polos_geradores
+  const tipos = row.tipos_google ?? row.tipos
+
+  return {
+    nome: String(row.nome ?? ''),
+    endereco: String(row.endereco ?? ''),
+    area_estimada_m2: Number(row.area_estimada_m2 ?? 0),
+    lat: row.lat != null ? Number(row.lat) : undefined,
+    lng: row.lng != null ? Number(row.lng) : undefined,
+    score_geoscout: Number(row.score_geoscout ?? 0),
+    score_ancoragem: Number(row.score_ancoragem ?? 0),
+    motivo: String(row.motivo ?? ''),
+    polos_geradores: Array.isArray(polos) ? (polos as string[]) : [],
+    street_view_url:
+      typeof row.street_view_url === 'string' ? row.street_view_url : undefined,
+    estimativa_visibilidade:
+      typeof row.estimativa_visibilidade === 'string'
+        ? row.estimativa_visibilidade
+        : undefined,
+    avenida_principal:
+      row.avenida_principal != null ? Boolean(row.avenida_principal) : undefined,
+    qualidade_sinal:
+      typeof row.qualidade_sinal === 'string' ? row.qualidade_sinal : undefined,
+    place_id: typeof row.place_id === 'string' ? row.place_id : undefined,
+    tipos: Array.isArray(tipos) ? (tipos as string[]) : undefined,
+    telefone: typeof row.telefone === 'string' ? row.telefone : undefined,
+    website,
+    tem_24h: Boolean(row.tem_24h),
+    listing_url: listingUrl,
+    listing_id: typeof row.listing_id === 'string' ? row.listing_id : undefined,
+    price_raw: typeof row.price_raw === 'string' ? row.price_raw : undefined,
+    listing_source:
+      typeof row.listing_source === 'string' ? row.listing_source : undefined,
+    fonte: typeof row.fonte === 'string' ? row.fonte : undefined,
+  }
+}
+
 function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
   const out = (p.output_consolidado ?? {}) as Record<string, unknown>
   const sens = p.sensibilidade ?? []
@@ -462,6 +521,10 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
     viabilidade: out.score_viabilidade as number | null | undefined,
   }
 
+  const resumoExecutivo =
+    (typeof out.resumo_executivo === 'string' ? out.resumo_executivo : null) ||
+    extractResumoFromMarkdown(p.header.markdown_completo)
+
   return {
     id: p.id,
     tipo_relatorio: (p.header.tipo_relatorio as string) ?? 'prospeccao_academia',
@@ -470,13 +533,16 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
     input_canonico: p.input_canonico as unknown as RelatorioDetail['input_canonico'],
     output_consolidado: {
       ...out,
+      resumo_executivo: resumoExecutivo,
       scores_regionais: scoresRegionais,
       // Alias nomes esperados pelo viewer (que vinham do JSON canônico)
       aluguel_mediana_m2_observado: out.aluguel_mediana_m2 ?? null,
       aluguel_min_m2_observado: out.aluguel_min_m2 ?? null,
       aluguel_max_m2_observado: out.aluguel_max_m2 ?? null,
       alertas_financeiros: out.alertas ?? [],
-      top_3_candidatos: (p.candidatos ?? []).slice(0, 3),
+      top_3_candidatos: (p.candidatos ?? [])
+        .slice(0, 3)
+        .map((c) => mapCandidatoRow(c as Record<string, unknown>)),
       // Competidores: passa direto (DB já tem rating_oficial, reviews jsonb,
       // bairro_concorrente, tem_24h). Telefone/website/whatsapp_link saem
       // como undefined até a Fase 2 do A3a enrichment.
@@ -502,6 +568,8 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
  * tabela filha). RLS filtra automaticamente pelo org_id do user logado.
  */
 async function fetchDetailFromSupabase(id: string): Promise<BackendPayload> {
+  const relatorioId = await resolveRelatorioUuid(id)
+
   const [
     header,
     inputs,
@@ -512,14 +580,14 @@ async function fetchDetailFromSupabase(id: string): Promise<BackendPayload> {
     sensibilidade,
     bairrosAlt,
   ] = await Promise.all([
-    supabase.from('relatorios').select('*').eq('id', id).maybeSingle(),
-    supabase.from('relatorio_inputs').select('*').eq('relatorio_id', id).maybeSingle(),
-    supabase.from('relatorio_outputs').select('*').eq('relatorio_id', id).maybeSingle(),
-    supabase.from('candidatos').select('*').eq('relatorio_id', id).order('posicao', { ascending: true }),
-    supabase.from('competidores').select('*').eq('relatorio_id', id),
-    supabase.from('cenarios_financeiros').select('*').eq('relatorio_id', id),
-    supabase.from('sensibilidade_cenarios').select('*').eq('relatorio_id', id),
-    supabase.from('bairros_alternativos').select('*').eq('relatorio_id', id).order('ordem', { ascending: true }),
+    supabase.from('relatorios').select('*').eq('id', relatorioId).maybeSingle(),
+    supabase.from('relatorio_inputs').select('*').eq('relatorio_id', relatorioId).maybeSingle(),
+    supabase.from('relatorio_outputs').select('*').eq('relatorio_id', relatorioId).maybeSingle(),
+    supabase.from('candidatos').select('*').eq('relatorio_id', relatorioId).order('posicao', { ascending: true }),
+    supabase.from('competidores').select('*').eq('relatorio_id', relatorioId),
+    supabase.from('cenarios_financeiros').select('*').eq('relatorio_id', relatorioId),
+    supabase.from('sensibilidade_cenarios').select('*').eq('relatorio_id', relatorioId),
+    supabase.from('bairros_alternativos').select('*').eq('relatorio_id', relatorioId).order('ordem', { ascending: true }),
   ])
 
   const firstErr = [header, inputs, outputs, candidatos, competidores, cenarios, sensibilidade, bairrosAlt]
@@ -529,7 +597,7 @@ async function fetchDetailFromSupabase(id: string): Promise<BackendPayload> {
   if (!header.data) throw new Error(`Relatório ${id} não encontrado`)
 
   return {
-    id,
+    id: relatorioId,
     header: header.data as Record<string, unknown>,
     input_canonico: (inputs.data as Record<string, unknown> | null) ?? null,
     output_consolidado: (outputs.data as Record<string, unknown> | null) ?? null,

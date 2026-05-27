@@ -18,6 +18,7 @@ import { useAuth } from '@/lib/auth'
 import { useMembership } from '@/hooks/useMembership'
 import { notify } from '@/lib/notify'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { PipelineMonitor } from '@/components/layout/PipelineMonitor'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -47,6 +48,9 @@ export function AppShell() {
             </Link>
 
             <nav className="flex items-center gap-1 text-sm h-full">
+              <NavItem to="/dashboard" active={pathname === '/dashboard'}>
+                Dashboard
+              </NavItem>
               <NavItem to="/relatorios" active={pathname.startsWith('/relatorios')}>
                 Relatórios
               </NavItem>
@@ -70,6 +74,8 @@ export function AppShell() {
             </div>
           </div>
         </header>
+
+        <PipelineMonitor />
 
         <main className="container py-8">
           <Outlet />

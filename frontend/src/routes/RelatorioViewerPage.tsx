@@ -17,7 +17,7 @@
  */
 import { useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
-import { ArrowLeft, ChevronDown, MapPin } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ChevronDown, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Breadcrumb,
@@ -39,6 +39,10 @@ import { ScoresDimensionais } from '@/components/domain/ScoresDimensionais'
 import { ContextoMercadoCard } from '@/components/domain/ContextoMercadoCard'
 import { CandidatoCard } from '@/components/domain/CandidatoCard'
 import { CenarioFinanceiroTable } from '@/components/domain/CenarioFinanceiroTable'
+import { CapexBreakdownChart } from '@/components/domain/CapexBreakdownChart'
+import { ConsorcioCard } from '@/components/domain/ConsorcioCard'
+import { FinanceiroKpiStrip } from '@/components/domain/FinanceiroKpiStrip'
+import { getCapexMid } from '@/lib/consorcio-config'
 import { KitEquipamentosTable } from '@/components/domain/KitEquipamentosTable'
 import {
   getKit,
@@ -56,6 +60,7 @@ import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativo
 import { TextoSecao } from '@/components/domain/TextoSecao'
 import { AlertasGlobais } from '@/components/domain/AlertasGlobais'
 import { ScriptCard } from '@/components/domain/ScriptCard'
+import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SectionHeader } from '@/components/ui/section-header'
@@ -130,8 +135,47 @@ export function RelatorioViewerPage() {
     return valores.reduce((a, b) => a + b, 0) / valores.length
   })()
 
+  const semCandidatos = (out.top_3_candidatos?.length ?? 0) === 0
+  const semConcorrentes = (out.competitors_set?.length ?? 0) === 0
+  const modoCidadeInteira = inp.bairro === '(cidade inteira)'
+
   return (
     <div className="space-y-8">
+      {(semCandidatos || semConcorrentes) && (
+        <div className="rounded-lg border border-veredito-ressalvas/50 bg-veredito-ressalvas/5 p-4 space-y-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle
+              size={16}
+              className="text-veredito-ressalvas shrink-0 mt-0.5"
+            />
+            <div className="space-y-1 text-sm">
+              <p className="font-semibold text-veredito-ressalvas">
+                Coleta geográfica incompleta — candidatos, listings e concorrentes
+                não foram encontrados
+              </p>
+              <ul className="list-disc pl-4 text-foreground/90 space-y-1">
+                {modoCidadeInteira && (
+                  <li>
+                    Relatório foi gerado em modo <strong>cidade inteira</strong> (não
+                    suportado no MVP). Gere novamente escolhendo um <strong>bairro
+                    específico</strong> — o GeoScout e o Deep Research (A0) dependem
+                    disso.
+                  </li>
+                )}
+                <li>
+                  Geocoding Google retornou <code className="text-xs">REQUEST_DENIED</code>
+                  — habilite a <strong>Geocoding API</strong> no projeto da chave{' '}
+                  <code className="text-xs">GOOGLE_MAPS_API_KEY</code> e confira billing.
+                </li>
+                <li>
+                  Cenários financeiros abaixo usam premissas genéricas (sem imóvel
+                  validado). Gere novamente com bairro definido após corrigir a API.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 1. Header (UI Lote 4): Breadcrumb + Título com veredito inline */}
       <header className="space-y-3">
         <Breadcrumb>
@@ -173,8 +217,8 @@ export function RelatorioViewerPage() {
             {/* Veredito INLINE ao título (não flutuando isolado no canto) */}
             <VeredictoBadge veredito={out.veredito} />
           </h1>
-          <p className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
-            <MapPin size={12} />
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <MapPin size={12} className="shrink-0" />
             <span>
               {TIPO_NEGOCIO_LABEL[inp.tipo_negocio ?? 'academia'] ?? inp.tipo_negocio}
               {' · '}
@@ -184,7 +228,8 @@ export function RelatorioViewerPage() {
               {' · '}
               público {inp.publico_alvo ?? '25-40'}
             </span>
-          </p>
+            <RerunPipelineButton relatorioId={relatorioId} className="ml-auto" />
+          </div>
         </div>
       </header>
 
@@ -201,6 +246,7 @@ export function RelatorioViewerPage() {
       {(out.market_context || meta.fonte_market_context) && (
         <Section title="🔬 Contexto de Mercado">
           <ContextoMercadoCard
+            relatorioId={relatorioId}
             marketContext={out.market_context}
             fonte={meta.fonte_market_context}
             dataColeta={meta.data_coleta_market_context}
@@ -260,11 +306,30 @@ export function RelatorioViewerPage() {
           ) : null
         }
       >
-        <CenarioFinanceiroTable
-          cenarios={cenariosRecalc ?? out.viabilidade_3_cenarios}
-          modeloRecomendado={out.modelo_recomendado}
-          areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
-        />
+        {(() => {
+          const cenariosAtivos = cenariosRecalc ?? out.viabilidade_3_cenarios
+          const capexMid = getCapexMid(cenariosAtivos)
+          return (
+            <>
+              <FinanceiroKpiStrip
+                areaM2Min={inp.area_m2_min}
+                areaM2Max={inp.area_m2_max}
+                aluguelMensal={out.aluguel_mensal}
+                cenarioMid={cenariosAtivos?.mid}
+              />
+              <CapexBreakdownChart
+                cenarios={cenariosAtivos}
+                className="mt-4"
+              />
+              <CenarioFinanceiroTable
+                cenarios={cenariosAtivos}
+                modeloRecomendado={out.modelo_recomendado}
+                areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
+              />
+              <ConsorcioCard capexMid={capexMid} className="mt-4" />
+            </>
+          )
+        })()}
         {cenariosRecalc && (
           <p className="mt-2 text-[10px] text-muted-foreground font-mono">
             ⚙ Valores recalculados via kit detalhado v1.5. Equipamentos

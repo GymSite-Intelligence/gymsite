@@ -66,5 +66,13 @@ export function useRelatorios(filters: RelatoriosFilters = {}) {
       const rows = (data ?? []) as unknown as RelatorioResumo[]
       return applyClientFilters(rows, filters)
     },
+    refetchInterval: (q) => {
+      const rows = q.state.data
+      if (rows?.some((r) => r.status === 'queued' || r.status === 'running')) {
+        return 5000
+      }
+      return false
+    },
+    refetchIntervalInBackground: true,
   })
 }

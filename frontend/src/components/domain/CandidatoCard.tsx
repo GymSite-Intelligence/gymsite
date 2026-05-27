@@ -9,7 +9,7 @@
  * pra placeholder visual sem quebrar layout.
  */
 import { useState } from 'react'
-import { MapPin, Eye, AlertCircle, Phone, Globe, Clock, MessageCircle } from 'lucide-react'
+import { MapPin, Eye, AlertCircle, Phone, Globe, Clock, MessageCircle, ExternalLink } from 'lucide-react'
 import { ScoreGauge } from './ScoreGauge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -51,6 +51,17 @@ export function CandidatoCard({
 
   const visibilidade = candidato.estimativa_visibilidade ?? 'desconhecida'
   const tipoLabel = (candidato.tipos?.[0] ?? '').replace(/_/g, ' ')
+  const isListing =
+    candidato.qualidade_sinal === 'direto-listing' ||
+    candidato.fonte === 'listing' ||
+    !!candidato.listing_url
+  const anuncioUrl = candidato.listing_url || candidato.website
+  const portalLabel =
+    candidato.listing_source === 'olx'
+      ? 'OLX'
+      : candidato.listing_source === 'imovelweb'
+        ? 'ImovelWeb'
+        : 'Anúncio'
 
   return (
     <article
@@ -82,6 +93,14 @@ export function CandidatoCard({
         >
           #{posicao}
         </Badge>
+        {isListing && (
+          <Badge
+            variant="default"
+            className="absolute top-2 left-14 bg-primary/90 text-primary-foreground backdrop-blur"
+          >
+            {portalLabel}
+          </Badge>
+        )}
         {/* Badge visibilidade (canto direito) — tonalidade por nível */}
         <Badge
           variant={
@@ -102,6 +121,11 @@ export function CandidatoCard({
       <div className="p-4 space-y-3 flex-1 flex flex-col">
         <div>
           <h3 className="font-semibold text-sm leading-tight">{candidato.nome}</h3>
+          {candidato.price_raw && isListing && (
+            <p className="text-sm font-mono font-semibold text-primary mt-0.5">
+              {candidato.price_raw}
+            </p>
+          )}
           {tipoLabel && (
             <p className="text-[10px] font-mono uppercase text-muted-foreground mt-0.5">
               {tipoLabel}
@@ -123,7 +147,7 @@ export function CandidatoCard({
         )}
 
         {/* Contact Data — Button primitives padronizados (UI Lote 2) */}
-        {(candidato.telefone || candidato.website || candidato.tem_24h) && (
+        {(candidato.telefone || anuncioUrl || candidato.tem_24h) && (
           <div className="flex items-center gap-2 flex-wrap">
             {candidato.telefone && (
               <>
@@ -148,16 +172,20 @@ export function CandidatoCard({
                 </Button>
               </>
             )}
-            {candidato.website && (
+            {anuncioUrl && (
               <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
                 <a
-                  href={candidato.website}
+                  href={anuncioUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Site"
+                  title={isListing ? `Ver anúncio ${portalLabel}` : 'Site'}
                 >
-                  <Globe size={12} />
-                  Site
+                  {isListing ? (
+                    <ExternalLink data-icon="inline-start" />
+                  ) : (
+                    <Globe data-icon="inline-start" />
+                  )}
+                  {isListing ? 'Ver anúncio' : 'Site'}
                 </a>
               </Button>
             )}

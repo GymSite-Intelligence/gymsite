@@ -21,7 +21,9 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { supabase } from '@/lib/supabase'
 import { useDeleteRelatorio } from '@/hooks/useDeleteRelatorio'
+import { useRerunPipeline } from '@/hooks/useRerunPipeline'
 import { notify } from '@/lib/notify'
+import { trackPipeline, untrackPipeline } from '@/lib/pipeline-tracker'
 
 interface StatusResponse {
   id: string
@@ -55,31 +57,14 @@ export function RelatorioAguardandoPage() {
   const navigate = useNavigate()
   const isValidId = UUID_RE.test(relatorioId)
 
-  // Carrega os inputs do relatório pra pré-popular o /relatorios/new quando
-  // o user clicar "Tentar de novo com mesmos parâmetros". Query leve (1 row),
-  // ativada sempre — útil também se o user voltar manualmente pra essa URL.
-  const { data: inputsRetry, isLoading: loadingInputs } = useQuery({
-    queryKey: ['relatorio-inputs-retry', relatorioId],
-    enabled: isValidId,
-    meta: { silent: true },
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('relatorio_inputs')
-        .select(
-          'cidade, uf, bairro, area_m2_min, area_m2_max, tamanho_preset, publico_alvo, genero_alvo, tipo_negocio, estacionamento_obrigatorio',
-        )
-        .eq('relatorio_id', relatorioId)
-        .maybeSingle()
-      if (error) throw new Error(error.message)
-      return data
-    },
-  })
+  useEffect(() => {
+    if (isValidId) trackPipeline(relatorioId)
+  }, [isValidId, relatorioId])
 
-  // Delete inline (só ativo quando status='failed'). Confirmação em 2 cliques:
-  // 1º arma, 2º deleta. Sem dialog porque o projeto não tem AlertDialog.
   const [armed, setArmed] = useState(false)
   const armedTimeoutRef = useRef<number | null>(null)
   const deleteMutation = useDeleteRelatorio()
+  const rerunMutation = useRerunPipeline()
 
   useEffect(() => {
     return () => {
@@ -105,27 +90,7 @@ export function RelatorioAguardandoPage() {
   }
 
   function tentarNovamente() {
-    const i = inputsRetry
-    if (!i) {
-      // Sem inputs (caso raro) — vai pra tela vazia
-      navigate({ to: '/relatorios/new' })
-      return
-    }
-    navigate({
-      to: '/relatorios/new',
-      search: {
-        cidade: i.cidade ?? undefined,
-        uf: i.uf ?? undefined,
-        bairro: i.bairro ?? undefined,
-        area_m2_min: i.area_m2_min ?? undefined,
-        area_m2_max: i.area_m2_max ?? undefined,
-        tamanho_preset: i.tamanho_preset ?? undefined,
-        publico_alvo: i.publico_alvo ?? undefined,
-        genero_alvo: i.genero_alvo ?? undefined,
-        tipo_negocio: i.tipo_negocio ?? undefined,
-        estacionamento_obrigatorio: i.estacionamento_obrigatorio ?? undefined,
-      },
-    })
+    rerunMutation.mutate({ relatorioId })
   }
 
   const { data, error } = useQuery<StatusResponse>({
@@ -153,10 +118,14 @@ export function RelatorioAguardandoPage() {
   // Redirect automático quando completar
   useEffect(() => {
     if (data?.status === 'done') {
+      untrackPipeline(relatorioId)
       const t = setTimeout(() => {
         navigate({ to: '/relatorios/$relatorioId', params: { relatorioId } })
       }, 800)
       return () => clearTimeout(t)
+    }
+    if (data?.status === 'failed' || data?.status === 'cancelled') {
+      untrackPipeline(relatorioId)
     }
   }, [data?.status, relatorioId, navigate])
 
@@ -247,10 +216,10 @@ export function RelatorioAguardandoPage() {
               <Button
                 size="sm"
                 onClick={() => tentarNovamente()}
-                disabled={loadingInputs}
+                disabled={rerunMutation.isPending}
               >
-                {loadingInputs ? (
-                  <>Carregando parâmetros…</>
+                {rerunMutation.isPending ? (
+                  <>Iniciando pipeline…</>
                 ) : (
                   <>Tentar novamente com mesmos parâmetros</>
                 )}

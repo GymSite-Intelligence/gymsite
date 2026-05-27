@@ -1,5 +1,5 @@
 /**
- * useBairroAutocomplete — autocomplete de bairros via Google Places API (proxy Vite).
+ * useBairroAutocomplete — autocomplete de bairros via Google Places (FastAPI proxy).
  *
  * Diferente de useMunicipioAutocomplete (que carrega tudo de uma vez), aqui
  * não dá pra cachear a lista inteira de bairros: a Places API retorna sob
@@ -15,6 +15,7 @@
  * Debounce de 250ms recomendado no caller (não embutido aqui pra manter o hook puro).
  */
 import { useQuery } from '@tanstack/react-query'
+import { PLACES_AUTOCOMPLETE_URL } from '@/lib/places-api'
 
 export interface BairroSugestao {
   placeId: string
@@ -39,7 +40,7 @@ interface AutocompleteResponse {
 async function fetchBairros(
   req: AutocompleteRequest,
 ): Promise<BairroSugestao[]> {
-  const res = await fetch('/api/places-autocomplete', {
+  const res = await fetch(PLACES_AUTOCOMPLETE_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(req),

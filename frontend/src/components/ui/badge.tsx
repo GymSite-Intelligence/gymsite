@@ -1,55 +1,54 @@
-/**
- * Badge — primitivo shadcn/ui (versão copiada/customizada, sem CLI).
- *
- * Variantes semânticas alinhadas ao design system v1.6 (tokens --status-*):
- *  - default / secondary / outline / destructive — primitivos
- *  - success / warning / investigate — semânticos (alto valor pro produto)
- *
- * Prop `mono` (default false) ativa a fonte mono — usada em códigos, IDs,
- * valores numéricos. Default sans pra badges de status legíveis ao cliente.
- *
- * Domain components (VeredictoBadge, CategoriaDorBadge) ainda usam
- * className override pra cor customizada; novos usos preferem variants.
- */
-import { type VariantProps, cva } from 'class-variance-authority'
-import type { HTMLAttributes } from 'react'
-import { cn } from '@/lib/utils'
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { Slot } from "radix-ui"
+
+import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground',
-        secondary: 'border-transparent bg-muted text-foreground',
-        outline: 'border-border text-foreground',
-        destructive: 'border-transparent bg-status-critical text-white',
-        // Semânticos — preferir nos componentes novos
-        success: 'border-status-good/40 bg-status-good/10 text-status-good',
-        warning: 'border-status-warning/40 bg-status-warning/10 text-status-warning',
-        investigate:
-          'border-status-investigate/40 bg-status-investigate/10 text-status-investigate',
-        critical: 'border-status-critical/40 bg-status-critical/10 text-status-critical',
-      },
-      mono: {
-        true: 'font-mono',
-        false: 'font-sans',
+        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        secondary:
+          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
+        destructive:
+          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+        outline:
+          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
+        success:
+          "bg-status-good/15 text-status-good border-status-good/30 [a]:hover:bg-status-good/25",
+        warning:
+          "bg-status-warning/15 text-status-warning border-status-warning/30 [a]:hover:bg-status-warning/25",
+        ghost:
+          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
+        link: "text-primary underline-offset-4 hover:underline",
       },
     },
-    defaultVariants: { variant: 'default', mono: false },
-  },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
 )
 
-export interface BadgeProps
-  extends Omit<HTMLAttributes<HTMLSpanElement>, 'className'>,
-    VariantProps<typeof badgeVariants> {
-  className?: string
-}
+function Badge({
+  className,
+  variant = "default",
+  asChild = false,
+  mono,
+  ...props
+}: React.ComponentProps<"span"> &
+  VariantProps<typeof badgeVariants> & { asChild?: boolean; mono?: boolean }) {
+  const Comp = asChild ? Slot.Root : "span"
 
-export function Badge({ className, variant, mono, ...props }: BadgeProps) {
   return (
-    <span className={cn(badgeVariants({ variant, mono }), className)} {...props} />
+    <Comp
+      data-slot="badge"
+      data-variant={variant}
+      className={cn(badgeVariants({ variant }), mono && "font-mono", className)}
+      {...props}
+    />
   )
 }
 
-export { badgeVariants }
+export { Badge, badgeVariants }

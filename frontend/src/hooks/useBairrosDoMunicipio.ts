@@ -16,6 +16,7 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import type { BairroSugestao } from '@/hooks/useBairroAutocomplete'
+import { PLACES_AUTOCOMPLETE_URL } from '@/lib/places-api'
 
 // Prefixos cobrem maioria dos bairros (vogais + consoantes comuns).
 // Letras raras (k, w, y, z) excluídas pra economizar chamadas.
@@ -47,21 +48,38 @@ interface AutocompleteResp {
   error?: string
 }
 
+function _isFatalPlacesError(msg: string) {
+  const m = msg.toLowerCase()
+  return (
+    m.includes('google_maps_api_key') ||
+    m.includes('maps_api_key') ||
+    m.includes('request_denied') ||
+    m.includes('places api retornou 403') ||
+    m.includes('places api retornou 401') ||
+    m.includes('places api (new) nao habilitada') ||
+    m.includes('api key bloqueada')
+  )
+}
+
 async function fetchPrefixo(
   prefixo: string,
   municipio: string,
   uf: string,
 ): Promise<BairroSugestao[]> {
   try {
-    const res = await fetch('/api/places-autocomplete', {
+    const res = await fetch(PLACES_AUTOCOMPLETE_URL, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ input: prefixo, municipio, uf }),
     })
     if (!res.ok) return []
     const data = (await res.json()) as AutocompleteResp
+    if (data.error && _isFatalPlacesError(data.error)) {
+      throw new Error(data.error)
+    }
     return data.suggestions || []
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && _isFatalPlacesError(err.message)) throw err
     return []
   }
 }
@@ -70,18 +88,34 @@ async function fetchTodosBairros(
   municipio: string,
   uf: string,
 ): Promise<BairroSugestao[]> {
-  // Disparo paralelo de todas as letras
-  const resultados = await Promise.all(
+  // Disparo paralelo de todas as letras. Quando Places está mal-configurado
+  // (chave ausente/sem billing), preferimos falhar com erro visível em vez de
+  // mostrar "lista vazia" e deixar o usuário no escuro.
+  const resultados = await Promise.allSettled(
     PREFIXOS_BUSCA.map((p) => fetchPrefixo(p, municipio, uf)),
   )
 
   // Dedup por placeId (preferido) ou textoCompleto
   const visto = new Map<string, BairroSugestao>()
-  for (const lista of resultados) {
-    for (const b of lista) {
+  for (const r of resultados) {
+    if (r.status !== 'fulfilled') continue
+    for (const b of r.value) {
       const key = b.placeId || b.textoCompleto
       if (!visto.has(key)) visto.set(key, b)
     }
+  }
+
+  // Se nenhuma chamada retornou bairros e pelo menos uma falhou de forma "fatal",
+  // propaga o erro pra UI exibir mensagem (ex.: REQUEST_DENIED / chave ausente).
+  if (visto.size === 0) {
+    const fatal = resultados.find(
+      (r) => r.status === 'rejected' && r.reason instanceof Error,
+    )
+    const fatalMsg =
+      fatal && fatal.status === 'rejected' && fatal.reason instanceof Error
+        ? fatal.reason.message
+        : null
+    if (fatalMsg) throw new Error(fatalMsg)
   }
 
   // Ordena alfabeticamente pra UX previsível no dropdown

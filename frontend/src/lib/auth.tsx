@@ -13,31 +13,54 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { USE_MOCKS } from '@/mocks'
+import { createMockSession, isSupabaseConfigured } from '@/lib/mock-auth'
+import { isPasswordExpired } from '@/lib/password-expiry'
 
 interface AuthState {
   user: User | null
   session: Session | null
   loading: boolean
+  /** true quando auth mock está ativo (dev sem Supabase). */
+  mockAuth: boolean
   signOut: () => Promise<void>
+  signInDev: () => void
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
+
+const mockAuthEnabled = USE_MOCKS && !isSupabaseConfigured()
+
+async function rejectExpiredPasswordSession(session: Session | null): Promise<Session | null> {
+  if (!session?.user || mockAuthEnabled) return session
+  if (!isPasswordExpired(session.user)) return session
+  await supabase.auth.signOut()
+  return null
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (mockAuthEnabled) {
+      setSession(createMockSession())
+      setLoading(false)
+      return
+    }
+
     let active = true
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return
-      setSession(data.session)
+      const s = await rejectExpiredPasswordSession(data.session)
+      setSession(s)
       setLoading(false)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s)
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      const next = await rejectExpiredPasswordSession(s)
+      setSession(next)
       setLoading(false)
     })
 
@@ -51,8 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session?.user ?? null,
     session,
     loading,
+    mockAuth: mockAuthEnabled,
     signOut: async () => {
+      if (mockAuthEnabled) {
+        setSession(null)
+        return
+      }
       await supabase.auth.signOut()
+    },
+    signInDev: () => {
+      if (mockAuthEnabled) setSession(createMockSession())
     },
   }
 

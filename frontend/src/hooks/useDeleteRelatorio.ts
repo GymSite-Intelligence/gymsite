@@ -12,6 +12,7 @@
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { resolveRelatorioUuid } from '@/lib/relatorio-id'
 import { USE_MOCKS } from '@/mocks'
 
 export function useDeleteRelatorio() {
@@ -23,10 +24,11 @@ export function useDeleteRelatorio() {
         await new Promise((r) => setTimeout(r, 200))
         return
       }
+      const relatorioUuid = await resolveRelatorioUuid(relatorioId)
       const { error } = await supabase
         .from('relatorios')
         .delete()
-        .eq('id', relatorioId)
+        .eq('id', relatorioUuid)
       if (error) {
         throw new Error(`Supabase: ${error.message}`)
       }

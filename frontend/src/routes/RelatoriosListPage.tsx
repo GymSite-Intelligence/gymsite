@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { GitCompare, Plus, RefreshCw, Search, X } from 'lucide-react'
+import { useMembership } from '@/hooks/useMembership'
 import { useRelatorios } from '@/hooks/useRelatorios'
 import { RelatorioCard } from '@/components/domain/RelatorioCard'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,8 @@ export function RelatoriosListPage() {
   const navigate = useNavigate()
   const search = useSearch({ from: '/relatorios' })
 
-  const { data, isLoading, isFetching, refetch } = useRelatorios({
+  const { orgId, loading: membershipLoading } = useMembership()
+  const { data, isLoading, isFetching, refetch, error } = useRelatorios({
     cidade: search.cidade || undefined,
     veredito: search.veredito || undefined,
     since: search.since || undefined,
@@ -146,12 +148,18 @@ export function RelatoriosListPage() {
       </div>
 
       {/* Lista / loading / empty */}
-      {isLoading ? (
+      {isLoading || membershipLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-20 w-full" />
           ))}
         </div>
+      ) : error ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          Erro ao carregar relatórios: {error.message}
+        </div>
+      ) : !orgId ? (
+        <EmptyState hasFiltros={false} semOrg />
       ) : !data || data.length === 0 ? (
         <EmptyState hasFiltros={hasFiltros} />
       ) : (
@@ -218,11 +226,26 @@ export function RelatoriosListPage() {
   )
 }
 
-function EmptyState({ hasFiltros }: { hasFiltros: boolean }) {
+function EmptyState({
+  hasFiltros,
+  semOrg = false,
+}: {
+  hasFiltros: boolean
+  semOrg?: boolean
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-border rounded-lg text-center">
       <span aria-hidden className="text-4xl mb-3">📊</span>
-      {hasFiltros ? (
+      {semOrg ? (
+        <>
+          <h3 className="font-semibold mb-1">Sem acesso à organização</h3>
+          <p className="text-sm text-muted-foreground max-w-md">
+            Sua conta ainda não está vinculada a uma organização. Peça ao
+            administrador para convidar você — depois disso os relatórios
+            aparecem aqui.
+          </p>
+        </>
+      ) : hasFiltros ? (
         <>
           <h3 className="font-semibold mb-1">Nenhum relatório bate com os filtros</h3>
           <p className="text-sm text-muted-foreground">

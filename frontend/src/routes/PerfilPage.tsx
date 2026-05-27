@@ -15,6 +15,12 @@ import { Loader2, Upload, Trash2, Check, User as UserIcon } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { notify } from '@/lib/notify'
+import {
+  formatPasswordExpiry,
+  isPasswordExpired,
+  isTesterUser,
+} from '@/lib/password-expiry'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -158,6 +164,10 @@ export function PerfilPage() {
     }
   }
 
+  const senhaExpiraEm = user ? formatPasswordExpiry(user) : null
+  const senhaExpirada = user ? isPasswordExpired(user) : false
+  const contaTeste = user ? isTesterUser(user) : false
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <header>
@@ -169,6 +179,16 @@ export function PerfilPage() {
           Esses dados aparecem no avatar do topo e em relatórios compartilhados.
         </p>
       </header>
+
+      {contaTeste && senhaExpiraEm && (
+        <Alert variant={senhaExpirada ? 'destructive' : 'warning'}>
+          <AlertDescription>
+            {senhaExpirada
+              ? `Senha de teste expirada em ${senhaExpiraEm}. Use código no email ou peça nova senha ao admin.`
+              : `Conta de teste — senha válida até ${senhaExpiraEm}.`}
+          </AlertDescription>
+        </Alert>
+      )}
 
       <section className="rounded-lg border border-border bg-card p-6 space-y-6">
         {/* Avatar + upload */}
