@@ -1,0 +1,9 @@
+tunnel: dbad2419-2271-42e1-840f-40864fa53298
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: api.gymsite.vectracargo.com.br
+    service: http://gymsite-api:8000
+    originRequest:
+      noTLSVerify: true
+  - service: http_status:404

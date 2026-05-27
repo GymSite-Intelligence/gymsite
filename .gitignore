@@ -2,9 +2,15 @@
 .env
 .env.local
 .env.*.local
+.env.tunnel
 credentials/
 *.pem
 *.key
+
+# Cloudflare Tunnel — nunca versionar credenciais (config.yml pode versionar)
+cloudflared/credentials.json
+cloudflared/*.json
+!cloudflared/config.yml
 
 # Python
 __pycache__/
@@ -30,7 +36,13 @@ Thumbs.db
 # Node / Vite
 node_modules/
 frontend/dist/
+frontend/dist-types-node/
 .pnpm-store/
+**/*.tsbuildinfo
+
+# Dados de referência locais (PDF/CSV pesados — manter fora do git)
+docs/*.pdf
+docs/series-historicas*.csv
 
 # Playwright runtime
 .playwright-mcp/
@@ -47,6 +59,16 @@ market_context/*.md
 
 # Token telemetry (estrutura versionada via .gitkeep, dados ignorados)
 metrics/*.csv
+
+# Pipeline / LLM caches locais (não versionar conteúdo gerado em runtime)
+metrics/grounding_cache/*.json
+metrics/relatorios/*.json
+metrics/cache/*.json
+metrics/state_diagnostics.jsonl
+metrics/rfb_cnpj_cache/
+
+# Dumps RFB / artefatos grandes
+*.zip
 
 # Popular times cache (estrutura versionada via .gitkeep, conteúdo ignorado)
 competitor_cache/*.json
