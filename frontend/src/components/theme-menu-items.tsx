@@ -7,7 +7,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   APP_THEME_OPTIONS,
+  applyAppThemeToDocument,
   isAppThemeId,
+  normalizeAppThemeId,
   persistAppThemeToUser,
 } from '@/lib/app-theme'
 import { useAuth } from '@/lib/auth'
@@ -21,10 +23,11 @@ const THEME_ICONS = {
 export function ThemeMenuItems() {
   const { theme, setTheme } = useTheme()
   const { user } = useAuth()
-  const active = isAppThemeId(theme) ? theme : 'analitico'
+  const active = normalizeAppThemeId(theme)
 
   function onSelect(next: string) {
     if (!isAppThemeId(next) || next === active) return
+    applyAppThemeToDocument(next)
     setTheme(next)
     persistAppThemeToUser(next, user)
   }

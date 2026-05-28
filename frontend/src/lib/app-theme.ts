@@ -35,6 +35,11 @@ export function isAppThemeId(value: unknown): value is AppThemeId {
   return typeof value === 'string' && (APP_THEME_IDS as readonly string[]).includes(value)
 }
 
+/** Valores legados (light/dark/system) ou lixo no storage → tema válido. */
+export function normalizeAppThemeId(value: unknown): AppThemeId {
+  return isAppThemeId(value) ? value : DEFAULT_APP_THEME
+}
+
 export function readStoredAppTheme(): AppThemeId | null {
   try {
     const raw = localStorage.getItem(APP_THEME_STORAGE_KEY)

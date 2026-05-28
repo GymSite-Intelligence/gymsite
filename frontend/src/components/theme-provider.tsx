@@ -5,6 +5,7 @@ import {
   DEFAULT_APP_THEME,
   applyAppThemeToDocument,
   isAppThemeId,
+  normalizeAppThemeId,
   readAppThemeFromUser,
   readStoredAppTheme,
 } from '@/lib/app-theme'
@@ -20,21 +21,45 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       storageKey={APP_THEME_STORAGE_KEY}
       disableTransitionOnChange
     >
+      <ThemeStorageSanitizer />
       <ThemeDocumentSync />
       {children}
     </NextThemesProvider>
   )
 }
 
-/** Garante .dark + color-scheme mesmo com temas custom (não light/dark do next-themes). */
-function ThemeDocumentSync() {
-  const { resolvedTheme, theme } = useTheme()
-  const active = resolvedTheme ?? theme
+/** Corrige localStorage legado (ex.: "dark") antes do next-themes aplicar atributo inválido. */
+function ThemeStorageSanitizer() {
+  const { setTheme } = useTheme()
 
   useEffect(() => {
-    if (!isAppThemeId(active)) return
-    applyAppThemeToDocument(active)
-  }, [active])
+    try {
+      const raw = localStorage.getItem(APP_THEME_STORAGE_KEY)
+      if (isAppThemeId(raw)) {
+        applyAppThemeToDocument(raw)
+        return
+      }
+      const fixed = normalizeAppThemeId(raw)
+      localStorage.setItem(APP_THEME_STORAGE_KEY, fixed)
+      applyAppThemeToDocument(fixed)
+      setTheme(fixed)
+    } catch {
+      applyAppThemeToDocument(DEFAULT_APP_THEME)
+      setTheme(DEFAULT_APP_THEME)
+    }
+  }, [setTheme])
+
+  return null
+}
+
+/** Garante .dark + data-theme no <html> a cada mudança (next-themes só persiste o atributo). */
+function ThemeDocumentSync() {
+  const { theme } = useTheme()
+
+  useEffect(() => {
+    if (!isAppThemeId(theme)) return
+    applyAppThemeToDocument(theme)
+  }, [theme])
 
   return null
 }
