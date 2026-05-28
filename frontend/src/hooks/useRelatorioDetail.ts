@@ -12,7 +12,7 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import { getMockRelatorioRaw, USE_MOCKS } from '@/mocks'
-import { useAuth } from '@/lib/auth-context'
+import { useAuth } from '@/lib/auth'
 import { resolveRelatorioUuid } from '@/lib/relatorio-id'
 import { supabase } from '@/lib/supabase'
 

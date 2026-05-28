@@ -188,6 +188,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Garante um único módulo de auth (evita useAuth fora de <AuthProvider> em prod).
+      '@/lib/auth-context': path.resolve(__dirname, './src/lib/auth.tsx'),
     },
     dedupe: ['react', 'react-dom'],
   },

@@ -1,16 +1,27 @@
 /**
  * ContextoMercadoCard — exibe o output completo do A0 Deep Research.
  *
- * Schema v1.2 persiste market_context rico em output_consolidado:
+ * Schema v1.2+ persiste market_context rico em output_consolidado:
  * ticket, aluguel R$/m², renda, faixa etária, redes, tendência,
  * regulamentação, insights estratégicos.
+ * Schema v1.7: novos_cnpj_fitness_90d + serie_aberturas_anual (RFB CNPJ Aberto).
  *
  * Graceful degradation: se o relatório for v1.1 antigo (sem market_context),
  * renderiza só os metadados básicos + métricas derivadas do output.
  */
-import { CheckCircle, Database, Lightbulb, TrendingDown, TrendingUp, Minus, ScrollText } from 'lucide-react'
+import {
+  CheckCircle,
+  Database,
+  Lightbulb,
+  TrendingDown,
+  TrendingUp,
+  Minus,
+  ScrollText,
+  Building2,
+} from 'lucide-react'
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { cn } from '@/lib/utils'
+import { formatComposicaoParque } from '@/lib/segmento-parque'
 import type { MarketContextJSON } from '@/hooks/useRelatorioDetail'
 
 export interface ContextoMercadoCardProps {
@@ -117,6 +128,42 @@ export function ContextoMercadoCard({
     ? TAMANHO_LABELS[mc.tamanho_preset] ?? mc.tamanho_preset.toUpperCase()
     : null
 
+  const novosCnpj90d =
+    typeof mc.novos_cnpj_fitness_90d === 'number' && mc.novos_cnpj_fitness_90d >= 0
+      ? mc.novos_cnpj_fitness_90d
+      : null
+
+  const serieAberturas = mc.serie_aberturas_anual
+    ? Object.entries(mc.serie_aberturas_anual)
+        .filter(([, n]) => typeof n === 'number')
+        .sort(([a], [b]) => a.localeCompare(b))
+    : []
+
+  const serieAberturasLabel =
+    serieAberturas.length > 0
+      ? serieAberturas.map(([ano, n]) => `${ano}: ${n}`).join(' · ')
+      : null
+
+  const fonteEntrantes =
+    mc.fonte_entrantes && mc.fonte_entrantes !== 'dados_nao_disponiveis'
+      ? mc.fonte_entrantes
+      : null
+
+  const parqueAtivo =
+    typeof mc.parque_ativo_total === 'number'
+      ? mc.parque_ativo_total
+      : typeof mc.academias_ativas_cidade_cnpj === 'number'
+        ? mc.academias_ativas_cidade_cnpj
+        : null
+
+  const composicaoParqueLabel = formatComposicaoParque(mc.composicao_parque)
+
+  const temDadosCnpj =
+    novosCnpj90d != null ||
+    parqueAtivo != null ||
+    !!composicaoParqueLabel ||
+    !!serieAberturasLabel
+
   // Calculado DEPOIS das labels pra ordem de declaração (TypeScript strict).
   const temMarketContextRico = !!(
     mc.ticket_medio_mercado ||
@@ -128,6 +175,7 @@ export function ContextoMercadoCard({
     tamanhoLabel ||
     mc.tendencia_mercado ||
     mc.regulamentacao_resumo ||
+    temDadosCnpj ||
     (mc.insights_estrategicos && mc.insights_estrategicos.length > 0)
   )
 
@@ -225,9 +273,67 @@ export function ContextoMercadoCard({
                     }
                   />
                 )}
+                {parqueAtivo != null && (
+                  <IndicatorRow
+                    label="Parque ativo (município)"
+                    value={
+                      <span className="font-semibold tabular-nums">{parqueAtivo}</span>
+                    }
+                  />
+                )}
+                {composicaoParqueLabel && (
+                  <IndicatorRow
+                    label="Composição do parque"
+                    value={
+                      <span className="text-xs leading-snug">{composicaoParqueLabel}</span>
+                    }
+                  />
+                )}
+                {novosCnpj90d != null && (
+                  <IndicatorRow
+                    label="Novas unidades (90 dias)"
+                    value={
+                      <span className="inline-flex items-center gap-1.5">
+                        <Building2 size={12} className="text-veredito-investigar shrink-0" />
+                        <span className="font-semibold tabular-nums">{novosCnpj90d}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">
+                          {mc.cidade ? `em ${mc.cidade}` : 'na cidade'}
+                          {mc.uf ? ` (${mc.uf})` : ''}
+                        </span>
+                      </span>
+                    }
+                  />
+                )}
+                {serieAberturasLabel && (
+                  <IndicatorRow
+                    label="Aberturas por ano (CNPJ)"
+                    value={
+                      <span className="font-mono text-xs">{serieAberturasLabel}</span>
+                    }
+                  />
+                )}
               </tbody>
             </table>
           </div>
+        )}
+
+        {temDadosCnpj && fonteEntrantes && (
+          <p className="text-[10px] font-mono text-muted-foreground -mt-3">
+            Entrantes: {fonteEntrantes}
+          </p>
+        )}
+
+        {(mc.fatos_parque_cnpj?.lacunas?.length ?? 0) > 0 && (
+          <section className="rounded-md border border-border bg-muted/15 p-4 space-y-2">
+            <h4 className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+              Fatos parque CNPJ (A0)
+            </h4>
+            <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+              {mc.fatos_parque_cnpj!.lacunas!.map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {/* Métricas derivadas (sempre presentes — vêm do output, não do A0) */}

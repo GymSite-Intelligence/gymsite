@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/lib/auth'
 import { useMembership } from '@/hooks/useMembership'
+import { ThemeMenuItems } from '@/components/theme-menu-items'
 import {
   EllipsisVerticalIcon,
   CircleUserRoundIcon,
@@ -107,6 +108,7 @@ export function NavUser() {
                 Perfil
               </Link>
             </DropdownMenuItem>
+            <ThemeMenuItems />
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={sair}>
               <LogOutIcon />

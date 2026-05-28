@@ -29,10 +29,14 @@ export interface AuthState {
 
 export const AuthContext = createContext<AuthState | undefined>(undefined)
 
+/** Fallback quando o bundle duplica o módulo de context (Provider vs useAuth). */
+const authStore: { current: AuthState | null } = { current: null }
+
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth fora de <AuthProvider>')
-  return ctx
+  const state = ctx ?? authStore.current
+  if (!state) throw new Error('useAuth fora de <AuthProvider>')
+  return state
 }
 
 const mockAuthEnabled = USE_MOCKS && !isSupabaseConfigured()
@@ -84,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut: async () => {
       if (mockAuthEnabled) {
         setSession(null)
+        authStore.current = null
         return
       }
       await supabase.auth.signOut()
@@ -92,6 +97,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mockAuthEnabled) setSession(createMockSession())
     },
   }
+
+  authStore.current = value
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
