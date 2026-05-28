@@ -35,7 +35,8 @@ import { DashboardPage } from '@/routes/DashboardPage'
 import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import type { Veredito } from '@/types/domain'
 
-const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade'])
+// Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
+const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade', '/pdf-smoke'])
 
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
