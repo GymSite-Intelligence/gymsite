@@ -89,6 +89,20 @@ export function RelatorioViewerPage() {
   const search = useSearch({ from: '/relatorios/$relatorioId' }) as { print?: string }
   const { data, isLoading, error } = useRelatorioDetail(relatorioId)
 
+  // Hooks sempre antes de early return (React #310).
+  useEffect(() => {
+    if (search?.print !== '1') return
+    if (isLoading || error || !data) return
+    const t = window.setTimeout(() => {
+      try {
+        window.print()
+      } catch {
+        // noop
+      }
+    }, 600)
+    return () => window.clearTimeout(t)
+  }, [search?.print, relatorioId, isLoading, error, data])
+
   if (isLoading) return <ViewerSkeleton />
   if (error || !data) return <ViewerError message={error?.message} />
 
@@ -142,20 +156,6 @@ export function RelatorioViewerPage() {
   const semCandidatos = (out.top_3_candidatos?.length ?? 0) === 0
   const semConcorrentes = (out.competitors_set?.length ?? 0) === 0
   const modoCidadeInteira = inp.bairro === '(cidade inteira)'
-
-  // Download PDF via impressão do browser (Ctrl+P -> salvar como PDF).
-  // Quando `?print=1`, dispara print automaticamente após carregar.
-  useEffect(() => {
-    if (search?.print !== '1') return
-    const t = window.setTimeout(() => {
-      try {
-        window.print()
-      } catch {
-        // noop
-      }
-    }, 600)
-    return () => window.clearTimeout(t)
-  }, [search?.print, relatorioId])
 
   return (
     <div className="space-y-8">
