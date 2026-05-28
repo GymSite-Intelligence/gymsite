@@ -15,8 +15,8 @@ let _client: SupabaseClient | null = null
 
 function _getClient(): SupabaseClient {
   if (_client) return _client
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+  const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim()
+  const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim()
   if (!url || !key) {
     throw new Error(
       'Supabase não configurado — defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env do frontend.',
@@ -37,4 +37,5 @@ export const supabase = new Proxy({} as SupabaseClient, {
 /** URL base da API HTTP do backend (FastAPI). Default localhost:8000 em dev. */
 export const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined)?.trim() ||
-  'http://localhost:8000'
+  // Produção: se o env não vier do Pages, tentamos o domínio público padrão.
+  'https://gymsite-api.vectracargo.com.br'
