@@ -139,21 +139,23 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
         )}
         {relatorio.status === 'done' && (
           <Button
-            type="button"
             variant="outline"
             size="sm"
             className="gap-1.5 shrink-0"
-            onClick={(e: MouseEvent) => {
-              e.stopPropagation()
-              // Fluxo simples: abre viewer e aciona print (usuário salva como PDF).
-              // Não depende de backend nem de libs de PDF; funciona em qualquer browser.
-              const url = `${window.location.origin}/relatorios/${relatorio.id}?print=1`
-              window.open(url, '_blank', 'noopener,noreferrer')
-            }}
+            asChild
             title="Baixar PDF (abre impressão)"
           >
-            <Download size={14} />
-            PDF
+            <Link
+              to="/relatorios/$relatorioId"
+              params={{ relatorioId: relatorio.id }}
+              search={{ print: '1' }}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e: MouseEvent) => e.stopPropagation()}
+            >
+              <Download size={14} />
+              PDF
+            </Link>
           </Button>
         )}
         {(relatorio.status === 'done' || relatorio.status === 'failed') && (

@@ -67,6 +67,7 @@ import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SectionHeader } from '@/components/ui/section-header'
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary'
 
 const TIPO_NEGOCIO_LABEL: Record<string, string> = {
   academia: 'Academia',
@@ -106,6 +107,20 @@ export function RelatorioViewerPage() {
   if (isLoading) return <ViewerSkeleton />
   if (error || !data) return <ViewerError message={error?.message} />
 
+  return (
+    <RouteErrorBoundary title="Erro ao exibir o relatório">
+      <RelatorioViewerContent relatorioId={relatorioId} data={data} />
+    </RouteErrorBoundary>
+  )
+}
+
+function RelatorioViewerContent({
+  relatorioId,
+  data,
+}: {
+  relatorioId: string
+  data: NonNullable<ReturnType<typeof useRelatorioDetail>['data']>
+}) {
   const inp = data.input_canonico
   const out = data.output_consolidado
   const meta = (data.metadata_execucao ?? {}) as MetadataExecucaoShape
@@ -344,7 +359,7 @@ export function RelatorioViewerPage() {
                 modeloRecomendado={out.modelo_recomendado}
                 areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
               />
-              <ConsorcioCard capexMid={capexMid} className="mt-4" />
+              <ConsorcioCard key={capexMid ?? 'sem-capex'} capexMid={capexMid} className="mt-4" />
             </>
           )
         })()}
