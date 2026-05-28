@@ -16,7 +16,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     <NextThemesProvider
       attribute="data-theme"
       defaultTheme={DEFAULT_APP_THEME}
-      themes={['analitico', 'vectra']}
+      themes={['escuro', 'claro']}
       enableSystem={false}
       storageKey={APP_THEME_STORAGE_KEY}
       disableTransitionOnChange
@@ -35,14 +35,14 @@ function ThemeStorageSanitizer() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(APP_THEME_STORAGE_KEY)
-      if (isAppThemeId(raw)) {
-        applyAppThemeToDocument(raw)
-        return
-      }
       const fixed = normalizeAppThemeId(raw)
-      localStorage.setItem(APP_THEME_STORAGE_KEY, fixed)
+      if (raw !== fixed) {
+        localStorage.setItem(APP_THEME_STORAGE_KEY, fixed)
+      }
       applyAppThemeToDocument(fixed)
-      setTheme(fixed)
+      if (!isAppThemeId(raw) || raw !== fixed) {
+        setTheme(fixed)
+      }
     } catch {
       applyAppThemeToDocument(DEFAULT_APP_THEME)
       setTheme(DEFAULT_APP_THEME)

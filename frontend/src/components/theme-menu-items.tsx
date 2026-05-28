@@ -13,11 +13,11 @@ import {
   persistAppThemeToUser,
 } from '@/lib/app-theme'
 import { useAuth } from '@/lib/auth'
-import { BarChart3Icon, PaletteIcon } from 'lucide-react'
+import { MoonIcon, SunIcon } from 'lucide-react'
 
 const THEME_ICONS = {
-  'bar-chart-3': BarChart3Icon,
-  palette: PaletteIcon,
+  moon: MoonIcon,
+  sun: SunIcon,
 } as const
 
 export function ThemeMenuItems() {

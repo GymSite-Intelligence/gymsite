@@ -7,11 +7,17 @@
         try {
           var k = 'gymsite-theme'
           var t = localStorage.getItem(k)
-          var id = t === 'vectra' || t === 'analitico' ? t : 'analitico'
+          var id = t === 'claro' ? 'claro' : 'escuro'
+          if (t === 'light' || t === 'claro') id = 'claro'
           var d = document.documentElement
           d.setAttribute('data-theme', id)
-          d.classList.add('dark')
-          d.style.colorScheme = 'dark'
+          if (id === 'escuro') {
+            d.classList.add('dark')
+            d.style.colorScheme = 'dark'
+          } else {
+            d.classList.remove('dark')
+            d.style.colorScheme = 'light'
+          }
         } catch (e) {}
       })()
     </script>

@@ -88,27 +88,9 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* Analítico — acento azul neutro (contrasta com Vectra teal). */
-html.dark[data-theme='analitico'],
-html[data-theme='analitico'] {
-  --primary: oklch(0.72 0.12 255);
-  --primary-foreground: oklch(0.99 0 0);
-  --ring: oklch(0.58 0.1 255);
-  --accent: oklch(0.28 0.04 255);
-  --accent-foreground: oklch(0.96 0.02 255);
-  --sidebar-primary: oklch(0.68 0.11 252);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-ring: oklch(0.58 0.1 255);
-  --chart-1: oklch(0.72 0.12 255);
-  --chart-2: oklch(0.62 0.1 248);
-  --chart-3: oklch(0.52 0.08 241);
-  --chart-4: oklch(0.42 0.06 234);
-  --chart-5: oklch(0.32 0.04 227);
-}
-
-/* Vectra Cargo — acento teal/cyan em primary, sidebar e gráficos. */
-html.dark[data-theme='vectra'],
-html[data-theme='vectra'] {
+/* Escuro — acento teal Vectra em primary, sidebar e gráficos. */
+html.dark[data-theme='escuro'],
+html[data-theme='escuro'] {
   --primary: oklch(0.78 0.14 192);
   --primary-foreground: oklch(0.16 0.03 192);
   --ring: oklch(0.62 0.11 192);
@@ -122,6 +104,23 @@ html[data-theme='vectra'] {
   --chart-3: oklch(0.58 0.1 204);
   --chart-4: oklch(0.48 0.08 210);
   --chart-5: oklch(0.38 0.06 216);
+}
+
+/* Claro — fundo :root + acento teal Vectra. */
+html[data-theme='claro'] {
+  --primary: oklch(0.52 0.14 192);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.58 0.12 192);
+  --accent: oklch(0.94 0.03 192);
+  --accent-foreground: oklch(0.22 0.04 192);
+  --sidebar-primary: oklch(0.48 0.13 188);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-ring: oklch(0.58 0.12 192);
+  --chart-1: oklch(0.52 0.14 192);
+  --chart-2: oklch(0.58 0.12 198);
+  --chart-3: oklch(0.64 0.1 204);
+  --chart-4: oklch(0.7 0.08 210);
+  --chart-5: oklch(0.76 0.06 216);
 }
 
 @theme inline {
@@ -197,9 +196,12 @@ html[data-theme='vectra'] {
     @apply font-sans;
   }
 
+  html[data-theme='claro'] {
+    color-scheme: light;
+  }
+
   html.dark,
-  html[data-theme='analitico'],
-  html[data-theme='vectra'] {
+  html[data-theme='escuro'] {
     color-scheme: dark;
   }
 
@@ -226,9 +228,12 @@ html[data-theme='vectra'] {
     font-style: normal;
   }
 
+  html[data-theme='claro'] select {
+    color-scheme: light;
+  }
+
   html.dark select,
-  html[data-theme='analitico'] select,
-  html[data-theme='vectra'] select {
+  html[data-theme='escuro'] select {
     color-scheme: dark;
   }
 

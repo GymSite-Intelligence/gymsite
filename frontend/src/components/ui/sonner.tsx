@@ -1,9 +1,14 @@
+"use client"
+
+import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { normalizeAppThemeId } from "@/lib/app-theme"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  // Ambos os temas do app são escuros; Sonner só entende light | dark | system.
-  const sonnerTheme: ToasterProps["theme"] = "dark"
+  const { theme } = useTheme()
+  const sonnerTheme: ToasterProps["theme"] =
+    normalizeAppThemeId(theme) === "claro" ? "light" : "dark"
 
   return (
     <Sonner
