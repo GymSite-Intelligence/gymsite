@@ -67,17 +67,19 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
   return (
     <article
       className={cn(
-        'group grid grid-cols-12 items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors',
+        // Desktop: colunas fixas pra alinhar a coluna de ações entre cards.
+        // Mobile: empilha naturalmente.
+        'group grid grid-cols-1 gap-3 p-4 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors sm:grid-cols-[72px_minmax(0,1fr)_220px_72px_280px] sm:items-center',
         className,
       )}
     >
       {/* Data */}
-      <div className="col-span-2 sm:col-span-1 font-mono text-xs text-muted-foreground">
+      <div className="font-mono text-xs text-muted-foreground sm:col-start-1">
         {formatData(relatorio.data_execucao)}
       </div>
 
       {/* Local + tipo */}
-      <div className="col-span-10 sm:col-span-4 min-w-0">
+      <div className="min-w-0 sm:col-start-2">
         <div className="flex items-center gap-2 mb-0.5">
           <h3 className="font-semibold text-sm truncate">
             {relatorio.bairro}
@@ -100,7 +102,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Veredito + Status */}
-      <div className="col-span-6 sm:col-span-3 flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap sm:col-start-3 sm:justify-start">
         {relatorio.veredito && (
           <VeredictoBadge veredito={relatorio.veredito} size="sm" />
         )}
@@ -110,7 +112,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Score Top 1 */}
-      <div className="col-span-6 sm:col-span-2 text-right sm:text-right">
+      <div className="text-left sm:col-start-4 sm:text-right">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
           Top 1
         </div>
@@ -120,7 +122,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Ação */}
-      <div className="col-span-12 sm:col-span-2 flex flex-wrap justify-end items-center gap-1">
+      <div className="flex flex-wrap justify-start items-center gap-1 sm:col-start-5 sm:flex-nowrap sm:justify-end sm:gap-2">
         {relatorio.status === 'failed' && (
           <DeleteRelatorioButton
             relatorioId={relatorio.id}
