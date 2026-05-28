@@ -18,6 +18,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router'
+import { AuthProvider } from '@/lib/auth'
 import { AuthenticatedSidebarLayout } from '@/components/layout/AuthenticatedSidebarLayout'
 import { RequireAuth } from '@/components/layout/RequireAuth'
 import { RelatoriosListPage } from '@/routes/RelatoriosListPage'
@@ -38,7 +39,7 @@ import type { Veredito } from '@/types/domain'
 // Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
 const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade', '/pdf-smoke'])
 
-function RootLayout() {
+function RootLayoutInner() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   if (PUBLIC_PATHS.has(pathname)) {
     return <Outlet />
@@ -47,6 +48,14 @@ function RootLayout() {
     <RequireAuth>
       <AuthenticatedSidebarLayout />
     </RequireAuth>
+  )
+}
+
+function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutInner />
+    </AuthProvider>
   )
 }
 
