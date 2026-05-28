@@ -12,7 +12,7 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import { getMockRelatorioRaw, USE_MOCKS } from '@/mocks'
-import { useAuth } from '@/lib/auth'
+import { useAuth } from '@/lib/auth-context'
 import { resolveRelatorioUuid } from '@/lib/relatorio-id'
 import { supabase } from '@/lib/supabase'
 
@@ -90,6 +90,134 @@ export interface OutputConsolidado {
    * generalizou players regionais como locais.
    */
   cobertura_redes_a0?: CoberturaRedesA0JSON
+  /** Schema v1.7: densidade no raio + referência CNPJ */
+  panorama_competitivo?: PanoramaCompetitivoJSON
+  total_encontrados_raio?: number | null
+  top_independentes?: AcademiaResumoJSON[]
+  academias_analisadas?: AcademiaResumoJSON[]
+  /** Schema v1.7: lista nominal de entrantes CNPJ (90d). */
+  entrantes_cnpj_90d?: EntrantesCnpj90dJSON
+  /** Obras fitness em andamento (CNO) + benchmark tempo obra. */
+  obras_cno_em_curso?: ObrasCnoEmCursoJSON
+}
+
+export interface ComposicaoSegmentoJSON {
+  count: number
+  pct: number
+  label?: string
+}
+
+export interface EntranteCnpjJSON {
+  cnpj: string
+  cnpj_formatado?: string
+  nome_fantasia?: string | null
+  razao_social_indisponivel?: boolean
+  data_abertura?: string
+  endereco?: string | null
+  cep?: string | null
+  cnae_principal?: string
+  ref_month?: string
+  segmento_operacao?: string
+  segmento_label?: string
+  segmento_confianca?: 'alta' | 'media' | 'baixa' | string
+  segmento_metodo?: string
+  segmento_requer_validacao?: boolean
+  incluir_no_parque?: boolean
+}
+
+export interface ObraCnoEmCursoJSON {
+  cno?: string
+  nome_obra?: string
+  area_m2?: number
+  bairro?: string | null
+  data_inicio?: string | null
+  previsao_encerramento_estimada?: string | null
+  duracao_obra_dias_estimada?: number | null
+  logradouro?: string | null
+  numero?: string | null
+  situacao_obra?: string
+}
+
+export interface BenchmarkTempoObraCnoJSON {
+  status?: string
+  amostra_valida?: number
+  metricas?: {
+    n?: number
+    dias_por_m2_mediana?: number
+    dias_por_m2_p25?: number
+    dias_por_m2_p75?: number
+    duracao_dias_mediana?: number
+  }
+  por_porte_m2?: Record<
+    string,
+    {
+      n?: number
+      dias_por_m2_mediana?: number
+      duracao_dias_mediana?: number
+    }
+  >
+  nota_metodologica?: string
+}
+
+export interface FiltroBairroCnoJSON {
+  bairro_filtro?: string | null
+  bairro_filtro_chave?: string | null
+  total_antes_filtro?: number
+  total_apos_filtro_bairro?: number
+}
+
+export interface ObrasCnoEmCursoJSON {
+  status?: string
+  motivo?: string
+  cidade?: string
+  uf?: string
+  fonte?: string
+  filtro?: string
+  total_obras_em_curso?: number
+  total_obras_em_curso_municipio?: number
+  filtro_bairro?: FiltroBairroCnoJSON | null
+  obras?: ObraCnoEmCursoJSON[]
+  benchmark_tempo_obra?: BenchmarkTempoObraCnoJSON | null
+  nota_metodologica?: string
+}
+
+export interface EntrantesCnpj90dJSON {
+  status?: string
+  motivo?: string
+  cidade?: string
+  uf?: string
+  dias?: number
+  cutoff?: string
+  total?: number
+  entrantes?: EntranteCnpjJSON[]
+  novas_unidades_90d_por_segmento?: Record<string, number>
+  fonte?: string
+  data_coleta?: string
+  nota?: string
+}
+
+export interface PanoramaCompetitivoJSON {
+  nivel_saturacao?: string
+  nivel_saturacao_amostra?: string
+  total_encontrados_raio?: number
+  total_concorrentes_analisados?: number
+  densidade_por_km2?: number
+  raio_km?: number
+  cnpj_parque_ativo_cidade?: number | null
+  /** @deprecated use cnpj_parque_ativo_cidade */
+  cnpj_academias_ativas_cidade?: number | null
+  metodologia?: string
+}
+
+export interface AcademiaResumoJSON {
+  nome: string
+  rating?: number | string | null
+  num_avaliacoes?: number | string | null
+  endereco?: string
+  bairro?: string
+  place_id?: string
+  is_independente?: boolean
+  rede_vinculada?: string | null
 }
 
 export interface CoberturaRedesA0JSON {
@@ -103,6 +231,7 @@ export interface CoberturaRedesA0JSON {
 export interface MarketContextJSON {
   cidade?: string
   bairro?: string
+  uf?: string
   ticket_medio_mercado?: string
   aluguel_medio_m2?: string
   renda_media_bairro?: string
@@ -122,6 +251,26 @@ export interface MarketContextJSON {
   tendencia_mercado?: 'crescimento' | 'estavel' | 'retracao' | string
   regulamentacao_resumo?: string
   insights_estrategicos?: string[]
+  /** Schema v1.7: novas unidades com abertura nos últimos ~90d (cidade/UF). */
+  novos_cnpj_fitness_90d?: number
+  /** Schema v1.8: parque ativo no município (snapshot CNPJ RFB). */
+  parque_ativo_total?: number | null
+  /** Schema v1.9: composição do parque por segmento. */
+  composicao_parque?: Record<string, ComposicaoSegmentoJSON>
+  novas_unidades_90d_por_segmento?: Record<string, number>
+  /** Fatos A0: CNPJ/CNO sem interpretação inventada. */
+  fatos_parque_cnpj?: {
+    fonte?: string
+    metricas?: Record<string, unknown>
+    indicadores_derivados?: Record<string, unknown>
+    cruzamento_cno?: Record<string, unknown>
+    lacunas?: string[]
+  }
+  /** @deprecated use parque_ativo_total */
+  academias_ativas_cidade_cnpj?: number | null
+  /** Contagem por ano de data_inicio_atividade (recorte alinhado ao resumo CNPJ). */
+  serie_aberturas_anual?: Record<string, number>
+  fonte_entrantes?: string
   fonte?: string
   data_coleta?: string
   cached?: boolean
