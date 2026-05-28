@@ -40,48 +40,70 @@ export interface ConsorcioCardProps {
   className?: string
 }
 
+function ConsorcioCardEmpty({ className }: { className?: string }) {
+  return (
+    <article
+      className={cn(
+        'rounded-lg border border-primary/30 bg-primary/5 p-5 space-y-4',
+        className,
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <div className="rounded-md bg-primary/15 p-2 shrink-0">
+          <Landmark size={18} className="text-primary" aria-hidden />
+        </div>
+        <div className="space-y-1 min-w-0">
+          <h3 className="font-semibold text-foreground">
+            Consórcio (alternativa estratégica)
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Mesmo em investimentos menores, o consórcio pode ser uma alternativa para{' '}
+            <span className="font-medium text-foreground">preservar caixa</span> e planejar a execução em{' '}
+            <span className="font-medium text-foreground">12–24 meses</span>.
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Para preencher a estimativa, este relatório precisa trazer os cenários financeiros (CAPEX do cenário mid).
+          </p>
+        </div>
+      </div>
+
+      <Button asChild className="gap-2 w-full sm:w-auto">
+        <a href={VECTRA_CONTATO_URL} target="_blank" rel="noopener noreferrer">
+          <MessageCircle size={14} aria-hidden />
+          Falar com Vectra Cargo
+        </a>
+      </Button>
+    </article>
+  )
+}
+
 export function ConsorcioCard({
   capexMid,
   horizonteMeses = 18,
   className,
 }: ConsorcioCardProps) {
   if (capexMid == null) {
-    return (
-      <article
-        className={cn(
-          'rounded-lg border border-primary/30 bg-primary/5 p-5 space-y-4',
-          className,
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div className="rounded-md bg-primary/15 p-2 shrink-0">
-            <Landmark size={18} className="text-primary" aria-hidden />
-          </div>
-          <div className="space-y-1 min-w-0">
-            <h3 className="font-semibold text-foreground">
-              Consórcio (alternativa estratégica)
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Mesmo em investimentos menores, o consórcio pode ser uma alternativa para{' '}
-              <span className="font-medium text-foreground">preservar caixa</span> e planejar a execução em{' '}
-              <span className="font-medium text-foreground">12–24 meses</span>.
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Para preencher a estimativa, este relatório precisa trazer os cenários financeiros (CAPEX do cenário mid).
-            </p>
-          </div>
-        </div>
-
-        <Button asChild className="gap-2 w-full sm:w-auto">
-          <a href={VECTRA_CONTATO_URL} target="_blank" rel="noopener noreferrer">
-            <MessageCircle size={14} aria-hidden />
-            Falar com Vectra Cargo
-          </a>
-        </Button>
-      </article>
-    )
+    return <ConsorcioCardEmpty className={className} />
   }
 
+  return (
+    <ConsorcioCardWithCapex
+      capexMid={capexMid}
+      horizonteMeses={horizonteMeses}
+      className={className}
+    />
+  )
+}
+
+function ConsorcioCardWithCapex({
+  capexMid,
+  horizonteMeses,
+  className,
+}: {
+  capexMid: number
+  horizonteMeses: 12 | 18 | 24
+  className?: string
+}) {
   const est: ConsorcioEstimativa = estimarConsorcio(capexMid)
 
   const [considerarLance, setConsiderarLance] = React.useState(true)

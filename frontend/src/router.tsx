@@ -168,6 +168,9 @@ const novoRelatorioRoute = createRoute({
 const relatorioDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/relatorios/$relatorioId',
+  validateSearch: (search: Record<string, unknown>): { print?: string } => ({
+    print: typeof search.print === 'string' ? search.print : undefined,
+  }),
   component: RelatorioViewerPage,
 })
 
