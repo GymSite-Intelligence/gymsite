@@ -15,8 +15,8 @@
  * 11. Script de Abordagem (com botão copiar)
  * 12. Alertas Globais + Decisão
  */
-import { useState } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { AlertTriangle, ArrowLeft, ChevronDown, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -53,6 +53,9 @@ import {
 import type { ModeloNegocio, TamanhoCodigo } from '@/data/tamanhos-por-modelo'
 import { recalcularCenariosComKit } from '@/lib/recalcula-cenario-com-kit'
 import { CompetidorGroup } from '@/components/domain/CompetidorGroup'
+import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
+import { EntrantesCnpjTable } from '@/components/domain/EntrantesCnpjTable'
+import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
 import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
 import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
 import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairrosTable'
@@ -83,6 +86,7 @@ interface MetadataExecucaoShape {
 
 export function RelatorioViewerPage() {
   const { relatorioId } = useParams({ from: '/relatorios/$relatorioId' })
+  const search = useSearch({ from: '/relatorios/$relatorioId' }) as { print?: string }
   const { data, isLoading, error } = useRelatorioDetail(relatorioId)
 
   if (isLoading) return <ViewerSkeleton />
@@ -138,6 +142,20 @@ export function RelatorioViewerPage() {
   const semCandidatos = (out.top_3_candidatos?.length ?? 0) === 0
   const semConcorrentes = (out.competitors_set?.length ?? 0) === 0
   const modoCidadeInteira = inp.bairro === '(cidade inteira)'
+
+  // Download PDF via impressão do browser (Ctrl+P -> salvar como PDF).
+  // Quando `?print=1`, dispara print automaticamente após carregar.
+  useEffect(() => {
+    if (search?.print !== '1') return
+    const t = window.setTimeout(() => {
+      try {
+        window.print()
+      } catch {
+        // noop
+      }
+    }, 600)
+    return () => window.clearTimeout(t)
+  }, [search?.print, relatorioId])
 
   return (
     <div className="space-y-8">
@@ -377,6 +395,20 @@ export function RelatorioViewerPage() {
         />
       )}
 
+      {/* 7.4 Novos entrantes CNPJ (90d) */}
+      {out.entrantes_cnpj_90d && (out.entrantes_cnpj_90d.entrantes?.length ?? 0) > 0 && (
+        <Section title="🆕 Novos entrantes (CNPJ — 90 dias)" collapsible>
+          <EntrantesCnpjTable block={out.entrantes_cnpj_90d} />
+        </Section>
+      )}
+
+      {/* 7.45 Obras fitness em andamento (CNO) */}
+      {out.obras_cno_em_curso && (
+        <Section title="🏗 Obras em andamento (CNO)" collapsible>
+          <ObrasEmAndamentoTable block={out.obras_cno_em_curso} />
+        </Section>
+      )}
+
       {/* 7.5 Cobertura Deep Research (schema v1.4) */}
       {out.cobertura_redes_a0 && out.cobertura_redes_a0.redes_solicitadas?.length > 0 && (
         <Section title="🔍 Cobertura Deep Research" collapsible>
@@ -390,6 +422,18 @@ export function RelatorioViewerPage() {
       {/* 8. Inteligência Competitiva — tabela por concorrente substituindo Dores Dominantes */}
       {out.competitors_set && out.competitors_set.length > 0 && (
         <Section title="🥊 Inteligência Competitiva" collapsible>
+          <InteligenciaCompetitivaResumoCard
+            className="mb-4"
+            nivelSaturacao={out.nivel_saturacao}
+            panorama={out.panorama_competitivo}
+            marketContext={out.market_context}
+            coberturaRedes={out.cobertura_redes_a0}
+            topIndependentes={out.top_independentes}
+            academiasAnalisadas={out.academias_analisadas}
+            totalEncontradosRaio={out.total_encontrados_raio}
+            totalAnalisados={out.total_concorrentes_analisados}
+            bairroAlvo={inp.bairro}
+          />
           <CompetidorGroup competidores={out.competitors_set} />
           <div className="mt-4">
             <CompetidoresDoresTable

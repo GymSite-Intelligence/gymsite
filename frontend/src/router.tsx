@@ -32,6 +32,7 @@ import { LoginPage } from '@/routes/LoginPage'
 import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
 import { PrivacidadePage } from '@/routes/PrivacidadePage'
 import { DashboardPage } from '@/routes/DashboardPage'
+import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import type { Veredito } from '@/types/domain'
 
 const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade'])
@@ -227,6 +228,15 @@ const dashboardRoute = createRoute({
   component: DashboardPage,
 })
 
+const pdfSmokeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/pdf-smoke',
+  validateSearch: (search: Record<string, unknown>): { print?: string } => ({
+    print: typeof search.print === 'string' ? search.print : undefined,
+  }),
+  component: PdfSmokePage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
@@ -241,6 +251,7 @@ const routeTree = rootRoute.addChildren([
   custosRoute,
   perfilRoute,
   dashboardRoute,
+  pdfSmokeRoute,
 ])
 
 export const router = createRouter({ routeTree })

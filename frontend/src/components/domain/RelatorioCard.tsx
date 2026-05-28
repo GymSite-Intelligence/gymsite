@@ -6,7 +6,7 @@
  */
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, type MouseEvent } from 'react'
-import { Pencil } from 'lucide-react'
+import { Download, Pencil } from 'lucide-react'
 import { VeredictoBadge } from './VeredictoBadge'
 import { StatusPipelineBadge } from './StatusPipelineBadge'
 import { DeleteRelatorioButton } from './DeleteRelatorioButton'
@@ -79,7 +79,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Local + tipo */}
-      <div className="min-w-0 sm:col-span-5">
+      <div className="min-w-0 sm:col-span-4">
         <div className="flex items-center gap-2 mb-0.5">
           <h3 className="font-semibold text-sm truncate">
             {relatorio.bairro}
@@ -122,7 +122,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Ação */}
-      <div className="flex flex-wrap justify-start items-center gap-1 sm:col-span-2 sm:min-w-[280px] sm:flex-nowrap sm:justify-end sm:gap-2">
+      <div className="flex flex-wrap justify-start items-center gap-1 sm:col-span-3 sm:min-w-[380px] sm:flex-nowrap sm:justify-end sm:gap-2">
         {relatorio.status === 'failed' && (
           <DeleteRelatorioButton
             relatorioId={relatorio.id}
@@ -136,6 +136,25 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
             label="Gerar novamente"
             stopPropagation
           />
+        )}
+        {relatorio.status === 'done' && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 shrink-0"
+            onClick={(e: MouseEvent) => {
+              e.stopPropagation()
+              // Fluxo simples: abre viewer e aciona print (usuário salva como PDF).
+              // Não depende de backend nem de libs de PDF; funciona em qualquer browser.
+              const url = `${window.location.origin}/relatorios/${relatorio.id}?print=1`
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }}
+            title="Baixar PDF (abre impressão)"
+          >
+            <Download size={14} />
+            PDF
+          </Button>
         )}
         {(relatorio.status === 'done' || relatorio.status === 'failed') && (
           <Button
