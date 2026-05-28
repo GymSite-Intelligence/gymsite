@@ -1,13 +1,13 @@
 /**
- * lib/auth.tsx — AuthProvider + useAuth.
+ * lib/auth.tsx — AuthContext, AuthProvider e useAuth (módulo único).
+ *
+ * Context + hook + provider no mesmo arquivo evita instâncias duplicadas do
+ * React Context no bundle de produção (chunk split entre auth.tsx e auth-context.ts).
  *
  * Modelo:
  * - Signup é **por convite apenas** (admin cria users no Supabase Dashboard).
- *   Não há tela de signup. A LoginPage só faz Magic Link via email já existente.
- * - O frontend depende do JWT do user pra ler dados via Supabase JS direto
- *   (RLS faz o filtro por org_id usando `user_org_ids()`).
- * - Sessão é persistida pelo próprio supabase-js (localStorage). AuthProvider
- *   reage a onAuthStateChange e expõe `{ user, session, loading }`.
+ * - O frontend depende do JWT do user pra ler dados via Supabase JS direto (RLS).
+ * - Sessão persistida pelo supabase-js (localStorage).
  */
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -17,7 +17,7 @@ import { USE_MOCKS } from '@/mocks'
 import { createMockSession, isSupabaseConfigured } from '@/lib/mock-auth'
 import { isPasswordExpired } from '@/lib/password-expiry'
 
-interface AuthState {
+export interface AuthState {
   user: User | null
   session: Session | null
   loading: boolean
@@ -27,7 +27,13 @@ interface AuthState {
   signInDev: () => void
 }
 
-const AuthContext = createContext<AuthState | undefined>(undefined)
+export const AuthContext = createContext<AuthState | undefined>(undefined)
+
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth fora de <AuthProvider>')
+  return ctx
+}
 
 const mockAuthEnabled = USE_MOCKS && !isSupabaseConfigured()
 
@@ -88,10 +94,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth fora de <AuthProvider>')
-  return ctx
 }
