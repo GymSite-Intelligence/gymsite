@@ -67,19 +67,19 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
   return (
     <article
       className={cn(
-        // Desktop: colunas fixas pra alinhar a coluna de ações entre cards.
-        // Mobile: empilha naturalmente.
-        'group grid grid-cols-1 gap-3 p-4 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors sm:grid-cols-[72px_minmax(0,1fr)_220px_72px_280px] sm:items-center',
+        // Desktop: usa grid-cols-12 "safe" + min-width na coluna de ações
+        // pra manter os botões alinhados entre cards.
+        'group grid grid-cols-1 gap-3 p-4 rounded-lg border border-border bg-card hover:bg-muted/40 transition-colors sm:grid-cols-12 sm:items-center',
         className,
       )}
     >
       {/* Data */}
-      <div className="font-mono text-xs text-muted-foreground sm:col-start-1">
+      <div className="font-mono text-xs text-muted-foreground sm:col-span-1 sm:min-w-[72px]">
         {formatData(relatorio.data_execucao)}
       </div>
 
       {/* Local + tipo */}
-      <div className="min-w-0 sm:col-start-2">
+      <div className="min-w-0 sm:col-span-5">
         <div className="flex items-center gap-2 mb-0.5">
           <h3 className="font-semibold text-sm truncate">
             {relatorio.bairro}
@@ -102,7 +102,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Veredito + Status */}
-      <div className="flex items-center gap-2 flex-wrap sm:col-start-3 sm:justify-start">
+      <div className="flex items-center gap-2 flex-wrap sm:col-span-3">
         {relatorio.veredito && (
           <VeredictoBadge veredito={relatorio.veredito} size="sm" />
         )}
@@ -112,7 +112,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Score Top 1 */}
-      <div className="text-left sm:col-start-4 sm:text-right">
+      <div className="text-left sm:col-span-1 sm:text-right">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
           Top 1
         </div>
@@ -122,7 +122,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
       </div>
 
       {/* Ação */}
-      <div className="flex flex-wrap justify-start items-center gap-1 sm:col-start-5 sm:flex-nowrap sm:justify-end sm:gap-2">
+      <div className="flex flex-wrap justify-start items-center gap-1 sm:col-span-2 sm:min-w-[280px] sm:flex-nowrap sm:justify-end sm:gap-2">
         {relatorio.status === 'failed' && (
           <DeleteRelatorioButton
             relatorioId={relatorio.id}
