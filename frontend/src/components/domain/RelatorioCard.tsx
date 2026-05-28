@@ -13,6 +13,7 @@ import { DeleteRelatorioButton } from './DeleteRelatorioButton'
 import { RerunPipelineButton } from './RerunPipelineButton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { downloadRelatorioPdf } from '@/lib/download-relatorio-pdf'
 import { fetchRelatorioInputsForRerun } from '@/lib/submit-pipeline'
 import { notify } from '@/lib/notify'
 import type { RelatorioResumo } from '@/types/domain'
@@ -52,6 +53,7 @@ export interface RelatorioCardProps {
 export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
   const navigate = useNavigate()
   const [editando, setEditando] = useState(false)
+  const [baixandoPdf, setBaixandoPdf] = useState(false)
   const score = relatorio.score_top1_candidato
   const scoreColor =
     score == null
@@ -139,23 +141,29 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
         )}
         {relatorio.status === 'done' && (
           <Button
+            type="button"
             variant="outline"
             size="sm"
             className="gap-1.5 shrink-0"
-            asChild
-            title="Baixar PDF (abre impressão)"
+            disabled={baixandoPdf}
+            title="Baixar PDF do relatório (gerado no servidor)"
+            onClick={async (e: MouseEvent) => {
+              e.stopPropagation()
+              if (baixandoPdf) return
+              setBaixandoPdf(true)
+              const t = notify.loading('Gerando PDF…')
+              try {
+                await downloadRelatorioPdf(relatorio.id, 'classic')
+                t.success('PDF baixado')
+              } catch (err) {
+                t.error(err)
+              } finally {
+                setBaixandoPdf(false)
+              }
+            }}
           >
-            <Link
-              to="/relatorios/$relatorioId"
-              params={{ relatorioId: relatorio.id }}
-              search={{ print: '1' }}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e: MouseEvent) => e.stopPropagation()}
-            >
-              <Download size={14} />
-              PDF
-            </Link>
+            <Download size={14} />
+            PDF
           </Button>
         )}
         {(relatorio.status === 'done' || relatorio.status === 'failed') && (

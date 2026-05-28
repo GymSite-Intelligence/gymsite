@@ -5,6 +5,7 @@ Endpoints:
 - POST /api/relatorios            cria stub + dispara pipeline em background
 - GET  /api/relatorios            lista (suporta filtros)
 - GET  /api/relatorios/{id}       detail completo (joins de todas as 9 tabelas)
+- GET  /api/relatorios/{id}/pdf   PDF estruturado (layout=classic|executive|data_room)
 - GET  /api/relatorios/{id}/status   polling leve do status
 
 O pipeline é invocado via Google ADK Runner em background task. O `relatorio_id`
@@ -19,7 +20,7 @@ Variáveis de ambiente (.env):
     SUPABASE_SERVICE_ROLE_KEY     chave service_role (RLS bypass)
     SUPABASE_GYMSITE_ORG_ID       UUID da org (default fixo se ausente)
     GEMINI_API_KEY / GOOGLE_API_KEY
-    MAPS_API_KEY
+    GOOGLE_MAPS_API_KEY  (Places New, Geocoding, pipeline)
 """
 from __future__ import annotations
 
@@ -31,14 +32,22 @@ import traceback
 from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from pathlib import Path
 
-load_dotenv()
+_ROOT = Path(__file__).resolve().parent
+load_dotenv(_ROOT / ".env")
+load_dotenv(_ROOT / "frontend" / ".env", override=False)
+load_dotenv(_ROOT / "gymsite_intelligence" / ".env", override=False)
 
 logger = logging.getLogger("gymsite.api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
+
+from tools.google_maps_key import warn_if_missing_maps_key
+
+warn_if_missing_maps_key()
 
 _DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001"
 
@@ -53,6 +62,30 @@ def _supabase_client():
         )
     from supabase import create_client
     return create_client(url, key)
+
+
+_UUID_RE = (
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+)
+
+
+def _resolve_relatorio_uuid(sb, relatorio_id: str) -> str:
+    """Aceita UUID ou adk_run_id legado (`rpt_*`)."""
+    import re
+
+    if re.match(_UUID_RE, relatorio_id, re.I):
+        return relatorio_id
+    if relatorio_id.startswith("rpt_"):
+        res = (
+            sb.table("relatorios")
+            .select("id")
+            .eq("adk_run_id", relatorio_id)
+            .maybe_single()
+            .execute()
+        )
+        if res.data:
+            return res.data["id"]
+    return relatorio_id
 
 
 app = FastAPI(title="GymSite Intelligence API", version="1.0.0")
@@ -102,6 +135,14 @@ class RelatorioStub(BaseModel):
     id: str
     status: str
     created_at: Optional[str] = None
+
+
+class PlacesAutocompleteInput(BaseModel):
+    input: str
+    municipio: str = ""
+    uf: str = ""
+    lat: Optional[float] = None
+    lng: Optional[float] = None
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -156,6 +197,7 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
                 "bairro": payload.bairro,
                 "area_m2_min": payload.area_m2_min,
                 "area_m2_max": payload.area_m2_max,
+                "tamanho_preset": payload.tamanho_preset,
                 "tipo_negocio": payload.tipo_negocio,
                 "publico_alvo": payload.publico_alvo,
                 "genero_alvo": payload.genero_alvo,
@@ -369,19 +411,70 @@ def health() -> dict:
     return {"status": "ok", "service": "gymsite-intelligence-api"}
 
 
+@app.post("/api/places-autocomplete")
+def places_autocomplete_endpoint(body: PlacesAutocompleteInput) -> dict:
+    """
+    Proxy Google Places (New) para autocomplete de bairros.
+    Usado pelo frontend em /relatorios/new — chave só no servidor.
+    """
+    from tools.places_autocomplete import places_autocomplete
+
+    return places_autocomplete(
+        input_text=body.input,
+        municipio=body.municipio,
+        uf=body.uf,
+        lat=body.lat,
+        lng=body.lng,
+    )
+
+
+def _resolve_user_and_org(request: Request) -> tuple[str | None, str]:
+    """Extrai user_id e org_id do JWT (Authorization: Bearer)."""
+    default_org = os.getenv("SUPABASE_GYMSITE_ORG_ID") or _DEFAULT_ORG_ID
+    auth = request.headers.get("authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        return None, default_org
+
+    token = auth[7:].strip()
+    if not token:
+        return None, default_org
+
+    try:
+        sb = _supabase_client()
+        user_resp = sb.auth.get_user(token)
+        user = user_resp.user if user_resp else None
+        if not user:
+            return None, default_org
+
+        mem = (
+            sb.table("organization_members")
+            .select("org_id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .execute()
+        )
+        org_id = mem.data[0]["org_id"] if mem.data else default_org
+        return user.id, org_id
+    except Exception as e:
+        logger.warning("Falha ao resolver user/org do JWT: %s", e)
+        return None, default_org
+
+
 @app.post("/api/relatorios", response_model=RelatorioStub)
 async def create_relatorio(
     payload: NovoRelatorioInput,
     background_tasks: BackgroundTasks,
+    request: Request,
 ) -> RelatorioStub:
     """Cria stub do relatório + dispara pipeline em background. Retorna ID pra polling."""
     sb = _supabase_client()
-    org_id = payload.org_id or os.getenv("SUPABASE_GYMSITE_ORG_ID") or _DEFAULT_ORG_ID
+    user_id, org_from_jwt = _resolve_user_and_org(request)
+    org_id = payload.org_id or org_from_jwt
 
     # 1. Header: status='queued' (FK satisfeito pra child inserts depois)
     res = sb.table("relatorios").insert({
         "org_id": org_id,
-        "user_id": None,
+        "user_id": user_id,
         "tipo_relatorio": "prospeccao_academia",
         "status": "queued",
         "schema_version": "1.6",
@@ -426,33 +519,31 @@ def _run_pipeline_async_wrapper(relatorio_id: str, payload: NovoRelatorioInput) 
 def get_status(relatorio_id: str) -> dict:
     """Polling leve. Retorna só status + erro se falhou."""
     sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
     res = sb.table("relatorios").select(
         "id, status, erro_mensagem, tempo_execucao_segundos, data_execucao"
-    ).eq("id", relatorio_id).single().execute()
+    ).eq("id", rid).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="relatório não encontrado")
     return res.data
 
 
-@app.get("/api/relatorios/{relatorio_id}")
-def get_relatorio(relatorio_id: str) -> dict:
+def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
     """Detail completo: joins de todas as tabelas filhas."""
-    sb = _supabase_client()
-
-    header = sb.table("relatorios").select("*").eq("id", relatorio_id).single().execute()
+    header = sb.table("relatorios").select("*").eq("id", rid).single().execute()
     if not header.data:
         raise HTTPException(status_code=404, detail="relatório não encontrado")
 
-    inputs = sb.table("relatorio_inputs").select("*").eq("relatorio_id", relatorio_id).maybe_single().execute()
-    outputs = sb.table("relatorio_outputs").select("*").eq("relatorio_id", relatorio_id).maybe_single().execute()
-    candidatos = sb.table("candidatos").select("*").eq("relatorio_id", relatorio_id).order("posicao").execute()
-    competidores = sb.table("competidores").select("*").eq("relatorio_id", relatorio_id).execute()
-    cenarios = sb.table("cenarios_financeiros").select("*").eq("relatorio_id", relatorio_id).execute()
-    sensibilidade = sb.table("sensibilidade_cenarios").select("*").eq("relatorio_id", relatorio_id).execute()
-    bairros_alt = sb.table("bairros_alternativos").select("*").eq("relatorio_id", relatorio_id).order("ordem").execute()
+    inputs = sb.table("relatorio_inputs").select("*").eq("relatorio_id", rid).maybe_single().execute()
+    outputs = sb.table("relatorio_outputs").select("*").eq("relatorio_id", rid).maybe_single().execute()
+    candidatos = sb.table("candidatos").select("*").eq("relatorio_id", rid).order("posicao").execute()
+    competidores = sb.table("competidores").select("*").eq("relatorio_id", rid).execute()
+    cenarios = sb.table("cenarios_financeiros").select("*").eq("relatorio_id", rid).execute()
+    sensibilidade = sb.table("sensibilidade_cenarios").select("*").eq("relatorio_id", rid).execute()
+    bairros_alt = sb.table("bairros_alternativos").select("*").eq("relatorio_id", rid).order("ordem").execute()
 
     return {
-        "id": relatorio_id,
+        "id": rid,
         "header": header.data,
         "input_canonico": inputs.data if inputs else None,
         "output_consolidado": outputs.data if outputs else None,
@@ -462,6 +553,54 @@ def get_relatorio(relatorio_id: str) -> dict:
         "sensibilidade": sensibilidade.data or [],
         "bairros_alternativos": bairros_alt.data or [],
     }
+
+
+@app.get("/api/relatorios/{relatorio_id}")
+def get_relatorio(relatorio_id: str) -> dict:
+    """Detail completo: joins de todas as tabelas filhas."""
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    return _fetch_relatorio_payload(sb, rid)
+
+
+@app.get("/api/relatorios/{relatorio_id}/pdf")
+def get_relatorio_pdf(relatorio_id: str, layout: str = "classic") -> Any:
+    """PDF estruturado do relatório (ReportLab + gráficos)."""
+    from fastapi.responses import Response
+
+    from pdf import LayoutId, generate_relatorio_pdf
+    from pdf.adapters import relatorio_from_api_payload
+
+    try:
+        layout_id = LayoutId(layout)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"layout inválido (use: classic, executive, data_room): {layout}",
+        ) from e
+
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    payload = _fetch_relatorio_payload(sb, rid)
+    status = (payload.get("header") or {}).get("status")
+    if status and status != "done":
+        raise HTTPException(
+            status_code=400,
+            detail=f"relatório ainda não está pronto (status={status})",
+        )
+
+    model = relatorio_from_api_payload(payload)
+    pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
+    slug = f"gymsite-{model.bairro}-{model.cidade}".replace(" ", "-")
+    slug = "".join(c if c.isalnum() or c in "-_" else "" for c in slug)[:48] or "relatorio"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{slug}.pdf"',
+            "Cache-Control": "private, max-age=300",
+        },
+    )
 
 
 @app.get("/api/relatorios")

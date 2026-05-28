@@ -9,3 +9,11 @@ uvicorn[standard]>=0.27.0
 supabase>=2.0.0
 # Scraping de portais imobiliários (OLX, ImovelWeb) — TLS-fp bloqueia httpx
 playwright>=1.40.0
+# HTML parsing (competitor_offer_mapper)
+beautifulsoup4>=4.12.0
+# Processamento do Excel FipeZap
+pandas>=2.0.0
+openpyxl>=3.1.0
+# PDF de relatório (produto)
+reportlab>=4.0.0
+matplotlib>=3.8.0

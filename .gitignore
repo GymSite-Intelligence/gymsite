@@ -12,6 +12,9 @@ cloudflared/credentials.json
 cloudflared/*.json
 !cloudflared/config.yml
 
+# PDF samples gerados localmente
+artifacts/
+
 # Python
 __pycache__/
 *.pyc
