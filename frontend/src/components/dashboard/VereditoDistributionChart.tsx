@@ -54,7 +54,7 @@ export function VereditoDistributionChart({
   }))
 
   return (
-    <Card className="@container/card">
+    <Card className="@container/card min-h-[280px]">
       <CardHeader>
         <CardTitle>Distribuição de vereditos</CardTitle>
         <CardDescription>Baseado em todos os relatórios visíveis</CardDescription>

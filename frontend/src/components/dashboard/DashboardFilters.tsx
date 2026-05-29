@@ -1,9 +1,18 @@
 /**
  * DashboardFilters — filtros para o dashboard (cidade, veredito, status, período).
+ *
+ * Usa componentes Select do shadcn/ui para consistência visual no tema claro/escuro.
  */
 import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { DashboardFilters } from '@/hooks/useDashboardStats'
 import type { Veredito, RelatorioStatus } from '@/types/domain'
 
@@ -58,34 +67,41 @@ export function DashboardFiltersPanel({ filters, onChange }: DashboardFiltersPro
         />
       </div>
 
-      <select
+      <Select
         value={filters.veredito ?? ''}
-        onChange={(e) => setFilter('veredito', (e.target.value as Veredito) || undefined)}
-        className="h-9 rounded-md border border-border bg-transparent px-3 text-sm"
+        onValueChange={(v) => setFilter('veredito', (v as Veredito) || undefined)}
       >
-        {VEREDITOS.map((v) => (
-          <option key={v.value} value={v.value}>
-            {v.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="h-9 w-[150px] text-sm">
+          <SelectValue placeholder="Veredito" />
+        </SelectTrigger>
+        <SelectContent>
+          {VEREDITOS.map((v) => (
+            <SelectItem key={v.value} value={v.value}>
+              {v.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
+      <Select
         value={filters.status ?? ''}
-        onChange={(e) => setFilter('status', (e.target.value as RelatorioStatus) || undefined)}
-        className="h-9 rounded-md border border-border bg-transparent px-3 text-sm"
+        onValueChange={(v) => setFilter('status', (v as RelatorioStatus) || undefined)}
       >
-        {STATUS.map((v) => (
-          <option key={v.value} value={v.value}>
-            {v.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="h-9 w-[150px] text-sm">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          {STATUS.map((v) => (
+            <SelectItem key={v.value} value={v.value}>
+              {v.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
+      <Select
         value={filters.since ? String(Math.round((Date.now() - new Date(filters.since).getTime()) / 86400000)) : ''}
-        onChange={(e) => {
-          const days = e.target.value
+        onValueChange={(days) => {
           if (!days) {
             setFilter('since', undefined)
             return
@@ -94,14 +110,18 @@ export function DashboardFiltersPanel({ filters, onChange }: DashboardFiltersPro
           d.setDate(d.getDate() - Number(days))
           setFilter('since', d.toISOString().slice(0, 10))
         }}
-        className="h-9 rounded-md border border-border bg-transparent px-3 text-sm"
       >
-        {PERIODOS.map((v) => (
-          <option key={v.value} value={v.value}>
-            {v.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="h-9 w-[170px] text-sm">
+          <SelectValue placeholder="Período" />
+        </SelectTrigger>
+        <SelectContent>
+          {PERIODOS.map((v) => (
+            <SelectItem key={v.value} value={v.value}>
+              {v.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2">
