@@ -1300,9 +1300,10 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         try:
             from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
 
+            cidade_efetiva, _ = resolver_cidade_efetiva(cidade, bairro)
             uf_mc = (inner_mc.get("uf") or "") if isinstance(inner_mc, dict) else ""
             entrantes_block = listar_entrantes_cnpj_fitness(
-                cidade, uf_mc, dias=90, limit=50
+                cidade_efetiva, uf_mc, dias=90, limit=50
             )
         except Exception:
             entrantes_block = {}

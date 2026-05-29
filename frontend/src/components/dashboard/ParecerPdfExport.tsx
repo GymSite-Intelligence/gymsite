@@ -63,38 +63,54 @@ export function ParecerPdfExport(props: ParecerPdfExportProps) {
   async function handleExportPdf() {
     if (!props.cenarioA || !props.cenarioB) return
     setGerandoPdf(true)
-    const html2pdf = (await import('html2pdf.js')).default
+    try {
+      const mod = await import('html2pdf.js')
+      const html2pdf = (mod as any).default ?? mod
+      if (typeof html2pdf !== 'function') {
+        throw new Error('html2pdf.js não carregou corretamente.')
+      }
 
-    requestAnimationFrame(() => {
-      const element = containerRef.current
-      if (!element) { setGerandoPdf(false); return }
+      requestAnimationFrame(() => {
+        try {
+          const element = containerRef.current
+          if (!element) { setGerandoPdf(false); return }
 
-      const opt = {
-        margin: [16, 12, 18, 12],
-        filename: `parecer-viabilidade-${props.bairroA}-vs-${props.bairroB}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      } as any
+          const opt = {
+            margin: [16, 12, 18, 12],
+            filename: `parecer-viabilidade-${props.bairroA}-vs-${props.bairroB}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+          } as any
 
-      const worker = html2pdf().set(opt).from(element)
-      worker.toPdf().get('pdf').then((pdf: any) => {
-        const totalPages = pdf.internal.getNumberOfPages()
-        for (let i = 1; i <= totalPages; i++) {
-          pdf.setPage(i)
-          pdf.setFontSize(8)
-          pdf.setTextColor(150, 150, 150)
-          pdf.text(
-            `${MARCA} · Página ${i} de ${totalPages}`,
-            pdf.internal.pageSize.getWidth() / 2,
-            pdf.internal.pageSize.getHeight() - 6,
-            { align: 'center' }
-          )
+          const worker = html2pdf().set(opt).from(element)
+          worker.toPdf().get('pdf').then((pdf: any) => {
+            const totalPages = pdf.internal.getNumberOfPages()
+            for (let i = 1; i <= totalPages; i++) {
+              pdf.setPage(i)
+              pdf.setFontSize(8)
+              pdf.setTextColor(150, 150, 150)
+              pdf.text(
+                `${MARCA} · Página ${i} de ${totalPages}`,
+                pdf.internal.pageSize.getWidth() / 2,
+                pdf.internal.pageSize.getHeight() - 6,
+                { align: 'center' }
+              )
+            }
+          }).catch(() => {
+            // ignora erro na numeração de páginas para não travar o download
+          })
+          worker.save().catch(() => {}).finally(() => setGerandoPdf(false))
+        } catch (innerErr) {
+          console.error('Erro ao gerar PDF:', innerErr)
+          setGerandoPdf(false)
         }
       })
-      worker.save().finally(() => setGerandoPdf(false))
-    })
+    } catch (err) {
+      console.error('Falha ao carregar html2pdf.js:', err)
+      setGerandoPdf(false)
+    }
   }
 
   function handlePrint() {

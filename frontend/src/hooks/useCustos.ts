@@ -10,7 +10,7 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { supabase, API_BASE } from '@/lib/supabase'
 
 export type Periodo = 'mes' | '30d' | 'tudo'
 
@@ -120,6 +120,53 @@ export function useCustosAgentes(relatorioId: string | null) {
         .order('custo_brl', { ascending: false })
       if (error) throw new Error(`Supabase: ${error.message}`)
       return (data ?? []) as CustoAgenteRow[]
+    },
+  })
+}
+
+export interface CustosAPIData {
+  llm: {
+    total_brl: number
+    por_agente: Record<
+      string,
+      {
+        tokens_in: number
+        tokens_out: number
+        custo_brl: number
+        modelo: string
+      }
+    >
+  }
+  api: {
+    total_brl: number
+    por_sku: Record<
+      string,
+      {
+        calls: number
+        custo_brl: number
+      }
+    >
+  }
+  total_brl: number
+}
+
+export function useCustosAPI(relatorioId: string | null) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['custos-api', user?.id ?? 'anon', relatorioId],
+    enabled: !!user && !!relatorioId,
+    queryFn: async (): Promise<CustosAPIData> => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: HeadersInit = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+      const res = await fetch(`${API_BASE}/api/relatorios/${encodeURIComponent(relatorioId!)}/custos-api`, { headers })
+      if (!res.ok) {
+        throw new Error(`Erro ao buscar custos de API: ${res.statusText}`)
+      }
+      return res.json()
     },
   })
 }

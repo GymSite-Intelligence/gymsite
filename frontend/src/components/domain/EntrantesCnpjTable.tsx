@@ -7,7 +7,6 @@ import { Building2, ExternalLink, Mail, Phone, Linkedin } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import {
-  CONFIANCA_HINT,
   SEGMENTO_BADGE_CLASS,
   SEGMENTO_PARQUE_LABELS,
 } from '@/lib/segmento-parque'
@@ -215,7 +214,6 @@ export function EntrantesCnpjTable({
                             SEGMENTO_BADGE_CLASS.outro,
                         )}
                       >
-                        {CONFIANCA_HINT[e.segmento_confianca ?? ''] ?? ''}
                         {e.segmento_label ??
                           SEGMENTO_PARQUE_LABELS[e.segmento_operacao] ??
                           e.segmento_operacao}

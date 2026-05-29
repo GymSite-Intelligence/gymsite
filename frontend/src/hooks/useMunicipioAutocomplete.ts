@@ -2,10 +2,14 @@
  * useMunicipioAutocomplete — busca municípios IBGE com fallback estático.
  *
  * Estratégia:
- * 1. Tenta IBGE Localidades API (fonte canônica, ~150-500 itens por UF, cacheado infinito).
+ * 1. Tenta IBGE Localidades API (fonte canônica, cacheado infinito por UF).
  * 2. Timeout 8s + 1 retry. Se falhar (caso observado em 2026-05-11), cai
  *    automaticamente pro fallback hardcoded em `data/municipios-fallback.ts`.
  * 3. Filtra client-side por substring case+accent-insensitive.
+ *
+ * Exibe até MAX_OPTIONS municípios no dropdown (scroll via Combobox max-h-72).
+ * CE: 184 • RJ: 92 • BA: 417 • SP: 645 • MG: 853
+ * Estados com > 300 municípios precisam de busca por texto pra refinar.
  *
  * Fonte exposta no return (`fonte: 'ibge' | 'fallback'`) pra UI sinalizar
  * ao usuário se está vendo a lista completa ou só os ~50 do cache local.
@@ -75,6 +79,9 @@ async function fetchMunicipios(uf: string): Promise<MunicipioIBGE[]> {
   }
 }
 
+/** Máx de itens no dropdown — cobre todos os estados exceto SP (645) e MG (853). */
+const MAX_OPTIONS = 300
+
 export function useMunicipioAutocomplete(query: string, uf: string = '') {
   const enabled = uf.length === 2
 
@@ -111,10 +118,13 @@ export function useMunicipioAutocomplete(query: string, uf: string = '') {
   const sugestoes = useMemo(() => {
     const q = normalizar(query)
     if (q.length === 0) {
+      // Sem filtro: lista alfabética completa (cap pra não estourar DOM em SP/MG)
       return [...todos]
         .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-        .slice(0, 20)
+        .slice(0, MAX_OPTIONS)
     }
+    // Com filtro: retorna todos os matches (estados menores ficam < 30 resultados;
+    // SP/MG com substring longa também ficam razoáveis)
     return todos
       .filter((m) => normalizar(m.nome).includes(q))
       .sort((a, b) => {
@@ -123,7 +133,7 @@ export function useMunicipioAutocomplete(query: string, uf: string = '') {
         if (aStart !== bStart) return aStart - bStart
         return a.nome.localeCompare(b.nome, 'pt-BR')
       })
-      .slice(0, 20)
+      .slice(0, MAX_OPTIONS)
   }, [todos, query])
 
   return {
