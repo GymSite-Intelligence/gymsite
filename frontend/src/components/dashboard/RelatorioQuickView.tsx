@@ -6,7 +6,7 @@
  */
 import { useNavigate } from '@tanstack/react-router'
 import { Map, Marker } from 'pigeon-maps'
-import { ExternalLink, X } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import { useRelatorioDetail } from '@/hooks/useRelatorioDetail'
 import { FinanceiroKpiStrip } from '@/components/domain/FinanceiroKpiStrip'
 import { ScoreGauge } from '@/components/domain/ScoreGauge'
@@ -42,7 +42,6 @@ export function RelatorioQuickView({ relatorioId, onClose }: RelatorioQuickViewP
         ) : (
           <QuickViewContent
             data={data}
-            onClose={onClose}
             onVerCompleto={() =>
               navigate({
                 to: '/relatorios/$relatorioId',
@@ -58,11 +57,9 @@ export function RelatorioQuickView({ relatorioId, onClose }: RelatorioQuickViewP
 
 function QuickViewContent({
   data,
-  onClose,
   onVerCompleto,
 }: {
   data: NonNullable<ReturnType<typeof useRelatorioDetail>['data']>
-  onClose: () => void
   onVerCompleto: () => void
 }) {
   const out = data.output_consolidado
@@ -77,24 +74,15 @@ function QuickViewContent({
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
-      <SheetHeader className="border-b border-border pb-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <SheetTitle className="truncate">
-              {inp.bairro} <span className="text-muted-foreground font-normal">·</span>{' '}
-              {inp.cidade}
-            </SheetTitle>
-            <p className="text-xs text-muted-foreground mt-1 font-mono">
-              {new Date(data.data_execucao).toLocaleDateString('pt-BR')} · {data.id.slice(0, 8)}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground shrink-0"
-            aria-label="Fechar"
-          >
-            <X size={16} />
-          </button>
+      <SheetHeader className="px-6 pt-6 pb-4 pr-12 border-b border-border">
+        <div className="min-w-0">
+          <SheetTitle className="truncate">
+            {inp.bairro} <span className="text-muted-foreground font-normal">·</span>{' '}
+            {inp.cidade}
+          </SheetTitle>
+          <p className="text-xs text-muted-foreground mt-1 font-mono">
+            {new Date(data.data_execucao).toLocaleDateString('pt-BR')} · {data.id.slice(0, 8)}
+          </p>
         </div>
         <div className="flex items-center gap-2 mt-2">
           <VeredictoBadge veredito={out.veredito} />
