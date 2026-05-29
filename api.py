@@ -190,59 +190,64 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
     from tools.research_provider import set_a0_research_provider
     from tools.token_telemetry import reset_run_id, _get_run_id
 
-    set_a0_research_provider(payload.a0_research_provider or "auto")
+    from tools.api_cost_tracker import current_relatorio_id
+    token = current_relatorio_id.set(relatorio_id)
+    try:
+        set_a0_research_provider(payload.a0_research_provider or "auto")
 
-    # Reset run_id pra cada tentativa — telemetria fica separada por tentativa.
-    reset_run_id()
+        # Reset run_id pra cada tentativa — telemetria fica separada por tentativa.
+        reset_run_id()
 
-    session_service = InMemorySessionService()
-    session_id = f"api_{relatorio_id}_{int(time.time())}"
-    user_id = "api_user"
+        session_service = InMemorySessionService()
+        session_id = f"api_{relatorio_id}_{int(time.time())}"
+        user_id = "api_user"
 
-    await session_service.create_session(
-        app_name="gymsite",
-        user_id=user_id,
-        session_id=session_id,
-        state={
-            "relatorio_id": relatorio_id,
-            # Params estruturados acessíveis via tool_context.state em qualquer
-            # tool — usado por A1 GeoScout (listings OLX+ImovelWeb filtra por
-            # area_min/max) e potencialmente A4 (estacionamento, tipo_negocio).
-            "input_params": {
-                "cidade": payload.cidade,
-                "uf": payload.uf,
-                "bairro": payload.bairro,
-                "area_m2_min": payload.area_m2_min,
-                "area_m2_max": payload.area_m2_max,
-                "tamanho_preset": payload.tamanho_preset,
-                "tipo_negocio": payload.tipo_negocio,
-                "publico_alvo": payload.publico_alvo,
-                "genero_alvo": payload.genero_alvo,
-                "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
-                "a0_research_provider": payload.a0_research_provider or "auto",
+        await session_service.create_session(
+            app_name="gymsite",
+            user_id=user_id,
+            session_id=session_id,
+            state={
+                "relatorio_id": relatorio_id,
+                # Params estruturados acessíveis via tool_context.state em qualquer
+                # tool — usado por A1 GeoScout (listings OLX+ImovelWeb filtra por
+                # area_min/max) e potencialmente A4 (estacionamento, tipo_negocio).
+                "input_params": {
+                    "cidade": payload.cidade,
+                    "uf": payload.uf,
+                    "bairro": payload.bairro,
+                    "area_m2_min": payload.area_m2_min,
+                    "area_m2_max": payload.area_m2_max,
+                    "tamanho_preset": payload.tamanho_preset,
+                    "tipo_negocio": payload.tipo_negocio,
+                    "publico_alvo": payload.publico_alvo,
+                    "genero_alvo": payload.genero_alvo,
+                    "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
+                    "a0_research_provider": payload.a0_research_provider or "auto",
+                },
             },
-        },
-    )
+        )
 
-    runner = Runner(
-        agent=root_agent,
-        app_name="gymsite",
-        session_service=session_service,
-    )
+        runner = Runner(
+            agent=root_agent,
+            app_name="gymsite",
+            session_service=session_service,
+        )
 
-    prompt = _build_pipeline_prompt(payload)
-    message = Content(role="user", parts=[Part(text=prompt)])
+        prompt = _build_pipeline_prompt(payload)
+        message = Content(role="user", parts=[Part(text=prompt)])
 
-    async for _event in runner.run_async(
-        user_id=user_id,
-        session_id=session_id,
-        new_message=message,
-    ):
-        pass
+        async for _event in runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=message,
+        ):
+            pass
 
-    run_id = _get_run_id()
-    sb = _supabase_client()
-    return _agregar_e_persistir_custos(sb, relatorio_id, run_id)
+        run_id = _get_run_id()
+        sb = _supabase_client()
+        return _agregar_e_persistir_custos(sb, relatorio_id, run_id)
+    finally:
+        current_relatorio_id.reset(token)
 
 
 async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) -> None:
@@ -361,6 +366,18 @@ def _agregar_e_persistir_custos(sb, relatorio_id: str, run_id: str | None) -> di
             sb.table("relatorio_custos_agentes") \
               .upsert(records, on_conflict="relatorio_id,agente") \
               .execute()
+
+        # Agrega custos de APIs externas gravados
+        api_total = 0.0
+        try:
+            api_res = sb.table("relatorio_api_calls").select("custo_brl").eq("relatorio_id", relatorio_id).execute()
+            if api_res.data:
+                api_total = sum(float(r.get("custo_brl") or 0.0) for r in api_res.data)
+        except Exception:
+            pass
+
+        # Soma o custo de API ao total geral do relatório
+        summary["custo_brl_total"] = round(summary.get("custo_brl_total", 0.0) + api_total, 4)
 
         return summary
     except Exception as e:
@@ -618,6 +635,59 @@ def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
     }
 
 
+@app.get("/api/relatorios/{relatorio_id}/custos-api")
+def get_relatorio_custos_api(relatorio_id: str) -> dict:
+    """Breakdown de custos LLM + APIs externas (Places, SearchAPI, Geocoding)."""
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    
+    # 1. Busca custos LLM
+    llm_res = sb.table("relatorio_custos_agentes").select("*").eq("relatorio_id", rid).execute()
+    llm_records = llm_res.data or []
+    
+    llm_total = sum(float(r.get("custo_brl") or 0.0) for r in llm_records)
+    llm_por_agente = {}
+    for r in llm_records:
+        agente = r.get("agente")
+        if agente:
+            llm_por_agente[agente] = {
+                "tokens_in": r.get("tokens_in", 0),
+                "tokens_out": r.get("tokens_out", 0),
+                "custo_brl": float(r.get("custo_brl") or 0.0),
+                "modelo": r.get("modelo") or "",
+            }
+            
+    # 2. Busca custos API
+    # Usando try-except em caso de migração de banco pendente (fail-safe)
+    api_records = []
+    try:
+        api_res = sb.table("relatorio_api_calls").select("*").eq("relatorio_id", rid).execute()
+        api_records = api_res.data or []
+    except Exception:
+        pass
+    
+    api_total = sum(float(r.get("custo_brl") or 0.0) for r in api_records)
+    api_por_sku = {}
+    for r in api_records:
+        sku = r.get("api_sku")
+        if sku:
+            slot = api_por_sku.setdefault(sku, {"calls": 0, "custo_brl": 0.0})
+            slot["calls"] += r.get("num_calls", 1)
+            slot["custo_brl"] = round(slot["custo_brl"] + float(r.get("custo_brl") or 0.0), 6)
+            
+    return {
+        "llm": {
+            "total_brl": round(llm_total, 4),
+            "por_agente": llm_por_agente,
+        },
+        "api": {
+            "total_brl": round(api_total, 4),
+            "por_sku": api_por_sku,
+        },
+        "total_brl": round(llm_total + api_total, 4),
+    }
+
+
 @app.get("/api/relatorios/{relatorio_id}")
 def get_relatorio(relatorio_id: str) -> dict:
     """Detail completo: joins de todas as tabelas filhas."""
@@ -794,6 +864,67 @@ def canais_status() -> dict:
     }
 
 
+@app.get("/api/relatorios/{relatorio_id}/custos-api")
+def get_relatorio_custos_api(relatorio_id: str) -> dict:
+    """Retorna o breakdown de custos de LLM e APIs externas do relatório."""
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    
+    # 1. Obter os custos dos agentes (LLM)
+    llm_por_agente = {}
+    llm_total = 0.0
+    try:
+        res_agents = sb.table("relatorio_custos_agentes").select("agente, modelo, tokens_in, tokens_out, custo_brl").eq("relatorio_id", rid).execute()
+        if res_agents.data:
+            for row in res_agents.data:
+                agente = row["agente"]
+                custo = float(row["custo_brl"] or 0.0)
+                llm_por_agente[agente] = {
+                    "modelo": row["modelo"] or "",
+                    "tokens_in": int(row["tokens_in"] or 0),
+                    "tokens_out": int(row["tokens_out"] or 0),
+                    "custo_brl": custo
+                }
+                llm_total += custo
+    except Exception as e:
+        logger.warning(f"Erro ao buscar custos de agentes: {e}")
+
+    # 2. Obter os custos das APIs
+    api_por_sku = {}
+    api_total = 0.0
+    try:
+        res_apis = sb.table("relatorio_api_calls").select("api_sku, num_calls, custo_brl").eq("relatorio_id", rid).execute()
+        if res_apis.data:
+            for row in res_apis.data:
+                sku = row["api_sku"]
+                calls = int(row["num_calls"] or 0)
+                custo = float(row["custo_brl"] or 0.0)
+                if sku in api_por_sku:
+                    api_por_sku[sku]["calls"] += calls
+                    api_por_sku[sku]["custo_brl"] += custo
+                else:
+                    api_por_sku[sku] = {
+                        "calls": calls,
+                        "custo_brl": custo
+                    }
+                api_total += custo
+    except Exception as e:
+        logger.warning(f"Erro ao buscar custos de APIs: {e}")
+
+    # 3. Retornar estrutura esperada pelo frontend
+    return {
+        "llm": {
+            "total_brl": round(llm_total, 4),
+            "por_agente": llm_por_agente
+        },
+        "api": {
+            "total_brl": round(api_total, 4),
+            "por_sku": api_por_sku
+        },
+        "total_brl": round(llm_total + api_total, 4)
+    }
+
+
 @app.get("/api/relatorios")
 def list_relatorios(
     cidade: Optional[str] = None,
@@ -812,3 +943,115 @@ def list_relatorios(
         q = q.gte("created_at", since)
     res = q.execute()
     return res.data or []
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Prospecção CNPJ × CNO → Claw
+# ════════════════════════════════════════════════════════════════════════════
+
+class ProspeccaoExecutarInput(BaseModel):
+    cidade: str
+    uf: str = "CE"
+    dias: int = 90
+    limit: int = 500
+    org_id: Optional[str] = None
+    webhook_url: Optional[str] = None
+
+
+class ProspeccaoStatusPatch(BaseModel):
+    status: str = Field(..., pattern=r"^(novo|qualificado|webhook_enviado|engajado|fechado|descartado)$")
+
+
+class WebhookConfigureInput(BaseModel):
+    org_id: str
+    webhook_url: str
+
+
+@app.post("/api/prospeccao/executar")
+def executar_prospeccao(
+    payload: ProspeccaoExecutarInput,
+    background_tasks: BackgroundTasks,
+) -> dict:
+    """Dispara engine de cruzamento CNPJ × CNO em background."""
+    def _run():
+        from prospecting.engine import run_prospeccao
+        return run_prospeccao(
+            cidade=payload.cidade,
+            uf=payload.uf,
+            dias=payload.dias,
+            limit=payload.limit,
+            org_id=payload.org_id,
+            webhook_url=payload.webhook_url,
+        )
+
+    background_tasks.add_task(_run)
+    return {
+        "status": "started",
+        "message": f"Prospecção iniciada para {payload.cidade}/{payload.uf}",
+    }
+
+
+@app.get("/api/prospeccao/oportunidades")
+def list_oportunidades_prospeccao(
+    cidade: Optional[str] = None,
+    uf: Optional[str] = None,
+    status: Optional[str] = None,
+    prioridade: Optional[str] = None,
+    score_min: Optional[float] = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[dict]:
+    """Lista oportunidades de prospecção com filtros."""
+    from prospecting.engine import list_oportunidades
+    return list_oportunidades(
+        cidade=cidade,
+        uf=uf,
+        status=status,
+        prioridade=prioridade,
+        score_min=score_min,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@app.get("/api/prospeccao/oportunidades/{oportunidade_id}")
+def get_oportunidade_prospeccao(oportunidade_id: str) -> dict:
+    """Retorna detalhe de uma oportunidade."""
+    from prospecting.engine import get_oportunidade
+    opp = get_oportunidade(oportunidade_id)
+    if not opp:
+        raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
+    return opp
+
+
+@app.post("/api/prospeccao/oportunidades/{oportunidade_id}/webhook")
+def reenviar_webhook_oportunidade(oportunidade_id: str) -> dict:
+    """Reenvia webhook manualmente para o Claw."""
+    from prospecting.engine import reenviar_webhook
+    return reenviar_webhook(oportunidade_id)
+
+
+@app.patch("/api/prospeccao/oportunidades/{oportunidade_id}/status")
+def patch_status_oportunidade(
+    oportunidade_id: str,
+    payload: ProspeccaoStatusPatch,
+) -> dict:
+    """Atualiza status do pipeline de prospecção."""
+    from prospecting.engine import update_status
+    ok = update_status(oportunidade_id, payload.status)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
+    return {"status": "updated", "id": oportunidade_id, "novo_status": payload.status}
+
+
+@app.post("/api/prospeccao/webhook/configure")
+def configurar_webhook_claw(payload: WebhookConfigureInput) -> dict:
+    """Configura URL do webhook do Claw por organização."""
+    sb = _supabase_client()
+    try:
+        sb.table("organizations").update({
+            "webhook_claw_url": payload.webhook_url,
+        }).eq("id", payload.org_id).execute()
+        return {"status": "ok", "org_id": payload.org_id, "webhook_url": payload.webhook_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

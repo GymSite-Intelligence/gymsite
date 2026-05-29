@@ -1182,8 +1182,10 @@ def _buscar_rede_geofenced(
         "languageCode": "pt-BR",
     }
     try:
-        with httpx.Client(timeout=15) as c:
-            data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
+        from tools.api_cost_tracker import track_api_call
+        with track_api_call("buscar_rede_geofenced", "places_search_new", 1):
+            with httpx.Client(timeout=15) as c:
+                data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
     except Exception:
         return None
 

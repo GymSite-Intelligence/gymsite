@@ -38,13 +38,11 @@ from tools.competitor_tools import analisar_concorrentes_completo
 # Function_call vira `analisar_concorrentes_completo()` sem args =>
 # impossível ser malformed. A3b vira "redator" que pega o output da
 # macro e adiciona `posicionamento_recomendado` + `resumo_executivo`.
-_GENERATE_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(thinking_budget=2048),
-)
+_GENERATE_CONFIG = types.GenerateContentConfig()
 
 competitor_analysis_agent = Agent(
     name="CompetitorAnalysis",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-flash-lite",
     generate_content_config=_GENERATE_CONFIG,
     description=(
         "Análise agregada de concorrentes: gaps de mercado, dores dominantes "

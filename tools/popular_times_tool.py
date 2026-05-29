@@ -467,17 +467,19 @@ def _tentar_searchapi(place_id: str) -> dict | None:
         api_key = os.environ.get("SEARCHAPI_KEY", "").strip()
         if not api_key:
             return None
-        resp = requests.get(
-            "https://www.searchapi.io/api/v1/search",
-            params={
-                "engine": "google_maps_place",
-                "place_id": place_id,
-                "hl": "pt",
-                "gl": "br",
-                "api_key": api_key,
-            },
-            timeout=15,
-        )
+        from tools.api_cost_tracker import track_api_call
+        with track_api_call("searchapi_popular_times", "searchapi_popular_times", 1):
+            resp = requests.get(
+                "https://www.searchapi.io/api/v1/search",
+                params={
+                    "engine": "google_maps_place",
+                    "place_id": place_id,
+                    "hl": "pt",
+                    "gl": "br",
+                    "api_key": api_key,
+                },
+                timeout=15,
+            )
         if resp.status_code != 200:
             print(f"[searchapi] {place_id}: HTTP {resp.status_code}: {resp.text[:140]}")
             return None

@@ -23,8 +23,10 @@ def _geocode_google(endereco: str) -> dict:
         "language": "pt-BR",
         "region": "BR",
     }
-    with httpx.Client(timeout=10) as c:
-        data = c.get(GEOCODING_BASE, params=params).json()
+    from tools.api_cost_tracker import track_api_call
+    with track_api_call("geocode_google", "geocoding", 1):
+        with httpx.Client(timeout=10) as c:
+            data = c.get(GEOCODING_BASE, params=params).json()
     if data.get("status") == "OK" and data.get("results"):
         r = data["results"][0]
         loc = r["geometry"]["location"]
@@ -110,13 +112,15 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
             "center": {"latitude": latitude, "longitude": longitude},
             "radius": float(raio_metros),
         }},
-        "includedTypes": ["shopping_mall", "store", "supermarket", "establishment"],
+        "includedTypes": ["shopping_mall", "store", "supermarket"],  # removed 'establishment' due to API 400 error
         "maxResultCount": 20,
         "languageCode": "pt-BR",
     }
-    with httpx.Client(timeout=15) as c:
-        resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
-        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    from tools.api_cost_tracker import track_api_call
+    with track_api_call("buscar_pontos_comerciais", "places_search_new", 1):
+        with httpx.Client(timeout=15) as c:
+            resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
+            data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
 
     if resp.status_code == 200 and data.get("places"):
         return [_extrair_lugar(p) for p in data.get("places", [])]
@@ -156,9 +160,11 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
         "maxResultCount": 10,
         "languageCode": "pt-BR",
     }
-    with httpx.Client(timeout=15) as c:
-        resp = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers)
-        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    from tools.api_cost_tracker import track_api_call
+    with track_api_call("buscar_imoveis_texto", "places_search_new", 1):
+        with httpx.Client(timeout=15) as c:
+            resp = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers)
+            data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
 
     if resp.status_code == 200 and data.get("places"):
         return [_extrair_lugar(p) for p in data.get("places", [])]
@@ -210,15 +216,17 @@ def obter_detalhes_contato(place_id: str) -> dict:
             "businessStatus,priceLevel"
         ),
     }
-    try:
-        with httpx.Client(timeout=10) as c:
-            r = c.get(f"{PLACES_BASE}/{place_id}",
-                      headers=headers, params={"languageCode": "pt-BR"})
-            if r.status_code != 200:
-                return {"erro": f"HTTP {r.status_code}: {r.text[:200]}"}
-            data = r.json()
-    except Exception as e:
-        return {"erro": f"Places Details falhou: {type(e).__name__}: {e}"}
+    from tools.api_cost_tracker import track_api_call
+    with track_api_call("obter_detalhes_contato", "places_details_new", 1):
+        try:
+            with httpx.Client(timeout=10) as c:
+                r = c.get(f"{PLACES_BASE}/{place_id}",
+                          headers=headers, params={"languageCode": "pt-BR"})
+                if r.status_code != 200:
+                    return {"erro": f"HTTP {r.status_code}: {r.text[:200]}"}
+                data = r.json()
+        except Exception as e:
+            return {"erro": f"Places Details falhou: {type(e).__name__}: {e}"}
 
     regulares = data.get("regularOpeningHours") or {}
     periods = regulares.get("periods") or []
