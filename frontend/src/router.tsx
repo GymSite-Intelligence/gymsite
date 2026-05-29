@@ -14,8 +14,8 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  Navigate,
   Outlet,
+  redirect,
   useRouterState,
 } from '@tanstack/react-router'
 import { AuthenticatedSidebarLayout } from '@/components/layout/AuthenticatedSidebarLayout'
@@ -77,7 +77,9 @@ const privacidadeRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => <Navigate to="/dashboard" replace />,
+  beforeLoad: () => {
+    throw redirect({ to: '/dashboard', replace: true })
+  },
 })
 
 interface RelatoriosSearch {

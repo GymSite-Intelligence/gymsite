@@ -15,8 +15,8 @@
  *   como única URL permitida em Redirect URLs. `verifyOtp` dispensa redirect
  *   e funciona em qualquer host.
  */
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { notify } from '@/lib/notify'
@@ -70,6 +70,8 @@ function mensagemErroAmigavel(raw: string): string {
 export function LoginPage() {
   const { session, mockAuth, signInDev } = useAuth()
   const navigate = useNavigate()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const redirectedRef = useRef(false)
   const [aba, setAba] = useState<Aba>('senha')
 
   // Estado aba "Senha"
@@ -84,10 +86,16 @@ export function LoginPage() {
   const [emailCodigo, setEmailCodigo] = useState('')
   const [code, setCode] = useState('')
 
-  // Sessão já existe → /relatorios
+  // Sessão já existe → /relatorios (uma vez; evita loop com Transitioner)
   useEffect(() => {
-    if (session) navigate({ to: '/relatorios', replace: true })
-  }, [session, navigate])
+    if (!session) {
+      redirectedRef.current = false
+      return
+    }
+    if (pathname !== '/login' || redirectedRef.current) return
+    redirectedRef.current = true
+    void navigate({ to: '/relatorios', replace: true })
+  }, [session, pathname, navigate])
 
   async function entrarComSenha(e: React.FormEvent) {
     e.preventDefault()

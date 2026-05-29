@@ -186,6 +186,10 @@ export interface CandidatoRow {
   street_view_url: string | null
   status_business: string | null
   proximo_passo: string | null
+  tipo_imovel_codigo_onr: number | null
+  tipo_imovel_label: string | null
+  modalidade: string | null
+  cartorio: Record<string, any> | null
   created_at: string
 }
 

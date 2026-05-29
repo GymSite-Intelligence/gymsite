@@ -10,8 +10,8 @@
  * Gate: render só se useMembership().isOwnerOrAdmin. Quem cair aqui sem
  * permissão (URL direta) vê uma mensagem de bloqueio.
  */
-import { useMemo, useState } from 'react'
-import { Navigate } from '@tanstack/react-router'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { ChevronDown, ChevronRight, Loader2, BarChart3 } from 'lucide-react'
 import { useMembership } from '@/hooks/useMembership'
 import {
@@ -60,6 +60,8 @@ const PERIODOS: { value: Periodo; label: string }[] = [
 
 export function CustosPage() {
   const { isOwnerOrAdmin, loading: roleLoading } = useMembership()
+  const navigate = useNavigate()
+  const redirectedRef = useRef(false)
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const [expandido, setExpandido] = useState<string | null>(null)
   const { data: relatorios, isLoading } = useCustosRelatorios(periodo)
@@ -104,6 +106,16 @@ export function CustosPage() {
     }
   }, [relatorios])
 
+  useEffect(() => {
+    if (roleLoading || isOwnerOrAdmin) {
+      redirectedRef.current = false
+      return
+    }
+    if (redirectedRef.current) return
+    redirectedRef.current = true
+    void navigate({ to: '/relatorios', replace: true })
+  }, [roleLoading, isOwnerOrAdmin, navigate])
+
   if (roleLoading) {
     return (
       <div className="py-12 text-center text-muted-foreground flex items-center justify-center gap-2">
@@ -114,7 +126,12 @@ export function CustosPage() {
   }
 
   if (!isOwnerOrAdmin) {
-    return <Navigate to="/relatorios" replace />
+    return (
+      <div className="py-12 text-center text-muted-foreground flex items-center justify-center gap-2">
+        <Loader2 size={16} className="animate-spin" />
+        Redirecionando…
+      </div>
+    )
   }
 
   return (

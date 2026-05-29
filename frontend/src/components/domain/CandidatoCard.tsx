@@ -9,7 +9,7 @@
  * pra placeholder visual sem quebrar layout.
  */
 import { useState } from 'react'
-import { MapPin, Eye, AlertCircle, Phone, Globe, Clock, MessageCircle, ExternalLink } from 'lucide-react'
+import { MapPin, Eye, AlertCircle, Phone, Globe, Clock, MessageCircle, ExternalLink, Building, Mail } from 'lucide-react'
 import { ScoreGauge } from './ScoreGauge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -51,7 +51,7 @@ export function CandidatoCard({
   const [imgError, setImgError] = useState(false)
 
   const visibilidade = candidato.estimativa_visibilidade ?? 'desconhecida'
-  const tipoLabel = (candidato.tipos?.[0] ?? '').replace(/_/g, ' ')
+  const tipoLabel = candidato.tipo_imovel_label || (candidato.tipos?.[0] ?? '').replace(/_/g, ' ')
   const isListing =
     candidato.qualidade_sinal === 'direto-listing' ||
     candidato.fonte === 'listing' ||
@@ -134,6 +134,12 @@ export function CandidatoCard({
                 <>
                   {' · '}
                   <span>~{candidato.area_estimada_m2} m²</span>
+                </>
+              )}
+              {candidato.modalidade && candidato.modalidade !== 'incerto' && (
+                <>
+                  {' · '}
+                  <span>{candidato.modalidade}</span>
                 </>
               )}
             </p>
@@ -224,6 +230,40 @@ export function CandidatoCard({
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Cartório Competente (CNJ) */}
+        {candidato.cartorio && (
+          <div className="rounded border border-primary/20 bg-primary/5 p-2.5 space-y-1.5 text-xs">
+            <p className="font-semibold text-foreground flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider">
+              <Building size={11} className="text-primary shrink-0" />
+              Cartório Competente (CNJ)
+            </p>
+            <div className="space-y-1 text-muted-foreground">
+              <p className="font-medium text-foreground text-xs">{candidato.cartorio.nome}</p>
+              {candidato.cartorio.cns && (
+                <p className="text-[10px] font-mono leading-none">CNS: {candidato.cartorio.cns}</p>
+              )}
+              {candidato.cartorio.endereco && (
+                <p className="leading-snug text-[11px] flex items-start gap-1">
+                  <MapPin size={10} className="mt-0.5 shrink-0" />
+                  <span>{candidato.cartorio.endereco}</span>
+                </p>
+              )}
+              {candidato.cartorio.telefone && (
+                <p className="font-mono text-[11px] flex items-center gap-1">
+                  <Phone size={10} className="shrink-0" />
+                  <span>{candidato.cartorio.telefone}</span>
+                </p>
+              )}
+              {candidato.cartorio.email && (
+                <p className="font-mono text-[11px] flex items-center gap-1 truncate">
+                  <Mail size={10} className="shrink-0" />
+                  <span>{candidato.cartorio.email}</span>
+                </p>
+              )}
+            </div>
           </div>
         )}
 

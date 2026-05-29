@@ -16,16 +16,16 @@ import {
 import type { DashboardFilters } from '@/hooks/useDashboardStats'
 import type { Veredito, RelatorioStatus } from '@/types/domain'
 
-const VEREDITOS: { value: Veredito | ''; label: string }[] = [
-  { value: '', label: 'Todos' },
+const VEREDITOS: { value: Veredito | 'all'; label: string }[] = [
+  { value: 'all', label: 'Todos' },
   { value: 'APROVADO', label: 'Aprovado' },
   { value: 'APROVADO COM RESSALVAS', label: 'Com Ressalvas' },
   { value: 'INVESTIGAR MAIS', label: 'Investigar' },
   { value: 'REPROVADO', label: 'Reprovado' },
 ]
 
-const STATUS: { value: RelatorioStatus | ''; label: string }[] = [
-  { value: '', label: 'Todos' },
+const STATUS: { value: RelatorioStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'Todos' },
   { value: 'done', label: 'Concluído' },
   { value: 'running', label: 'Em execução' },
   { value: 'queued', label: 'Na fila' },
@@ -33,7 +33,7 @@ const STATUS: { value: RelatorioStatus | ''; label: string }[] = [
 ]
 
 const PERIODOS: { value: string; label: string }[] = [
-  { value: '', label: 'Todo período' },
+  { value: 'all', label: 'Todo período' },
   { value: '7', label: 'Últimos 7 dias' },
   { value: '30', label: 'Últimos 30 dias' },
   { value: '90', label: 'Últimos 90 dias' },
@@ -68,8 +68,8 @@ export function DashboardFiltersPanel({ filters, onChange }: DashboardFiltersPro
       </div>
 
       <Select
-        value={filters.veredito ?? ''}
-        onValueChange={(v) => setFilter('veredito', (v as Veredito) || undefined)}
+        value={filters.veredito ?? 'all'}
+        onValueChange={(v) => setFilter('veredito', v === 'all' ? undefined : (v as Veredito))}
       >
         <SelectTrigger className="h-9 w-[150px] text-sm">
           <SelectValue placeholder="Veredito" />
@@ -84,8 +84,8 @@ export function DashboardFiltersPanel({ filters, onChange }: DashboardFiltersPro
       </Select>
 
       <Select
-        value={filters.status ?? ''}
-        onValueChange={(v) => setFilter('status', (v as RelatorioStatus) || undefined)}
+        value={filters.status ?? 'all'}
+        onValueChange={(v) => setFilter('status', v === 'all' ? undefined : (v as RelatorioStatus))}
       >
         <SelectTrigger className="h-9 w-[150px] text-sm">
           <SelectValue placeholder="Status" />
@@ -100,9 +100,9 @@ export function DashboardFiltersPanel({ filters, onChange }: DashboardFiltersPro
       </Select>
 
       <Select
-        value={filters.since ? String(Math.round((Date.now() - new Date(filters.since).getTime()) / 86400000)) : ''}
+        value={filters.since ? String(Math.round((Date.now() - new Date(filters.since).getTime()) / 86400000)) : 'all'}
         onValueChange={(days) => {
-          if (!days) {
+          if (!days || days === 'all') {
             setFilter('since', undefined)
             return
           }

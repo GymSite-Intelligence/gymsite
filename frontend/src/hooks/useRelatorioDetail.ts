@@ -335,6 +335,10 @@ export interface CandidatoJSON {
   price_raw?: string
   listing_source?: string
   fonte?: string
+  tipo_imovel_codigo_onr?: number | null
+  tipo_imovel_label?: string | null
+  modalidade?: string | null
+  cartorio?: Record<string, any> | null
 }
 
 export interface CompetidorJSON {
@@ -601,6 +605,10 @@ function mapCandidatoRow(row: Record<string, unknown>): CandidatoJSON {
     listing_source:
       typeof row.listing_source === 'string' ? row.listing_source : undefined,
     fonte: typeof row.fonte === 'string' ? row.fonte : undefined,
+    tipo_imovel_codigo_onr: row.tipo_imovel_codigo_onr != null ? Number(row.tipo_imovel_codigo_onr) : undefined,
+    tipo_imovel_label: typeof row.tipo_imovel_label === 'string' ? row.tipo_imovel_label : undefined,
+    modalidade: typeof row.modalidade === 'string' ? row.modalidade : undefined,
+    cartorio: row.cartorio != null ? (row.cartorio as Record<string, any>) : undefined,
   }
 }
 

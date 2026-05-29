@@ -43,14 +43,33 @@ def run_a8_validation(
     custo_brl: Optional[float] = None,
 ) -> Optional[dict[str, Any]]:
     try:
-        return asyncio.run(
-            run_a8_validation_async(
-                relatorio_markdown,
-                state,
-                relatorio=relatorio,
-                custo_brl=custo_brl,
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(
+                    asyncio.run,
+                    run_a8_validation_async(
+                        relatorio_markdown,
+                        state,
+                        relatorio=relatorio,
+                        custo_brl=custo_brl,
+                    )
+                )
+                return future.result()
+        else:
+            return asyncio.run(
+                run_a8_validation_async(
+                    relatorio_markdown,
+                    state,
+                    relatorio=relatorio,
+                    custo_brl=custo_brl,
+                )
             )
-        )
     except Exception as e:
         logger.warning("A8 falhou: %s", e)
         return None

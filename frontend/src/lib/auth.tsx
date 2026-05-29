@@ -9,7 +9,7 @@
  * - O frontend depende do JWT do user pra ler dados via Supabase JS direto (RLS).
  * - Sessão persistida pelo supabase-js (localStorage).
  */
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
@@ -80,23 +80,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const value: AuthState = {
-    user: session?.user ?? null,
-    session,
-    loading,
-    mockAuth: mockAuthEnabled,
-    signOut: async () => {
-      if (mockAuthEnabled) {
-        setSession(null)
-        authStore.current = null
-        return
-      }
-      await supabase.auth.signOut()
-    },
-    signInDev: () => {
-      if (mockAuthEnabled) setSession(createMockSession())
-    },
-  }
+  const value: AuthState = useMemo(
+    () => ({
+      user: session?.user ?? null,
+      session,
+      loading,
+      mockAuth: mockAuthEnabled,
+      signOut: async () => {
+        if (mockAuthEnabled) {
+          setSession(null)
+          authStore.current = null
+          return
+        }
+        await supabase.auth.signOut()
+      },
+      signInDev: () => {
+        if (mockAuthEnabled) setSession(createMockSession())
+      },
+    }),
+    [session, loading],
+  )
 
   authStore.current = value
 
