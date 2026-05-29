@@ -164,6 +164,8 @@ def _row_outputs(rel: dict, relatorio_id: str) -> dict:
         # do tipo "quais relatórios o DR errou redes que não existem locally?".
         # Quando v1.4 ausente (relatórios antigos), grava {} pra não quebrar.
         "cobertura_redes_a0": out.get("cobertura_redes_a0") or {},
+        "entrantes_cnpj_90d": out.get("entrantes_cnpj_90d") or {},
+        "obras_cno_em_curso": out.get("obras_cno_em_curso") or {},
         "alertas": out.get("alertas_financeiros") or [],
         # embedding fica NULL — gerado depois por job de RAG
     }
@@ -200,6 +202,12 @@ def _rows_candidatos(rel: dict, relatorio_id: str) -> list[dict]:
             "telefone": c.get("telefone") or None,
             "website": c.get("website") or None,
             "tem_24h": bool(c.get("tem_24h", False)),
+            "listing_url": c.get("listing_url") or (
+                c.get("website") if c.get("fonte") == "listing" else None
+            ),
+            "listing_id": c.get("listing_id") or None,
+            "price_raw": c.get("price_raw") or None,
+            "listing_source": c.get("source") or None,
             "proximo_passo": c.get("proximo_passo"),
         })
     return rows

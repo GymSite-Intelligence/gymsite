@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { Check, Copy, MessageCircle, Phone, Mail, Linkedin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { SHOW_WHATSAPP_UI } from '@/lib/feature-flags'
 
 interface ContatoDecisorShape {
   tipo_ponto?: string
@@ -59,8 +60,10 @@ export function ScriptCard({ contato, className }: ScriptCardProps) {
 
   // `??` aqui fallha pra string vazia (`""` é falsy mas não nullish — vira `""` em vez de WHATSAPP).
   // Por isso checa explicitamente com ternário antes de aplicar fallback.
-  const canalKey = contato.canal_recomendado || 'WHATSAPP'
-  const canalCfg = CANAL_CONFIG[canalKey] ?? CANAL_CONFIG.WHATSAPP
+  const canalRaw = contato.canal_recomendado || 'WHATSAPP'
+  const canalKey =
+    !SHOW_WHATSAPP_UI && canalRaw === 'WHATSAPP' ? 'LIGACAO' : canalRaw
+  const canalCfg = CANAL_CONFIG[canalKey] ?? CANAL_CONFIG.LIGACAO
   const CanalIcon = canalCfg.Icon
 
   const handleCopy = async () => {

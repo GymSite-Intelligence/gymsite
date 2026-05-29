@@ -49,6 +49,7 @@ export function BairrosAlternativosTable({
               <th className="text-left p-3 font-medium">Status competitivo</th>
               <th className="text-center p-3 font-medium">Ticket</th>
               <th className="text-center p-3 font-medium">Prioridade</th>
+              <th className="text-left p-3 font-medium">Fonte</th>
             </tr>
           </thead>
           <tbody>
@@ -101,6 +102,19 @@ export function BairrosAlternativosTable({
                     >
                       {prioridade}
                     </span>
+                  </td>
+                  <td className="p-3 text-[10px] font-mono text-muted-foreground align-top max-w-[140px]">
+                    {b.fonte_busca_competidores === 'overpass_osm' ? (
+                      <span title={b.metodologia}>OSM (Maps off)</span>
+                    ) : b.fonte_busca_competidores === 'cnpj_rfb' ? (
+                      <span title={b.metodologia}>CNPJ RFB</span>
+                    ) : b.fonte_busca_competidores === 'google_places' ? (
+                      'Google Places'
+                    ) : b.dados_confiaveis === false ? (
+                      <span className="text-veredito-investigar">Estimativa A3*</span>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                 </tr>
               )

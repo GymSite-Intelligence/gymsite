@@ -1,0 +1,37 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gymsite-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Monta o dataset CNO do host dentro do container.
+      # Configure no .env: CNO_DATA_DIR_HOST=C:\Users\marce\Downloads\cno_extract
+      - ${CNO_DATA_DIR_HOST}:/data/cno:ro
+    env_file:
+      - .env
+    environment:
+      # Performance pipeline (P0) — sobrescreve .env se ainda tiver valores antigos
+      DEEP_RESEARCH_AGENT: deep-research-preview-04-2026
+      DEEP_RESEARCH_TIMEOUT_SEC: "420"
+      CNPJ_ENRIQUECER_MAX: "3"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gymsite-tunnel
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      api:
+        condition: service_healthy

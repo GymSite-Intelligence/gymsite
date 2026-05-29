@@ -84,3 +84,7 @@ competitor_cache/*.md
 # com tokens locais, .env, browser profile, sessions, cache). Decisao
 # pendente sobre versionar openclaw.example.json quando promover.
 .openclaw-edge/
+
+# Scratch e ferramentas locais do Gemini Antigravity
+scratch/
+.gemini/

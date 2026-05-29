@@ -16,6 +16,8 @@ class LayoutId(str, Enum):
     """Resumo executivo 2–4 páginas: veredito, scores, financeiro mid, top candidatos."""
     DATA_ROOM = "data_room"
     """Ênfase em tabelas e números; menos narrativa (due diligence)."""
+    BALA = "bala"
+    """Layout premium: capa impactante, cards de KPI, hierarquia visual moderna."""
 
 
 @dataclass

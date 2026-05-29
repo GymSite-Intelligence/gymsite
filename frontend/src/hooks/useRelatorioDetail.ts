@@ -107,11 +107,36 @@ export interface ComposicaoSegmentoJSON {
   label?: string
 }
 
+export interface SocioAdministradorJSON {
+  nome?: string | null
+  qualificacao?: string | null
+  email?: string | null
+  telefone?: string | null
+  contato_individual_disponivel?: boolean
+}
+
 export interface EntranteCnpjJSON {
   cnpj: string
   cnpj_formatado?: string
   nome_fantasia?: string | null
+  razao_social?: string | null
+  nome_exibicao?: string | null
+  nome_fantasia_inferido_de?: string | null
   razao_social_indisponivel?: boolean
+  bairro?: string | null
+  bairro_fonte?: string | null
+  email_empresa?: string | null
+  telefone_empresa?: string | null
+  email_socio_administrador?: string | null
+  telefone_socio_administrador?: string | null
+  linkedin_url?: string | null
+  socio_administrador?: SocioAdministradorJSON | null
+  qsa?: { nome?: string; qualificacao?: string }[]
+  contato_validado?: boolean
+  contato_validado_em?: string | null
+  contato_validado_por?: string | null
+  dados_completos?: boolean
+  lacunas_contato?: string[]
   data_abertura?: string
   endereco?: string | null
   cep?: string | null
@@ -189,6 +214,8 @@ export interface EntrantesCnpj90dJSON {
   dias?: number
   cutoff?: string
   total?: number
+  entrantes_incompletos?: number
+  enriquecimento_meta?: Record<string, unknown>
   entrantes?: EntranteCnpjJSON[]
   novas_unidades_90d_por_segmento?: Record<string, number>
   fonte?: string
@@ -223,9 +250,12 @@ export interface AcademiaResumoJSON {
 export interface CoberturaRedesA0JSON {
   redes_solicitadas: string[]
   redes_cobertas: string[]
+  redes_locais_validadas?: string[]
+  redes_detectadas_osm?: string[]
   redes_nao_encontradas: string[]
   concorrentes_excluidos?: { nome: string; motivo: string }[]
   tem_redes_fantasma: boolean
+  fonte_redes_locais?: string
 }
 
 export interface MarketContextJSON {
@@ -248,6 +278,8 @@ export interface MarketContextJSON {
   /** Schema v1.5: replicado pra contexto (já existe em input_canonico). */
   tipo_negocio?: string
   principais_redes_concorrentes?: string[]
+  /** Redes citadas pelo DR sem confirmação local (schema v1.11). */
+  redes_dr_nao_validadas?: string[]
   tendencia_mercado?: 'crescimento' | 'estavel' | 'retracao' | string
   regulamentacao_resumo?: string
   insights_estrategicos?: string[]
@@ -469,6 +501,10 @@ export interface BairroAlternativoJSON {
   ticket_sugerido?: string
   concorrentes_no_bairro?: number
   academias_existentes?: string[]
+  /** google_places | overpass_osm — vazio se fallback A3b apenas */
+  fonte_busca_competidores?: string | null
+  dados_confiaveis?: boolean
+  metodologia?: string
 }
 
 export interface DorDominanteJSON {

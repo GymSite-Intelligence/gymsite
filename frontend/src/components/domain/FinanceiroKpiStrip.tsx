@@ -3,22 +3,7 @@
  */
 import { cn } from '@/lib/utils'
 import type { CenarioJSON } from '@/hooks/useRelatorioDetail'
-
-function formatBRL(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  }).format(v)
-}
-
-function formatPayback(m: number | null | undefined): string {
-  if (m == null) return '—'
-  if (m >= 999) return 'inviável'
-  if (m >= 24) return `${(m / 12).toFixed(1)} anos`
-  return `${m} meses`
-}
+import { formatBRL, formatPayback } from '@/lib/format'
 
 export interface FinanceiroKpiStripProps {
   areaM2Min?: number
@@ -35,10 +20,20 @@ export function FinanceiroKpiStrip({
   cenarioMid,
   className,
 }: FinanceiroKpiStripProps) {
-  const areaLabel =
-    areaM2Min != null && areaM2Max != null
-      ? `${areaM2Min.toLocaleString('pt-BR')}–${areaM2Max.toLocaleString('pt-BR')} m²`
-      : '—'
+  const areaLabel = (() => {
+    const hasMin = areaM2Min != null && !Number.isNaN(areaM2Min);
+    const hasMax = areaM2Max != null && !Number.isNaN(areaM2Max);
+    if (hasMin && hasMax) {
+      return `${areaM2Min.toLocaleString('pt-BR')}–${areaM2Max.toLocaleString('pt-BR')} m²`
+    }
+    if (hasMin) {
+      return `≥ ${areaM2Min.toLocaleString('pt-BR')} m²`
+    }
+    if (hasMax) {
+      return `≤ ${areaM2Max.toLocaleString('pt-BR')} m²`
+    }
+    return '—'
+  })()
 
   const aluguel =
     cenarioMid?.custos_detalhados?.aluguel ??

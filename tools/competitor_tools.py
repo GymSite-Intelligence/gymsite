@@ -1,12 +1,10 @@
 # tools/competitor_tools.py
 """Inteligência competitiva profunda: busca, reviews, gap analysis."""
-import os
 import math
 import json
 import httpx
+from tools.google_maps_key import get_google_maps_api_key
 from tools.maps_tools import calcular_distancia_km, geocode_endereco
-
-MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("MAPS_API_KEY", "")
 PLACES_BASE = "https://places.googleapis.com/v1/places"
 
 
@@ -250,49 +248,213 @@ def aplicar_classificacao_dores(
 
 
 # ── Buscas ─────────────────────────────────────────────────────────
-def buscar_academias(bairro: str, cidade: str, raio_metros: int = 3000) -> dict:
+def _buscar_academias_cnpj_bairro(
+    bairro: str,
+    cidade: str,
+    uf: str = "",
+    *,
+    limit: int = 20,
+) -> tuple[list[dict], dict]:
+    """Terceiro canal: parque CNPJ fitness no bairro (Supabase RFB)."""
+    try:
+        from tools.cnpj_fitness_tools import listar_unidades_cnpj_no_bairro
+
+        block = listar_unidades_cnpj_no_bairro(
+            cidade, bairro, uf, limit=limit
+        )
+        if block.get("status") != "ok":
+            return [], block
+        out: list[dict] = []
+        for u in block.get("unidades") or []:
+            if not isinstance(u, dict):
+                continue
+            out.append(
+                {
+                    "place_id": f"cnpj/{u.get('cnpj', '')}",
+                    "nome": u.get("nome", ""),
+                    "endereco": u.get("endereco", ""),
+                    "lat": 0.0,
+                    "lng": 0.0,
+                    "distancia_km": 0.0,
+                    "rating": None,
+                    "num_avaliacoes": 0,
+                    "nivel_preco": "",
+                    "status": "CNPJ_ATIVO",
+                    "tipos": ["gym", "cnpj_fitness"],
+                    "telefone": "",
+                    "website": "",
+                    "tem_24h": False,
+                    "horarios": [],
+                    "fonte_busca": "cnpj_rfb",
+                }
+            )
+        return out, block
+    except Exception as exc:
+        return [], {"status": "erro", "motivo": str(exc)}
+
+
+def _buscar_academias_overpass(
+    lat: float,
+    lng: float,
+    raio_metros: int,
+    *,
+    limit: int = 20,
+) -> tuple[list[dict], dict]:
+    """Retorna (concorrentes, meta_overpass). Lista vazia se fallback desligado ou falhou."""
+    try:
+        from tools.maps_fallback import (
+            fallback_habilitado,
+            overpass_fitness_near,
+            overpass_fitness_to_concorrentes,
+        )
+
+        if not fallback_habilitado():
+            return [], {"erro": "MAPS_FALLBACK_ENABLED desligado"}
+        fb = overpass_fitness_near(lat, lng, raio_metros, limit=limit)
+        if not fb.get("places"):
+            return [], fb
+        return (
+            overpass_fitness_to_concorrentes(fb["places"], lat, lng),
+            fb,
+        )
+    except Exception as exc:
+        return [], {"erro": str(exc)}
+
+
+def buscar_academias(
+    bairro: str,
+    cidade: str,
+    raio_metros: int = 3000,
+    uf: str = "",
+) -> dict:
     """
     Busca academias e fitness centers num raio do bairro/cidade.
     Recebe strings (bairro, cidade) — geocodifica internamente.
-    """
-    if not MAPS_API_KEY:
-        return {"erro": "GOOGLE_MAPS_API_KEY não configurada", "concorrentes": []}
 
-    # Geocode interno
+    Ordem: Geocode (Google → Nominatim) → Places Nearby → Overpass OSM.
+    Sem chave Google ou com API bloqueada, usa OSM quando MAPS_FALLBACK_ENABLED=1.
+    """
     endereco = f"{bairro}, {cidade}, Brasil" if bairro else f"{cidade}, Brasil"
     geo = geocode_endereco(endereco)
     if "error" in geo:
-        return {"erro": geo["error"], "concorrentes": []}
+        return {
+            "erro": geo["error"],
+            "concorrentes": [],
+            "fonte_geocode": geo.get("fonte_geocode"),
+        }
 
     lat, lng = geo["lat"], geo["lng"]
+    fonte_geocode = geo.get("fonte_geocode", "google")
+    api_key = get_google_maps_api_key()
 
-    headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": MAPS_API_KEY,
-        "X-Goog-FieldMask": (
-            "places.id,places.displayName,places.formattedAddress,"
-            "places.location,places.rating,places.userRatingCount,"
-            "places.priceLevel,places.businessStatus,places.types,"
-            "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
-        ),
-    }
-    body = {
-        "locationRestriction": {"circle": {
-            "center": {"latitude": lat, "longitude": lng},
-            "radius": float(raio_metros),
-        }},
-        "includedTypes": ["gym", "fitness_center"],
-        "maxResultCount": 20,
-        "languageCode": "pt-BR",
-    }
-    try:
-        with httpx.Client(timeout=15) as c:
-            data = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers).json()
-    except Exception as e:
-        return {"erro": f"Places API falhou: {e}", "concorrentes": []}
+    # ── Tier 0 Geo (Places Aggregate) — só com chave Google ─────────
+    # Nearby Search no Places API New tem maxResultCount limitado (ex: 20).
+    # Para score competitivo, queremos a densidade REAL no raio.
+    agregados: dict = {}
+    places_ok = False
+    data: dict = {}
+    if api_key:
+        try:
+            from tools.places_aggregate_tools import compute_insight_count_circle
 
-    concorrentes = []
-    for p in data.get("places", []):
+            base = compute_insight_count_circle(
+                latitude=lat,
+                longitude=lng,
+                radius_meters=int(raio_metros),
+                included_types=["gym", "fitness_center"],
+            )
+            hi42 = compute_insight_count_circle(
+                latitude=lat,
+                longitude=lng,
+                radius_meters=int(raio_metros),
+                included_types=["gym", "fitness_center"],
+                min_rating=4.2,
+            )
+            agregados = {
+                "status": "ok" if "erro" not in base else "erro",
+                "count_total": base.get("count") if isinstance(base, dict) else None,
+                "count_rating_ge_4_2": hi42.get("count") if isinstance(hi42, dict) else None,
+                "radius_meters": int(raio_metros),
+                "center": {"lat": lat, "lng": lng},
+                "included_types": ["gym", "fitness_center"],
+                "erros": [e for e in [base.get("erro"), hi42.get("erro")] if e],
+            }
+        except Exception:
+            agregados = {"status": "erro", "motivo": "exception_import_or_call"}
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": (
+                "places.id,places.displayName,places.formattedAddress,"
+                "places.location,places.rating,places.userRatingCount,"
+                "places.priceLevel,places.businessStatus,places.types,"
+                "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
+            ),
+        }
+        body = {
+            "locationRestriction": {"circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": float(raio_metros),
+            }},
+            "includedTypes": ["gym", "fitness_center"],
+            "maxResultCount": 20,
+            "languageCode": "pt-BR",
+        }
+        try:
+            with httpx.Client(timeout=15) as c:
+                resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
+                data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                places_ok = resp.status_code == 200 and bool(data.get("places"))
+        except Exception as e:
+            places_ok = False
+            data = {"error": str(e)}
+
+    concorrentes: list[dict] = []
+    fonte_busca = "google_places"
+    if not places_ok:
+        concorrentes, _fb_meta = _buscar_academias_overpass(lat, lng, raio_metros, limit=20)
+        if concorrentes:
+            fonte_busca = "overpass_osm"
+            agregados = {
+                **(agregados if isinstance(agregados, dict) else {}),
+                "status": "fallback_osm",
+                "count_total": len(concorrentes),
+                "nota": (
+                    "Google Places indisponível ou sem chave — "
+                    "contagem via OpenStreetMap (Overpass)"
+                ),
+            }
+        if not concorrentes and bairro.strip():
+            concorrentes, _cnpj_meta = _buscar_academias_cnpj_bairro(
+                bairro, cidade, uf, limit=20
+            )
+            if concorrentes:
+                fonte_busca = "cnpj_rfb"
+                agregados = {
+                    **(agregados if isinstance(agregados, dict) else {}),
+                    "status": "fallback_cnpj",
+                    "count_total": len(concorrentes),
+                    "nota": (
+                        "Google/OSM sem resultados — parque ativo CNPJ (RFB) no bairro"
+                    ),
+                }
+        if not concorrentes:
+            err = (
+                data.get("error", {}).get("message")
+                if isinstance(data.get("error"), dict)
+                else data.get("error")
+            )
+            if not api_key:
+                err = err or "Maps/OSM/CNPJ sem academias no bairro"
+            return {
+                "erro": f"Busca de academias falhou: {err or 'sem resultados'}",
+                "concorrentes": [],
+                "fonte_geocode": fonte_geocode,
+                "fonte_busca_competidores": "nenhuma",
+            }
+
+    for p in (data.get("places") or []) if places_ok else []:
         plat = p.get("location", {}).get("latitude", 0)
         plng = p.get("location", {}).get("longitude", 0)
         horarios = p.get("regularOpeningHours", {})
@@ -314,27 +476,55 @@ def buscar_academias(bairro: str, cidade: str, raio_metros: int = 3000) -> dict:
             "website": p.get("websiteUri", ""),
             "tem_24h": tem_24h,
             "horarios": periodos[:3],
+            "fonte_busca": "google_places",
         })
-    concorrentes.sort(key=lambda x: x["distancia_km"])
+    if places_ok:
+        concorrentes.sort(key=lambda x: x["distancia_km"])
+
+    total_nearby = len(concorrentes)
+    total_agregado = (
+        int(agregados.get("count_total"))
+        if isinstance(agregados, dict) and agregados.get("count_total") is not None
+        else None
+    )
+
+    redes_osm: list[str] = []
+    if fonte_busca == "overpass_osm" and concorrentes:
+        try:
+            from tools.local_market_facts import inferir_redes_de_concorrentes
+
+            redes_osm = inferir_redes_de_concorrentes(concorrentes)
+        except Exception:
+            redes_osm = []
 
     return {
         "bairro": bairro,
         "cidade": cidade,
         "raio_metros": raio_metros,
         "lat_centro": lat, "lng_centro": lng,
-        "total_encontrados": len(concorrentes),
+        "fonte_geocode": fonte_geocode,
+        # `total_encontrados` passa a refletir o melhor estimate disponível
+        # para densidade no raio: Aggregate (se disponível) > Nearby (limitado).
+        "total_encontrados": total_agregado if total_agregado is not None else total_nearby,
+        "total_encontrados_nearby": total_nearby,
+        # Contagem agregada (se disponível) — mais fiel que len(concorrentes)
+        # quando há >20 academias no raio.
+        "total_encontrados_agregado": total_agregado,
+        "agregados_competicao_places": agregados,
+        "fonte_busca_competidores": fonte_busca,
+        "redes_detectadas_osm": redes_osm,
         "concorrentes": concorrentes,
     }
 
 
 def buscar_reviews_academia(place_id: str, nome_academia: str = "") -> dict:
     """Busca reviews via Places Details API (Places API New)."""
-    if not MAPS_API_KEY:
-        return {"erro": "GOOGLE_MAPS_API_KEY não configurada", "reviews": []}
+    if not get_google_maps_api_key():
+        return {"erro": "GOOGLE_get_google_maps_api_key() não configurada", "reviews": []}
 
     headers = {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": MAPS_API_KEY,
+        "X-Goog-Api-Key": get_google_maps_api_key(),
         "X-Goog-FieldMask": "id,displayName,rating,userRatingCount,reviews",
     }
     try:
@@ -471,6 +661,8 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
 
     todas_dores = {}                # {dor: total_count}
     dores_por_academia = {}         # {dor: {academia_nome: count_neste_concorrente}}
+    categorias_dor = {}             # {categoria_dor: total_count}
+    categorias_por_academia = {}
     servicos_oferecidos = set()
     ratings_por_academia = {}
 
@@ -492,6 +684,12 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
                 continue
             dores = review.get("dores_detectadas", []) or []
             servs = review.get("servicos_mencionados", []) or []
+            cat = (review.get("categoria_dor") or "").strip()
+            if cat and cat.lower() not in ("outra", "outras", ""):
+                categorias_dor[cat] = categorias_dor.get(cat, 0) + 1
+                if cat not in categorias_por_academia:
+                    categorias_por_academia[cat] = {}
+                categorias_por_academia[cat][nome] = categorias_por_academia[cat].get(nome, 0) + 1
             if isinstance(dores, list):
                 for dor in dores:
                     if not isinstance(dor, str):
@@ -505,7 +703,12 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
                     if isinstance(srv, str):
                         servicos_oferecidos.add(srv)
 
-    dores_rankeadas = sorted(todas_dores.items(), key=lambda x: x[1], reverse=True)
+    # Prioriza taxonomia semântica (Gemini) quando disponível; fallback substring.
+    if categorias_dor:
+        dores_rankeadas = sorted(categorias_dor.items(), key=lambda x: x[1], reverse=True)
+        dores_por_academia = categorias_por_academia
+    else:
+        dores_rankeadas = sorted(todas_dores.items(), key=lambda x: x[1], reverse=True)
     gaps_servicos = list(set(SERVICOS_ACADEMIA) - servicos_oferecidos)
 
     # Mapa dor → solução
@@ -595,6 +798,41 @@ def classificar_saturacao(num_concorrentes: int, raio_km: float) -> str:
     elif densidade < 0.8: return "MEDIO"
     elif densidade < 1.5: return "ALTO"
     else:                 return "SATURADO"
+
+
+def panorama_saturacao(
+    *,
+    total_raio: int,
+    total_analisados: int,
+    raio_km: float = 3.0,
+    cnpj_cidade: int | None = None,
+) -> dict:
+    """
+    Saturação primária = densidade no raio (Places nearby, academia tradicional).
+    Secundária = amostra analisada (top 10) + referência CNPJ municipal.
+    """
+    area = math.pi * raio_km ** 2
+    densidade_raio = round(total_raio / area, 2) if area > 0 else 0.0
+    return {
+        "nivel_saturacao": classificar_saturacao(total_raio, raio_km),
+        "nivel_saturacao_amostra": classificar_saturacao(total_analisados, raio_km),
+        "total_encontrados_raio": total_raio,
+        "total_concorrentes_analisados": total_analisados,
+        "densidade_por_km2": densidade_raio,
+        "raio_km": raio_km,
+        "cnpj_parque_ativo_cidade": cnpj_cidade,
+        "cnpj_academias_ativas_cidade": cnpj_cidade,  # alias legado
+        "metodologia": (
+            f"Saturação principal: {total_raio} academias tradicionais no raio "
+            f"{raio_km} km ({densidade_raio}/km²). Amostra aprofundada: "
+            f"{total_analisados} unidades (reviews + dores). "
+            + (
+                f"Parque ativo municipal (CNPJ): {cnpj_cidade} unidades."
+                if cnpj_cidade is not None
+                else "Parque ativo municipal (CNPJ) indisponível."
+            )
+        ),
+    }
 
 
 def calcular_score_concorrencia(num_concorrentes: int, rating_medio: float,
@@ -776,6 +1014,18 @@ def extrair_bairro_endereco(endereco: str) -> str | None:
     return None
 
 
+def _aplicar_bairro_concorrente(c: dict) -> None:
+    """Preenche bairro_concorrente (+ chave normalizada) a partir do endereço."""
+    if not isinstance(c, dict) or c.get("bairro_concorrente"):
+        return
+    from tools.bairro_normalize import formatar_bairro_exibicao, normalizar_bairro
+
+    raw = extrair_bairro_endereco(c.get("endereco", ""))
+    if raw:
+        c["bairro_concorrente"] = formatar_bairro_exibicao(raw)
+        c["bairro_concorrente_chave"] = normalizar_bairro(raw)
+
+
 # ── Macro-tool de busca + reconciliação A0 para A3a (VEC-379) ───────
 def _parse_market_context(raw):
     """
@@ -908,12 +1158,12 @@ def _buscar_rede_geofenced(
     Returns:
         Dict do match mais próximo, ou None se nenhuma unidade no raio.
     """
-    if not MAPS_API_KEY:
+    if not get_google_maps_api_key():
         return None
 
     headers = {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": MAPS_API_KEY,
+        "X-Goog-Api-Key": get_google_maps_api_key(),
         "X-Goog-FieldMask": (
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.rating,places.userRatingCount,"
@@ -1027,8 +1277,7 @@ def buscar_concorrentes_balanceados(
     # Permite que A6 agrupe geograficamente e detecte se bairros sugeridos
     # como alternativa estão de fato saturados (VEC-387).
     for c in todas:
-        if isinstance(c, dict) and not c.get("bairro_concorrente"):
-            c["bairro_concorrente"] = extrair_bairro_endereco(c.get("endereco", ""))
+        _aplicar_bairro_concorrente(c)
 
     # Lê redes do A0 do session state
     redes_a0: list[str] = []
@@ -1053,6 +1302,18 @@ def buscar_concorrentes_balanceados(
         else:
             redes_pendentes.append(rede)
 
+    redes_detectadas_osm = (
+        busca_nearby.get("redes_detectadas_osm")
+        if isinstance(busca_nearby.get("redes_detectadas_osm"), list)
+        else []
+    )
+    if not redes_cobertas and redes_detectadas_osm:
+        redes_cobertas = list(redes_detectadas_osm)
+        if redes_a0:
+            redes_pendentes = [r for r in redes_a0 if r not in redes_cobertas]
+        else:
+            redes_pendentes = []
+
     # Busca expandida para redes pendentes (geo-fenced).
     #
     # IMPORTANTE: a busca expandida FICA centrada no bairro alvo (lat_alvo/lng_alvo),
@@ -1076,8 +1337,7 @@ def buscar_concorrentes_balanceados(
             # Marca origem + distância pra A6 sinalizar no markdown
             match["origem_busca"] = "expandida_a0"
             match["dentro_do_raio_alvo"] = True
-            if not match.get("bairro_concorrente"):
-                match["bairro_concorrente"] = extrair_bairro_endereco(match.get("endereco", ""))
+            _aplicar_bairro_concorrente(match)
             todas.append(match)
             redes_cobertas.append(rede)
         else:
@@ -1157,18 +1417,47 @@ def buscar_concorrentes_balanceados(
             if len(top_5) >= ALVO_TOTAL:
                 break
 
+    def _resumo_unidade(c: dict, *, rede: str | None = None) -> dict:
+        return {
+            "nome": c.get("nome", ""),
+            "rating": c.get("rating_oficial") or c.get("rating_geral"),
+            "num_avaliacoes": c.get("num_avaliacoes"),
+            "endereco": c.get("endereco", ""),
+            "bairro": c.get("bairro_concorrente") or extrair_bairro_endereco(c.get("endereco", "")),
+            "place_id": c.get("place_id"),
+            "is_independente": rede is None,
+            "rede_vinculada": rede,
+        }
+
+    top_independentes = [
+        _resumo_unidade(c) for c in grupos.get("_outros", [])[:5]
+    ]
+    academias_analisadas: list[dict] = []
+    for c in top_5:
+        rede = _classify(c)
+        rede_label = None if rede == "_outros" else rede
+        academias_analisadas.append(_resumo_unidade(c, rede=rede_label))
+
     return {
         "bairro": bairro,
         "cidade": cidade,
         "raio_metros": raio_metros,
         "total_encontrados": len(todas),
+        # Propaga a contagem agregada (quando disponível) para o envelope do A3a/A3b.
+        "total_encontrados_agregado": busca_nearby.get("total_encontrados_agregado"),
+        # Count do Nearby (limitado por maxResultCount) — útil pra transparência.
+        "total_encontrados_nearby": busca_nearby.get("total_encontrados_nearby"),
+        "agregados_competicao_places": busca_nearby.get("agregados_competicao_places") or {},
         "concorrentes": todas,
         # Nome legacy mantido pra compat — agora pode ter até 10 itens.
         "concorrentes_top_5_balanceados": top_5,
         "concorrentes_balanceados": top_5,
+        "top_independentes": top_independentes,
+        "academias_analisadas": academias_analisadas,
         "redes_a0_solicitadas": redes_a0,
         "redes_a0_cobertas": redes_cobertas,
         "redes_a0_nao_encontradas": redes_nao_encontradas,
+        "redes_detectadas_osm": redes_detectadas_osm,
         "metodologia": (
             f"Top {len(top_5)} balanceado: até {MAX_REDES_NO_TOP} redes do A0 "
             "(1 unidade cada, a com mais num_avaliacoes), restante preenchido "
@@ -1228,6 +1517,9 @@ def _slim_concorrente(c: dict) -> dict:
             reviews_slim.append({
                 "rating": r.get("rating"),
                 "dores_detectadas": r.get("dores_detectadas") or [],
+                "categoria_dor": r.get("categoria_dor"),
+                "sinal": r.get("sinal"),
+                "confianca_classificacao": r.get("confianca_classificacao"),
                 "servicos_mencionados": r.get("servicos_mencionados") or [],
                 "quote_curta": (r.get("quote_curta") or "")[:180],
                 "autor": r.get("autor"),
@@ -1249,6 +1541,8 @@ def _slim_concorrente(c: dict) -> dict:
         "horarios_pico": c.get("horarios_pico"),
         "servicos_oferecidos": (am.get("servicos_ofertados") or [])[:15] if isinstance(am, dict) else [],
         "reclamacoes_marketing": (am.get("principais_reclamacoes") or [])[:8] if isinstance(am, dict) else [],
+        "is_independente": bool(c.get("is_independente")),
+        "rede_vinculada": c.get("rede_vinculada"),
     }
 
 
@@ -1384,9 +1678,27 @@ async def analisar_concorrentes_a3a_completo(
     )
     aplicar_classificacao_dores(concorrentes_brutos, classificacoes)
 
+    redes_a0 = busca.get("redes_a0_solicitadas") or []
+    for c in concorrentes_brutos:
+        nome = c.get("nome", "")
+        rede_match = next((r for r in redes_a0 if _matches_rede(nome, r)), None)
+        c["is_independente"] = rede_match is None
+        c["rede_vinculada"] = rede_match
+
     return {
         "escopo_busca": "academia_tradicional",
         "total_concorrentes": len(concorrentes_brutos),
+        # Usa contagem agregada quando disponível (Tier 0 Geo),
+        # fallback para o count do Nearby Search (limitado a maxResultCount).
+        "total_encontrados_raio": (
+            busca.get("total_encontrados_agregado")
+            if busca.get("total_encontrados_agregado") is not None
+            else busca.get("total_encontrados", 0)
+        ),
+        "total_encontrados_raio_nearby": busca.get("total_encontrados_nearby"),
+        "agregados_competicao_places": busca.get("agregados_competicao_places") or {},
+        "top_independentes": busca.get("top_independentes", []),
+        "academias_analisadas": busca.get("academias_analisadas", []),
         "concorrentes_brutos": concorrentes_brutos,
         "concorrentes_excluidos": excluidos,
         "redes_a0_solicitadas": busca.get("redes_a0_solicitadas", []),
@@ -1432,17 +1744,27 @@ def analisar_concorrentes_completo(tool_context) -> dict:
 
     raw = state.get("concorrentes_brutos")
     bairro = state.get("bairro") or ""
+    cidade = state.get("cidade") or ""
+    envelope: dict = {}
 
     # A3a também emite via output_key — pode vir como markdown com ```json fence,
     # mesmo problema do market_context. Reusa o parser robusto.
     if isinstance(raw, list):
         lista = raw
+    elif isinstance(raw, dict):
+        envelope = raw
+        lista = raw.get("concorrentes_brutos") or raw.get("concorrentes") or []
+        bairro = bairro or raw.get("bairro") or ""
+        cidade = cidade or raw.get("cidade") or ""
     else:
         parsed = _parse_market_context(raw)
         if isinstance(parsed, dict):
+            envelope = parsed
             lista = parsed.get("concorrentes_brutos") or parsed.get("concorrentes") or []
             if not bairro:
                 bairro = parsed.get("bairro") or ""
+            if not cidade:
+                cidade = parsed.get("cidade") or ""
         elif isinstance(parsed, list):
             lista = parsed
         else:
@@ -1494,8 +1816,49 @@ def analisar_concorrentes_completo(tool_context) -> dict:
     ratings = [s.get("rating_geral") for s in slim if s.get("rating_geral") is not None]
     rating_medio = round(sum(ratings) / len(ratings), 2) if ratings else 0.0
     num = len(slim)
-    saturacao = classificar_saturacao(num, raio_km=3.0)
-    score_conc = calcular_score_concorrencia(num, rating_medio, saturacao)
+    total_raio = int(
+        envelope.get("total_encontrados_raio")
+        or envelope.get("total_encontrados")
+        or num
+    )
+    total_raio_nearby = envelope.get("total_encontrados_raio_nearby")
+    try:
+        total_raio_nearby = int(total_raio_nearby) if total_raio_nearby is not None else None
+    except (TypeError, ValueError):
+        total_raio_nearby = None
+
+    cnpj_cidade: int | None = None
+    mc_raw = state.get("market_context")
+    mc = _parse_market_context(mc_raw) if mc_raw is not None else {}
+    if isinstance(mc, dict):
+        mc_inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
+        val = mc_inner.get("parque_ativo_total")
+        if not isinstance(val, int):
+            val = mc_inner.get("academias_ativas_cidade_cnpj")
+        if isinstance(val, int):
+            cnpj_cidade = val
+        elif not cidade:
+            cidade = mc_inner.get("cidade") or ""
+    if cnpj_cidade is None and cidade:
+        try:
+            from tools.cnpj_fitness_tools import count_parque_ativo
+
+            uf_mc = ""
+            if isinstance(mc, dict):
+                mc_inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
+                uf_mc = (mc_inner.get("uf") or "") if isinstance(mc_inner, dict) else ""
+            cnpj_cidade = count_parque_ativo(cidade, uf_mc)
+        except Exception:
+            cnpj_cidade = None
+
+    pano = panorama_saturacao(
+        total_raio=total_raio,
+        total_analisados=num,
+        raio_km=3.0,
+        cnpj_cidade=cnpj_cidade,
+    )
+    saturacao = pano["nivel_saturacao"]
+    score_conc = calcular_score_concorrencia(total_raio, rating_medio, saturacao)
 
     # Distribuição geográfica — agrupa concorrentes por bairro_concorrente.
     # Usado pelo A6 para (a) etiquetar concorrentes na seção de inteligência
@@ -1525,8 +1888,14 @@ def analisar_concorrentes_completo(tool_context) -> dict:
         },
         "estrategia_counter_programming": picos,
         "nivel_saturacao": saturacao,
+        "panorama_competitivo": pano,
+        "agregados_competicao_places": envelope.get("agregados_competicao_places") or {},
         "rating_medio_concorrentes": rating_medio,
         "score_concorrencia": score_conc,
         "total_concorrentes_analisados": num,
+        "total_encontrados_raio": total_raio,
+        "total_encontrados_raio_nearby": total_raio_nearby,
+        "top_independentes": envelope.get("top_independentes") or [],
+        "academias_analisadas": envelope.get("academias_analisadas") or [],
         "distribuicao_geografica": distribuicao_geografica,
     }

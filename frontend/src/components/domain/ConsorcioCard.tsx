@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { SHOW_WHATSAPP_UI } from '@/lib/feature-flags'
 import {
   CONSORCIO_TAXA_ADMIN_PCT,
   CONSORCIO_TAXA_FUNDO_RESERVA_PCT,
@@ -67,12 +68,14 @@ function ConsorcioCardEmpty({ className }: { className?: string }) {
         </div>
       </div>
 
-      <Button asChild className="gap-2 w-full sm:w-auto">
-        <a href={VECTRA_CONTATO_URL} target="_blank" rel="noopener noreferrer">
-          <MessageCircle size={14} aria-hidden />
-          Falar com Vectra Cargo
-        </a>
-      </Button>
+      {SHOW_WHATSAPP_UI && (
+        <Button asChild className="gap-2 w-full sm:w-auto">
+          <a href={VECTRA_CONTATO_URL} target="_blank" rel="noopener noreferrer">
+            <MessageCircle size={14} aria-hidden />
+            Falar com Vectra Cargo
+          </a>
+        </Button>
+      )}
     </article>
   )
 }
@@ -288,12 +291,14 @@ function ConsorcioCardWithCapex({
         probabilidade de contemplação por sorteio.
       </p>
 
-      <Button asChild className="gap-2 w-full sm:w-auto">
-        <a href={VECTRA_CONTATO_URL} target="_blank" rel="noopener noreferrer">
-          <MessageCircle size={14} aria-hidden />
-          Falar com Vectra Cargo
-        </a>
-      </Button>
+      {SHOW_WHATSAPP_UI && (
+        <Button asChild className="gap-2 w-full sm:w-auto">
+          <a href={VECTRA_CONTATO_URL} target="_blank" rel="noopener noreferrer">
+            <MessageCircle size={14} aria-hidden />
+            Falar com Vectra Cargo
+          </a>
+        </Button>
+      )}
     </article>
   )
 }

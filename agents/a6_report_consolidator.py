@@ -174,10 +174,9 @@ def _norm_cidade(cidade: str) -> str:
     Lowercase + strip + remove acentos pra lookup robusto.
     'São Paulo' → 'sao paulo', 'Eusébio' → 'eusebio'.
     """
-    import unicodedata
-    s = (cidade or "").lower().strip()
-    nfkd = unicodedata.normalize("NFKD", s)
-    return "".join(c for c in nfkd if not unicodedata.combining(c))
+    from tools.bairro_normalize import normalizar_bairro
+
+    return normalizar_bairro(cidade)
 
 
 def detectar_bairro_que_eh_cidade(bairro: str, cidade: str) -> str | None:
@@ -306,8 +305,8 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
     quando na realidade Google mostra dezenas de academias lá.
 
     Agora: para cada bairro alternativo, faz `buscar_academias()` em raio
-    de 2km especificamente. Custo extra: ~4 chamadas Places API por relatório
-    (~$0.13 USD ≈ R$ 0,72). Tradeoff aceito para evitar falsa segurança.
+    de 2km (Google Places → fallback Overpass/OSM se API bloqueada).
+    Se a busca falhar, tenta OSM de novo antes de cair na distribuição do A3b.
 
     Lê do session state:
       - market_context.cidade (output do A0)
@@ -331,6 +330,7 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
 
     state = getattr(tool_context, "state", None)
     cidade = ""
+    uf = ""
     distribuicao: list = []
 
     if state is not None:
@@ -339,6 +339,7 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
             inner_candidate = ctx.get("market_context")
             inner = inner_candidate if isinstance(inner_candidate, dict) else ctx
             cidade = (inner.get("cidade") or "").strip()
+            uf = (inner.get("uf") or "").strip()
 
         ic = _parse_market_context(state.get("inteligencia_competitiva"))
         if isinstance(ic, dict):
@@ -348,8 +349,10 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
                 if isinstance(inner_ic, dict):
                     distribuicao = inner_ic.get("distribuicao_geografica") or []
 
+    from tools.bairro_normalize import normalizar_bairro, partes_bairro_alvo
+
     bairro_alvo = _bairro_alvo_da_busca(state)
-    bairro_alvo_low = bairro_alvo.lower().strip()
+    bairro_alvo_chave = normalizar_bairro(bairro_alvo)
 
     # ── Cross-município fix ──────────────────────────────────────────
     # Quando o A0 trata o município alvo como bairro (caso Eusébio dentro
@@ -397,18 +400,58 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
             continue
 
         bairro_principal = partes[0]
-        partes_low = {p.lower().strip() for p in partes}
+        partes_chave = set(partes_bairro_alvo(bairro_alt) or [normalizar_bairro(p) for p in partes])
         count_total = 0
         academias_existentes: list[str] = []
         place_ids_vistos: set = set()
+        fontes_busca: list[str] = []
+        fonte_dominante = ""
         metodologia = "busca real (raio 2km, filtros: academia tradicional + match de bairro)"
 
         try:
             for parte in partes:
-                resultado = buscar_academias(parte, cidade_para_busca, raio_metros=2000)
-                if "erro" in resultado:
-                    raise RuntimeError(resultado.get("erro"))
+                resultado = buscar_academias(
+                    parte, cidade_para_busca, raio_metros=2000, uf=uf or "CE"
+                )
                 concorrentes = resultado.get("concorrentes") or []
+                fonte_parte = resultado.get("fonte_busca_competidores") or ""
+
+                # Canal 2: OSM — se Places falhou mas geocode ok
+                if not concorrentes and resultado.get("erro"):
+                    try:
+                        from tools.competitor_tools import _buscar_academias_overpass
+                        from tools.maps_tools import geocode_endereco
+
+                        geo_p = geocode_endereco(f"{parte}, {cidade_para_busca}, Brasil")
+                        if "error" not in geo_p:
+                            osm_list, _ = _buscar_academias_overpass(
+                                geo_p["lat"], geo_p["lng"], 2000, limit=20
+                            )
+                            if osm_list:
+                                concorrentes = osm_list
+                                fonte_parte = "overpass_osm"
+                    except Exception:
+                        pass
+
+                # Canal 3: CNPJ RFB — parque ativo no bairro (Supabase)
+                if not concorrentes:
+                    try:
+                        from tools.competitor_tools import _buscar_academias_cnpj_bairro
+
+                        cnpj_list, cnpj_blk = _buscar_academias_cnpj_bairro(
+                            parte, cidade_para_busca, uf or "CE", limit=25
+                        )
+                        if cnpj_list:
+                            concorrentes = cnpj_list
+                            fonte_parte = "cnpj_rfb"
+                    except Exception:
+                        pass
+
+                if fonte_parte:
+                    fontes_busca.append(fonte_parte)
+                if not concorrentes and resultado.get("erro"):
+                    raise RuntimeError(resultado.get("erro"))
+
                 for c in concorrentes:
                     if not isinstance(c, dict):
                         continue
@@ -431,12 +474,14 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
                     bairro_concorrente = ""
                     try:
                         from tools.competitor_tools import extrair_bairro_endereco
-                        bairro_concorrente = (
+
+                        bairro_concorrente_raw = (
                             extrair_bairro_endereco(c.get("endereco", "")) or ""
-                        ).lower().strip()
+                        )
+                        bairro_concorrente = normalizar_bairro(bairro_concorrente_raw)
                     except Exception:
                         pass
-                    if bairro_alvo_low and bairro_concorrente == bairro_alvo_low:
+                    if bairro_alvo_chave and bairro_concorrente == bairro_alvo_chave:
                         continue
 
                     # Match de bairro com tolerância: se bairro_concorrente
@@ -444,10 +489,14 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
                     # o nome da academia menciona alguma das partes
                     # (ex: "TP FITNESS ACADEMIAS | MARAPONGA" sem bairro
                     # extraído deve contar como Maraponga).
-                    if bairro_concorrente and bairro_concorrente not in partes_low:
-                        nome_low = (c.get("nome") or "").lower()
-                        nome_bate_bairro = any(p in nome_low for p in partes_low)
-                        if not nome_bate_bairro:
+                    usa_fallback_geo = (
+                        fonte_parte in ("overpass_osm", "cnpj_rfb")
+                        or c.get("fonte_busca") in ("overpass_osm", "cnpj_rfb")
+                    )
+                    if bairro_concorrente and bairro_concorrente not in partes_chave:
+                        nome_low = normalizar_bairro(c.get("nome") or "")
+                        nome_bate_bairro = any(p in nome_low for p in partes_chave)
+                        if not nome_bate_bairro and not usa_fallback_geo:
                             continue
                     place_ids_vistos.add(pid)
                     count_total += 1
@@ -455,10 +504,15 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
                     if nome_academia not in academias_existentes:
                         academias_existentes.append(nome_academia)
         except Exception as e:
-            # Fallback: usa distribuicao_geografica do A3b
-            metodologia = f"fallback distribuicao_geografica (busca falhou: {type(e).__name__})"
+            # Último recurso: distribuição do raio do bairro alvo (A3b) — incompleta
+            # para bairros distantes; não tratar como "sem concorrentes" confiável.
+            metodologia = (
+                f"fallback distribuicao_geografica (busca Maps/OSM falhou: "
+                f"{type(e).__name__}) — contagem pode estar subestimada"
+            )
             count_total = 0
             academias_existentes = []
+            fonte_dominante = ""
             for parte in partes:
                 p_low = parte.lower()
                 count_total += saturados_fallback.get(p_low, 0)
@@ -471,6 +525,26 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
 
         status, prioridade = _classificar_status_competitivo(count_total)
 
+        if not fonte_dominante:
+            if "google_places" in fontes_busca:
+                fonte_dominante = "google_places"
+            elif "overpass_osm" in fontes_busca:
+                fonte_dominante = "overpass_osm"
+            elif "cnpj_rfb" in fontes_busca:
+                fonte_dominante = "cnpj_rfb"
+            else:
+                fonte_dominante = ""
+        if fonte_dominante == "overpass_osm":
+            metodologia = (
+                f"{metodologia} | fonte: OpenStreetMap (Google Places indisponível)"
+            )
+        elif fonte_dominante == "cnpj_rfb":
+            metodologia = (
+                f"{metodologia} | fonte: CNPJ RFB parque ativo (Maps/OSM indisponíveis)"
+            )
+        elif fonte_dominante == "google_places":
+            metodologia = f"{metodologia} | fonte: Google Places"
+
         enriquecidos.append({
             **entry,
             "bairro_principal_busca": bairro_principal,
@@ -479,6 +553,9 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
             "status": status,
             "prioridade_ajustada": prioridade,
             "metodologia": metodologia,
+            "fonte_busca_competidores": fonte_dominante or None,
+            "dados_confiaveis": fonte_dominante
+            in ("google_places", "overpass_osm", "cnpj_rfb"),
         })
 
     # Reordena: ALTA > MEDIA > BAIXA. Empate → menor count.
@@ -499,6 +576,83 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
         "distribuicao_geografica": distribuicao,
         "bairros_alternativos": enriquecidos,
     }
+
+
+def _precompute_entrantes_cnpj(callback_context) -> dict:
+    """Carrega lista de entrantes CNPJ (90d) para o relatório — sem LLM."""
+    from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
+    from tools.competitor_tools import _parse_market_context
+
+    state = getattr(callback_context, "state", {}) or {}
+    raw_mc = state.get("market_context")
+    mc = _parse_market_context(raw_mc)
+    inner_mc = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
+    if not isinstance(inner_mc, dict):
+        inner_mc = {}
+
+    cidade = (inner_mc.get("cidade") or state.get("cidade") or "").strip()
+    uf = (inner_mc.get("uf") or state.get("uf") or "").strip()
+    if not cidade:
+        return {"status": "indisponivel", "motivo": "cidade_ausente", "entrantes": []}
+
+    return listar_entrantes_cnpj_fitness(cidade, uf, dias=90, limit=50)
+
+
+def _precompute_obras_cno(callback_context) -> dict:
+    """Obras fitness em andamento (CNO) — nome, m², bairro, data início."""
+    import os
+    from pathlib import Path
+
+    from tools.competitor_tools import _parse_market_context
+
+    state = getattr(callback_context, "state", {}) or {}
+    raw_mc = state.get("market_context")
+    mc = _parse_market_context(raw_mc)
+    inner_mc = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
+    if not isinstance(inner_mc, dict):
+        inner_mc = {}
+
+    cidade = (inner_mc.get("cidade") or state.get("cidade") or "").strip()
+    uf = (inner_mc.get("uf") or state.get("uf") or "").strip()
+    if not cidade:
+        return {"status": "indisponivel", "motivo": "cidade_ausente", "obras": []}
+
+    cno_dir = (os.getenv("CNO_DATA_DIR") or "").strip()
+    if not cno_dir or not Path(cno_dir).is_dir():
+        cno_dir_host = (os.getenv("CNO_DATA_DIR_HOST") or "").strip()
+        if cno_dir_host and Path(cno_dir_host).is_dir():
+            cno_dir = cno_dir_host
+    if not cno_dir or not Path(cno_dir).is_dir():
+        return {"status": "nao_configurado", "motivo": "CNO_DATA_DIR ausente", "obras": []}
+
+    try:
+        from tools.cno_fitness_tools import (
+            calcular_benchmark_tempo_obra_cno,
+            listar_obras_fitness_em_curso,
+            slim_obras_para_relatorio,
+        )
+
+        bairro_alvo = (inner_mc.get("bairro") or state.get("bairro") or "").strip()
+        cidade_efetiva, _ = resolver_cidade_efetiva(cidade, bairro_alvo)
+
+        bench = calcular_benchmark_tempo_obra_cno(
+            cno_dir=cno_dir, cidade=cidade_efetiva, uf=uf
+        )
+        # Escopo municipal — não filtrar só o bairro do relatório.
+        block = listar_obras_fitness_em_curso(
+            cno_dir=cno_dir,
+            cidade=cidade_efetiva,
+            uf=uf,
+            limit=40,
+            benchmark_tempo=bench,
+            bairro_filtro=None,
+        )
+        slim = slim_obras_para_relatorio(block, benchmark_tempo=bench)
+        if isinstance(slim, dict) and bairro_alvo:
+            slim["bairro_relatorio"] = bairro_alvo
+        return slim
+    except Exception as exc:
+        return {"status": "erro", "motivo": str(exc), "obras": []}
 
 
 def _a6_precompute_callback(callback_context):
@@ -523,6 +677,16 @@ def _a6_precompute_callback(callback_context):
         callback_context.state["bairros_alternativos_pronto"] = result
     except Exception:
         pass  # falha silenciosa — não bloqueia o pipeline
+    try:
+        callback_context.state["entrantes_cnpj_pronto"] = _precompute_entrantes_cnpj(
+            callback_context
+        )
+    except Exception:
+        pass
+    try:
+        callback_context.state["obras_cno_pronto"] = _precompute_obras_cno(callback_context)
+    except Exception:
+        pass
     try:
         _telemetry_before(callback_context)
     except Exception:
@@ -592,8 +756,10 @@ def _renderizar_secao_bairros_alternativos(pronto: dict) -> str:
     linhas.append("")
     if alternativos:
         linhas.append(
-            "Status competitivo vem de **busca real no Google Places** (raio 2km "
-            "em cada bairro alternativo) — não de extrapolação do raio do bairro alvo."
+            "Status competitivo vem de **busca real por bairro** (raio 2km): "
+            "1) **Google Places** (preferencial); 2) **OpenStreetMap** se Maps falhar; "
+            "3) **CNPJ RFB** (parque ativo no bairro, Supabase) se Maps+OSM vazios. "
+            "Não extrapola só o raio do bairro alvo (fallback A3* = baixa confiança)."
         )
         linhas.append("")
         linhas.append("| Bairro | Motivo | Status competitivo | Ticket sugerido | Prioridade |")
@@ -645,42 +811,273 @@ def _renderizar_secao_bairros_alternativos(pronto: dict) -> str:
     return "\n".join(linhas)
 
 
+def _renderizar_secao_ofertas_mapeadas(oferta_raw, concorrentes: list) -> str:
+    """
+    Renderiza markdown das ofertas reais mapeadas via A3c CompetitorMapper.
+    Anexado ao system instruction do A6 para que o LLM use os dados reais
+    de planos, mensalidades e diferenciais em vez de silêncio/reviews apenas.
+    """
+    if not oferta_raw or not concorrentes:
+        return ""
+
+    import json
+    if isinstance(oferta_raw, str):
+        txt = oferta_raw.strip()
+        if txt.startswith("```"):
+            lines = txt.split("\n")
+            txt = "\n".join(ln for ln in lines if not ln.strip().startswith("```"))
+        try:
+            oferta_raw = json.loads(txt)
+        except Exception:
+            return ""
+
+    if not isinstance(oferta_raw, dict):
+        return ""
+
+    mapeamento = oferta_raw.get("oferta_concorrentes") or oferta_raw
+    if not isinstance(mapeamento, dict):
+        return ""
+
+    oferta_lookup = {}
+    for k, v in mapeamento.items():
+        if isinstance(v, dict):
+            if k:
+                oferta_lookup[str(k).lower()] = v
+            nome_no_oferta = v.get("nome")
+            if nome_no_oferta:
+                oferta_lookup[str(nome_no_oferta).lower()] = v
+
+    linhas = ["## SEÇÃO PRÉ-COMPUTADA — MENSALIDADES E DIFERENCIAIS REAIS DOS CONCORRENTES"]
+    linhas.append("")
+    linhas.append(
+        "Use as informações de mensalidades, planos e diferenciais abaixo para preencher "
+        "o campo 'Serviços oferecidos' e adicionar detalhes de preços em cada card de "
+        "concorrente na seção '## 🥊 Inteligência Competitiva — Concorrente por Concorrente'. "
+        "Se houver silêncio ou ausência de dados abaixo para um concorrente específico, "
+        "use a informação que você possui no estado ou marque como não disponível/—."
+    )
+    linhas.append("")
+
+    encontrou_algum = False
+    for c in concorrentes:
+        if not isinstance(c, dict):
+            continue
+        nome = c.get("nome", "?")
+        place_id = c.get("place_id")
+        nome_lower = (c.get("nome") or "").lower()
+
+        oferta = None
+        if place_id:
+            oferta = oferta_lookup.get(str(place_id).lower())
+        if not oferta and nome_lower:
+            oferta = oferta_lookup.get(nome_lower)
+
+        if oferta:
+            encontrou_algum = True
+            linhas.append(f"### Concorrente: {nome}")
+            
+            # Preços
+            faixa = oferta.get("faixa_preco_brl")
+            precos_str = "Não disponível nos sites/redes sociais"
+            if isinstance(faixa, dict):
+                p_min = faixa.get("plano_mensal_min")
+                p_max = faixa.get("plano_mensal_max")
+                if p_min is not None or p_max is not None:
+                    p_min_f = float(p_min) if p_min is not None else 0.0
+                    p_max_f = float(p_max) if p_max is not None else 0.0
+                    if p_min_f == p_max_f and p_min_f > 0:
+                        precos_str = f"A partir de R$ {p_min_f:.2f}/mês"
+                    elif p_min_f > 0 or p_max_f > 0:
+                        p_min_show = p_min_f if p_min_f > 0 else p_max_f
+                        p_max_show = p_max_f if p_max_f > 0 else p_min_f
+                        if p_min_show == p_max_show:
+                            precos_str = f"A partir de R$ {p_min_show:.2f}/mês"
+                        else:
+                            precos_str = f"De R$ {p_min_show:.2f} a R$ {p_max_show:.2f}/mês"
+            
+            planos = oferta.get("planos") or []
+            planos_list = []
+            for pl in planos:
+                if isinstance(pl, dict):
+                    p_nome = pl.get("nome", "Plano")
+                    p_valor = pl.get("preco") or pl.get("valor_brl")
+                    if p_valor is not None:
+                        try:
+                            planos_list.append(f"{p_nome}: R$ {float(p_valor):.2f}/mês")
+                        except (ValueError, TypeError):
+                            planos_list.append(f"{p_nome}: R$ {p_valor}/mês")
+            if planos_list:
+                precos_str += f" ({', '.join(planos_list)})"
+
+            linhas.append(f"- **Preços e Planos:** {precos_str}")
+
+            # Modalidades e diferenciais
+            modalidades = oferta.get("modalidades") or []
+            diferenciais = oferta.get("diferenciais") or []
+            
+            servicos = []
+            if modalidades:
+                servicos.append(f"Modalidades: {', '.join(modalidades)}")
+            if diferenciais:
+                servicos.append(f"Diferenciais: {', '.join(diferenciais)}")
+            
+            servicos_str = " | ".join(servicos) if servicos else "Não especificado"
+            linhas.append(f"- **Serviços Oferecidos:** {servicos_str}")
+
+            obs = oferta.get("observacoes")
+            if obs:
+                linhas.append(f"- **Observações do Site/IG:** {obs}")
+            linhas.append("")
+
+    if not encontrou_algum:
+        return ""
+
+    return "\n".join(linhas)
+
+
+def _renderizar_secao_novos_entrantes(entrantes_block: dict) -> str:
+    """
+    Renderiza o markdown determinístico da seção de Novos Entrantes com decisores.
+    """
+    if not isinstance(entrantes_block, dict) or entrantes_block.get("status") != "ok":
+        return ""
+
+    entrantes = entrantes_block.get("entrantes") or []
+    if not entrantes:
+        return ""
+
+    linhas = ["## SEÇÃO PRÉ-COMPUTADA — NOVOS ENTRANTES DE MERCADO (CNPJ)"]
+    linhas.append("")
+    linhas.append(
+        "Use LITERALMENTE a tabela abaixo na seção '## 🏢 Novos Entrantes de Mercado (CNPJ)' "
+        "do seu relatório. NÃO altere dados, contatos ou links do LinkedIn."
+    )
+    linhas.append("")
+    linhas.append("| Abertura | Nome Fantasia / Razão Social | Segmento | Bairro | Contato PJ | Decisor / Sócio Administrador | CNPJ |")
+    linhas.append("|---|---|---|---|---|---|---|")
+
+    for e in entrantes:
+        if not isinstance(e, dict):
+            continue
+
+        # Abertura
+        abertura = e.get("data_abertura") or "—"
+        try:
+            dt = datetime.strptime(abertura, "%Y-%m-%d")
+            abertura = dt.strftime("%d/%m/%Y")
+        except Exception:
+            pass
+
+        # Nome
+        nome = e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—"
+
+        # Segmento
+        segmento = e.get("segmento_label") or e.get("segmento_operacao") or "—"
+
+        # Bairro
+        bairro = e.get("bairro") or "—"
+
+        # Contatos PJ
+        email_pj = (e.get("email_empresa") or "").strip()
+        tel_pj = (e.get("telefone_empresa") or "").strip()
+        contatos_pj = []
+        if email_pj:
+            contatos_pj.append(email_pj)
+        if tel_pj:
+            contatos_pj.append(tel_pj)
+        contato_pj_str = ", ".join(contatos_pj) if contatos_pj else "—"
+
+        # Sócio / Decisor (Apollo)
+        socio_str = "—"
+        socio_info = e.get("socio_administrador")
+        if socio_info and isinstance(socio_info, dict):
+            s_nome = (socio_info.get("nome") or "").strip()
+            s_cargo = (socio_info.get("qualificacao") or socio_info.get("cargo") or "Sócio-Administrador").strip()
+            s_email = (e.get("email_socio_administrador") or "").strip()
+            s_linkedin = (e.get("linkedin_url") or "").strip()
+
+            partes_socio = []
+            if s_nome:
+                partes_socio.append(f"**{s_nome}** ({s_cargo})")
+            if s_email:
+                partes_socio.append(f"E-mail: {s_email}")
+            if s_linkedin:
+                partes_socio.append(f"[LinkedIn]({s_linkedin})")
+
+            if partes_socio:
+                socio_str = "<br>".join(partes_socio)
+
+        cnpj = e.get("cnpj_formatado") or e.get("cnpj") or "—"
+
+        # Escape markdown pipes
+        nome_esc = _escape_md_pipe(nome)
+        seg_esc = _escape_md_pipe(segmento)
+        bairro_esc = _escape_md_pipe(bairro)
+        pj_esc = _escape_md_pipe(contato_pj_str)
+        socio_esc = socio_str.replace("|", "/")  # Evita quebrar as colunas do MD
+
+        linhas.append(
+            f"| {abertura} | {nome_esc} | {seg_esc} | {bairro_esc} | {pj_esc} | {socio_esc} | {cnpj} |"
+        )
+
+    linhas.append("")
+    return "\n".join(linhas)
+
+
 def _a6_before_model_callback(callback_context, llm_request):
     """
     Antes de cada chamada ao modelo do A6, anexa o markdown pré-renderizado
-    de Distribuição Geográfica + Bairros Alternativos à system instruction.
-
-    Por que aqui (e não no `before_agent_callback`):
-    o `before_agent_callback` popula state, mas ADK não injeta state no
-    prompt automaticamente. Já o `before_model_callback` recebe o
-    `llm_request` que vai pro modelo — `append_instructions` adiciona ao
-    system_instruction de forma garantida.
-
-    Idempotente: se o markdown já foi anexado em uma call anterior do
-    mesmo turno, não duplica (verifica via marker no system instruction).
+    de Distribuição Geográfica + Bairros Alternativos + Ofertas Reais de Concorrentes + Novos Entrantes à system instruction.
     """
     try:
         state = getattr(callback_context, "state", None)
         if state is None:
             return
+        
+        # 1. Bairros Alternativos e Distribuição Geográfica
         pronto = state.get("bairros_alternativos_pronto")
-        if not pronto:
-            return
+        if pronto:
+            markdown_bairros = _renderizar_secao_bairros_alternativos(pronto)
+            if markdown_bairros:
+                existing_si = ""
+                try:
+                    existing_si = llm_request.config.system_instruction or ""
+                except Exception:
+                    existing_si = ""
+                if "SEÇÃO PRÉ-COMPUTADA — BAIRROS ALTERNATIVOS" not in existing_si:
+                    llm_request.append_instructions([markdown_bairros])
 
-        markdown = _renderizar_secao_bairros_alternativos(pronto)
-        if not markdown:
-            return
+        # 2. Ofertas Mapeadas dos Concorrentes (Retirada do Shadow para o Markdown)
+        from tools.competitor_tools import _parse_market_context
+        oferta_raw = state.get("oferta_concorrentes")
+        ic_raw = _parse_market_context(state.get("inteligencia_competitiva"))
+        inner_ic = ic_raw.get("inteligencia_competitiva") if isinstance(ic_raw.get("inteligencia_competitiva"), dict) else ic_raw
+        concorrentes = (inner_ic.get("concorrentes_detalhados") or inner_ic.get("concorrentes") or []) if isinstance(inner_ic, dict) else []
 
-        # Idempotência: só anexa se ainda não foi anexado neste request
-        existing_si = ""
-        try:
-            existing_si = llm_request.config.system_instruction or ""
-        except Exception:
-            existing_si = ""
-        if "SEÇÃO PRÉ-COMPUTADA — BAIRROS ALTERNATIVOS" in existing_si:
-            return
+        if oferta_raw and concorrentes:
+            markdown_ofertas = _renderizar_secao_ofertas_mapeadas(oferta_raw, concorrentes)
+            if markdown_ofertas:
+                existing_si = ""
+                try:
+                    existing_si = llm_request.config.system_instruction or ""
+                except Exception:
+                    existing_si = ""
+                if "SEÇÃO PRÉ-COMPUTADA — MENSALIDADES E DIFERENCIAIS REAIS DOS CONCORRENTES" not in existing_si:
+                    llm_request.append_instructions([markdown_ofertas])
 
-        llm_request.append_instructions([markdown])
+        # 3. Novos Entrantes (RFB CNPJ Aberto)
+        entrantes_block = state.get("entrantes_cnpj_pronto")
+        if entrantes_block:
+            markdown_entrantes = _renderizar_secao_novos_entrantes(entrantes_block)
+            if markdown_entrantes:
+                existing_si = ""
+                try:
+                    existing_si = llm_request.config.system_instruction or ""
+                except Exception:
+                    existing_si = ""
+                if "SEÇÃO PRÉ-COMPUTADA — NOVOS ENTRANTES DE MERCADO" not in existing_si:
+                    llm_request.append_instructions([markdown_entrantes])
+
     except Exception:
         pass  # falha silenciosa — nunca bloqueia o pipeline
 
@@ -699,6 +1096,46 @@ def _safe_float(v, default=0.0):
         return float(v) if v is not None else default
     except (TypeError, ValueError):
         return default
+
+
+def _rank_candidatos_for_top3(candidatos: list) -> list:
+    """Prioriza listings OLX/ImovelWeb antes do slice top 3."""
+
+    def sort_key(c: dict) -> tuple:
+        is_listing = (
+            c.get("fonte") == "listing"
+            or c.get("qualidade_sinal") == "direto-listing"
+            or str(c.get("place_id") or "").startswith("listing_")
+        )
+        return (1 if is_listing else 0, _safe_float(c.get("score_geoscout")))
+
+    valid = [c for c in candidatos if isinstance(c, dict)]
+    return sorted(valid, key=sort_key, reverse=True)
+
+
+def _enriquecer_candidato_investigacao(c: dict) -> dict:
+    """Expõe resumo da investigação web (A1) no candidato do relatório."""
+    out = dict(c)
+    ir = c.get("investigacao_resultado")
+    if not isinstance(ir, dict):
+        return out
+    res = ir.get("resultado")
+    if not isinstance(res, dict):
+        return out
+    tipo_inf = c.get("tipo_imovel_inferido") if isinstance(c.get("tipo_imovel_inferido"), dict) else {}
+    out["investigacao_site"] = {
+        "status_operacao": res.get("status_operacao"),
+        "operador_atual": res.get("operador_atual"),
+        "segmento": res.get("segmento"),
+        "confianca": res.get("confianca"),
+        "coerencia_listing": res.get("coerencia_listing"),
+        "implicacao_site": res.get("implicacao_site"),
+        "evidencias": (res.get("evidencias") or [])[:3],
+        "tier": ir.get("tier"),
+        "tipo_imovel_label": tipo_inf.get("tipo_imovel_label"),
+        "tipo_imovel_codigo_onr": tipo_inf.get("tipo_imovel_codigo_onr"),
+    }
+    return out
 
 
 def _navegar_aninhado(d, *chaves, default=None):
@@ -730,6 +1167,31 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     from tools.competitor_tools import _parse_market_context
 
     state = getattr(callback_context, "state", {}) or {}
+
+    # Mapeamento de ofertas (para enriquecer o competitors_set do JSON canônico)
+    oferta_raw = state.get("oferta_concorrentes")
+    if isinstance(oferta_raw, str):
+        txt = oferta_raw.strip()
+        if txt.startswith("```"):
+            lines = txt.split("\n")
+            txt = "\n".join(ln for ln in lines if not ln.strip().startswith("```"))
+        try:
+            import json
+            oferta_raw = json.loads(txt)
+        except Exception:
+            oferta_raw = None
+
+    mapeamento_ofertas = {}
+    if isinstance(oferta_raw, dict):
+        mapeamento = oferta_raw.get("oferta_concorrentes") or oferta_raw
+        if isinstance(mapeamento, dict):
+            for k, v in mapeamento.items():
+                if isinstance(v, dict):
+                    if k:
+                        mapeamento_ofertas[str(k).lower()] = v
+                    nome_no_oferta = v.get("nome")
+                    if nome_no_oferta:
+                        mapeamento_ofertas[str(nome_no_oferta).lower()] = v
 
     # ── Input canônico (vem do market_context A0 + defaults do pipeline) ──
     raw_mc = state.get("market_context")
@@ -782,6 +1244,10 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # que não tem unidade local no raio alvo, A3a marca em redes_a0_nao_encontradas.
     cs_raw = _parse_market_context(state.get("concorrentes_brutos"))
     cobertura_redes_a0 = _build_cobertura_redes_a0(cs_raw, inner_mc, inner_ic)
+    slim_market_context = _slim_market_context(inner_mc)
+    slim_market_context = _apply_redes_validadas_market_context(
+        slim_market_context, cobertura_redes_a0
+    )
 
     # Scores podem estar no top-level OU dentro de inteligencia_competitiva
     score_concorrencia = (
@@ -800,7 +1266,13 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         if isinstance(geo_raw.get("candidatos"), list)
         else []
     )
-    top_3 = candidatos[:3] if candidatos else []
+    ranked = _rank_candidatos_for_top3(candidatos)
+    top_3 = [_enriquecer_candidato_investigacao(c) for c in (ranked[:3] if ranked else [])]
+    investigacoes_resumo = (
+        geo_raw.get("investigacoes_imoveis")
+        if isinstance(geo_raw.get("investigacoes_imoveis"), dict)
+        else {}
+    )
 
     # ── Output: análise demográfica (A2) ──
     demo = _parse_market_context(state.get("analise_demografica"))
@@ -822,6 +1294,48 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     bap = state.get("bairros_alternativos_pronto") or {}
     if not isinstance(bap, dict):
         bap = {}
+
+    entrantes_block = state.get("entrantes_cnpj_pronto") or {}
+    if not isinstance(entrantes_block, dict) or entrantes_block.get("status") != "ok":
+        try:
+            from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
+
+            uf_mc = (inner_mc.get("uf") or "") if isinstance(inner_mc, dict) else ""
+            entrantes_block = listar_entrantes_cnpj_fitness(
+                cidade, uf_mc, dias=90, limit=50
+            )
+        except Exception:
+            entrantes_block = {}
+
+    obras_cno_block = state.get("obras_cno_pronto") or {}
+    if not isinstance(obras_cno_block, dict) or obras_cno_block.get("status") not in (
+        "ok",
+        "nao_configurado",
+    ):
+        try:
+            obras_cno_block = _precompute_obras_cno(type("Ctx", (), {"state": state})())
+        except Exception:
+            obras_cno_block = {}
+
+    # Fallback: A0 pode ter embutido obras no fatos_parque_cnpj
+    if (
+        (not obras_cno_block or obras_cno_block.get("status") != "ok")
+        and isinstance(inner_mc, dict)
+    ):
+        fatos = inner_mc.get("fatos_parque_cnpj") or {}
+        cno_mc = (fatos.get("cruzamento_cno") or {}) if isinstance(fatos, dict) else {}
+        emb = cno_mc.get("obras_fitness_em_curso")
+        if isinstance(emb, dict) and emb.get("status") == "ok":
+            try:
+                from tools.cno_fitness_tools import slim_obras_para_relatorio
+
+                bench_emb = cno_mc.get("benchmark_tempo_obra_cno")
+                obras_cno_block = slim_obras_para_relatorio(
+                    emb,
+                    benchmark_tempo=bench_emb if isinstance(bench_emb, dict) else None,
+                )
+            except Exception:
+                pass
 
     # ── distribuicao_geografica: tenta 3 fontes em ordem ──
     # 1. bairros_alternativos_pronto (computado no _a6_precompute_callback)
@@ -911,12 +1425,46 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 "viabilidade": _safe_float(score_viab),
             },
             "nivel_saturacao": nivel_saturacao,
+            "panorama_competitivo": (
+                ic_raw.get("panorama_competitivo")
+                or inner_ic.get("panorama_competitivo")
+            ),
+            "total_encontrados_raio": (
+                ic_raw.get("total_encontrados_raio")
+                or inner_ic.get("total_encontrados_raio")
+            ),
+            "total_concorrentes_analisados": (
+                ic_raw.get("total_concorrentes_analisados")
+                or inner_ic.get("total_concorrentes_analisados")
+                or len(inner_ic.get("concorrentes_detalhados") or [])
+            ),
+            "top_independentes": (
+                ic_raw.get("top_independentes")
+                or inner_ic.get("top_independentes")
+                or []
+            ),
+            "academias_analisadas": (
+                ic_raw.get("academias_analisadas")
+                or inner_ic.get("academias_analisadas")
+                or []
+            ),
             "rating_medio_concorrentes": _safe_float(
                 ic_raw.get("rating_medio_concorrentes")
                 or inner_ic.get("rating_medio_concorrentes")
             ),
             "top_3_candidatos": top_3,
-            "competitors_set": inner_ic.get("concorrentes_detalhados", []),
+            "investigacoes_imoveis": investigacoes_resumo,
+            "competitors_set": [
+                {
+                    **c,
+                    "oferta_mapeada": (
+                        mapeamento_ofertas.get(str(c.get("place_id")).lower())
+                        or mapeamento_ofertas.get((c.get("nome") or "").lower())
+                    ) if isinstance(c, dict) else None
+                }
+                for c in (inner_ic.get("concorrentes_detalhados") or [])
+                if isinstance(c, dict)
+            ],
             "dores_dominantes": inner_ic.get("dores_dominantes", []),
             "servicos_nao_oferecidos": inner_ic.get("servicos_nao_oferecidos", []),
             "distribuicao_geografica": distribuicao_geo,
@@ -945,12 +1493,16 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             # `briefing_completo_md` é grande (vários kb) e raramente útil pro
             # consumidor — descartado pra reduzir peso do JSON. Se precisar,
             # voltar a incluir setando _INCLUIR_BRIEFING_COMPLETO = True.
-            "market_context": _slim_market_context(inner_mc),
+            "market_context": slim_market_context,
             # Schema v1.4 — cobertura A0: confronta redes que o Deep Research
             # listou vs as que realmente têm unidade no raio do bairro alvo.
             # Quando tem_redes_fantasma=true, o A6 renderiza aviso explícito
             # no markdown apontando que o DR pode estar inflando concorrência.
             "cobertura_redes_a0": cobertura_redes_a0,
+            # Schema v1.7 — novos entrantes CNPJ (lista para prospecção)
+            "entrantes_cnpj_90d": entrantes_block,
+            # Schema v1.10 — obras fitness em andamento (CNO RFB)
+            "obras_cno_em_curso": obras_cno_block,
         },
         "metadata_execucao": {
             # Schema v1.2: mantém só infos de execução. Dados ricos do
@@ -978,6 +1530,7 @@ def _slim_market_context(inner_mc: dict) -> dict:
     keys = [
         "cidade",
         "bairro",
+        "uf",
         "ticket_medio_mercado",
         "aluguel_medio_m2",
         "renda_media_bairro",
@@ -990,6 +1543,19 @@ def _slim_market_context(inner_mc: dict) -> dict:
         "tendencia_mercado",
         "regulamentacao_resumo",
         "insights_estrategicos",
+        # Entrantes (RFB CNPJ Aberto) — schema v1.7
+        "novos_cnpj_fitness_90d",
+        "parque_ativo_total",
+        "academias_ativas_cidade_cnpj",
+        "composicao_parque",
+        "novas_unidades_90d_por_segmento",
+        "parque_comercial_total",
+        "excluidos_saude_clinica",
+        "pendentes_validacao",
+        "fatos_parque_cnpj",
+        "analise_parque_cnpj",
+        "serie_aberturas_anual",
+        "fonte_entrantes",
         "fonte",
         "data_coleta",
         "cached",
@@ -998,6 +1564,37 @@ def _slim_market_context(inner_mc: dict) -> dict:
     if _INCLUIR_BRIEFING_COMPLETO and inner_mc.get("briefing_completo_md"):
         out["briefing_completo_md"] = inner_mc["briefing_completo_md"]
     return out
+
+
+def _apply_redes_validadas_market_context(
+    slim_mc: dict,
+    cobertura: dict,
+) -> dict:
+    """
+    Não expõe lista do Deep Research como se fosse validada localmente.
+    Só persiste marcas com unidade confirmada (Places/OSM) em
+    `principais_redes_concorrentes`; DR não validado vai em
+    `redes_dr_nao_validadas`.
+    """
+    if not isinstance(slim_mc, dict):
+        return slim_mc or {}
+    if not isinstance(cobertura, dict):
+        return slim_mc
+
+    redes_locais = (
+        cobertura.get("redes_locais_validadas")
+        or cobertura.get("redes_cobertas")
+        or []
+    )
+    nao_validadas = cobertura.get("redes_nao_encontradas") or []
+
+    if cobertura.get("tem_redes_fantasma"):
+        slim_mc["redes_dr_nao_validadas"] = list(nao_validadas)
+        slim_mc["principais_redes_concorrentes"] = list(redes_locais)
+    elif redes_locais:
+        slim_mc["principais_redes_concorrentes"] = list(redes_locais)
+
+    return slim_mc
 
 
 def _build_cobertura_redes_a0(
@@ -1081,12 +1678,41 @@ def _build_cobertura_redes_a0(
             r for r in redes_solicitadas if r.lower() not in cobertas_set
         ]
 
+    redes_locais_osm: list[str] = []
+    if isinstance(src, dict):
+        raw_osm = src.get("redes_detectadas_osm")
+        if isinstance(raw_osm, list):
+            redes_locais_osm = [r for r in raw_osm if isinstance(r, str) and r.strip()]
+
+    if not redes_cobertas and isinstance(inner_ic, dict):
+        comp_set = inner_ic.get("concorrentes_detalhados") or inner_ic.get("concorrentes") or []
+        if isinstance(comp_set, list) and comp_set:
+            try:
+                from tools.local_market_facts import inferir_redes_de_concorrentes
+
+                redes_locais_osm = inferir_redes_de_concorrentes(
+                    [c for c in comp_set if isinstance(c, dict)]
+                )
+                if redes_locais_osm:
+                    redes_cobertas = list(redes_locais_osm)
+            except Exception:
+                pass
+
+    redes_locais_validadas = list(dict.fromkeys(redes_cobertas))
+
     return {
         "redes_solicitadas": redes_solicitadas,
-        "redes_cobertas": list(dict.fromkeys(redes_cobertas)),  # dedup preservando ordem
+        "redes_cobertas": redes_locais_validadas,
+        "redes_locais_validadas": redes_locais_validadas,
+        "redes_detectadas_osm": redes_locais_osm,
         "redes_nao_encontradas": list(dict.fromkeys(redes_nao_encontradas)),
         "concorrentes_excluidos": concorrentes_excluidos[:10],  # cap pra não inflar JSON
         "tem_redes_fantasma": bool(redes_nao_encontradas),
+        "fonte_redes_locais": (
+            "overpass_osm"
+            if redes_locais_osm and not src.get("redes_a0_cobertas")
+            else "busca_georreferenciada"
+        ),
     }
 
 
@@ -1143,6 +1769,33 @@ def _a6_after_agent_callback(callback_context):
             # o writer insere um novo header com UUID gerado pelo Postgres.
             relatorio_id = state.get("relatorio_id") if isinstance(state.get("relatorio_id"), str) else None
             write_relatorio_failsafe(relatorio, markdown, relatorio_id=relatorio_id)
+
+            # A8 — validação cruzada pós-A6 (fail-safe)
+            try:
+                import os
+                from tools.a8_runner import persist_validacao, run_a8_validation
+
+                validacao = run_a8_validation(
+                    markdown or "",
+                    state if isinstance(state, dict) else {},
+                    relatorio=relatorio,
+                )
+                if validacao:
+                    relatorio["validacao_a8"] = validacao
+                    path.write_text(
+                        json.dumps(relatorio, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    rid = relatorio_id or relatorio.get("id")
+                    org_id = (
+                        relatorio.get("org_id")
+                        or os.getenv("SUPABASE_GYMSITE_ORG_ID")
+                        or "00000000-0000-0000-0000-000000000001"
+                    )
+                    if rid:
+                        persist_validacao(str(rid), str(org_id), validacao)
+            except Exception:
+                pass
         except Exception:
             pass  # falha total do import/writer não bloqueia o pipeline
     except Exception:
@@ -1340,6 +1993,11 @@ Qual o melhor candidato e por quê?>
 | Competitivo | X.X | <nivel_saturacao do A3> |
 | Viabilidade financeira | X.X | <viabilidade do A4 melhor cenário> |
 
+**Transparência (OBRIGATÓRIO):** logo após a tabela acima, inclua uma linha curta:
+- `Academias no raio 3km (Aggregate): <total_encontrados_raio> | amostra analisada (reviews): <total_concorrentes_analisados>`
+Se existir `total_encontrados_raio_nearby`, adicione entre parênteses:
+`(Nearby retornou: <total_encontrados_raio_nearby>, limitado por maxResultCount)`.
+
 **ATENÇÃO — campo correto para "Competitivo":**
 Use **`score_concorrencia`** do A3 (range 0-10, onde 10 = mercado pouco saturado / favorável).
 NÃO confunda com `score_oportunidade_mercado` (range 0-10, onde 10 = muitas dores =
@@ -1369,6 +2027,9 @@ oportunidade de gap). Os dois existem mas têm semânticas diferentes — sempre
   - <polos_geradores[1]>
   - <polos_geradores[2]>
 - **Próximo passo:** <ação>
+- **Investigação site** (se `investigacao_site` existir): status `<status_operacao>` —
+  operador `<operador_atual ou —>` | tipo imóvel ONR `<tipo_imovel_codigo_onr>` (`<tipo_imovel_label>`) |
+  confiança `<confianca>` | `<implicacao_site>` (até 2 URLs de `evidencias`)
 
 ### #2 — ...
 ### #3 — ...
@@ -1452,7 +2113,8 @@ Para CADA concorrente, gere um card com este formato:
 #### <Nome do Concorrente> — Rating <X.X> ⭐ (<N> avaliações) <[24h]?>
 - **Endereço:** <endereco>
 - **Bairro:** <bairro_concorrente>
-- **Serviços oferecidos:** <lista do servicos_oferecidos>
+- **Mensalidades e Planos:** <copie literalmente o campo correspondente da SEÇÃO PRÉ-COMPUTADA DE MENSALIDADES E DIFERENCIAIS se disponível; caso contrário, use 'Não mapeado nos sites/redes sociais' ou '—'>
+- **Serviços oferecidos:** <use os serviços oferecidos e diferenciais mapeados da SEÇÃO PRÉ-COMPUTADA DE MENSALIDADES E DIFERENCIAIS se disponível; caso contrário, use a lista de servicos_oferecidos obtidos no state como fallback>
 - **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):
   - "<quote_pt_br>" — <autor>, <rating>⭐ (<data>) [original em <idioma_original>]  → categoria: <categoria_dor>
   - "<quote_pt_br 2>" — ...
@@ -1510,6 +2172,16 @@ uma sub-linha explícita após o posicionamento padrão:
   local — mercado ultra-restrito."
 
 Omitir essa sub-linha se `genero_alvo` ausente ou for "misto".
+
+---
+
+## 🏢 Novos Entrantes de Mercado (CNPJ)
+
+⚠️ **PRÉ-CONDIÇÃO**: Esta seção só deve ser exibida se houver dados pré-computados na `SEÇÃO PRÉ-COMPUTADA — NOVOS ENTRANTES DE MERCADO (CNPJ)`.
+
+Copie LITERALMENTE a tabela gerada na `SEÇÃO PRÉ-COMPUTADA — NOVOS ENTRANTES DE MERCADO (CNPJ)` enviada nas instruções do sistema. NÃO altere dados ou contatos dos decisores (e-mail, LinkedIn, etc.).
+
+Se a seção pré-computada não contiver novos entrantes, omita esta seção inteira do relatório final (não escreva N/A ou vazio).
 
 ---
 

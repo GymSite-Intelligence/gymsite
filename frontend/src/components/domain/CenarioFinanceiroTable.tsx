@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { CenarioJSON, SensibilidadeStress } from '@/hooks/useRelatorioDetail'
+import { formatBRL, formatInt, formatPct, INVIAVEL_PAYBACK_THRESHOLD } from '@/lib/format'
 
 /**
  * TooltipLabel — texto com underline tracejado que abre tooltip ao hover.
@@ -65,26 +66,9 @@ const VIABILIDADE_COLOR: Record<string, string> = {
 }
 
 // ── Formatters ───────────────────────────────────────────────────────────
-function formatBRL(v: number | null | undefined, opts?: { compact?: boolean }): string {
-  if (v == null) return '—'
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-    notation: opts?.compact ? 'compact' : 'standard',
-  }).format(v)
-}
-function formatInt(v: number | null | undefined): string {
-  if (v == null) return '—'
-  return v.toLocaleString('pt-BR')
-}
-function formatPct(v: number | null | undefined): string {
-  if (v == null) return '—'
-  return `${v.toFixed(1)}%`
-}
 function formatPaybackMeses(m: number | null | undefined): string {
-  if (m == null) return '—'
-  if (m >= 999) return 'inviável'
+  if (m == null || typeof m !== 'number' || !Number.isFinite(m)) return '—'
+  if (m >= INVIAVEL_PAYBACK_THRESHOLD) return 'inviável'
   if (m >= 24) return `${(m / 12).toFixed(1)} anos (${m}m)`
   return `${m}m`
 }

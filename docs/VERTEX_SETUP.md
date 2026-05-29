@@ -1,5 +1,7 @@
 # Vertex AI — guia de migração (Sprint A)
 
+> **Estado atual (2026-05):** o projeto roda com **`GOOGLE_GENAI_USE_VERTEXAI=false`** (Developer API) para manter **Deep Research no A0**. Só ative Vertex quando o agente Deep Research estiver disponível no Vertex ou se aceitar o fallback grounded no A0.
+
 Migração da Gemini Developer API (API Key) para **Vertex AI** no projeto `gen-lang-client-0662901510`.
 
 ## Por quê

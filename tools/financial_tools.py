@@ -98,6 +98,65 @@ MATRICULADOS_POR_M2 = {
     "premium": {"conservador": 0.4, "realista": 0.6, "agressivo": 0.9},
 }
 
+# CNO / prospecção: códigos de situação da obra (RFB — campo Situação no CSV)
+CNO_SITUACAO_EM_CURSO = frozenset({"01", "02", "03", "04"})
+CNO_SITUACAO_ENCERRADA = frozenset({"15"})
+
+
+def projecao_demanda_receita_obra(
+    area_m2: float,
+    faixa: str = "mid",
+    *,
+    ticket_override: float | None = None,
+) -> dict:
+    """
+    Projeção operacional a partir de m² (CNO ou input manual).
+
+    Mesma lógica de `calcular_viabilidade_3_cenarios`: matrículas pagantes em
+    3 calibrações; receita = matrículas × ticket × (1 − inadimplência).
+
+    Retorno é **estimativa** (benchmark A4), não dado CNPJ/CNO.
+    """
+    if area_m2 <= 0:
+        return {"status": "erro", "motivo": "area_m2 inválida"}
+
+    faixa_key = faixa if faixa in MATRICULADOS_POR_M2 else "mid"
+    faixa_info = TICKET_FAIXAS[faixa_key]
+    ticket = ticket_override if ticket_override is not None else faixa_info["ticket_medio"]
+    inad = TAXA_INADIMPLENCIA_POR_MODELO[faixa_key]
+    ticket_realizado = round(ticket * (1.0 - inad), 2)
+
+    calibracoes = MATRICULADOS_POR_M2[faixa_key]
+    matriculas: dict[str, dict] = {}
+    receita_mensal_estimada: dict[str, float] = {}
+    for cal_id, mpm in calibracoes.items():
+        n = int(area_m2 * mpm)
+        matriculas[cal_id] = {
+            "valor": n,
+            "matr_por_m2": mpm,
+            "densidade_maxima_m2": mpm,  # alias legível em relatórios CNO
+        }
+        receita_mensal_estimada[cal_id] = round(n * ticket_realizado, 2)
+
+    return {
+        "status": "ok",
+        "tipo": "projecao_estimativa",
+        "fonte_premissas": "financial_tools — mesmo benchmark do A4",
+        "area_m2": round(area_m2, 2),
+        "faixa_ticket": faixa_key,
+        "faixa_label": faixa_info["label"],
+        "ticket_nominal": round(ticket, 2),
+        "taxa_inadimplencia": inad,
+        "ticket_realizado": ticket_realizado,
+        "matriculas": matriculas,
+        "receita_mensal_estimada": receita_mensal_estimada,
+        "receita_base_calibracao": "realista",
+        "nota": (
+            "Projeção para prospecção/parâmetros. Não é faturamento declarado "
+            "nem garantia de ocupação na abertura."
+        ),
+    }
+
 # Capacidade FÍSICA simultânea (no pico horário) — check de conforto/segurança.
 # Diferente de matrículas: quantas pessoas cabem ao mesmo tempo na academia.
 CAPACIDADE_SIMULTANEA_POR_M2 = {"low": 0.55, "mid": 0.40, "premium": 0.25}
@@ -817,12 +876,27 @@ def analise_financeira_completa(
             if queries_com_dados else "Search Grounding"
         )
     else:
-        bench = estimar_aluguel(cidade, area_m2)
-        aluguel_mensal = bench["aluguel_estimado"]
-        bench_m2 = bench["preco_m2_estimado"]
-        aluguel_min_m2 = round(bench_m2 * 0.6, 2)
-        aluguel_max_m2 = round(bench_m2 * 1.5, 2)
-        fonte_aluguel = "Benchmark ACAD"
+        # Tier 1.5: FipeZap (dados mensais oficiais do mercado)
+        try:
+            from tools.fipezap_tools import get_aluguel_comercial_m2
+            fipe = get_aluguel_comercial_m2(cidade)
+        except Exception:
+            fipe = {"disponivel": False}
+
+        if fipe.get("disponivel") and fipe.get("preco_m2"):
+            preco_m2 = float(fipe["preco_m2"])
+            aluguel_mensal = round(preco_m2 * float(area_m2), 2)
+            aluguel_min_m2 = round(preco_m2 * 0.7, 2)
+            aluguel_max_m2 = round(preco_m2 * 1.4, 2)
+            fonte_aluguel = fipe["fonte"]
+        else:
+            # Tier 2: Benchmarks ACAD hardcoded
+            bench = estimar_aluguel(cidade, area_m2)
+            aluguel_mensal = bench["aluguel_estimado"]
+            bench_m2 = bench["preco_m2_estimado"]
+            aluguel_min_m2 = round(bench_m2 * 0.6, 2)
+            aluguel_max_m2 = round(bench_m2 * 1.5, 2)
+            fonte_aluguel = "Benchmark ACAD"
 
     viabilidade = calcular_viabilidade_3_cenarios(
         area_m2=area_m2,

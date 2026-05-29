@@ -3,7 +3,8 @@
 Pipeline multi-agente que avalia viabilidade comercial de pontos para academias no Brasil. Cruza dados de mercado, demografia (IBGE), concorrência (Google Maps), horários de pico e cenário financeiro num único relatório executivo — gerado em ~5 min por ~R$ 4,45 de custo de API.
 
 > **Status:** produto end-to-end pronto pra demos com testers externos.
-> Pipeline **A0 → A6** rodando em Vertex AI (`us-central1`), frontend Vite em `:5174`, dashboard `/custos` por org, multi-tenant via Supabase RLS.
+> Pipeline **A0 → A6** via **Gemini Developer API** (`GOOGLE_GENAI_USE_VERTEXAI=false`) — Deep Research no A0; frontend Vite em `:5174`, dashboard `/custos` por org, multi-tenant via Supabase RLS.
+> Vertex AI fica **desligado por padrão** até o agente Deep Research existir no Vertex ([docs/VERTEX_SETUP.md](docs/VERTEX_SETUP.md)).
 
 ---
 
@@ -35,7 +36,7 @@ Backend FastAPI (api.py :8000)
         │ ADK Runner (background task)
         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ A0 ContextBuilder      → Deep Research (Search Grounding)   │
+│ A0 ContextBuilder      → Deep Research (Interactions API)   │
 │ A1 GeoScout            → Places API + Distance Matrix +     │
 │                          listings OLX & ImovelWeb           │
 │ A2 DemoAnalyst         → IBGE Censo 2022 (BigQuery)         │
@@ -58,13 +59,127 @@ Cada agente é um `LlmAgent` do Google ADK com **macro-tools consolidadas** (A1,
 
 ---
 
+## Agentes do Pipeline (A0 – A7)
+
+O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline")` → sub-agentes especializados. A fase 2 (A2/A3/A4) roda em paralelo via `ParallelAgent`.
+
+### A0 — ContextBuilder
+**Arquivo:** `agents/a0_context_builder.py`  
+**Modelo:** Gemini 2.5 Flash (thinking_budget=1024)  
+**Input:** cidade, bairro, tipo_negocio, público alvo  
+**Output:** `contexto_mercado` (JSON), `insights_deep_research`, `benchmarks_setor`
+
+- Executa **Deep Research** qualitativo via `rodar_deep_research` (Gemini Interactions API) sobre o bairro/cidade.
+- Cruza com dados quantitativos do parque ativo CNPJ/CNO via `dados_parque_cnpj_para_a0`.
+- Não emite interpretação própria além dos dados retornados pelas tools.
+- Introduzido na v0.4 como primeiro agente do pipe — substitui o "cold start" do A1.
+
+### A1 — GeoScout
+**Arquivo:** `agents/a1_geoscout.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** parâmetros de localização + contexto do A0  
+**Output:** `candidatos` (top 3 imóveis), `score_ancoragem`, `polos_geradores`
+
+- Refatorado em 2026-05-09 (VEC-379): 10 tools individuais foram consolidadas em **1 macro-tool** `analisar_pontos_comerciais_completo`.
+- Motivo do refator: MALFORMED_FUNCTION_CALL quando o LLM reenviava lista de 30+ polos como argumento de `calcular_score_ancoragem`.
+- Usa Google Maps (Places New, Geocoding, Street View), listings OLX/ImovelWeb via Playwright, e distance matrix.
+
+### A2 — DemoAnalyst
+**Arquivo:** `agents/a2_demo_analyst.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** cidade, bairro  
+**Output:** `analise_demografica` (JSON)
+
+- Refatorado em 2026-05-09: 5 tools sequenciais (buscar_municipio, buscar_populacao, estimar_faixa_etaria, buscar_renda, calcular_score_demografico) → **1 macro-tool** `analise_demografica_completa`.
+- Reduz round-trips LLM de ~6 para 2 por run. Economia observada: ~165k tokens/run.
+- Dados: IBGE Censo 2022 (`servicodados.ibge.gov.br`) + PNAD Contínua / Atlas Brasil via Search Grounding ao vivo.
+
+### A3a — CompetitorSearch
+**Arquivo:** `agents/a3a_competitor_search.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** coordenadas do bairro + tipo_negocio  
+**Output:** `concorrentes_brutos` (lista de academias)
+
+- Sub-agente da fase competitiva (ex-A3 monolítico). Separação evita estouro do AFC=10 do Gemini.
+- Responsável **APENAS** por buscar academias concorrentes, processar reviews e fazer enrichment via Google Knowledge Panel + Search Grounding.
+- NÃO faz análise agregada — isso é do A3b.
+- Macro-tool: `analisar_concorrentes_a3a_completo` (consolida busca + reviews + enrichment).
+
+### A3b — CompetitorAnalysis
+**Arquivo:** `agents/a3b_competitor_analysis.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** `concorrentes_brutos` do A3a (via session state)  
+**Output:** `inteligencia_competitiva`, `score_concorrencia`, `posicionamento_recomendado`, `estrategia_counter_programming`
+
+- Recebe os dados brutos do A3a e produz:
+  - Gaps competitivos, dores nominadas e oportunidades
+  - Estratégia de counter-programming (picos/vales de horário)
+  - Score numérico de saturação
+  - Posicionamento recomendado para o novo negócio
+- NÃO faz busca — consome apenas o state do A3a.
+
+### A3c — CompetitorMapper
+**Arquivo:** `agents/a3c_competitor_mapper.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** top 10 concorrentes do A3b  
+**Output:** `oferta_concorrentes` (shadow mode)
+
+- Visita **site oficial + Instagram público** dos top 10 concorrentes.
+- Extrai modalidades, faixa de preço e diferenciais via keyword matching + normalização LLM.
+- **Modo SHADOW (default desde 2026-05-12):** output é gravado no state, mas o A6 ReportConsolidator ainda **não consome** ativamente. Feature flag `A3C_ENFORCE` no A6 ainda desativada — validar acurácia em 5 relatórios antes de ativar.
+- Motivação: evitar que o relatório recomende "explorar piscina + área kids" quando o concorrente já oferece ambos.
+
+### A4 — FinancialEstimator
+**Arquivo:** `agents/a4_financial_estimator.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** candidatos, demografia, contexto de mercado  
+**Output:** `cenarios_financeiros` (3 cenários: low/mid/premium), `aluguel_estimado`, `payback`, `viabilidade`
+
+- Refatorado em Run 20 (Task #56): substituídas 2 tools por **1 macro-tool** `analise_financeira_a4_completo`.
+- Resolveu MALFORMED_FUNCTION_CALL no cenário Pro (Run 20 / 5d7d92c738d8).
+- Calcula CAPEX por kit de equipamentos (`tools/kits_equipamentos.py`), frete ANTT (`tools/antt_tools.py`), aluguel mediano via Search Grounding, e payback em 3 cenários.
+
+### A5 — ContactHunter
+**Arquivo:** `agents/a5_contact_hunter.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** top candidato + contexto do negócio  
+**Output:** `contato_decisor`, `script_abordagem`, `tipo_ponto`
+
+- Refatorado (Task #57): 4 tools → **1 macro-tool** `gerar_contato_decisor_completo`.
+- Reduz custo de ~112k tokens (27% do custo total) para ~30k tokens.
+- Identifica tipo de ponto (imobiliária, proprietário direto, shopping), busca CNPJ relacionado, gera script de abordagem no formato SPIN, e formata contato para WhatsApp.
+- Fix 2026-05-12: `after_agent_callback` detecta state vazio (LLM emitia 0 tokens após tool call) e previne `contato_decisor: {}` na DB.
+
+### A6 — ReportConsolidator
+**Arquivo:** `agents/a6_report_consolidator.py`  
+**Modelo:** Gemini 2.5 Pro (thinking alto)  
+**Input:** outputs de A0–A5 via session state  
+**Output:** `relatorio_executivo` (markdown), `veredito`, `bairros_alternativos`, `alertas`
+
+- Sintetiza outputs de 5 agentes anteriores, decide bairros alternativos quando `score_geral < 6`, escolhe o veredito final e renderiza tabelas complexas com regras condicionais.
+- Persiste no Supabase via `UPDATE` (relatório stub já criado pelo `api.py` antes do pipeline iniciar).
+- Suporta **Modo Crowdsource**: se o usuário informar bairros indicados por terceiros, renderiza seção especial "📣 Demanda Social Detectada".
+- Telemetria: registra tokens reais por agente em `metrics/tokens_pipeline.csv`.
+
+### A7 — MarketResearch
+**Arquivo:** `agents/a7_market_research.py`  
+**Modelo:** Gemini 2.5 Flash  
+**Input:** pergunta livre do usuário sobre tendências macro  
+**Output:** resposta com fontes (Search Grounding)
+
+- Agente isolado — **não pode ter outras tools além de `google_search`** (limitação ADK/Gemini).
+- Acionado pelo root_agent quando o usuário pede pesquisa de mercado em tempo real OU quando o Playwright scraper falha em capturar horários de pico do Knowledge Panel.
+- Não faz parte do pipeline sequencial padrão (A0→A6). É chamado on-demand.
+
+---
+
 ## Stack
 
 | Camada      | Tech                                                          |
 |-------------|---------------------------------------------------------------|
 | LLM         | Gemini 2.5 Flash (default) + Gemini 2.5 Pro (consolidação)    |
 | Orquestração | Google ADK (`google-adk>=1.3.0`)                              |
-| Compute LLM | Vertex AI `us-central1` (cobrança em `gen-lang-client-0662901510`) |
+| Compute LLM | Gemini Developer API (`GOOGLE_API_KEY`); Vertex opcional (`GOOGLE_GENAI_USE_VERTEXAI=true`) |
 | Backend     | FastAPI + Uvicorn, Python 3.12                                |
 | Banco       | Supabase Postgres (mesmo cluster do CFN), RLS multi-org       |
 | Dados ext.  | Google Maps Platform (Places, Distance Matrix, Street View) · IBGE Censo 2022 (REST `servicodados`) · PNAD/Atlas via Search Grounding · SearchAPI Tier 0 (horários de pico) · **OLX + ImovelWeb** (listings comerciais via Playwright headless — ver [docs/listing_sources.md](docs/listing_sources.md)) |
@@ -100,7 +215,7 @@ gymsite_intelligence/
 │   ├── ibge_tools.py            BigQuery IBGE 2022
 │   ├── financial_tools.py
 │   ├── popular_times_tool.py    cascata SearchAPI → lib → Playwright
-│   ├── deep_research_tool.py    Search Grounding (A0)
+│   ├── deep_research_tool.py    Interactions API Deep Research + fallback (A0)
 │   ├── benchmarks_tool.py
 │   ├── kits_equipamentos.py     CAPEX por kit
 │   ├── pricing.py               tabela Gemini + Maps SKUs + câmbio
@@ -125,16 +240,17 @@ gymsite_intelligence/
 - Python 3.12+
 - Node.js 20+ (pnpm/npm)
 - Acesso ao projeto Supabase `cargo-flow-navigator` (schema GymSite vive lá)
-- Service Account com role `Vertex AI User` no projeto `gen-lang-client-0662901510`
+- `GOOGLE_API_KEY` (Gemini Developer API — padrão atual)
+- (Opcional, Vertex) Service Account com role `Vertex AI User` — ver [docs/VERTEX_SETUP.md](docs/VERTEX_SETUP.md)
 
 ### Backend
 
 ```powershell
 # 1. .env (a partir de .env.example) — preencher:
 #    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_GYMSITE_ORG_ID
-#    GOOGLE_API_KEY / GOOGLE_GENAI_USE_VERTEXAI=true
-#    GOOGLE_APPLICATION_CREDENTIALS=C:\Users\...\gymsite-sa.json
-#    MAPS_API_KEY ou GOOGLE_MAPS_API_KEY (ambos aceitos)
+#    GOOGLE_API_KEY=...  e  GOOGLE_GENAI_USE_VERTEXAI=false  (padrão — Deep Research no A0)
+#    (Vertex, opcional) GOOGLE_GENAI_USE_VERTEXAI=true + GOOGLE_APPLICATION_CREDENTIALS=...
+#    GOOGLE_MAPS_API_KEY (Places New, Geocoding, pipeline; ver .env.example)
 #    SEARCHAPI_KEY (horários de pico, free tier)
 
 # 2. Instalar deps
@@ -153,6 +269,25 @@ npm run dev   # :5174
 ```
 
 `.env` do frontend precisa de `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` + `VITE_API_BASE=http://localhost:8000`.
+
+### shadcn/ui (private registry `@gymsite`)
+
+O `frontend/components.json` define um registry privado `@gymsite` usando placeholders `${REGISTRY_URL}` e `${REGISTRY_TOKEN}`.
+O **shadcn CLI lê essas variáveis do ambiente do processo (shell)** e **não carrega `frontend/.env*`**.
+
+Workflow recomendado (PowerShell, a partir da raiz do repo):
+
+```powershell
+# 1) Preencha REGISTRY_URL e REGISTRY_TOKEN no .env da raiz
+#    (copie de .env.example → .env)
+#
+# 2) Exporte as variáveis na sua sessão (ou use um .env loader externo)
+$env:REGISTRY_URL="https://registry.vectracargo.com.br"
+$env:REGISTRY_TOKEN="..."
+
+# 3) Rode o shadcn
+npx shadcn@latest add @gymsite/<componente>
+```
 
 ### Login
 
@@ -214,6 +349,8 @@ Cada agente combina dados estruturados (APIs com schema fixo) com **Search Groun
 | Aluguel mediano         | Anúncios e portais imobiliários ao vivo                 | 3 queries Search Grounding paralelas | A4 `financial_estimator`          |
 | Concorrentes            | Google Places API (New) — Search Nearby + Reviews       | API REST              | `tools/competitor_tools.py`            |
 | Listings comerciais      | OLX (Lojas/Salas + Galpões) + ImovelWeb (Comerciais)    | Playwright Chromium headless (`page.evaluate`) | `tools/listing_tools.py` + `tools/imobiliaria_scraper.py` — ver [docs/listing_sources.md](docs/listing_sources.md) |
+| Investigação de imóvel   | Gemini grounded (o que opera no endereço)               | A1 pós-listings, até 5/disparo                 | [INVESTIGACAO_IMOVEL.md](docs/INVESTIGACAO_IMOVEL.md) |
+| Enriquecimento (PRD)     | CNJ Justiça Aberta (CNS) + portais comerciais           | Roadmap — ver PRD                              | [PRD-ENRIQUECIMENTO-IMOVEIS.md](docs/PRD-ENRIQUECIMENTO-IMOVEIS.md) |
 | Horários de pico        | SearchAPI free tier (Tier 0) → lib → Playwright         | Cascata               | `tools/popular_times_tool.py`          |
 | CAPEX equipamentos       | `tools/kits_totais.json` (catálogo estático)            | JSON local            | `tools/kits_equipamentos.py`           |
 | Frete equipamentos       | ANTT Resolução 6.034 com origem heurística              | Tabela local          | `tools/antt_tools.py`                  |
@@ -259,7 +396,8 @@ Custos persistidos em `relatorios.custo_brl/tokens_total` e detalhados por agent
 - Pipeline A0–A6 estável, sem MALFORMED, custo R$ 4,45
 - Frontend completo: listagem, novo relatório, viewer, comparador, mapa, custos, perfil
 - Auth email+senha + OTP, multi-tenant via RLS
-- Vertex AI us-central1 + retry 30s/60s/120s em 429
+- Deep Research A0 via Interactions API; retry 30s/60s/120s em 429 no `api.py`
+- Vertex AI documentado em `VERTEX_SETUP.md` (não é o padrão de dev)
 - Horários de pico via SearchAPI (9/9 cobertura em testes)
 - Delete de relatórios `failed` direto da UI
 

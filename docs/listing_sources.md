@@ -396,5 +396,6 @@ real, sem precisar parser HTML em Python. Chromium já estava instalado no
 4. ✅ `tools/listing_tools.py` implementado — parsing puro + orquestrador async com `asyncio.gather` das 3 fontes
 5. ✅ `tools/imobiliaria_scraper.py` reescrito como runner Playwright unificado (`fetch_olx_nextdata` + `fetch_imovelweb_jsonld`)
 6. ✅ Smoke test ao vivo Fortaleza/CE: 144 brutos → 15 únicos após dedup+filtro, incluindo prédio 988m² R$ 9.500 Centro (id 3032295652)
-7. ⏳ Modificar `agents/a1_geoscout.py` pra usar 3 estágios (zonas Places + listings + cruzamento via geocode)
+7. ✅ A1 integrado via `anchoring_tools._fetch_listings_como_candidatos` + A6 `_rank_candidatos_for_top3`
 8. ⏳ Teste E2E full pipeline em Fortaleza/Centro, validar top 3 candidatos com `listing_url` clicáveis
+9. ✅ Migration `db/migrations/20260526_candidatos_listing_columns.sql` + persistência `supabase_writer` + UI `CandidatoCard`

@@ -22,7 +22,7 @@ import {
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { cn } from '@/lib/utils'
 import { formatComposicaoParque } from '@/lib/segmento-parque'
-import type { MarketContextJSON } from '@/hooks/useRelatorioDetail'
+import type { CoberturaRedesA0JSON, MarketContextJSON } from '@/hooks/useRelatorioDetail'
 
 export interface ContextoMercadoCardProps {
   /** UUID do relatório — habilita botão "Gerar novamente" no aviso v1.1. */
@@ -34,6 +34,8 @@ export interface ContextoMercadoCardProps {
   dataColeta?: string
   cached?: boolean
   redesA0?: string[]
+  /** Cobertura A0 — só exibe redes validadas localmente quando DR falhou. */
+  coberturaRedes?: CoberturaRedesA0JSON
   /** Métricas derivadas do output_consolidado pra dar substância à seção */
   totalConcorrentesAnalisados?: number
   nivelSaturacao?: string | null
@@ -76,6 +78,7 @@ export function ContextoMercadoCard({
   dataColeta,
   cached,
   redesA0,
+  coberturaRedes,
   totalConcorrentesAnalisados,
   nivelSaturacao,
   aluguelMedianaM2,
@@ -87,7 +90,13 @@ export function ContextoMercadoCard({
   const fonteEff = mc.fonte ?? fonte ?? 'Desconhecida'
   const dataColetaEff = mc.data_coleta ?? dataColeta ?? ''
   const cachedEff = mc.cached ?? cached ?? false
-  const redes = mc.principais_redes_concorrentes ?? redesA0 ?? []
+  const redesDr = mc.principais_redes_concorrentes ?? redesA0 ?? []
+  const redesValidadas =
+    coberturaRedes?.redes_locais_validadas ??
+    coberturaRedes?.redes_cobertas ??
+    (coberturaRedes?.tem_redes_fantasma ? [] : redesDr)
+  const redesDrNaoValidadas =
+    mc.redes_dr_nao_validadas ?? coberturaRedes?.redes_nao_encontradas ?? []
 
   const tendCfg = mc.tendencia_mercado
     ? TENDENCIA_CONFIG[mc.tendencia_mercado.toLowerCase()] ?? null
@@ -354,14 +363,14 @@ export function ContextoMercadoCard({
           )}
         </dl>
 
-        {/* Redes investigadas */}
-        {redes.length > 0 && (
+        {/* Redes — só as validadas no raio (OSM/Places); não lista DR “fantasma”. */}
+        {redesValidadas.length > 0 && (
           <div>
             <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-2">
-              Principais redes concorrentes investigadas
+              Redes com unidade no raio (validadas)
             </h4>
             <ul className="flex flex-wrap gap-1.5">
-              {redes.map((rede) => (
+              {redesValidadas.map((rede) => (
                 <li
                   key={rede}
                   className="px-2 py-0.5 rounded-md bg-muted text-xs font-mono"
@@ -372,6 +381,20 @@ export function ContextoMercadoCard({
             </ul>
           </div>
         )}
+        {redesDrNaoValidadas.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Redes citadas pelo Deep Research sem unidade confirmada no raio:{' '}
+            <span className="font-mono">{redesDrNaoValidadas.join(', ')}</span>
+          </p>
+        )}
+        {redesValidadas.length === 0 &&
+          redesDr.length > 0 &&
+          (coberturaRedes?.tem_redes_fantasma || totalConcorrentesAnalisados === 0) && (
+            <p className="text-xs text-veredito-investigar">
+              Nenhuma rede foi confirmada por busca local (geocode/Places/OSM). A lista do
+              Deep Research não é exibida como concorrência verificada.
+            </p>
+          )}
 
         {/* Insights estratégicos */}
         {mc.insights_estrategicos && mc.insights_estrategicos.length > 0 && (

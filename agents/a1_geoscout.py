@@ -65,6 +65,8 @@ A macro-tool já executa internamente:
 - **Listings reais de OLX + ImovelWeb (Playwright)** com `listing_url`,
   `listing_id`, `price_raw`, `source` — oferta concreta marcada com
   `qualidade_sinal: "direto-listing"` (vs heurísticas com "indireto-heuristico")
+- **Investigação web** nos imóveis com gatilho (`investigacao`, `investigacao_resultado`):
+  o que opera no endereço hoje (aberto/vago/fechado) — preserve esses campos nos candidatos
 
 NÃO chame ferramentas separadas — todas foram consolidadas. Uma única
 chamada à macro-tool é suficiente E obrigatória.
@@ -84,7 +86,8 @@ A5 ContactHunter usa esses campos:
   "estrategia": "<copiar da macro>",
   "qualidade_sinal": "<copiar da macro>",
   "checklist_diligencia": [<6 itens>],
-  "candidatos": [<lista ordenada por score_geoscout, mistura âncoras + listings>]
+  "investigacoes_imoveis": {"disparados": N, "executados": N, "limite": 5},
+  "candidatos": [<lista com investigacao + investigacao_resultado quando houver>]
 }
 ```
 

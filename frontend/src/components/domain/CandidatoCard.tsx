@@ -14,6 +14,7 @@ import { ScoreGauge } from './ScoreGauge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { SHOW_WHATSAPP_UI } from '@/lib/feature-flags'
 import type { CandidatoJSON } from '@/hooks/useRelatorioDetail'
 
 function formatTelefoneBR(tel: string): string {
@@ -159,17 +160,19 @@ export function CandidatoCard({
                     </span>
                   </a>
                 </Button>
-                <Button variant="success" size="sm" className="h-7 text-xs" asChild>
-                  <a
-                    href={whatsappLink(candidato.telefone)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="WhatsApp"
-                  >
-                    <MessageCircle size={12} />
-                    WhatsApp
-                  </a>
-                </Button>
+                {SHOW_WHATSAPP_UI && (
+                  <Button variant="success" size="sm" className="h-7 text-xs" asChild>
+                    <a
+                      href={whatsappLink(candidato.telefone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="WhatsApp"
+                    >
+                      <MessageCircle size={12} />
+                      WhatsApp
+                    </a>
+                  </Button>
+                )}
               </>
             )}
             {anuncioUrl && (

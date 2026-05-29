@@ -46,6 +46,7 @@ import {
   type ModeloNegocio,
   type TamanhoCodigo,
 } from '@/data/tamanhos-por-modelo'
+import { CanalRunPanel } from '@/components/domain/CanalRunPanel'
 
 /** Valor legado em relatórios antigos — não permitir novo disparo no MVP. */
 const BAIRRO_CIDADE_INTEIRA = '(cidade inteira)'
@@ -88,6 +89,7 @@ const formSchema = z
     // benchmark do modelo. Usuário pode override manualmente depois.
     tamanho: z.enum(['pp', 'p', 'm', 'g', 'gg']),
     estacionamentoObrigatorio: z.boolean(),
+    a0ResearchProvider: z.enum(['auto', 'gemini', 'kimi']),
   })
   .refine((d) => d.areaMax >= d.areaMin, {
     message: 'Área máxima deve ser >= mínima',
@@ -193,6 +195,7 @@ export function NovoRelatorioPage() {
       tipoNegocio: (retrySearch.tipo_negocio as FormData['tipoNegocio']) ?? 'academia',
       tamanho: (retrySearch.tamanho_preset as FormData['tamanho']) ?? 'm',
       estacionamentoObrigatorio: retrySearch.estacionamento_obrigatorio ?? true,
+      a0ResearchProvider: 'auto',
     },
   })
 
@@ -334,6 +337,7 @@ export function NovoRelatorioPage() {
       genero_alvo: data.generoAlvo,
       tipo_negocio: data.tipoNegocio,
       estacionamento_obrigatorio: data.estacionamentoObrigatorio,
+      a0_research_provider: data.a0ResearchProvider,
     }
 
     return { prompt, structured_params }
@@ -357,6 +361,10 @@ export function NovoRelatorioPage() {
         genero_alvo: structured_params.genero_alvo as string,
         tipo_negocio: structured_params.tipo_negocio as string,
         estacionamento_obrigatorio: structured_params.estacionamento_obrigatorio as boolean,
+        a0_research_provider: structured_params.a0_research_provider as
+          | 'auto'
+          | 'gemini'
+          | 'kimi',
       })
 
       trackPipeline(
@@ -596,6 +604,15 @@ export function NovoRelatorioPage() {
               será habilitada em versão futura.
             </p>
           </Field>
+
+          <CanalRunPanel
+            cidade={municipioSelecionado?.nome ?? ''}
+            bairro={watchedBairro}
+            uf={ufSelecionada?.sigla}
+            tipoNegocio={watchedTipoNegocio}
+            publicoAlvo={watch('publicoAlvo')}
+            disabled={!municipioSelecionado || !watchedBairro}
+          />
         </section>
 
         {/* Parâmetros do imóvel */}
@@ -736,6 +753,25 @@ export function NovoRelatorioPage() {
             />
             Estacionamento obrigatório no imóvel
           </label>
+
+          <Field
+            label="Pesquisa de mercado (A0)"
+            hint="Gemini = Deep Research Google · Kimi = OpenClaw (5 buscas paralelas)"
+          >
+            <SelectGrouped
+              value={watch('a0ResearchProvider')}
+              onChange={(v) =>
+                setValue('a0ResearchProvider', v as FormData['a0ResearchProvider'], {
+                  shouldDirty: true,
+                })
+              }
+              options={[
+                { value: 'auto', label: 'Automático (.env)' },
+                { value: 'gemini', label: 'Gemini Deep Research' },
+                { value: 'kimi', label: 'Kimi / OpenClaw' },
+              ]}
+            />
+          </Field>
         </section>
 
         {submitError && (

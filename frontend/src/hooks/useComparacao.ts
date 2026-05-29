@@ -70,17 +70,5 @@ export function calcularDelta(
   return { delta, pct, direcao }
 }
 
-/** Formata BRL pra exibição. */
-export function formatBRL(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return v.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  })
-}
-
-export function formatPct(v: number | null | undefined): string {
-  if (v == null || !Number.isFinite(v)) return '—'
-  return `${v.toFixed(1)}%`
-}
+import { formatBRL, formatPct } from '@/lib/format'
+export { formatBRL, formatPct }

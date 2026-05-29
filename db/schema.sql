@@ -183,6 +183,12 @@ create table relatorio_outputs (
   -- Contexto de mercado (do A0 Deep Research)
   market_context jsonb,
 
+  -- Novos entrantes CNPJ fitness — schema v1.7 (lista 90d)
+  entrantes_cnpj_90d jsonb not null default '{}'::jsonb,
+
+  -- Obras fitness em andamento no município (CNO) — schema v1.10
+  obras_cno_em_curso jsonb not null default '{}'::jsonb,
+
   -- Cobertura A0 (schema v1.4) — confronta redes solicitadas pelo DR vs
   -- validadas pela busca georreferenciada. Inclui redes_solicitadas,
   -- redes_cobertas, redes_nao_encontradas, tem_redes_fantasma.
@@ -199,6 +205,43 @@ create index idx_outputs_veredito on relatorio_outputs(veredito);
 create index idx_outputs_score_top1 on relatorio_outputs(score_top1_candidato desc);
 
 comment on table relatorio_outputs is 'Saída consolidada do relatório (scores, veredito, recomendações).';
+
+-- ============================================================================
+-- 10. CNPJ FITNESS (RFB) — SNAPSHOTS MENSAIS (CNAE 9313100)
+-- ============================================================================
+-- Nota: não é multi-tenant (dado público). Pode ser usado por todos os tenants.
+create table if not exists cnpj_fitness_estabelecimentos (
+  id uuid primary key default gen_random_uuid(),
+  ref_month date not null,
+  cnpj text not null,
+  municipio_codigo text,
+  uf text,
+  cidade text,
+  cnae_fiscal_principal text,
+  cnaes_secundarios text,
+  data_inicio_atividade date,
+  situacao_cadastral integer,
+  data_situacao_cadastral date,
+  nome_fantasia text,
+  cep text,
+  logradouro text,
+  numero text,
+  complemento text,
+  segmento_operacao text,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists uq_cnpj_fitness_ref_cnpj
+  on cnpj_fitness_estabelecimentos(ref_month, cnpj);
+
+create index if not exists idx_cnpj_fitness_ref_month
+  on cnpj_fitness_estabelecimentos(ref_month);
+
+create index if not exists idx_cnpj_fitness_municipio
+  on cnpj_fitness_estabelecimentos(municipio_codigo);
+
+create index if not exists idx_cnpj_fitness_data_inicio
+  on cnpj_fitness_estabelecimentos(data_inicio_atividade);
 
 
 -- ============================================================================
@@ -238,6 +281,12 @@ create table candidatos (
   telefone text,
   website text,
   tem_24h boolean default false,
+
+  -- Listing imobiliário (OLX / ImovelWeb) — qualidade_sinal = direto-listing
+  listing_url text,
+  listing_id text,
+  price_raw text,
+  listing_source text,
 
   proximo_passo text,
   created_at timestamptz default now(),

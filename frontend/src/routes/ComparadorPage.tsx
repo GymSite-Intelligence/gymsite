@@ -15,6 +15,7 @@ import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { useComparacao, formatBRL } from '@/hooks/useComparacao'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
 import { MetricaDiff } from '@/components/domain/MetricaDiff'
+import { PopularTimesHeatmap } from '@/components/dashboard/PopularTimesHeatmap'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -415,6 +416,38 @@ export function ComparadorPage() {
           direcaoMelhor="neutro"
         />
       </SecaoComparativa>
+
+      {/* Bloco 6: Heatmap de horários de pico (comparativo) */}
+      <section className="rounded-lg border border-border overflow-hidden">
+        <header className="px-4 py-2.5 bg-muted/30 border-b border-border">
+          <h3 className="text-sm font-semibold">Horários de pico dos concorrentes</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Média de intensidade por dia/hora · quanto mais quente, mais movimento
+          </p>
+        </header>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground mb-2">
+              Relatório A · {inpA.bairro}
+            </p>
+            <PopularTimesHeatmap
+              competidores={outA.competitors_set ?? []}
+              agregacao="mean"
+              compact
+            />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground mb-2">
+              Relatório B · {inpB.bairro}
+            </p>
+            <PopularTimesHeatmap
+              competidores={outB.competitors_set ?? []}
+              agregacao="mean"
+              compact
+            />
+          </div>
+        </div>
+      </section>
 
       <footer className="flex items-center justify-between pt-4 border-t border-border">
         <Button

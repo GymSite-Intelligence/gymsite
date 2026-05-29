@@ -242,10 +242,12 @@ def _estimar_area_por_tipo(tipos: list[str]) -> int:
     return max(areas) if areas else 600  # fallback
 
 
-def _calcular_score_geoscout_basico(c: dict, bairro_alvo_low: str) -> float:
+def _calcular_score_geoscout_basico(c: dict, bairro_alvo_chave: str) -> float:
     """Score 0-10 determinístico baseado nos sinais do Place."""
     tipos_set = {str(t).lower() for t in (c.get("tipos") or [])}
-    endereco_low = (c.get("endereco") or "").lower()
+    from tools.bairro_normalize import normalizar_bairro
+
+    endereco_chave = normalizar_bairro(c.get("endereco") or "")
     status = (c.get("status") or "").upper()
     rating = c.get("rating")
     num_av = c.get("num_avaliacoes") or 0
@@ -253,7 +255,7 @@ def _calcular_score_geoscout_basico(c: dict, bairro_alvo_low: str) -> float:
     score = 0.0
     if tipos_set & {"supermarket", "car_dealer", "warehouse", "hardware_store"}:
         score += 3
-    if any(s in endereco_low for s in ["av.", "avenida", "rod.", "rodovia"]):
+    if any(s in endereco_chave for s in ["av.", "avenida", "rod.", "rodovia"]):
         score += 2
     if status in ("CLOSED_TEMPORARILY", "CLOSED_PERMANENTLY"):
         score += 2
@@ -264,7 +266,7 @@ def _calcular_score_geoscout_basico(c: dict, bairro_alvo_low: str) -> float:
     if num_av > 200:
         score += 1
     # Bônus +1 se endereço contém o bairro alvo
-    if bairro_alvo_low and bairro_alvo_low in endereco_low:
+    if bairro_alvo_chave and bairro_alvo_chave in endereco_chave:
         score += 1
 
     return round(min(score, 10.0), 1)
@@ -369,7 +371,9 @@ def analisar_pontos_comerciais_completo(
     todos = list(by_id.values())
 
     # 5. Filtro blacklist + área incompatível
-    bairro_low = (bairro or "").lower().strip()
+    from tools.bairro_normalize import normalizar_bairro
+
+    bairro_chave = normalizar_bairro(bairro or "")
     candidatos: list[dict] = []
     for c in todos:
         if _nome_blacklisted(c.get("nome", "")):
@@ -377,7 +381,7 @@ def analisar_pontos_comerciais_completo(
         c["area_estimada_m2"] = _estimar_area_por_tipo(c.get("tipos", []))
         if c["area_estimada_m2"] == 0:  # restaurant sem âncora
             continue
-        c["score_geoscout"] = _calcular_score_geoscout_basico(c, bairro_low)
+        c["score_geoscout"] = _calcular_score_geoscout_basico(c, bairro_chave)
         candidatos.append(c)
 
     # 6. Top 10 por score
@@ -456,6 +460,33 @@ def analisar_pontos_comerciais_completo(
     candidatos_final = top_10 + listings_candidatos
     candidatos_final.sort(key=lambda x: x.get("score_geoscout", 0), reverse=True)
 
+    from tools.deep_research_tool import (
+        executar_investigacoes_candidatos,
+        marcar_gatilhos_investigacao,
+    )
+    from tools.investigacao_context import build_contexto_investigacao
+
+    state = getattr(tool_context, "state", None) if tool_context else None
+    input_params = (state.get("input_params") if state else None) or {}
+    if not input_params.get("cidade"):
+        input_params = {
+            **input_params,
+            "cidade": cidade,
+            "bairro": bairro or "",
+            "uf": uf or "",
+        }
+    contexto_inv = build_contexto_investigacao(input_params)
+
+    marcar_gatilhos_investigacao(candidatos_final)
+    investigacoes_resumo = executar_investigacoes_candidatos(
+        candidatos_final,
+        cidade=cidade,
+        bairro=bairro or "",
+        uf=uf or "",
+        contexto_relatorio=contexto_inv,
+        input_params=input_params,
+    )
+
     return {
         "total_candidatos": len(candidatos_final),
         "ancoras_heuristicas": len(top_10),
@@ -466,6 +497,7 @@ def analisar_pontos_comerciais_completo(
         ),
         "qualidade_sinal": "misto-heuristico+direto-listing",
         "checklist_diligencia": list(CHECKLIST_DILIGENCIA),
+        "investigacoes_imoveis": investigacoes_resumo,
         "candidatos": candidatos_final,
         "lat_centro": lat,
         "lng_centro": lng,
@@ -474,7 +506,8 @@ def analisar_pontos_comerciais_completo(
             "Macro-tool determinística: geocode + nearby search + text search "
             "(supermercado, concessionária) + filtro blacklist + score "
             "GeoScout + score ancoragem (polos geradores) + visibilidade + "
-            "avenida + street view + listings OLX/ImovelWeb (Playwright). "
+            "avenida + street view + listings OLX/ImovelWeb (Playwright) + "
+            "investigação web opcional (o que opera no endereço hoje). "
             "Tudo em 1 chamada — sem function_calls grandes que provocavam MALFORMED."
         ),
     }

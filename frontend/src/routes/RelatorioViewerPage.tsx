@@ -40,9 +40,7 @@ import { ContextoMercadoCard } from '@/components/domain/ContextoMercadoCard'
 import { CandidatoCard } from '@/components/domain/CandidatoCard'
 import { CenarioFinanceiroTable } from '@/components/domain/CenarioFinanceiroTable'
 import { CapexBreakdownChart } from '@/components/domain/CapexBreakdownChart'
-import { ConsorcioCard } from '@/components/domain/ConsorcioCard'
 import { FinanceiroKpiStrip } from '@/components/domain/FinanceiroKpiStrip'
-import { getCapexMid } from '@/lib/consorcio-config'
 import { KitEquipamentosTable } from '@/components/domain/KitEquipamentosTable'
 import {
   getKit,
@@ -62,7 +60,6 @@ import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairro
 import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativosTable'
 import { TextoSecao } from '@/components/domain/TextoSecao'
 import { AlertasGlobais } from '@/components/domain/AlertasGlobais'
-import { ScriptCard } from '@/components/domain/ScriptCard'
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -281,6 +278,7 @@ function RelatorioViewerContent({
           <ContextoMercadoCard
             relatorioId={relatorioId}
             marketContext={out.market_context}
+            coberturaRedes={out.cobertura_redes_a0}
             fonte={meta.fonte_market_context}
             dataColeta={meta.data_coleta_market_context}
             cached={meta.cached_market_context}
@@ -341,7 +339,6 @@ function RelatorioViewerContent({
       >
         {(() => {
           const cenariosAtivos = cenariosRecalc ?? out.viabilidade_3_cenarios
-          const capexMid = getCapexMid(cenariosAtivos)
           return (
             <>
               <FinanceiroKpiStrip
@@ -359,7 +356,7 @@ function RelatorioViewerContent({
                 modeloRecomendado={out.modelo_recomendado}
                 areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
               />
-              <ConsorcioCard key={capexMid ?? 'sem-capex'} capexMid={capexMid} className="mt-4" />
+              {/* <ConsorcioCard key={capexMid ?? 'sem-capex'} capexMid={capexMid} className="mt-4" /> */}
             </>
           )
         })()}
@@ -413,7 +410,7 @@ function RelatorioViewerContent({
       {/* 7.4 Novos entrantes CNPJ (90d) */}
       {out.entrantes_cnpj_90d && (out.entrantes_cnpj_90d.entrantes?.length ?? 0) > 0 && (
         <Section title="🆕 Novos entrantes (CNPJ — 90 dias)" collapsible>
-          <EntrantesCnpjTable block={out.entrantes_cnpj_90d} />
+          <EntrantesCnpjTable block={out.entrantes_cnpj_90d} relatorioId={relatorioId} />
         </Section>
       )}
 
@@ -495,14 +492,9 @@ function RelatorioViewerContent({
       {/* 11. Script de Abordagem — só renderiza se A5 conseguiu extrair algo útil.
           Quando A5 falha, contato_decisor vem como {} e a section ficaria vazia. */}
       {(() => {
-        const c = out.contato_decisor as Record<string, unknown> | undefined
-        const temScript = !!(c && (c.script_abordagem || c.canal_recomendado))
-        if (!temScript) return null
-        return (
-          <Section title="📞 Script de Abordagem — Top 1" collapsible>
-            <ScriptCard contato={c as Parameters<typeof ScriptCard>[0]['contato']} />
-          </Section>
-        )
+        // Ocultado até segunda ordem
+        void out.contato_decisor
+        return null
       })()}
 
       {/* 12. Alertas + Decisão (collapsible) */}

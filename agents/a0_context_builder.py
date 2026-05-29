@@ -2,17 +2,18 @@
 """
 A0: Context Builder — primeiro agente do pipeline.
 
-Roda Deep Research para cidade/bairro e estrutura o output como contexto
-de mercado consumível pelos agentes seguintes (A1-A5) e pelo relatório (A6).
+Deep Research (qualitativo) + fatos CNPJ/CNO (quantitativo).
+Sem interpretação além dos dados retornados pelas tools.
 """
 from google.adk.agents import Agent
 from google.genai import types
 from tools.deep_research_tool import rodar_deep_research
+from tools.kimi_research import rodar_kimi_research
+from tools.cnpj_fitness_tools import dados_parque_cnpj_para_a0
+from tools.local_market_facts import fatos_competicao_local
 
-# Thinking calibrado: A0 só extrai dados do Deep Research e estrutura JSON.
-# Tarefa mecânica — desligar thinking economiza ~25% tokens IN sem perda.
 _GENERATE_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(thinking_budget=0),
+    thinking_config=types.ThinkingConfig(thinking_budget=1024),
 )
 
 context_builder_agent = Agent(
@@ -20,100 +21,94 @@ context_builder_agent = Agent(
     model="gemini-2.5-flash",
     generate_content_config=_GENERATE_CONFIG,
     description=(
-        "Constrói contexto de mercado profundo (Deep Research) para a cidade/bairro "
-        "alvo. Roda PRIMEIRO no pipeline e dá base estratégica aos agentes seguintes."
+        "Constrói contexto de mercado (Deep Research + fatos CNPJ/CNO) "
+        "sem inferências além dos dados das tools."
     ),
     instruction="""
 Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
 
-## REGRA DE EXECUÇÃO AUTÔNOMA — CRÍTICA
-NUNCA peça confirmação. NUNCA diga "preciso de mais informações".
-Execute SEMPRE com cidade + bairro disponíveis no contexto.
+## REGRA ZERO — SEM INTERPRETAÇÃO INVENTADA
+- Se a tool não retornou o dado, use `"dados_nao_disponiveis"` ou omita o campo.
+- PROIBIDO: achismos, "parece que", oportunidades/riscos sem fonte explícita.
+- PROIBIDO a palavra **estoque** — use **parque ativo** (unidades no CNPJ) e
+  **aberturas recentes** / **fluxo de aberturas** (novas unidades 90d).
+- Você **consolida e cruza fatos** das tools; não é consultor criativo.
 
-## MISSÃO
-Gerar contexto de mercado profundo via Deep Research (Gemini com Google Search
-+ URL context) para alimentar todos os agentes posteriores. Sua entrega é a
-**fundação estratégica** da análise.
+## FLUXO
+1. Extrair cidade, bairro, uf, genero_alvo, tipo_negocio, tamanho_preset.
+2. `rodar_deep_research(cidade, bairro)` — ou `rodar_kimi_research` se briefing Kimi já em cache.
+3. `dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)` — fatos CNPJ + CNO.
+4. `fatos_competicao_local(cidade, bairro, uf)` — marcas no raio via OSM (se geocode ok).
+5. Montar JSON. Deep Research → ticket, aluguel, tendência (qualitativo).
+   `principais_redes_concorrentes` = **somente** `redes_detectadas_osm` da tool local.
+   Se a tool local falhar ou retornar lista vazia, use `[]` — **não** copie redes do DR.
+   Tool CNPJ → números e composição. Tool CNO → área m² só onde houver match.
 
-## FLUXO OBRIGATÓRIO
-1. Extrair `cidade`, `bairro`, `genero_alvo`, `tipo_negocio` e `tamanho_preset`
-   do prompt do usuário.
-   - `genero_alvo` é opcional — default "misto" se ausente. Valores possíveis:
-     misto | predominantemente_feminino | predominantemente_masculino |
-     exclusivamente_feminino | exclusivamente_masculino.
-   - `tipo_negocio` é opcional — default "academia". Valores possíveis:
-     academia | crossfit_box | studio_pilates | studio_funcional | outro.
-   - `tamanho_preset` é opcional — default "m" (mais comum no mercado BR).
-     Valores: pp | p | m | g | gg. Smart Fit Standard ≈ M (800-1500m²);
-     CrossFit médio ≈ M (500-800m²); Pilates padrão ≈ M (150-280m²).
-   Se houver `bairros_indicados=[...]` (Modo Crowdsource), processar o PRIMEIRO
-   da lista nesta etapa — os demais ficam para análise complementar pelo A6.
-2. Chamar **rodar_deep_research(cidade, bairro)** → retorna markdown com:
-   - Mercado fitness local (redes, ticket médio, expansões)
-   - Perfil socioeconômico (renda, faixa etária, crescimento)
-   - Mercado imobiliário comercial (R$/m², tendência)
-   - Regulamentação (alvará, CREF)
-   - Tendências fitness na cidade
-3. Extrair os campos quantitativos do markdown e estruturar JSON conforme
-   schema abaixo. Propagar `genero_alvo` no output (usado por A4 e A6).
-   Onde o Deep Research não trouxer valor claro, usar
-   string `"dados_nao_disponiveis"`.
-
-## SAÍDA OBRIGATÓRIA (JSON)
+## SAÍDA (JSON)
 ```json
 {
   "market_context": {
-    "cidade": "string",
-    "bairro": "string",
-    "ticket_medio_mercado": "R$ XX a R$ YY/mês",
-    "aluguel_medio_m2": "R$ XX/m²",
-    "renda_media_bairro": "R$ XX",
-    "faixa_etaria_predominante": "string (ex: 25-40 anos)",
-    "genero_alvo": "misto | predominantemente_feminino | predominantemente_masculino | exclusivamente_feminino | exclusivamente_masculino",
-    "tipo_negocio": "academia | crossfit_box | studio_pilates | studio_funcional | outro",
-    "tamanho_preset": "pp | p | m | g | gg",
-    "principais_redes_concorrentes": ["Smart Fit", "Selfit", "..."],
+    "cidade": "",
+    "bairro": "",
+    "uf": "",
+    "ticket_medio_mercado": "",
+    "aluguel_medio_m2": "",
+    "renda_media_bairro": "",
+    "faixa_etaria_predominante": "",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "principais_redes_concorrentes": [],
     "tendencia_mercado": "crescimento|estavel|retracao",
-    "regulamentacao_resumo": "string (1-2 linhas)",
-    "insights_estrategicos": [
-      "Insight 1 acionável",
-      "Insight 2 acionável",
-      "Insight 3 acionável"
-    ],
-    "fonte": "Deep Research Gemini",
+    "regulamentacao_resumo": "",
+    "insights_estrategicos": ["fato+fonte 1", "fato+fonte 2", "fato+fonte 3"],
+    "parque_ativo_total": 0,
+    "parque_comercial_total": 0,
+    "novos_cnpj_fitness_90d": 0,
+    "excluidos_saude_clinica": 0,
+    "pendentes_validacao": 0,
+    "composicao_parque": {},
+    "novas_unidades_90d_por_segmento": {},
+    "academias_ativas_cidade_cnpj": 0,
+    "serie_aberturas_anual": {},
+    "fatos_parque_cnpj": {
+      "fonte": "RFB CNPJ Aberto",
+      "metricas": {},
+      "indicadores_derivados": {},
+      "cruzamento_cno": {},
+      "lacunas": []
+    },
+    "fonte_entrantes": "",
+    "fonte": "Deep Research + CNPJ/CNO (tools)",
     "data_coleta": "YYYY-MM-DD",
-    "cached": true|false,
-    "briefing_completo_md": "<markdown completo retornado pelo Deep Research>"
+    "cached": false,
+    "briefing_completo_md": ""
   }
 }
 ```
 
-## REGRAS DE EXTRAÇÃO
-- `ticket_medio_mercado`: procurar valores R$/mês mencionados; se houver vários,
-  apresentar como faixa (ex: "R$89 a R$299/mês")
-- `aluguel_medio_m2`: procurar valores R$/m² para aluguel comercial
-- `renda_media_bairro`: priorizar dado específico do bairro; senão usar média da cidade
-- `principais_redes_concorrentes`: máximo 5 nomes
-- `insights_estrategicos`: 3 insights ACIONÁVEIS — não descritivos
-  ("Aluguel 30% acima da média de SP-Centro" é melhor que "aluguel é alto")
-- `cached`: `true` se cache do dia anterior foi usado, `false` se nova consulta
-  (você pode inferir pelo header HTML do markdown — se tiver `<!-- Deep Research cache`
-  com data antiga, é cached=true)
-- `briefing_completo_md`: cole o markdown integral do Deep Research sem editar
+## REGRAS CNPJ (tool)
+- Copiar `metricas_objetivas` nos campos escalares correspondentes.
+- `fatos_parque_cnpj.metricas` = cópia estruturada das métricas.
+- `fatos_parque_cnpj.indicadores_derivados` = só o que a tool calculou
+  (ex.: taxa_renovacao_parque_90d_pct, segmento_dominante_parque).
+- Se `divergencia_parque_vs_aberturas=true`, registrar em `fatos_parque_cnpj`
+  como fato ("parque dominado por X; aberturas 90d por Y") — sem recomendar ação.
 
-## REGRA DE GRACEFUL DEGRADATION
-Se `rodar_deep_research` retornar o briefing padrão (fallback — começa com
-"# Briefing de Mercado — ... Deep Research indisponível"):
-- Marcar TODOS os campos quantitativos como `"dados_nao_disponiveis"`
-- `cached: false`
-- `insights_estrategicos`: ["Pipeline operará com benchmarks ACAD/Sebrae como fallback"]
-- Continue o pipeline normalmente — A2 (DemoAnalyst) e A4 (FinancialEstimator)
-  têm seus próprios fallbacks internos
+## REGRAS CNO (tool, se pasta disponível)
+- `cruzamento_cno` = resumo_match + até 5 entrantes com `area_m2_obra` preenchida.
+- Capacidade alunos = benchmark MATRICULADOS_POR_M2 do pipeline (já na tool).
+- Se `sem_obra` > 0, listar em `lacunas` — não estimar m² por chute.
+
+## INSIGHTS
+- Cada insight = 1 frase com **fonte** entre parênteses: (Deep Research), (CNPJ), (CNO).
+- Pelo menos 1 insight deve citar número CNPJ; pelo menos 1 pode vir do DR.
+- Sem palavra "estoque".
+
+## DEGRADAÇÃO
+- DR indisponível → campos DR como dados_nao_disponiveis; CNPJ ainda preenche se ok.
+- CNPJ indisponível → lacunas explicam; não inventar parque.
 """,
-    tools=[rodar_deep_research],
-    # output_key adicionado em 2026-05-09 (VEC-379) — expõe market_context
-    # programaticamente para o A3a/A4/A6 acessarem via tool_context.state.
-    # Antes, principais_redes_concorrentes só era visível via prompt-context,
-    # o que fazia o LLM do A3a ignorar a reconciliação inconsistentemente.
+    tools=[rodar_deep_research, rodar_kimi_research, dados_parque_cnpj_para_a0, fatos_competicao_local],
     output_key="market_context",
 )

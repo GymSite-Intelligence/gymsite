@@ -537,8 +537,30 @@
       ],
       "fonte": "Deep Research Gemini",
       "data_coleta": "2026-05-07",
-      "cached": true
-    }
+      "cached": true,
+      "uf": "SC",
+      "novos_cnpj_fitness_90d": 50,
+      "academias_ativas_cidade_cnpj": 1828,
+      "serie_aberturas_anual": { "2026": 50 },
+      "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)"
+    },
+    "panorama_competitivo": {
+      "nivel_saturacao": "ALTO",
+      "total_encontrados_raio": 18,
+      "total_concorrentes_analisados": 8,
+      "cnpj_academias_ativas_cidade": 1828,
+      "densidade_por_km2": 0.64,
+      "metodologia": "Saturação no raio 3 km + referência CNPJ municipal."
+    },
+    "top_independentes": [
+      {
+        "nome": "Academia Exemplo Independente",
+        "rating": 4.6,
+        "num_avaliacoes": 320,
+        "bairro": "Cordeiros",
+        "is_independente": true
+      }
+    ]
   },
   "metadata_execucao": {
     "fonte_market_context": "Deep Research Gemini",

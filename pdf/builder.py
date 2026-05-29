@@ -23,6 +23,8 @@ from pdf.charts import chart_capex_stacked, chart_lucro_cenarios, chart_scores_b
 from pdf.models import LayoutId, RelatorioPdfModel
 from pdf.theme import (
     BORDER,
+    CARD_BG,
+    CHARCOAL,
     CONTENT_W,
     MARGIN_B,
     MARGIN_L,
@@ -31,7 +33,9 @@ from pdf.theme import (
     NAVY,
     PAGE_SIZE,
     ROW_ALT,
+    SLATE,
     TEAL,
+    TEAL_DARK,
     TEAL_LIGHT,
     build_styles,
     veredito_color,
@@ -68,6 +72,48 @@ def _para(text: str, style: str, styles: dict) -> Paragraph:
 
 def _section_title(title: str, styles: dict) -> list:
     return [Paragraph(title, styles["h1"]), Spacer(1, 4)]
+
+
+def _section_title_bala(title: str, styles: dict) -> list:
+    """Título de seção com linha de acento teal."""
+    return [
+        Paragraph(title, styles["bala_section"]),
+        Table(
+            [[""]],
+            colWidths=[CONTENT_W],
+            rowHeights=[2],
+            style=TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), TEAL),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ]),
+        ),
+        Spacer(1, 8),
+    ]
+
+
+def _table_bala(data: list[list], col_widths: list[float] | None = None) -> Table:
+    t = Table(data, colWidths=col_widths, repeatRows=1)
+    t.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), TEAL_DARK),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("FONTSIZE", (0, 1), (-1, -1), 9),
+                ("LINEBELOW", (0, 0), (-1, 0), 1.5, TEAL_DARK),
+                ("LINEBELOW", (0, -1), (-1, -1), 0.5, BORDER),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, ROW_ALT]),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ],
+        ),
+    )
+    return t
 
 
 def _table(data: list[list], col_widths: list[float] | None = None) -> Table:
@@ -456,6 +502,362 @@ def _build_data_room(model: RelatorioPdfModel, styles: dict) -> list:
     return story
 
 
+def _header_footer_bala(canvas, doc, model: RelatorioPdfModel) -> None:
+    canvas.saveState()
+    w, h = PAGE_SIZE
+    # faixa teal no topo
+    canvas.setFillColor(TEAL)
+    canvas.rect(0, h - 0.4 * cm, w, 0.4 * cm, fill=1, stroke=0)
+    canvas.setFillColor(CHARCOAL)
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.drawString(MARGIN_L, h - 0.9 * cm, "GymSite Intelligence")
+    canvas.setFont("Helvetica", 8)
+    loc = f"{model.bairro} · {model.cidade}"
+    if model.uf:
+        loc += f" / {model.uf}"
+    canvas.drawRightString(w - MARGIN_R, h - 0.9 * cm, loc[:60])
+    # rodapé
+    canvas.setStrokeColor(BORDER)
+    canvas.line(MARGIN_L, 1.2 * cm, w - MARGIN_R, 1.2 * cm)
+    canvas.setFillColor(SLATE)
+    canvas.setFont("Helvetica", 7)
+    canvas.drawString(
+        MARGIN_L,
+        0.8 * cm,
+        f"Relatório {model.relatorio_id[:8]}… · gerado {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+    )
+    canvas.drawRightString(w - MARGIN_R, 0.8 * cm, f"Página {doc.page}")
+    canvas.restoreState()
+
+
+def _cover_block_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    ver = model.veredito or "—"
+    vc = veredito_color(model.veredito)
+    meta = (
+        f"Área {model.area_m2_min}–{model.area_m2_max} m² · "
+        f"{model.tipo_negocio.replace('_', ' ')} · "
+        f"público {model.publico_alvo or '—'}"
+    )
+    badge = Table(
+        [[Paragraph(ver.upper(), styles["bala_badge"])]],
+        colWidths=[6 * cm],
+    )
+    badge.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), vc),
+            ("LEFTPADDING", (0, 0), (-1, -1), 14),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ])
+    )
+    cover_inner = [
+        [Paragraph("GymSite Intelligence", styles["bala_cover_sub"])],
+        [Paragraph(f"<b>{model.bairro}</b> · {model.cidade}", styles["bala_cover_title"])],
+        [badge],
+        [Paragraph(meta, styles["bala_cover_sub"])],
+        [
+            Paragraph(
+                f"Data da análise: {model.data_execucao or '—'}",
+                styles["bala_cover_sub"],
+            ),
+        ],
+    ]
+    cover_tbl = Table(cover_inner, colWidths=[CONTENT_W])
+    cover_tbl.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), CHARCOAL),
+            ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 20),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 20),
+            ("TOPPADDING", (0, 0), (-1, -1), 18),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 18),
+        ]),
+    )
+
+    # KPI cards
+    kpi_data = [
+        [
+            Paragraph("Score bairro", styles["bala_kpi_label"]),
+            Paragraph("Score Top 1", styles["bala_kpi_label"]),
+            Paragraph("Saturação", styles["bala_kpi_label"]),
+            Paragraph("Concorrentes", styles["bala_kpi_label"]),
+        ],
+        [
+            Paragraph(_score(model.score_bairro), styles["bala_kpi_value"]),
+            Paragraph(_score(model.score_top1), styles["bala_kpi_value"]),
+            Paragraph(model.nivel_saturacao or "—", styles["bala_kpi_value"]),
+            Paragraph(str(model.total_concorrentes or "—"), styles["bala_kpi_value"]),
+        ],
+    ]
+    kpi_tbl = Table(kpi_data, colWidths=[CONTENT_W / 4] * 4)
+    kpi_tbl.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, BORDER),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ])
+    )
+
+    return [cover_tbl, kpi_tbl, Spacer(1, 20)]
+
+
+def _scores_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    flow = _section_title_bala("1. Scores e veredito", styles)
+    kpi = [
+        ["Score bairro", "Score Top 1", "Saturação", "Concorrentes analisados"],
+        [
+            _score(model.score_bairro),
+            _score(model.score_top1),
+            model.nivel_saturacao or "—",
+            str(model.total_concorrentes or "—"),
+        ],
+    ]
+    flow.append(_table_bala(kpi, [CONTENT_W / 4] * 4))
+    flow.append(Spacer(1, 10))
+    png = chart_scores_bar(model.scores)
+    if png:
+        flow.append(Image(io.BytesIO(png), width=CONTENT_W * 0.85, height=4.2 * cm))
+    return flow
+
+
+def _resumo_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    if not model.resumo_executivo:
+        return []
+    flow = _section_title_bala("2. Resumo executivo", styles)
+    flow.append(_para(model.resumo_executivo[:4000], "bala_body", styles))
+    return flow
+
+
+def _market_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    if not model.market:
+        return []
+    m = model.market
+    flow = _section_title_bala("3. Contexto de mercado", styles)
+    rows = [
+        ["Indicador", "Valor"],
+        ["Ticket mercado", m.ticket_mercado or "—"],
+        ["Aluguel médio/m²", m.aluguel_m2 or "—"],
+        ["Renda bairro", m.renda or "—"],
+        ["Tendência", m.tendencia or "—"],
+    ]
+    if m.parque_ativo is not None:
+        rows.append(["Parque ativo (CNPJ)", str(m.parque_ativo)])
+    if m.novos_cnpj_90d is not None:
+        rows.append(["Novos CNPJ fitness (90d)", str(m.novos_cnpj_90d)])
+    flow.append(_table_bala(rows, [CONTENT_W * 0.45, CONTENT_W * 0.55]))
+    if m.redes:
+        flow.append(Spacer(1, 6))
+        flow.append(_para("Redes mapeadas: " + ", ".join(m.redes[:8]), "bala_small", styles))
+    for ins in m.insights[:3]:
+        flow.append(_para(f"• {ins}", "bala_body", styles))
+    return flow
+
+
+def _candidatos_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    if not model.candidatos:
+        return []
+    flow = _section_title_bala("4. Top candidatos (imóveis)", styles)
+    data = [["#", "Nome", "Área m²", "GeoScout", "Ancoragem", "Endereço"]]
+    for c in model.candidatos:
+        data.append(
+            [
+                str(c.posicao),
+                c.nome[:40],
+                str(int(c.area_m2)) if c.area_m2 else "—",
+                _score(c.score_geoscout),
+                _score(c.score_ancoragem),
+                c.endereco[:55],
+            ],
+        )
+    flow.append(
+        _table_bala(
+            data,
+            [
+                0.8 * cm,
+                4.2 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                1.5 * cm,
+                CONTENT_W - 9.5 * cm,
+            ],
+        ),
+    )
+    for c in model.candidatos:
+        if c.motivo:
+            flow.append(
+                _para(f"<b>Cand. {c.posicao}:</b> {c.motivo[:400]}", "bala_small", styles),
+            )
+    return flow
+
+
+def _finance_section_bala(model: RelatorioPdfModel, styles: dict, *, charts: bool) -> list:
+    if not model.cenarios:
+        return []
+    flow = _section_title_bala("5. Viabilidade financeira (3 cenários)", styles)
+    if model.modelo_recomendado:
+        flow.append(
+            _para(f"Modelo recomendado: <b>{model.modelo_recomendado}</b>", "bala_body", styles),
+        )
+    if model.aluguel_mensal is not None:
+        extra = ""
+        if model.aluguel_mediana_m2 is not None:
+            extra = f" · mediana {_brl(model.aluguel_mediana_m2)}/m²"
+        flow.append(_para(f"Aluguel estimado: <b>{_brl(model.aluguel_mensal)}</b>{extra}", "bala_body", styles))
+
+    data = [
+        [
+            "Modelo",
+            "Ticket",
+            "Receita/mês",
+            "Lucro/mês",
+            "Margem",
+            "Payback",
+            "Investimento",
+            "Viabilidade",
+        ],
+    ]
+    for c in model.cenarios:
+        pb = str(c.payback_meses) if c.payback_meses and c.payback_meses < 900 else "—"
+        data.append(
+            [
+                c.label,
+                _brl(c.ticket_medio),
+                _brl(c.receita_mensal),
+                _brl(c.lucro_mensal),
+                _pct(c.margem_pct),
+                f"{pb} m",
+                _brl(c.investimento_total or c.capex_total),
+                c.viabilidade or "—",
+            ],
+        )
+    cw = CONTENT_W / 8
+    flow.append(_table_bala(data, [cw] * 8))
+
+    if charts:
+        flow.append(Spacer(1, 10))
+        png1 = chart_capex_stacked(model.cenarios)
+        if png1:
+            flow.append(Image(io.BytesIO(png1), width=CONTENT_W, height=5.5 * cm))
+        flow.append(Spacer(1, 6))
+        png2 = chart_lucro_cenarios(model.cenarios)
+        if png2:
+            flow.append(Image(io.BytesIO(png2), width=CONTENT_W * 0.9, height=5 * cm))
+    return flow
+
+
+def _competition_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    if not model.competidores:
+        return []
+    flow = _section_title_bala("6. Inteligência competitiva", styles)
+    if model.total_raio is not None:
+        flow.append(
+            _para(
+                f"Academias no raio (agregado): <b>{model.total_raio}</b> · "
+                f"amostra analisada: <b>{model.total_concorrentes or len(model.competidores)}</b>",
+                "bala_body",
+                styles,
+            ),
+        )
+    data = [["Concorrente", "Rating", "Avaliações", "Bairro", "24h"]]
+    for c in model.competidores:
+        data.append(
+            [
+                c.nome[:42],
+                _score(c.rating),
+                str(c.num_avaliacoes or "—"),
+                (c.bairro or "—")[:20],
+                "Sim" if c.tem_24h else ("Não" if c.tem_24h is False else "—"),
+            ],
+        )
+    flow.append(
+        _table_bala(
+            data,
+            [5.5 * cm, 1.5 * cm, 2 * cm, 3 * cm, 1.2 * cm],
+        ),
+    )
+    return flow
+
+
+def _extras_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    flow: list = []
+    if model.posicionamento:
+        flow.extend(_section_title_bala("7. Posicionamento recomendado", styles))
+        flow.append(_para(model.posicionamento[:3500], "bala_body", styles))
+
+    if model.bairros_alternativos:
+        flow.extend(_section_title_bala("8. Bairros alternativos", styles))
+        data = [["Bairro", "Prioridade", "Concorrentes", "Motivo"]]
+        for b in model.bairros_alternativos[:6]:
+            data.append(
+                [
+                    b.bairro[:25],
+                    b.prioridade or "—",
+                    str(b.concorrentes) if b.concorrentes is not None else "—",
+                    b.motivo[:80],
+                ],
+            )
+        flow.append(_table_bala(data, [3 * cm, 2 * cm, 2 * cm, CONTENT_W - 7 * cm]))
+
+    if model.alertas:
+        flow.extend(_section_title_bala("9. Alertas e ressalvas", styles))
+        box = Table(
+            [[_para("<br/>".join(f"• {a}" for a in model.alertas[:12]), "bala_body", styles)]],
+            colWidths=[CONTENT_W],
+        )
+        box.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEF2F2")),
+                ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#FECACA")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ]),
+        )
+        flow.append(box)
+
+    if model.entrantes_cnpj_total is not None:
+        flow.append(Spacer(1, 8))
+        flow.append(
+            _para(
+                f"Novos entrantes CNPJ (90 dias) na cidade: <b>{model.entrantes_cnpj_total}</b>",
+                "bala_body",
+                styles,
+            ),
+        )
+    return flow
+
+
+def _build_bala(model: RelatorioPdfModel, styles: dict) -> list:
+    story: list = []
+    story.extend(_cover_block_bala(model, styles))
+    story.extend(_scores_section_bala(model, styles))
+    story.extend(_resumo_section_bala(model, styles))
+    story.extend(_market_section_bala(model, styles))
+    story.append(PageBreak())
+    story.extend(_candidatos_section_bala(model, styles))
+    story.extend(_finance_section_bala(model, styles, charts=True))
+    story.append(PageBreak())
+    story.extend(_competition_section_bala(model, styles))
+    story.extend(_extras_section_bala(model, styles))
+    story.append(Spacer(1, 14))
+    story.append(
+        _para(
+            "Documento gerado automaticamente pelo pipeline GymSite Intelligence (A0–A6). "
+            "Valores são estimativas — validar com visita técnica e due diligence.",
+            "bala_small",
+            styles,
+        ),
+    )
+    return story
+
+
 def generate_relatorio_pdf(
     model: RelatorioPdfModel,
     *,
@@ -466,27 +868,46 @@ def generate_relatorio_pdf(
     styles = build_styles()
 
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buf,
-        pagesize=PAGE_SIZE,
-        leftMargin=MARGIN_L,
-        rightMargin=MARGIN_R,
-        topMargin=MARGIN_T + 0.6 * cm,
-        bottomMargin=MARGIN_B + 0.4 * cm,
-        title=f"GymSite — {model.bairro} {model.cidade}",
-        author="GymSite Intelligence",
-    )
 
-    if layout_id == LayoutId.EXECUTIVE:
-        story = _build_executive(model, styles)
-    elif layout_id == LayoutId.DATA_ROOM:
-        story = _build_data_room(model, styles)
+    if layout_id == LayoutId.BALA:
+        doc = SimpleDocTemplate(
+            buf,
+            pagesize=PAGE_SIZE,
+            leftMargin=MARGIN_L,
+            rightMargin=MARGIN_R,
+            topMargin=MARGIN_T,
+            bottomMargin=MARGIN_B,
+            title=f"GymSite — {model.bairro} {model.cidade}",
+            author="GymSite Intelligence",
+        )
+        story = _build_bala(model, styles)
+        doc.build(
+            story,
+            onFirstPage=lambda c, d: _header_footer_bala(c, d, model),
+            onLaterPages=lambda c, d: _header_footer_bala(c, d, model),
+        )
     else:
-        story = _build_classic(model, styles)
+        doc = SimpleDocTemplate(
+            buf,
+            pagesize=PAGE_SIZE,
+            leftMargin=MARGIN_L,
+            rightMargin=MARGIN_R,
+            topMargin=MARGIN_T + 0.6 * cm,
+            bottomMargin=MARGIN_B + 0.4 * cm,
+            title=f"GymSite — {model.bairro} {model.cidade}",
+            author="GymSite Intelligence",
+        )
 
-    doc.build(
-        story,
-        onFirstPage=lambda c, d: _header_footer(c, d, model),
-        onLaterPages=lambda c, d: _header_footer(c, d, model),
-    )
+        if layout_id == LayoutId.EXECUTIVE:
+            story = _build_executive(model, styles)
+        elif layout_id == LayoutId.DATA_ROOM:
+            story = _build_data_room(model, styles)
+        else:
+            story = _build_classic(model, styles)
+
+        doc.build(
+            story,
+            onFirstPage=lambda c, d: _header_footer(c, d, model),
+            onLaterPages=lambda c, d: _header_footer(c, d, model),
+        )
     return buf.getvalue()

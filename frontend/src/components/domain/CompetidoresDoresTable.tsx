@@ -13,6 +13,7 @@ import { ExternalLink, MessageCircle, Phone, Globe } from 'lucide-react'
 import { CategoriaDorBadge } from './CategoriaDorBadge'
 import { SparklinePopularTimes } from './SparklinePopularTimes'
 import { cn } from '@/lib/utils'
+import { SHOW_WHATSAPP_UI } from '@/lib/feature-flags'
 import type {
   CompetidorJSON,
   ReviewJSON,
@@ -151,7 +152,7 @@ export function CompetidoresDoresTable({
                       <ContatoCell
                         telefone={c.telefone}
                         website={c.website}
-                        whatsapp={c.whatsapp_link}
+                        whatsapp={SHOW_WHATSAPP_UI ? c.whatsapp_link : undefined}
                       />
                     </td>
                     <td className="p-3 text-center font-mono text-sm tabular-nums">

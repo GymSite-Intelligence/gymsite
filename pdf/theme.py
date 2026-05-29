@@ -16,14 +16,20 @@ MARGIN_B = 2.0 * cm
 CONTENT_W = PAGE_SIZE[0] - MARGIN_L - MARGIN_R
 
 NAVY = colors.HexColor("#1B2A4A")
+CHARCOAL = colors.HexColor("#0F172A")
 TEAL = colors.HexColor("#0D9488")
 TEAL_LIGHT = colors.HexColor("#CCFBF1")
+TEAL_DARK = colors.HexColor("#115E59")
 ORANGE = colors.HexColor("#E8751A")
 SLATE = colors.HexColor("#64748B")
 TEXT = colors.HexColor("#1E293B")
 MUTED = colors.HexColor("#64748B")
 BORDER = colors.HexColor("#E2E8F0")
 ROW_ALT = colors.HexColor("#F8FAFC")
+CARD_BG = colors.HexColor("#F1F5F9")
+SUCCESS = colors.HexColor("#16A34A")
+DANGER = colors.HexColor("#DC2626")
+WARNING = colors.HexColor("#CA8A04")
 
 VEREDITO_COLORS = {
     "APROVADO": colors.HexColor("#16A34A"),
@@ -121,6 +127,82 @@ def build_styles() -> dict[str, ParagraphStyle]:
             fontSize=16,
             alignment=TA_CENTER,
             spaceAfter=4,
+        ),
+        # --- estilos layout BALA ---
+        "bala_cover_title": ParagraphStyle(
+            "BalaCoverTitle",
+            parent=base["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=32,
+            textColor=colors.white,
+            leading=36,
+            spaceAfter=4,
+        ),
+        "bala_cover_sub": ParagraphStyle(
+            "BalaCoverSub",
+            parent=base["Normal"],
+            fontName="Helvetica",
+            fontSize=13,
+            textColor=colors.HexColor("#CBD5E1"),
+            leading=16,
+            spaceAfter=2,
+        ),
+        "bala_kpi_label": ParagraphStyle(
+            "BalaKpiLabel",
+            parent=base["Normal"],
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=SLATE,
+            leading=10,
+            alignment=TA_CENTER,
+        ),
+        "bala_kpi_value": ParagraphStyle(
+            "BalaKpiValue",
+            parent=base["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=18,
+            textColor=TEAL_DARK,
+            leading=20,
+            alignment=TA_CENTER,
+        ),
+        "bala_section": ParagraphStyle(
+            "BalaSection",
+            parent=base["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=16,
+            textColor=CHARCOAL,
+            spaceBefore=18,
+            spaceAfter=6,
+            borderWidth=0,
+            borderColor=TEAL,
+            borderPadding=5,
+            leftIndent=0,
+        ),
+        "bala_body": ParagraphStyle(
+            "BalaBody",
+            parent=base["Normal"],
+            fontName="Helvetica",
+            fontSize=9.5,
+            textColor=TEXT,
+            leading=13,
+            spaceAfter=6,
+        ),
+        "bala_small": ParagraphStyle(
+            "BalaSmall",
+            parent=base["Normal"],
+            fontName="Helvetica",
+            fontSize=8,
+            textColor=MUTED,
+            leading=10,
+        ),
+        "bala_badge": ParagraphStyle(
+            "BalaBadge",
+            parent=base["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=11,
+            textColor=colors.white,
+            alignment=TA_CENTER,
+            leading=12,
         ),
     }
 

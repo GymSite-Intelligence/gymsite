@@ -129,6 +129,10 @@ class NovoRelatorioInput(BaseModel):
     estacionamento_obrigatorio: bool = True
     bairros_indicados: list[str] = []
     org_id: Optional[str] = None
+    a0_research_provider: Optional[str] = Field(
+        default="auto",
+        description="Provedor A0: gemini | kimi | auto",
+    )
 
 
 class RelatorioStub(BaseModel):
@@ -143,6 +147,16 @@ class PlacesAutocompleteInput(BaseModel):
     uf: str = ""
     lat: Optional[float] = None
     lng: Optional[float] = None
+
+
+class CanalProbeInput(BaseModel):
+    """Parâmetros mínimos para probes Run now (formulário novo relatório)."""
+    cidade: str
+    bairro: str
+    uf: Optional[str] = None
+    tipo_negocio: str = "academia"
+    publico_alvo: str = "premium"
+    raio_metros: int = Field(default=3000, ge=500, le=15000)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -173,7 +187,10 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
     from google.adk.sessions import InMemorySessionService
     from google.genai.types import Content, Part
     from gymsite_intelligence.agent import root_agent
+    from tools.research_provider import set_a0_research_provider
     from tools.token_telemetry import reset_run_id, _get_run_id
+
+    set_a0_research_provider(payload.a0_research_provider or "auto")
 
     # Reset run_id pra cada tentativa — telemetria fica separada por tentativa.
     reset_run_id()
@@ -202,6 +219,7 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
                 "publico_alvo": payload.publico_alvo,
                 "genero_alvo": payload.genero_alvo,
                 "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
+                "a0_research_provider": payload.a0_research_provider or "auto",
             },
         },
     )
@@ -411,6 +429,21 @@ def health() -> dict:
     return {"status": "ok", "service": "gymsite-intelligence-api"}
 
 
+@app.get("/health/maps")
+def health_maps() -> dict:
+    """Diagnóstico Google Maps + status do fallback OSM."""
+    from tools.maps_health import check_google_maps
+    from tools.maps_fallback import fallback_habilitado
+
+    diag = check_google_maps()
+    return {
+        "service": "gymsite-intelligence-api",
+        "google_maps": diag,
+        "fallback_osm_enabled": fallback_habilitado(),
+        "pipeline_unblocked": diag.get("ok") or fallback_habilitado(),
+    }
+
+
 @app.post("/api/places-autocomplete")
 def places_autocomplete_endpoint(body: PlacesAutocompleteInput) -> dict:
     """
@@ -460,31 +493,32 @@ def _resolve_user_and_org(request: Request) -> tuple[str | None, str]:
         return None, default_org
 
 
-@app.post("/api/relatorios", response_model=RelatorioStub)
-async def create_relatorio(
+def create_relatorio_stub(
     payload: NovoRelatorioInput,
-    background_tasks: BackgroundTasks,
-    request: Request,
-) -> RelatorioStub:
-    """Cria stub do relatório + dispara pipeline em background. Retorna ID pra polling."""
+    *,
+    org_id: str | None = None,
+    user_id: str | None = None,
+) -> tuple[str, str | None]:
+    """
+    Cria header + inputs no Supabase (status=queued).
+    Retorna (relatorio_id, created_at).
+    Usado pela API HTTP e pelo CLI — garante FK antes do pipeline gravar outputs.
+    """
     sb = _supabase_client()
-    user_id, org_from_jwt = _resolve_user_and_org(request)
-    org_id = payload.org_id or org_from_jwt
+    resolved_org = org_id or payload.org_id or os.getenv("SUPABASE_GYMSITE_ORG_ID") or _DEFAULT_ORG_ID
 
-    # 1. Header: status='queued' (FK satisfeito pra child inserts depois)
     res = sb.table("relatorios").insert({
-        "org_id": org_id,
+        "org_id": resolved_org,
         "user_id": user_id,
         "tipo_relatorio": "prospeccao_academia",
         "status": "queued",
         "schema_version": "1.6",
     }).execute()
     if not res.data:
-        raise HTTPException(status_code=500, detail="falha ao criar header")
+        raise RuntimeError("falha ao criar header do relatório")
     relatorio_id = res.data[0]["id"]
+    created_at = res.data[0].get("created_at")
 
-    # 2. Inputs (pra que listagens já consigam exibir cidade/bairro mesmo antes
-    #    do pipeline rodar)
     sb.table("relatorio_inputs").insert({
         "relatorio_id": relatorio_id,
         "cidade": payload.cidade,
@@ -498,15 +532,35 @@ async def create_relatorio(
         "tipo_negocio": payload.tipo_negocio,
         "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
         "bairros_indicados": payload.bairros_indicados,
+        "a0_research_provider": (payload.a0_research_provider or "auto")[:16],
     }).execute()
 
-    # 3. Dispara pipeline async
+    return relatorio_id, created_at
+
+
+@app.post("/api/relatorios", response_model=RelatorioStub)
+async def create_relatorio(
+    payload: NovoRelatorioInput,
+    background_tasks: BackgroundTasks,
+    request: Request,
+) -> RelatorioStub:
+    """Cria stub do relatório + dispara pipeline em background. Retorna ID pra polling."""
+    user_id, org_from_jwt = _resolve_user_and_org(request)
+    try:
+        relatorio_id, created_at = create_relatorio_stub(
+            payload,
+            org_id=payload.org_id or org_from_jwt,
+            user_id=user_id,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
     background_tasks.add_task(_run_pipeline_async_wrapper, relatorio_id, payload)
 
     return RelatorioStub(
         id=relatorio_id,
         status="queued",
-        created_at=res.data[0].get("created_at"),
+        created_at=created_at,
     )
 
 
@@ -541,6 +595,14 @@ def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
     cenarios = sb.table("cenarios_financeiros").select("*").eq("relatorio_id", rid).execute()
     sensibilidade = sb.table("sensibilidade_cenarios").select("*").eq("relatorio_id", rid).execute()
     bairros_alt = sb.table("bairros_alternativos").select("*").eq("relatorio_id", rid).order("ordem").execute()
+    validacao = (
+        sb.table("validacoes")
+        .select("*")
+        .eq("relatorio_id", rid)
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
 
     return {
         "id": rid,
@@ -552,6 +614,7 @@ def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
         "cenarios": cenarios.data or [],
         "sensibilidade": sensibilidade.data or [],
         "bairros_alternativos": bairros_alt.data or [],
+        "validacao_a8": (validacao.data or [None])[0],
     }
 
 
@@ -561,6 +624,57 @@ def get_relatorio(relatorio_id: str) -> dict:
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
     return _fetch_relatorio_payload(sb, rid)
+
+
+class EntranteValidacaoInput(BaseModel):
+    cnpj: str = Field(..., min_length=11, max_length=18)
+    validado: bool = True
+
+
+@app.patch("/api/relatorios/{relatorio_id}/entrantes-cnpj/validacao")
+def patch_entrante_validacao(relatorio_id: str, body: EntranteValidacaoInput) -> dict:
+    """Marca contato do entrant como validado manualmente (persiste em entrantes_cnpj_90d)."""
+    import re
+    from datetime import datetime, timezone
+
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    cnpj_limpo = re.sub(r"\D", "", body.cnpj)
+    if len(cnpj_limpo) != 14:
+        raise HTTPException(status_code=400, detail="CNPJ inválido")
+
+    out_res = (
+        sb.table("relatorio_outputs")
+        .select("entrantes_cnpj_90d")
+        .eq("relatorio_id", rid)
+        .maybe_single()
+        .execute()
+    )
+    block = (out_res.data or {}).get("entrantes_cnpj_90d") if out_res.data else None
+    if not isinstance(block, dict):
+        raise HTTPException(status_code=404, detail="entrantes_cnpj_90d não encontrado")
+
+    entrantes = block.get("entrantes") or []
+    found = False
+    now = datetime.now(timezone.utc).isoformat()
+    for ent in entrantes:
+        if not isinstance(ent, dict):
+            continue
+        ecnpj = re.sub(r"\D", "", str(ent.get("cnpj") or ""))
+        if ecnpj == cnpj_limpo:
+            ent["contato_validado"] = body.validado
+            ent["contato_validado_em"] = now if body.validado else None
+            ent["contato_validado_por"] = "usuario_ui" if body.validado else None
+            found = True
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="CNPJ não está na lista de entrantes")
+
+    block["entrantes"] = entrantes
+    sb.table("relatorio_outputs").update({"entrantes_cnpj_90d": block}).eq(
+        "relatorio_id", rid
+    ).execute()
+    return {"ok": True, "cnpj": cnpj_limpo, "contato_validado": body.validado}
 
 
 @app.get("/api/relatorios/{relatorio_id}/pdf")
@@ -601,6 +715,83 @@ def get_relatorio_pdf(relatorio_id: str, layout: str = "classic") -> Any:
             "Cache-Control": "private, max-age=300",
         },
     )
+
+
+def _run_canal_probe(canal: str, body: CanalProbeInput) -> dict:
+    from tools.canais_probe import probe_cnpj, probe_kimi, probe_osm, probe_places
+
+    cidade = body.cidade.strip()
+    bairro = body.bairro.strip()
+    uf = (body.uf or "")[:2]
+    if not cidade or not bairro:
+        raise HTTPException(status_code=400, detail="cidade e bairro são obrigatórios")
+
+    runners = {
+        "places": lambda: probe_places(bairro, cidade, uf, raio_metros=body.raio_metros),
+        "osm": lambda: probe_osm(bairro, cidade, uf, raio_metros=body.raio_metros),
+        "cnpj": lambda: probe_cnpj(bairro, cidade, uf),
+        "kimi": lambda: probe_kimi(
+            cidade,
+            bairro,
+            tipo_negocio=body.tipo_negocio,
+            publico_alvo=body.publico_alvo,
+            force_refresh=True,
+        ),
+    }
+    fn = runners.get(canal)
+    if not fn:
+        raise HTTPException(status_code=404, detail=f"canal desconhecido: {canal}")
+
+    try:
+        return fn()
+    except Exception as e:
+        logger.exception("canal %s falhou: %s", canal, e)
+        return {
+            "canal": canal,
+            "ok": False,
+            "erro": f"{type(e).__name__}: {e}",
+        }
+
+
+@app.post("/api/canais/places")
+def canal_places(body: CanalProbeInput) -> dict:
+    """Run now — Google Places (geocode + nearby gym)."""
+    return _run_canal_probe("places", body)
+
+
+@app.post("/api/canais/osm")
+def canal_osm(body: CanalProbeInput) -> dict:
+    """Run now — OpenStreetMap / Overpass (ignora Places)."""
+    return _run_canal_probe("osm", body)
+
+
+@app.post("/api/canais/cnpj")
+def canal_cnpj(body: CanalProbeInput) -> dict:
+    """Run now — parque CNPJ fitness no bairro (RFB / Supabase)."""
+    return _run_canal_probe("cnpj", body)
+
+
+@app.post("/api/canais/kimi-research")
+def canal_kimi_research(body: CanalProbeInput) -> dict:
+    """Run now — Kimi / OpenClaw (5 pesquisas paralelas → cache markdown A0)."""
+    return _run_canal_probe("kimi", body)
+
+
+@app.get("/api/canais/status")
+def canais_status() -> dict:
+    """Diagnóstico rápido dos canais (sem executar probe pesado)."""
+    from tools.kimi_research import _openclaw_configured, kimi_provider_ativo
+    from tools.maps_health import check_google_maps
+    from tools.maps_fallback import fallback_habilitado
+
+    maps = check_google_maps()
+    return {
+        "kimi_provider_ativo": kimi_provider_ativo(),
+        "openclaw_configured": _openclaw_configured(),
+        "maps_ok": maps.get("ok"),
+        "maps_fallback": fallback_habilitado(),
+        "google_maps": maps,
+    }
 
 
 @app.get("/api/relatorios")

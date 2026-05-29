@@ -1,27 +1,64 @@
 # tools/maps_tools.py
-import os
+import logging
 import math
 import httpx
 from typing import Optional
 
-MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY") or os.environ.get("MAPS_API_KEY", "")
+from tools.google_maps_key import get_google_maps_api_key
+
+logger = logging.getLogger(__name__)
+
 PLACES_BASE = "https://places.googleapis.com/v1/places"
 GEOCODING_BASE = "https://maps.googleapis.com/maps/api/geocode/json"
 STREET_VIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
 
 
-def geocode_endereco(endereco: str) -> dict:
-    """Converte endereço em coordenadas lat/lng."""
-    params = {"address": endereco, "key": MAPS_API_KEY, "language": "pt-BR", "region": "BR"}
+def _geocode_google(endereco: str) -> dict:
+    key = get_google_maps_api_key()
+    if not key:
+        return {"error": "GOOGLE_MAPS_API_KEY ausente"}
+    params = {
+        "address": endereco,
+        "key": key,
+        "language": "pt-BR",
+        "region": "BR",
+    }
     with httpx.Client(timeout=10) as c:
         data = c.get(GEOCODING_BASE, params=params).json()
     if data.get("status") == "OK" and data.get("results"):
         r = data["results"][0]
         loc = r["geometry"]["location"]
-        return {"lat": loc["lat"], "lng": loc["lng"],
-                "formatted_address": r["formatted_address"],
-                "place_id": r.get("place_id", "")}
-    return {"error": f"Geocoding falhou: {data.get('status')}"}
+        return {
+            "lat": loc["lat"],
+            "lng": loc["lng"],
+            "formatted_address": r["formatted_address"],
+            "place_id": r.get("place_id", ""),
+            "fonte_geocode": "google",
+        }
+    msg = data.get("error_message") or data.get("status")
+    return {"error": f"Geocoding falhou: {data.get('status')}", "detail": msg}
+
+
+def geocode_endereco(endereco: str) -> dict:
+    """Converte endereço em lat/lng (Google → fallback Nominatim/OSM)."""
+    result = _geocode_google(endereco)
+    if "error" not in result:
+        return result
+    try:
+        from tools.maps_fallback import fallback_habilitado, geocode_nominatim
+
+        if fallback_habilitado():
+            fb = geocode_nominatim(endereco)
+            if "error" not in fb:
+                logger.warning(
+                    "Geocode Google indisponível (%s) — usando Nominatim para: %s",
+                    result.get("error"),
+                    endereco[:60],
+                )
+                return fb
+    except Exception as exc:
+        logger.debug("fallback geocode falhou: %s", exc)
+    return result
 
 
 def _extrair_lugar(p: dict) -> dict:
@@ -58,7 +95,7 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
     """Nearby Search por espaços comerciais candidatos."""
     headers = {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": MAPS_API_KEY,
+        "X-Goog-Api-Key": get_google_maps_api_key(),
         "X-Goog-FieldMask": (
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.businessStatus,"
@@ -78,9 +115,23 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
         "languageCode": "pt-BR",
     }
     with httpx.Client(timeout=15) as c:
-        data = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers).json()
+        resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
 
-    return [_extrair_lugar(p) for p in data.get("places", [])]
+    if resp.status_code == 200 and data.get("places"):
+        return [_extrair_lugar(p) for p in data.get("places", [])]
+
+    try:
+        from tools.maps_fallback import fallback_habilitado, overpass_fitness_near
+
+        if fallback_habilitado():
+            fb = overpass_fitness_near(latitude, longitude, raio_metros, limit=20)
+            if fb.get("places"):
+                logger.warning("Places Nearby indisponível — fallback Overpass (%s lugares)", len(fb["places"]))
+                return fb["places"]
+    except Exception as exc:
+        logger.debug("fallback nearby falhou: %s", exc)
+    return []
 
 
 def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
@@ -88,7 +139,7 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
     """Text Search para imóveis comerciais: 'galpão para alugar', etc."""
     headers = {
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": MAPS_API_KEY,
+        "X-Goog-Api-Key": get_google_maps_api_key(),
         "X-Goog-FieldMask": (
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.businessStatus,"
@@ -106,16 +157,30 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
         "languageCode": "pt-BR",
     }
     with httpx.Client(timeout=15) as c:
-        data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
+        resp = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers)
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
 
-    return [_extrair_lugar(p) for p in data.get("places", [])]
+    if resp.status_code == 200 and data.get("places"):
+        return [_extrair_lugar(p) for p in data.get("places", [])]
+
+    try:
+        from tools.maps_fallback import fallback_habilitado, overpass_fitness_near
+
+        if fallback_habilitado():
+            fb = overpass_fitness_near(latitude, longitude, raio_metros, limit=10)
+            if fb.get("places"):
+                logger.warning("Places Text Search indisponível — fallback Overpass")
+                return fb["places"]
+    except Exception as exc:
+        logger.debug("fallback text search falhou: %s", exc)
+    return []
 
 
 def obter_street_view_url(latitude: float, longitude: float,
                            width: int = 640, height: int = 400) -> str:
     """URL de imagem Street View estática."""
     return (f"{STREET_VIEW_BASE}?size={width}x{height}"
-            f"&location={latitude},{longitude}&fov=90&key={MAPS_API_KEY}")
+            f"&location={latitude},{longitude}&fov=90&key={get_google_maps_api_key()}")
 
 
 def obter_detalhes_contato(place_id: str) -> dict:
@@ -135,10 +200,10 @@ def obter_detalhes_contato(place_id: str) -> dict:
         Dict com telefone, website, tem_24h, horarios (lista de strings),
         aberto_agora, business_status. Vazio em caso de erro/quota.
     """
-    if not MAPS_API_KEY or not place_id:
+    if not get_google_maps_api_key() or not place_id:
         return {}
     headers = {
-        "X-Goog-Api-Key": MAPS_API_KEY,
+        "X-Goog-Api-Key": get_google_maps_api_key(),
         "X-Goog-FieldMask": (
             "id,nationalPhoneNumber,internationalPhoneNumber,"
             "websiteUri,regularOpeningHours,currentOpeningHours,"

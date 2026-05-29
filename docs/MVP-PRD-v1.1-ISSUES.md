@@ -9,7 +9,11 @@
 Camada de **captação de leads** sobre o GymSite (que já roda end-to-end).
 Fluxo: VectraCargo (form) → VectraClaw (POST /api/gymsite/lead) → Morpheus (rota) → Hermes (e-mail) + CFN (cliente com badge) + Navi (deal) → Lead acessa `gymsite.vectracargo.com.br?code=<uuid>`.
 
-**Não está em escopo:** construir frontend gymsite (já existe completo), alterar pipeline A0–A6.
+**Não está em escopo:** reescrever o frontend gymsite do zero, alterar pipeline A0–A6.
+
+**Exceção M4 (frontend mínimo):** rotas públicas de lead (`?code=`), viewer guest e vínculo `access_code` lead ↔ relatório — issues **GYM-21..23**. O viewer autenticado (12 seções A0–A6) já existe; não refatorar em massa no MVP.
+
+**Mockup visual (estilo [kimi.page](https://fmz5gctopgu4k.kimi.page)):** [`docs/mockups/frontend-mvp-preview.html`](./mockups/frontend-mvp-preview.html) · análise: [`REFATORACAO-FRONTEND-INSPIRACAO-KIMI.md`](./REFATORACAO-FRONTEND-INSPIRACAO-KIMI.md)
 
 ## Convenções
 
@@ -37,8 +41,10 @@ M3 (onboarding) ─┬─ GYM-13 (← GYM-08, SMTP em GYM-04)
                  ├─ GYM-15 ─→ GYM-16
                  └─ GYM-17 (← GYM-14)
 
-M4 (access_code) ─┬─ GYM-18 ─→ GYM-19
-                  └─ GYM-20 (← tudo) — e2e
+M4 (access_code) ─┬─ GYM-18 ─→ GYM-19 ─→ GYM-21
+                  ├─ GYM-08 + GYM-18 ─→ GYM-22
+                  ├─ GYM-23 (pós-MVP, UI consórcio)
+                  └─ GYM-20 (← GYM-01..22) — e2e
 ```
 
 ---
@@ -495,9 +501,9 @@ COMMENT ON COLUMN clients.gymsite_access_code IS 'UUID do GymSite (1 consulta)';
 
 ---
 
-## M4 — Acesso via access_code (gymsite)
+## M4 — Acesso via access_code (gymsite + frontend guest)
 
-**Estimativa:** 1h. **Depende de:** M2 (access_code armazenado).
+**Estimativa:** 4–6h (backend + frontend). **Depende de:** M2 (access_code armazenado).
 
 ### [ ] GYM-18 — Migration relatorios.access_code
 
@@ -540,11 +546,73 @@ COMMENT ON COLUMN relatorios.access_code_used_at IS 'Timestamp da primeira utili
 
 ---
 
+### [ ] GYM-21 — Rota pública lead: `/acesso` + `?code=` + viewer guest
+
+- **Owner:** `agente-1` (gymsite)
+- **Labels:** `gymsite` `frontend` `security`
+- **Arquivos:** `frontend/src/router.tsx`, `frontend/src/hooks/useRelatorioDetail.ts`, `frontend/src/routes/LeadAccessPage.tsx` (novo)
+- **Blocked by:** GYM-19, GYM-03 (deploy Pages)
+
+**Spec:**
+- Adicionar `/acesso` em `PUBLIC_PATHS` (sem `RequireAuth` / `AppShell`)
+- `validateSearch`: `code?: string` (uuid), `id?: string` (relatorio_id)
+- Redirect opcional: `/?code=<uuid>` → `/acesso?code=<uuid>&id=<id>` quando `id` conhecido
+- `useRelatorioDetail(relatorioId, { accessCode })`: se `accessCode` presente, `GET /api/relatorios/{id}?access_code=` **sem** JWT Supabase
+- Estados UI:
+  - loading → skeleton
+  - `status !== done` → tela aguardando (reutilizar padrão `RelatorioAguardandoPage`, layout guest)
+  - `403` → “Link inválido ou expirado” + CTA VectraCargo
+  - `200` → `RelatorioViewerPage` em **modo guest** (header mínimo: logo + “Análise exclusiva”, sem nav Relatórios/Mapa/Custos)
+- Polling de status permitido com `access_code` no query (se GYM-19 estender `/status` — senão só GET detail)
+
+**Aceite:** GYM-20 passo 6 funciona sem login; deep-link do e-mail abre relatório ou estado pendente.
+
+**Restrições:** não duplicar lógica A4 no client; consumir JSON A6 existente. Ver mockup tela “Acesso Lead”.
+
+---
+
+### [ ] GYM-22 — Vincular `gymsite_leads.access_code` → `relatorios`
+
+- **Owner:** `agente-3` + `agente-1`
+- **Labels:** `gymsite` `OpenClaw` `integração`
+- **Arquivos:** migration ou lógica Morpheus/Hermes; doc `docs/GYMSITE_LEAD_ACCESS.md` (novo)
+- **Blocked by:** GYM-08, GYM-18
+
+**Spec (escolher uma estratégia e documentar):**
+- **A)** Ao processar `gymsite_lead_intake`, criar `relatorios` stub com **mesmo** `access_code` do lead + `input_canonico` mínimo (cidade do CNPJ ou default)
+- **B)** Tabela ponte `gymsite_lead_relatorios(lead_id, relatorio_id, access_code)` com UNIQUE em `access_code`
+- E-mail Hermes (GYM-13) deve incluir link: `https://gymsite.vectracargo.com.br/acesso?code={access_code}&id={relatorio_id}`
+
+**Aceite:** um único `access_code` abre o relatório correto no frontend; Morpheus consegue resolver id sem login.
+
+**Gap que fecha:** GYM-06 grava code em `gymsite_leads`; GYM-18 em `relatorios` — hoje sem join no plano.
+
+---
+
+### [ ] GYM-23 — Card Consórcio + gráfico CAPEX (UI, pós-MVP hardening)
+
+- **Owner:** `agente-1` (gymsite frontend)
+- **Labels:** `gymsite` `frontend` `ui`
+- **Arquivos:** `frontend/src/components/domain/ConsorcioCard.tsx`, `CapexBreakdownChart.tsx` (novos); `RelatorioViewerPage.tsx`
+- **Blocked by:** — (recomendado após GYM-21; dados podem vir de regra A4 futura)
+
+**Spec:**
+- Card “Consórcio recomendado” quando `capex_mid` (ou campo A4) > threshold — carta sugerida, parcela estimada, CTA “Falar com Vectra”
+- Gráfico barras empilhadas: obra / equipamentos / contingência nos 3 cenários (Recharts)
+- KPI strip (4 cards) acima da seção financeira: área, aluguel total, CAPEX mid, payback
+- **Não** implementar probabilidade de contemplação por sorteio no client sem modelo validado
+
+**Aceite:** mockup `frontend-mvp-preview.html` tela “Viewer autenticado” refletida no React.
+
+**Inspiração:** protótipo Kimi `ReportView.tsx` — ver `REFATORACAO-FRONTEND-INSPIRACAO-KIMI.md`.
+
+---
+
 ### [ ] GYM-20 — Teste e2e completo (acceptance criteria)
 
 - **Owner:** `humano`
 - **Labels:** `teste` `integração`
-- **Blocked by:** GYM-01..19
+- **Blocked by:** GYM-01..22
 
 **Roteiro:**
 
@@ -553,7 +621,7 @@ COMMENT ON COLUMN relatorios.access_code_used_at IS 'Timestamp da primeira utili
 3. Submit → POST `/api/gymsite/lead` retorna HTTP 201 com `access_code`
 4. UI exibe "Acesso enviado! Verifique seu e-mail."
 5. Em até 5 min: e-mail chega com `access_code` em destaque + link gymsite
-6. Acessar `https://gymsite.vectracargo.com.br?code=<uuid>` → gymsite valida e exibe relatório (ou form de solicitação)
+6. Acessar `https://gymsite.vectracargo.com.br/acesso?code=<uuid>&id=<relatorio_id>` → gymsite valida (GYM-21) e exibe relatório guest ou tela aguardando (GYM-22)
 7. CFN mostra novo cliente com badge "GymSite Lead"
 8. Navi mostra deal com `source=gymsite_lead_form` e tag `gymsite`
 9. CNPJ duplicado no form → mensagem 409 amigável, sem crash
@@ -564,7 +632,7 @@ COMMENT ON COLUMN relatorios.access_code_used_at IS 'Timestamp da primeira utili
 
 ### Semana 1 (paralelo)
 - [ ] **Humano:** GYM-02, GYM-03, GYM-04
-- [ ] **Agente 1:** GYM-01, GYM-05, GYM-18, GYM-19
+- [ ] **Agente 1:** GYM-01, GYM-05, GYM-18, GYM-19, GYM-21, GYM-22 (doc)
 - [ ] **Agente 3:** GYM-06..10, GYM-13, GYM-14
 
 ### Semana 2 (após Agente 3 commit)
@@ -573,6 +641,8 @@ COMMENT ON COLUMN relatorios.access_code_used_at IS 'Timestamp da primeira utili
 - [ ] **Agente 5:** GYM-17
 
 ### Semana 3
+- [ ] **Agente 1:** GYM-21 (após GYM-19 + GYM-03), GYM-23 se sobrar tempo
+- [ ] **Agente 3:** GYM-22 (vínculo lead ↔ relatório no Morpheus/Hermes)
 - [ ] **Humano:** GYM-20 (e2e)
 
 ---

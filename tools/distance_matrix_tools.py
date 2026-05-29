@@ -117,7 +117,6 @@ def calcular_distancia_rodoviaria(
     api_key = (
         os.environ.get("GOOGLE_DISTANCE_MATRIX_API_KEY")
         or os.environ.get("GOOGLE_MAPS_API_KEY")
-        or os.environ.get("MAPS_API_KEY")
     )
     if not api_key:
         logger.warning(

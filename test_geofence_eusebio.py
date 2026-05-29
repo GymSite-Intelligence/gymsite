@@ -16,7 +16,7 @@ from pathlib import Path
 
 # Garante que .env é carregado
 from dotenv import load_dotenv
-# .env do package tem GOOGLE_MAPS_API_KEY (root .env só tem MAPS_API_KEY)
+# GOOGLE_MAPS_API_KEY em gymsite_intelligence/.env ou frontend/.env
 load_dotenv(Path(__file__).parent / "gymsite_intelligence" / ".env")
 load_dotenv(Path(__file__).parent / ".env", override=False)
 

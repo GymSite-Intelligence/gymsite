@@ -492,8 +492,7 @@ def _tentar_populartimes_lib(place_id: str) -> dict | None:
         # legacy. Fallback pra chave Maps compartilhada quando não definida.
         api_key = (
             os.environ.get("PLACES_API_KEY_LEGACY")
-            or os.environ.get("GOOGLE_MAPS_API_KEY")
-            or os.environ.get("MAPS_API_KEY", "")
+            or os.environ.get("GOOGLE_MAPS_API_KEY", "")
         )
         if not api_key:
             return None

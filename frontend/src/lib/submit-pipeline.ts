@@ -17,6 +17,7 @@ export interface PipelineReportPayload {
   genero_alvo?: string | null
   tipo_negocio?: string | null
   estacionamento_obrigatorio?: boolean | null
+  a0_research_provider?: 'gemini' | 'kimi' | 'auto' | string | null
 }
 
 interface RelatorioInputsRow {
@@ -91,6 +92,7 @@ export async function submitPipelineReport(
       genero_alvo: payload.genero_alvo ?? 'misto',
       tipo_negocio: payload.tipo_negocio ?? 'academia',
       estacionamento_obrigatorio: payload.estacionamento_obrigatorio ?? true,
+      a0_research_provider: payload.a0_research_provider ?? 'auto',
     }),
   })
 
