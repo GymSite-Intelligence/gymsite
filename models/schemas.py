@@ -112,3 +112,7 @@ class ListingResult:
     property_type: str = "comercial"     # "loja" | "galpao" | "predio" (LLM infere)
     parking: Optional[bool] = None
     floor_type: Optional[str] = None     # "terreo" | "andar"
+    tipo_imovel_codigo_onr: Optional[int] = None
+    tipo_imovel_label: Optional[str] = None
+    modalidade: Optional[str] = None
+

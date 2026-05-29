@@ -35,6 +35,10 @@ class CandidatoPdf:
     score_geoscout: float | None
     score_ancoragem: float | None
     motivo: str
+    tipo_imovel_codigo_onr: int | None = None
+    tipo_imovel_label: str | None = None
+    modalidade: str | None = None
+    cartorio: dict | None = None
 
 
 @dataclass

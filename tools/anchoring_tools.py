@@ -460,6 +460,37 @@ def analisar_pontos_comerciais_completo(
     candidatos_final = top_10 + listings_candidatos
     candidatos_final.sort(key=lambda x: x.get("score_geoscout", 0), reverse=True)
 
+    # 11. Enriquecimento CNJ Cartório e Classificação ONR/Modalidade
+    try:
+        from tools.cnj_justica_aberta import resolver_cartorio_por_municipio
+        from tools.investigacao_context import inferir_tipo_imovel_candidato
+
+        for c in candidatos_final:
+            # 1. Inferir tipo de imóvel se não estiver definido
+            if "tipo_imovel_codigo_onr" not in c or c.get("tipo_imovel_codigo_onr") is None:
+                inf = inferir_tipo_imovel_candidato(c)
+                c["tipo_imovel_codigo_onr"] = inf.get("tipo_imovel_codigo_onr")
+                c["tipo_imovel_label"] = inf.get("tipo_imovel_label")
+            
+            # 2. Modalidade
+            if "modalidade" not in c or c.get("modalidade") is None:
+                if c.get("qualidade_sinal") == "direto-listing":
+                    c["modalidade"] = "locacao"
+                else:
+                    c["modalidade"] = "incerto"
+            
+            # 3. Cartório
+            c_cidade = c.get("cidade") or cidade
+            c_uf = c.get("uf") or uf
+            c_bairro = c.get("bairro") or bairro
+            
+            cart = resolver_cartorio_por_municipio(c_cidade, c_uf, c_bairro)
+            c["cartorio"] = cart
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Erro no enriquecimento CNJ/ONR: %s", e)
+
+
     from tools.deep_research_tool import (
         executar_investigacoes_candidatos,
         marcar_gatilhos_investigacao,
@@ -608,6 +639,9 @@ def _fetch_listings_como_candidatos(
             "listing_url": l.listing_url,
             "listing_id": l.listing_id,
             "price_raw": l.price_raw,
+            "tipo_imovel_codigo_onr": l.tipo_imovel_codigo_onr,
+            "tipo_imovel_label": l.tipo_imovel_label,
+            "modalidade": l.modalidade or "locacao",
             "geocoded": geocoded,
             "motivo": (
                 f"Imóvel anunciado para aluguel em {l.source.upper()} — "

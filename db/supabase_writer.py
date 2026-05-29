@@ -209,6 +209,10 @@ def _rows_candidatos(rel: dict, relatorio_id: str) -> list[dict]:
             "price_raw": c.get("price_raw") or None,
             "listing_source": c.get("source") or None,
             "proximo_passo": c.get("proximo_passo"),
+            "tipo_imovel_codigo_onr": c.get("tipo_imovel_codigo_onr"),
+            "tipo_imovel_label": c.get("tipo_imovel_label"),
+            "modalidade": c.get("modalidade"),
+            "cartorio": c.get("cartorio") if isinstance(c.get("cartorio"), dict) else None,
         })
     return rows
 

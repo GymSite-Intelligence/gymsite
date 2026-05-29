@@ -97,6 +97,10 @@ def _map_candidato(row: dict[str, Any], pos: int) -> CandidatoPdf:
         score_geoscout=_num(row.get("score_geoscout")),
         score_ancoragem=_num(row.get("score_ancoragem")),
         motivo=motivo[:500],
+        tipo_imovel_codigo_onr=_int(row.get("tipo_imovel_codigo_onr")),
+        tipo_imovel_label=str(row.get("tipo_imovel_label")) if row.get("tipo_imovel_label") is not None else None,
+        modalidade=str(row.get("modalidade")) if row.get("modalidade") is not None else None,
+        cartorio=row.get("cartorio") if isinstance(row.get("cartorio"), dict) else None,
     )
 
 

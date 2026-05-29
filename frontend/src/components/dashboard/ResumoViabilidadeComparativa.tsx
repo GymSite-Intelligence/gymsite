@@ -1,8 +1,19 @@
 /**
- * ResumoViabilidadeComparativa — narrativa técnica explicando por que A ou B
- * é financeiramente mais vantajoso, com destaque nos drivers de diferença.
+ * ResumoViabilidadeComparativa — narrativa executiva de viabilidade comparativa.
+ *
+ * Tom: direto, decisório, C-level. Sem jargão técnico de engenharia.
+ * Fontes: sempre genéricas ("dados públicos", "benchmark do setor", "pesquisa de mercado").
  */
-import { TrendingUp, TrendingDown, Equal, AlertTriangle, CheckCircle } from 'lucide-react'
+import {
+  TrendingUp,
+  TrendingDown,
+  Equal,
+  AlertTriangle,
+  CheckCircle,
+  BarChart3,
+  Wallet,
+  Target,
+} from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -36,13 +47,17 @@ function deltaPct(a: number | null | undefined, b: number | null | undefined): n
   return ((b - a) / Math.abs(a)) * 100
 }
 
+type Favor = 'A' | 'B' | 'neutro'
+
 interface Driver {
   label: string
   valorA: string
   valorB: string
   diffPct: number | null
-  favoravel: 'A' | 'B' | 'neutro'
-  peso: number // para ordenar importância
+  favoravel: Favor
+  peso: number
+  categoria: 'receita' | 'custo' | 'retorno' | 'operacional'
+  metodologia: string
 }
 
 export function ResumoViabilidadeComparativa({
@@ -57,41 +72,80 @@ export function ResumoViabilidadeComparativa({
     return (
       <Card className="border-dashed">
         <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Dados financeiros insuficientes para gerar o resumo comparativo.
+          Dados financeiros insuficientes para gerar o resumo executivo de viabilidade.
         </CardContent>
       </Card>
     )
   }
 
-  // ── Computa drivers ──
+  // ── Computa todos os drivers ──
   const drivers: Driver[] = []
 
   // Receita
   const diffReceita = deltaPct(cenarioA.receita_mensal, cenarioB.receita_mensal)
   if (diffReceita != null) {
     drivers.push({
-      label: 'Receita mensal',
+      label: 'Receita mensal projetada',
       valorA: fmtBRL(cenarioA.receita_mensal),
       valorB: fmtBRL(cenarioB.receita_mensal),
       diffPct: diffReceita,
       favoravel: diffReceita > 5 ? 'B' : diffReceita < -5 ? 'A' : 'neutro',
       peso: Math.abs(diffReceita),
+      categoria: 'receita',
+      metodologia:
+        'Baseada em ticket médio estimado, matrículas projetadas e frequência de visita — calibrada com benchmark do setor fitness para o perfil demográfico do bairro.',
     })
   }
 
-  // Aluguel (do relatório ou do cenário)
+  // Ticket médio
+  const diffTicket = deltaPct(cenarioA.ticket_medio, cenarioB.ticket_medio)
+  if (diffTicket != null) {
+    drivers.push({
+      label: 'Ticket médio mensal',
+      valorA: fmtBRL(cenarioA.ticket_medio),
+      valorB: fmtBRL(cenarioB.ticket_medio),
+      diffPct: diffTicket,
+      favoravel: diffTicket > 5 ? 'B' : diffTicket < -5 ? 'A' : 'neutro',
+      peso: Math.abs(diffTicket) * 0.7,
+      categoria: 'receita',
+      metodologia:
+        'Estimativa a partir da renda média do bairro, concorrência local e posicionamento de mercado — referência em pesquisa de preços praticados na região.',
+    })
+  }
+
+  // Matrículas
+  const matrA = cenarioA.matriculas?.realista?.valor ?? cenarioA.alunos_projetados ?? 0
+  const matrB = cenarioB.matriculas?.realista?.valor ?? cenarioB.alunos_projetados ?? 0
+  const diffMatr = deltaPct(matrA, matrB)
+  if (diffMatr != null) {
+    drivers.push({
+      label: 'Matrículas projetadas (cenário realista)',
+      valorA: String(Math.round(matrA)),
+      valorB: String(Math.round(matrB)),
+      diffPct: diffMatr,
+      favoravel: diffMatr > 10 ? 'B' : diffMatr < -10 ? 'A' : 'neutro',
+      peso: Math.abs(diffMatr) * 0.8,
+      categoria: 'operacional',
+      metodologia:
+        'Projeção de demanda baseada em densidade populacional, renda e comportamento de consumo do público-alvo — validada com benchmark de ocupação de academias comparáveis.',
+    })
+  }
+
+  // Aluguel / Custos fixos
   const aluguelAeff = aluguelA ?? cenarioA.custos_detalhados?.aluguel ?? cenarioA.custos_fixos_total
   const aluguelBeff = aluguelB ?? cenarioB.custos_detalhados?.aluguel ?? cenarioB.custos_fixos_total
   const diffAluguel = deltaPct(aluguelAeff, aluguelBeff)
   if (diffAluguel != null) {
     drivers.push({
-      label: 'Aluguel / Custos fixos',
+      label: 'Aluguel e custos fixos mensais',
       valorA: fmtBRL(aluguelAeff),
       valorB: fmtBRL(aluguelBeff),
       diffPct: diffAluguel,
-      // Aluguel MENOR é melhor, então se B é menor (diff negativo), B é favorável
       favoravel: diffAluguel < -10 ? 'B' : diffAluguel > 10 ? 'A' : 'neutro',
-      peso: Math.abs(diffAluguel) * 0.8, // peso ligeiramente menor que receita
+      peso: Math.abs(diffAluguel) * 0.9,
+      categoria: 'custo',
+      metodologia:
+        'Estimativa de custo operacional fixo a partir de dados de mercado imobiliário local e benchmark de condomínio/IPTU para o porte da unidade.',
     })
   }
 
@@ -104,7 +158,10 @@ export function ResumoViabilidadeComparativa({
       valorB: fmtBRL(cenarioB.lucro_mensal_estimado),
       diffPct: diffLucro,
       favoravel: diffLucro > 10 ? 'B' : diffLucro < -10 ? 'A' : 'neutro',
-      peso: Math.abs(diffLucro) * 1.2, // peso maior
+      peso: Math.abs(diffLucro) * 1.3,
+      categoria: 'retorno',
+      metodologia:
+        'Receita mensal projetada menos custos totais (fixos + variáveis + marketing) — cenário realista de ocupação.',
     })
   }
 
@@ -112,12 +169,15 @@ export function ResumoViabilidadeComparativa({
   const diffMargem = deltaPct(cenarioA.margem_percentual, cenarioB.margem_percentual)
   if (diffMargem != null) {
     drivers.push({
-      label: 'Margem líquida',
+      label: 'Margem líquida operacional',
       valorA: fmtPct(cenarioA.margem_percentual),
       valorB: fmtPct(cenarioB.margem_percentual),
       diffPct: diffMargem,
       favoravel: diffMargem > 5 ? 'B' : diffMargem < -5 ? 'A' : 'neutro',
       peso: Math.abs(diffMargem),
+      categoria: 'retorno',
+      metodologia:
+        'Lucro mensal dividido pela receita bruta — indicador de eficiência operacional e saúde do modelo de negócio.',
     })
   }
 
@@ -125,36 +185,38 @@ export function ResumoViabilidadeComparativa({
   const paybackA = cenarioA.payback_meses
   const paybackB = cenarioB.payback_meses
   let diffPaybackPct: number | null = null
-  let favoravelPayback: 'A' | 'B' | 'neutro' = 'neutro'
+  let favoravelPayback: Favor = 'neutro'
   if (paybackA != null && paybackB != null && paybackA > 0 && paybackB > 0) {
     diffPaybackPct = ((paybackB - paybackA) / paybackA) * 100
-    // Payback MENOR é melhor
     favoravelPayback = diffPaybackPct < -15 ? 'B' : diffPaybackPct > 15 ? 'A' : 'neutro'
   }
-  const diffPaybackAbs = paybackA != null && paybackB != null ? paybackB - paybackA : null
-  if (diffPaybackAbs != null) {
+  if (diffPaybackPct != null) {
     drivers.push({
-      label: 'Payback',
+      label: 'Payback do investimento',
       valorA: `${paybackA} meses`,
       valorB: `${paybackB} meses`,
       diffPct: diffPaybackPct,
       favoravel: favoravelPayback,
-      peso: Math.min(Math.abs(diffPaybackPct ?? 0), 50),
+      peso: Math.min(Math.abs(diffPaybackPct), 60),
+      categoria: 'retorno',
+      metodologia:
+        'Tempo estimado para recuperação do capital investido (CAPEX + giro) a partir do fluxo de caixa mensal projetado.',
     })
   }
 
   // TIR
-  const tirA = cenarioA.tir_anual_pct
-  const tirB = cenarioB.tir_anual_pct
-  const diffTir = deltaPct(tirA, tirB)
+  const diffTir = deltaPct(cenarioA.tir_anual_pct, cenarioB.tir_anual_pct)
   if (diffTir != null) {
     drivers.push({
-      label: 'TIR anual',
-      valorA: fmtPct(tirA),
-      valorB: fmtPct(tirB),
+      label: 'TIR anual estimada',
+      valorA: fmtPct(cenarioA.tir_anual_pct),
+      valorB: fmtPct(cenarioB.tir_anual_pct),
       diffPct: diffTir,
       favoravel: diffTir > 10 ? 'B' : diffTir < -10 ? 'A' : 'neutro',
-      peso: Math.abs(diffTir) * 0.9,
+      peso: Math.abs(diffTir) * 1.1,
+      categoria: 'retorno',
+      metodologia:
+        'Taxa interna de retorno do projeto em 5 anos — considerando crescimento conservador de matrículas e inflação de custos.',
     })
   }
 
@@ -162,12 +224,15 @@ export function ResumoViabilidadeComparativa({
   const diffVpl = deltaPct(cenarioA.vpl_5_anos, cenarioB.vpl_5_anos)
   if (diffVpl != null) {
     drivers.push({
-      label: 'VPL 5 anos',
+      label: 'VPL acumulado (5 anos)',
       valorA: fmtBRL(cenarioA.vpl_5_anos),
       valorB: fmtBRL(cenarioB.vpl_5_anos),
       diffPct: diffVpl,
       favoravel: diffVpl > 10 ? 'B' : diffVpl < -10 ? 'A' : 'neutro',
-      peso: Math.abs(diffVpl) * 1.1,
+      peso: Math.abs(diffVpl) * 1.2,
+      categoria: 'retorno',
+      metodologia:
+        'Valor presente líquido dos fluxos de caixa futuros — descontado pela taxa mínima de atratividade do setor.',
     })
   }
 
@@ -177,92 +242,60 @@ export function ResumoViabilidadeComparativa({
   const diffCapex = deltaPct(capexA, capexB)
   if (diffCapex != null) {
     drivers.push({
-      label: 'Investimento total (CAPEX+giro)',
+      label: 'Investimento inicial total',
       valorA: fmtBRL(capexA),
       valorB: fmtBRL(capexB),
       diffPct: diffCapex,
-      // CAPEX MENOR é melhor
       favoravel: diffCapex < -10 ? 'B' : diffCapex > 10 ? 'A' : 'neutro',
-      peso: Math.abs(diffCapex) * 0.7,
+      peso: Math.abs(diffCapex) * 0.8,
+      categoria: 'custo',
+      metodologia:
+        'Soma de equipamentos, obra de adaptação, projeto, alvarás, frete e capital de giro — orçamento referenciado em fornecedores do setor.',
     })
   }
 
   // Ordena por impacto
   const driversSorted = drivers.sort((a, b) => b.peso - a.peso)
-  const topDrivers = driversSorted.slice(0, 5)
+  const topDrivers = driversSorted.slice(0, 6)
 
   // ── Decide vencedor ──
   const pontosA = drivers.filter((d) => d.favoravel === 'A').reduce((s, d) => s + d.peso, 0)
   const pontosB = drivers.filter((d) => d.favoravel === 'B').reduce((s, d) => s + d.peso, 0)
-  const vencedor: 'A' | 'B' | 'empate' =
-    pontosB > pontosA * 1.15 ? 'B' : pontosA > pontosB * 1.15 ? 'A' : 'empate'
+  const vencedor: Favor =
+    pontosB > pontosA * 1.2 ? 'B' : pontosA > pontosB * 1.2 ? 'A' : 'neutro'
 
-  // ── Gera narrativa ──
   const mesmosModelos = cenarioA.modelo === cenarioB.modelo
   const modeloStr = cenarioA.modelo ?? 'N/A'
 
   return (
     <section className="rounded-lg border border-border overflow-hidden">
-      <header className="px-4 py-3 bg-muted/30 border-b border-border">
-        <h3 className="text-sm font-semibold">Resumo Técnico de Viabilidade</h3>
+      <header className="px-5 py-3 bg-muted/30 border-b border-border">
+        <h3 className="text-sm font-semibold">Parecer executivo de viabilidade</h3>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Análise dos drivers financeiros que diferenciam os dois pontos
+          Análise comparativa dos drivers financeiros e operacionais · baseada em dados de mercado
         </p>
       </header>
 
-      <div className="p-4 space-y-5">
-        {/* Veredito do comparativo */}
-        <div className="flex items-center gap-3">
-          {vencedor === 'B' ? (
-            <>
-              <CheckCircle size={18} className="text-emerald-600" />
-              <div>
-                <p className="text-sm font-semibold">
-                  {bairroB} apresenta melhor viabilidade financeira
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {mesmosModelos
-                    ? `Ambos seguem o modelo ${modeloStr}, mas ${bairroB} tem vantagens operacionais.`
-                    : `Modelos diferentes — ${bairroB} (${cenarioB.modelo}) vs ${bairroA} (${cenarioA.modelo}).`}
-                </p>
-              </div>
-            </>
-          ) : vencedor === 'A' ? (
-            <>
-              <CheckCircle size={18} className="text-emerald-600" />
-              <div>
-                <p className="text-sm font-semibold">
-                  {bairroA} apresenta melhor viabilidade financeira
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {mesmosModelos
-                    ? `Ambos seguem o modelo ${modeloStr}, mas ${bairroA} tem vantagens operacionais.`
-                    : `Modelos diferentes — ${bairroA} (${cenarioA.modelo}) vs ${bairroB} (${cenarioB.modelo}).`}
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <Equal size={18} className="text-sky-600" />
-              <div>
-                <p className="text-sm font-semibold">
-                  Viabilidade financeira equilibrada entre os dois pontos
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {mesmosModelos
-                    ? `Ambos no modelo ${modeloStr}. As diferenças são marginais — a decisão pode pender para fatores qualitativos (visibilidade, concorrência, dores dominantes).`
-                    : `Modelos distintos compensam-se financeiramente. Analise outros critérios.`}
-                </p>
-              </div>
-            </>
-          )}
-        </div>
+      <div className="p-5 space-y-6">
+        {/* Recomendação */}
+        <RecomendacaoCard
+          vencedor={vencedor}
+          bairroA={bairroA}
+          bairroB={bairroB}
+          mesmosModelos={mesmosModelos}
+          modelo={modeloStr}
+          cenarioA={cenarioA}
+          cenarioB={cenarioB}
+        />
 
         {/* Drivers principais */}
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
-            Principais drivers de diferença
-          </p>
+          <div className="flex items-center gap-2">
+            <BarChart3 size={14} className="text-muted-foreground" />
+            <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+              Drivers que mais impactam a decisão
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {topDrivers.map((d) => (
               <DriverCard key={d.label} driver={d} />
@@ -270,12 +303,15 @@ export function ResumoViabilidadeComparativa({
           </div>
         </div>
 
-        {/* Narrativa explicativa */}
-        <div className="rounded-lg bg-muted/30 border border-border p-3 space-y-2">
-          <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
-            Análise narrativa
-          </p>
-          <Narrativa
+        {/* Narrativa executiva */}
+        <div className="rounded-lg bg-muted/30 border border-border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Target size={14} className="text-muted-foreground" />
+            <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+              Narrativa decisória
+            </p>
+          </div>
+          <NarrativaExecutiva
             drivers={driversSorted}
             bairroA={bairroA}
             bairroB={bairroB}
@@ -285,22 +321,38 @@ export function ResumoViabilidadeComparativa({
           />
         </div>
 
+        {/* Metodologia resumida */}
+        <div className="rounded-lg border border-border p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <Wallet size={14} className="text-muted-foreground" />
+            <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+              Base de análise
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Todos os indicadores financeiros são projetados a partir de dados públicos de
+            demografia, pesquisa de mercado local e benchmark operacional do setor fitness.
+            Os cenários consideram ocupação realista, sazonalidade de matrículas e inflação
+            de custos. Não constituem garantia de performance, mas sim referência para
+            tomada de decisão estratégica.
+          </p>
+        </div>
+
         {/* Alerta de modelo diferente */}
         {!mesmosModelos && (
-          <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-md px-3 py-2">
+          <div className="flex items-start gap-2.5 text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-md px-4 py-3">
             <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-            <p className="text-xs">
-              <strong>Atenção:</strong> os modelos recomendados são diferentes (
-              {cenarioA.modelo} vs {cenarioB.modelo}). Isso significa que a
-              comparação direta de receita e CAPEX pode não ser justa — o modelo
-              {cenarioB.modelo ?? ''} naturalmente exige{' '}
-              {(cenarioB.modelo ?? '').toLowerCase().includes('premium')
-                ? 'maior investimento e promete maior retorno'
-                : (cenarioB.modelo ?? '').toLowerCase().includes('low')
-                  ? 'menor investimento com retorno mais conservador'
-                  : 'perfil de risco diferente'}
-              . Considere o payback e a TIR como métricas normalizadas.
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs font-semibold">Modelos de negócio distintos</p>
+              <p className="text-xs leading-relaxed">
+                {bairroA} foi dimensionado no modelo <strong>{cenarioA.modelo}</strong>,
+                enquanto {bairroB} aponta para <strong>{cenarioB.modelo}</strong>.
+                Isso afeta diretamente o ticket médio, o CAPEX e a capacidade da unidade.
+                Recomendamos priorizar o <strong>payback</strong> e a{' '}
+                <strong>TIR</strong> como métricas normalizadas, já que comparam retorno
+                independentemente do porte do investimento.
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -308,58 +360,162 @@ export function ResumoViabilidadeComparativa({
   )
 }
 
-function DriverCard({
-  driver,
-}: {
-  driver: Driver
-}) {
-  const isB = driver.favoravel === 'B'
-  const isA = driver.favoravel === 'A'
-  const diffStr =
-    driver.diffPct != null
-      ? `${driver.diffPct > 0 ? '+' : ''}${driver.diffPct.toFixed(1)}%`
-      : '—'
+// ── Subcomponentes ──
 
-  return (
-    <div className="rounded-md border border-border bg-card p-2.5 flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
-          {driver.label}
-        </p>
-        <div className="flex items-center gap-2 mt-1 text-xs">
-          <span className={cn('font-mono tabular-nums', isA && 'font-semibold text-emerald-600')}>
-            {driver.valorA}
-          </span>
-          <span className="text-muted-foreground">→</span>
-          <span className={cn('font-mono tabular-nums', isB && 'font-semibold text-emerald-600')}>
-            {driver.valorB}
-          </span>
+function RecomendacaoCard({
+  vencedor,
+  bairroA,
+  bairroB,
+  mesmosModelos,
+  modelo,
+  cenarioA,
+  cenarioB,
+}: {
+  vencedor: Favor
+  bairroA: string
+  bairroB: string
+  mesmosModelos: boolean
+  modelo: string
+  cenarioA: CenarioJSON
+  cenarioB: CenarioJSON
+}) {
+  const lucroA = cenarioA.lucro_mensal_estimado
+  const lucroB = cenarioB.lucro_mensal_estimado
+  const payA = cenarioA.payback_meses
+  const payB = cenarioB.payback_meses
+
+  if (vencedor === 'B') {
+    return (
+      <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900 p-4">
+        <CheckCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">
+            Recomendamos {bairroB}
+          </p>
+          <p className="text-xs text-emerald-800 dark:text-emerald-400 leading-relaxed">
+            {mesmosModelos
+              ? `Ambos os pontos operam no mesmo modelo (${modelo}), mas ${bairroB} entrega melhor relação risco/retorno.`
+              : `${bairroB} foi dimensionado no modelo ${cenarioB.modelo}, que se ajusta melhor ao perfil de demanda local.`}{' '}
+            {lucroB != null && lucroA != null && lucroB > lucroA
+              ? `O lucro mensal projetado é ${fmtBRL(lucroB)} vs ${fmtBRL(lucroA)} em ${bairroA}.`
+              : ''}{' '}
+            {payB != null && payA != null && payB < payA
+              ? `O payback é ${payB} meses, ${payA - payB} meses mais rápido que ${bairroA}.`
+              : ''}
+          </p>
         </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {isB ? (
-          <TrendingUp size={14} className="text-emerald-600" />
-        ) : isA ? (
-          <TrendingDown size={14} className="text-red-500" />
-        ) : (
-          <Equal size={14} className="text-muted-foreground" />
-        )}
-        <Badge
-          variant="outline"
-          className={cn(
-            'text-[10px] font-mono',
-            isB && 'border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20',
-            isA && 'border-red-200 text-red-700 bg-red-50 dark:bg-red-950/20',
-          )}
-        >
-          {diffStr}
-        </Badge>
+    )
+  }
+
+  if (vencedor === 'A') {
+    return (
+      <div className="flex items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900 p-4">
+        <CheckCircle size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">
+            Recomendamos {bairroA}
+          </p>
+          <p className="text-xs text-emerald-800 dark:text-emerald-400 leading-relaxed">
+            {mesmosModelos
+              ? `Ambos os pontos operam no mesmo modelo (${modelo}), mas ${bairroA} entrega melhor relação risco/retorno.`
+              : `${bairroA} foi dimensionado no modelo ${cenarioA.modelo}, que se ajusta melhor ao perfil de demanda local.`}{' '}
+            {lucroA != null && lucroB != null && lucroA > lucroB
+              ? `O lucro mensal projetado é ${fmtBRL(lucroA)} vs ${fmtBRL(lucroB)} em ${bairroB}.`
+              : ''}{' '}
+            {payA != null && payB != null && payA < payB
+              ? `O payback é ${payA} meses, ${payB - payA} meses mais rápido que ${bairroB}.`
+              : ''}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-sky-200 bg-sky-50 dark:bg-sky-950/20 dark:border-sky-900 p-4">
+      <Equal size={18} className="text-sky-600 shrink-0 mt-0.5" />
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-sky-900 dark:text-sky-300">
+          Viabilidade financeira equilibrada
+        </p>
+        <p className="text-xs text-sky-800 dark:text-sky-400 leading-relaxed">
+          {mesmosModelos
+            ? `Os dois pontos apresentam retorno financeiro próximo no modelo ${modelo}.`
+            : `Modelos distintos compensam-se financeiramente.`}{' '}
+          A decisão deve considerar fatores qualitativos: visibilidade da fachada,
+          densidade de concorrência, acesso de transporte público e perfil do público-alvo.
+        </p>
       </div>
     </div>
   )
 }
 
-function Narrativa({
+function DriverCard({ driver }: { driver: Driver }) {
+  const isB = driver.favoravel === 'B'
+  const isA = driver.favoravel === 'A'
+  const diffStr =
+    driver.diffPct != null
+      ? `${driver.diffPct > 0 ? '+' : ''}${driver.diffPct.toFixed(1)}%`
+      : '≈ 0%'
+
+  const iconColor =
+    driver.categoria === 'receita'
+      ? 'text-emerald-600'
+      : driver.categoria === 'custo'
+        ? 'text-amber-600'
+        : driver.categoria === 'retorno'
+          ? 'text-violet-600'
+          : 'text-sky-600'
+
+  return (
+    <Card className="border hover:border-foreground/20 transition-colors">
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground truncate">
+            {driver.label}
+          </p>
+          <div className="flex items-center gap-1 shrink-0">
+            {isB ? (
+              <TrendingUp size={13} className="text-emerald-600" />
+            ) : isA ? (
+              <TrendingDown size={13} className="text-red-500" />
+            ) : (
+              <Equal size={13} className="text-muted-foreground" />
+            )}
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] font-mono h-5 px-1',
+                isB && 'border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20',
+                isA && 'border-red-200 text-red-700 bg-red-50 dark:bg-red-950/20',
+              )}
+            >
+              {diffStr}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className={cn('font-mono tabular-nums', isA && 'font-semibold text-emerald-700')}>
+            {driver.valorA}
+          </span>
+          <span className="text-muted-foreground">→</span>
+          <span className={cn('font-mono tabular-nums', isB && 'font-semibold text-emerald-700')}>
+            {driver.valorB}
+          </span>
+        </div>
+
+        <p className="text-[10px] text-muted-foreground leading-snug border-t border-border pt-1.5">
+          <span className={cn('font-medium', iconColor)}>Base: </span>
+          {driver.metodologia}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function NarrativaExecutiva({
   drivers,
   bairroA,
   bairroB,
@@ -370,77 +526,74 @@ function Narrativa({
   drivers: Driver[]
   bairroA: string
   bairroB: string
-  vencedor: 'A' | 'B' | 'empate'
+  vencedor: Favor
   mesmosModelos: boolean
   modelo: string
 }) {
-  // Encontra os 2 drivers mais impactantes
-  const top2 = drivers.slice(0, 2)
-  const [d1, d2] = top2
-
-  if (!d1) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        Dados financeiros insuficientes para análise narrativa.
-      </p>
-    )
-  }
-
+  const top3 = drivers.slice(0, 3)
   const ganhador = vencedor === 'B' ? bairroB : vencedor === 'A' ? bairroA : null
   const perdedor = vencedor === 'B' ? bairroA : vencedor === 'A' ? bairroB : null
 
-  // Monta frases sobre os drivers
   const frases: string[] = []
 
-  // Driver 1
-  if (d1.favoravel === 'neutro') {
-    frases.push(
-      `Em ${d1.label.toLowerCase()}, ambos os pontos estão muito próximos (${d1.valorA} vs ${d1.valorB}), não sendo um fator decisivo.`
-    )
-  } else {
-    const fav = d1.favoravel === 'B' ? bairroB : bairroA
-    const outro = d1.favoravel === 'B' ? bairroA : bairroB
-    const diffAbs = d1.diffPct != null ? Math.abs(d1.diffPct).toFixed(1) : null
-    frases.push(
-      `O principal diferencial é ${d1.label.toLowerCase()}: ${fav} ${d1.label.includes('Aluguel') || d1.label.includes('CAPEX') || d1.label.includes('Payback') ? 'tem vantagem com' : 'se destaca com'} ${d1.valorA === d1.favoravel ? d1.valorA : d1.valorB}${diffAbs ? ` (${diffAbs}% vs ${outro})` : ''}.`
-    )
-  }
+  // Abertura
+  if (ganhador && perdedor) {
+    const lucroD = drivers.find((d) => d.label === 'Lucro mensal estimado')
+    const payD = drivers.find((d) => d.label === 'Payback do investimento')
 
-  // Driver 2
-  if (d2) {
-    if (d2.favoravel === 'neutro') {
-      frases.push(`${d2.label} também é equivalente entre os dois pontos.`)
-    } else {
-      const fav2 = d2.favoravel === 'B' ? bairroB : bairroA
-      const outro2 = d2.favoravel === 'B' ? bairroA : bairroB
+    if (lucroD && lucroD.favoravel === vencedor) {
       frases.push(
-        `Em ${d2.label.toLowerCase()}, ${fav2} leva vantagem sobre ${outro2}${d2.diffPct != null ? ` com uma diferença de ${Math.abs(d2.diffPct).toFixed(1)}%` : ''}.`
+        `O ponto em ${ganhador} se destaca pelo lucro mensal projetado superior, que é o principal atrativo para o investidor.`
+      )
+    } else if (payD && payD.favoravel === vencedor) {
+      frases.push(
+        `A principal vantagem de ${ganhador} é o payback mais curto, reduzindo o risco de exposição do capital investido.`
+      )
+    } else {
+      frases.push(
+        `${ganhador} apresenta melhor conjunto de métricas financeiras quando comparado a ${perdedor}.`
       )
     }
-  }
 
-  // Conclusão
-  if (ganhador && perdedor) {
-    const paybackDriver = drivers.find((d) => d.label === 'Payback')
-    const lucroDriver = drivers.find((d) => d.label === 'Lucro mensal estimado')
+    // Driver 2 e 3
+    const outrosDrivers = top3.filter(
+      (d) => d.label !== 'Lucro mensal estimado' && d.label !== 'Payback do investimento' && d.favoravel !== 'neutro'
+    )
+    if (outrosDrivers.length > 0) {
+      const nomes = outrosDrivers.map((d) => d.label.toLowerCase())
+      const ultimo = nomes.pop()
+      const lista = nomes.length > 0 ? `${nomes.join(', ')} e ${ultimo}` : ultimo
+      frases.push(
+        `Isso é sustentado por vantagens em ${lista}, que juntos compõem um cenário de menor risco operacional.`
+      )
+    }
 
+    // Ressalva
+    const neutros = top3.filter((d) => d.favoravel === 'neutro')
+    if (neutros.length > 0) {
+      frases.push(
+        `Em ${neutros[0].label.toLowerCase()}, ambos os pontos estão alinhados, o que não pesa na decisão.`
+      )
+    }
+
+    // Conclusão
     if (mesmosModelos) {
       frases.push(
-        `Como ambos operam no modelo ${modelo}, a escolha de ${ganhador} é justificada ${lucroDriver && lucroDriver.favoravel === (vencedor === 'B' ? 'B' : 'A') ? 'principalmente pelo lucro mensal superior' : paybackDriver && paybackDriver.favoravel === (vencedor === 'B' ? 'B' : 'A') ? 'principalmente pelo payback mais curto' : 'pela combinação de métricas financeiras mais favoráveis'}. ${perdedor} só seria preferível se houver fatores qualitativos decisivos (ex: visibilidade, concorrência menor) não capturados na planilha.`
+        `Como o modelo de negócio é o mesmo (${modelo}), a decisão deve privilegiar ${ganhador}, a menos que ${perdedor} ofereça vantagens estratégicas não quantificáveis — como melhor visibilidade de rua, menor concorrência imediata ou acesso superior ao transporte público.`
       )
     } else {
       frases.push(
-        `Com modelos distintos, ${ganhador} apresenta melhor relação risco/retorno. ${perdedor} pode fazer sentido se o objetivo for ${modelo.toLowerCase().includes('low') ? 'entrada conservadora no mercado' : modelo.toLowerCase().includes('premium') ? 'premiumização da marca' : 'estratégia de nicho diferente'}.`
+        `Com modelos distintos, a escolha depende do apetite a risco da operação: ${modelo} em ${vencedor === 'A' ? bairroA : bairroB} representa ${modelo.toLowerCase().includes('premium') ? 'maior investimento com retorno potencial mais alto' : modelo.toLowerCase().includes('low') ? 'entrada de baixo risco e capital reduzido' : 'perfil de retorno moderado'}.`
       )
     }
   } else {
     frases.push(
-      `As métricas financeiras são equilibradas. A decisão final deve considerar fatores qualitativos: dores dominantes dos concorrentes, visibilidade do ponto, densidade populacional e projeção de crescimento do bairro.`
+      `Os dois pontos apresentam retorno financeiro equivalente dentro da margem de erro da projeção. Recomendamos aprofundar a análise qualitativa: compare a intensidade de concorrência, o horário de pico dos vizinhos e a projeção de crescimento demográfico do bairro antes de tomar a decisão final.`
     )
   }
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {frases.map((f, i) => (
         <p key={i} className="text-xs text-foreground leading-relaxed">
           {f}

@@ -269,16 +269,17 @@ def _candidatos_section(model: RelatorioPdfModel, styles: dict) -> list:
     if not model.candidatos:
         return []
     flow = _section_title("4. Top candidatos (imóveis)", styles)
-    data = [["#", "Nome", "Área m²", "GeoScout", "Ancoragem", "Endereço"]]
+    data = [["#", "Nome", "Tipo ONR", "Área m²", "GeoScout", "Ancoragem", "Endereço"]]
     for c in model.candidatos:
         data.append(
             [
                 str(c.posicao),
-                c.nome[:40],
+                c.nome[:30],
+                c.tipo_imovel_label or "—",
                 str(int(c.area_m2)) if c.area_m2 else "—",
                 _score(c.score_geoscout),
                 _score(c.score_ancoragem),
-                c.endereco[:55],
+                c.endereco[:45],
             ],
         )
     flow.append(
@@ -286,11 +287,12 @@ def _candidatos_section(model: RelatorioPdfModel, styles: dict) -> list:
             data,
             [
                 0.8 * cm,
-                4.2 * cm,
+                3.8 * cm,
+                2.2 * cm,
                 1.5 * cm,
                 1.5 * cm,
                 1.5 * cm,
-                CONTENT_W - 9.5 * cm,
+                CONTENT_W - 11.3 * cm,
             ],
         ),
     )
@@ -298,6 +300,19 @@ def _candidatos_section(model: RelatorioPdfModel, styles: dict) -> list:
         if c.motivo:
             flow.append(
                 _para(f"<b>Cand. {c.posicao}:</b> {c.motivo[:400]}", "small", styles),
+            )
+        if c.cartorio:
+            cart = c.cartorio
+            cns = cart.get("cns") or "—"
+            nome = cart.get("nome") or "—"
+            tel = cart.get("telefone") or "—"
+            end = cart.get("endereco") or "—"
+            flow.append(
+                _para(
+                    f"<b>Cartório Competente (Cand. {c.posicao}):</b> {nome} (CNS: {cns}) · Tel: {tel} · End: {end}",
+                    "small",
+                    styles,
+                ),
             )
     return flow
 

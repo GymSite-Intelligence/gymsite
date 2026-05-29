@@ -60,6 +60,22 @@ def _olx_properties_lookup(properties: list[dict], key: str) -> str:
     return ""
 
 
+def _infer_onr_type(title: str, extra_text: str = "") -> tuple[int | None, str | None]:
+    text = f"{title} {extra_text}".lower()
+    if re.search(r"galp[aã]o|deposito|depósito|armaz[eé]m", text):
+        return 31, "Galpão"
+    if re.search(r"pr[eé]dio|edif[ií]cio\s+inteiro", text):
+        return 33, "Prédio Comercial"
+    if re.search(r"loja|ponto\s+comercial|box", text):
+        return 15, "Loja"
+    if re.search(r"sala\s+comercial|sala", text):
+        return 17, "Sala"
+    if re.search(r"terreno|lote", text):
+        return 71, "Terreno/Fração"
+    return None, None
+
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # OLX — extrai __NEXT_DATA__ pós-hydration
 # ─────────────────────────────────────────────────────────────────────────────
@@ -139,10 +155,12 @@ async def fetch_olx_nextdata(
             property_type = "loja" if "loja" in re_type.lower() else (
                 "galpao" if "galp" in re_type.lower() else "comercial"
             )
+            subject = str(ad.get("subject", ""))
+            onr_code, onr_label = _infer_onr_type(subject, re_type)
 
             results.append(ListingResult(
                 source="olx",
-                title=str(ad.get("subject", "")),
+                title=subject,
                 price_raw=price_raw,
                 area_m2=area_m2,
                 address=address,
@@ -150,6 +168,9 @@ async def fetch_olx_nextdata(
                 listing_id=list_id or _extract_id(friendly_url),
                 source_url=url,
                 property_type=property_type,
+                tipo_imovel_codigo_onr=onr_code,
+                tipo_imovel_label=onr_label,
+                modalidade="locacao"
             ))
         except Exception as e:
             logger.debug("olx: ad ignorado — %s", e)
@@ -259,16 +280,23 @@ async def fetch_imovelweb_jsonld(
         if not listing_url and area_m2 == 0:
             continue
 
+        title = str(c.get("title", ""))
+        desc = str(c.get("description", ""))
+        onr_code, onr_label = _infer_onr_type(title, desc)
+
         results.append(ListingResult(
             source="imovelweb",
-            title=str(c.get("title", "")),
+            title=title,
             price_raw=str(c.get("price", "")),
             area_m2=area_m2,
             address=str(c.get("address", "")),
             listing_url=listing_url,
             listing_id=str(listing_id),
             source_url=url,
-            description=str(c.get("description", ""))[:300],
+            description=desc[:300],
+            tipo_imovel_codigo_onr=onr_code,
+            tipo_imovel_label=onr_label,
+            modalidade="locacao"
         ))
 
     logger.info(
