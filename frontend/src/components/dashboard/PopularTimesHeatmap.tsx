@@ -116,14 +116,27 @@ export function PopularTimesHeatmap({
     return m || 100
   }, [matriz])
 
-  const temDados = competidores.some((c) => c.horarios_pico)
+  /**
+   * temDados: verifica se pelo menos 1 competidor tem horarios_pico com
+   * ao menos 1 dia de dados. {} vazio é truthy mas não tem dados reais.
+   */
+  const temDados = competidores.some((c) => {
+    if (!c.horarios_pico) return false
+    return Object.keys(c.horarios_pico).length > 0
+  })
 
   if (!temDados) {
     return (
       <div className={cn('rounded-lg border border-border bg-card p-4', className)}>
-        <p className="text-xs text-muted-foreground text-center py-4">
-          Dados de horários de pico indisponíveis para esses competidores.
-        </p>
+        <div className="text-center py-6 space-y-1.5">
+          <p className="text-xs text-muted-foreground">
+            Dados de horários de pico não coletados para esses competidores.
+          </p>
+          <p className="text-[10px] text-muted-foreground/60 font-mono">
+            O Google Maps pode não exibir popular times para academias com poucas avaliações,
+            ou o enriquecimento via Playwright falhou durante a geração do relatório.
+          </p>
+        </div>
       </div>
     )
   }

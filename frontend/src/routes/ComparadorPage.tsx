@@ -16,6 +16,7 @@ import { useComparacao, formatBRL } from '@/hooks/useComparacao'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
 import { MetricaDiff } from '@/components/domain/MetricaDiff'
 import { PopularTimesHeatmap } from '@/components/dashboard/PopularTimesHeatmap'
+import { ResumoViabilidadeComparativa } from '@/components/dashboard/ResumoViabilidadeComparativa'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -448,6 +449,16 @@ export function ComparadorPage() {
           </div>
         </div>
       </section>
+
+      {/* Bloco 7: Resumo Técnico de Viabilidade */}
+      <ResumoViabilidadeComparativa
+        bairroA={inpA.bairro}
+        bairroB={inpB.bairro}
+        cenarioA={cenarioA as unknown as import('@/hooks/useRelatorioDetail').CenarioJSON}
+        cenarioB={cenarioB as unknown as import('@/hooks/useRelatorioDetail').CenarioJSON}
+        aluguelA={outA.aluguel_mensal}
+        aluguelB={outB.aluguel_mensal}
+      />
 
       <footer className="flex items-center justify-between pt-4 border-t border-border">
         <Button
