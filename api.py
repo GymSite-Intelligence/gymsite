@@ -109,6 +109,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 
@@ -777,11 +778,19 @@ def get_relatorio_pdf(relatorio_id: str, layout: str = "classic") -> Any:
     pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
     slug = f"gymsite-{model.bairro}-{model.cidade}".replace(" ", "-")
     slug = "".join(c if c.isalnum() or c in "-_" else "" for c in slug)[:48] or "relatorio"
+    # ASCII-safe fallback + RFC 5987 encoding for non-ASCII chars
+    from urllib.parse import quote
+    slug_ascii = slug.encode("ascii", "ignore").decode("ascii") or "relatorio"
+    slug_utf8 = quote(slug, safe="-_")
+    dispo = (
+        f'attachment; filename="{slug_ascii}.pdf"; '
+        f"filename*=UTF-8''{slug_utf8}.pdf"
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="{slug}.pdf"',
+            "Content-Disposition": dispo,
             "Cache-Control": "private, max-age=300",
         },
     )
