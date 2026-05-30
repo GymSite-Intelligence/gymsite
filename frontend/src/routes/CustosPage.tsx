@@ -12,13 +12,20 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { ChevronDown, ChevronRight, Loader2, BarChart3, Coins, Cpu, Lightbulb, Sparkles, TrendingDown } from 'lucide-react'
+import { ChevronDown, ChevronRight, Loader2, BarChart3, Coins, Cpu, Lightbulb, Sparkles, Download, CheckCircle2, XCircle, CircleDashed, Archive } from 'lucide-react'
 import { useMembership } from '@/hooks/useMembership'
 import {
   useCustosRelatorios,
   useCustosAPI,
+  useCustosOptimizations,
+  usePropostasOtimizacao,
+  useCriarPropostaOtimizacao,
+  useAtualizarPropostaOtimizacao,
   type Periodo,
   type RelatorioCustoRow,
+  type SugestaoOtimizacao,
+  type PropostaOtimizacao,
+  type CustosOptimizationsData,
 } from '@/hooks/useCustos'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,6 +72,10 @@ export function CustosPage() {
   const [periodo, setPeriodo] = useState<Periodo>('mes')
   const [expandido, setExpandido] = useState<string | null>(null)
   const { data: relatorios, isLoading } = useCustosRelatorios(periodo)
+  const { data: optimizacoes, isLoading: optimizacoesLoading } = useCustosOptimizations(30)
+  const { data: propostas, isLoading: propostasLoading } = usePropostasOtimizacao()
+  const criarProposta = useCriarPropostaOtimizacao()
+  const atualizarProposta = useAtualizarPropostaOtimizacao()
 
   // Resumos calculados em cima do dataset atual.
   // `porOrg` agrega total + count por org pra visão multi-tenant.
@@ -157,6 +168,15 @@ export function CustosPage() {
               {p.label}
             </Button>
           ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportarCSV(relatorios, periodo)}
+            disabled={!relatorios?.length}
+          >
+            <Download size={14} className="mr-1" />
+            CSV
+          </Button>
         </div>
       </header>
 
@@ -273,66 +293,302 @@ export function CustosPage() {
         )}
       </section>
 
-      {/* Seção de Oportunidades de Otimização */}
+      {/* Seção de Oportunidades de Otimização — Workflow de Aprovação */}
       <section className="rounded-lg border border-border bg-card p-5 space-y-4 shadow-sm relative overflow-hidden">
-        {/* Background glow */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full filter blur-xl pointer-events-none" />
-        
-        <div className="flex items-center gap-2">
-          <Lightbulb className="text-yellow-500" size={18} />
-          <h2 className="text-sm font-semibold tracking-tight">
-            Oportunidades de redução de custo identificadas
-          </h2>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="text-yellow-500" size={18} />
+            <h2 className="text-sm font-semibold tracking-tight">
+              Governança de Otimização de Custo
+            </h2>
+          </div>
+          {optimizacoes && (
+            <span className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+              {optimizacoes.total_chamadas} chamadas · R$ {optimizacoes.total_custo_brl.toFixed(2)}
+            </span>
+          )}
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div className="p-3 rounded-md bg-muted/30 border border-border/50 space-y-1 hover:border-primary/20 transition-all">
-            <div className="font-semibold text-foreground flex items-center gap-1.5">
-              <Sparkles size={13} className="text-primary" />
-              Troca do Agente A3b para Gemini 2.5 Flash Lite
-            </div>
-            <p className="text-muted-foreground leading-relaxed">
-              O agente de análise de concorrentes (A3b) foi migrado com sucesso de <code>gemini-2.5-flash</code> para o novo modelo <code>gemini-2.5-flash-lite</code>. Isso gera uma **redução imediata de até 40%** no custo de processamento deste sub-agente.
-            </p>
-            <div className="text-[10px] text-emerald-500 font-medium">Economia: ~R$ 0,80 a R$ 1,50 por execução</div>
-          </div>
 
-          <div className="p-3 rounded-md bg-muted/30 border border-border/50 space-y-1 hover:border-primary/20 transition-all">
-            <div className="font-semibold text-foreground flex items-center gap-1.5">
-              <TrendingDown size={13} className="text-primary" />
-              Cache Geográfico por Cidade e Bairro (7 dias)
-            </div>
-            <p className="text-muted-foreground leading-relaxed">
-              A reutilização de dados de geocoding e popular_times da SearchAPI via cache em disco evita consultas repetitivas para o mesmo bairro. Garanta a manutenção do cache local para manter as requisições de API a custo zero.
-            </p>
-            <div className="text-[10px] text-emerald-500 font-medium">Economia: Elimina custos redundantes de geocoding e SearchAPI</div>
-          </div>
-
-          <div className="p-3 rounded-md bg-muted/30 border border-border/50 space-y-1 hover:border-primary/20 transition-all">
-            <div className="font-semibold text-foreground flex items-center gap-1.5">
-              <Coins size={13} className="text-primary" />
-              Limitação de concorrentes processados no A3c
-            </div>
-            <p className="text-muted-foreground leading-relaxed">
-              Ao limitar o mapeamento de oferta do A3c a apenas os concorrentes mais relevantes que possuem presença ativa na web (website ou Instagram), evitamos chamadas de Places Details desnecessárias para academias sem canais digitais.
-            </p>
-            <div className="text-[10px] text-emerald-500 font-medium">Economia: ~30% do custo do A3c</div>
-          </div>
-
-          <div className="p-3 rounded-md bg-muted/30 border border-border/50 space-y-1 hover:border-primary/20 transition-all">
-            <div className="font-semibold text-foreground flex items-center gap-1.5">
-              <Cpu size={13} className="text-primary" />
-              Context Caching no Consolidador A6
-            </div>
-            <p className="text-muted-foreground leading-relaxed">
-              Como o prompt base e as diretrizes do relatório consolidado são estáticos, a implementação futura de Context Caching do Gemini reduzirá drasticamente o custo do agente A6 (que consome mais de 1.8M tokens por relatório).
-            </p>
-            <div className="text-[10px] text-emerald-500 font-medium">Economia: R$ 1,00 a R$ 2,00 por relatório completo</div>
-          </div>
-        </div>
+        {/* Abas de status */}
+        <PropostasWorkflow
+          optimizacoes={optimizacoes}
+          optimizacoesLoading={optimizacoesLoading}
+          propostas={propostas}
+          propostasLoading={propostasLoading}
+          onCriarProposta={(s) =>
+            criarProposta.mutate({
+              tipo: s.tipo,
+              agente: s.agente,
+              modelo_atual: s.modelo_atual,
+              modelo_sugerido: s.modelo_sugerido || '',
+              titulo: `${s.tipo}: ${s.agente}`,
+              descricao: s.detalhe,
+              economia_brl_estimada: s.economia_brl,
+              severidade: s.severidade,
+              referencia_dados: { periodo_dias: optimizacoes?.periodo_dias, total_custo: optimizacoes?.total_custo_brl },
+            })
+          }
+          onAtualizarProposta={(id, status, justificativa) =>
+            atualizarProposta.mutate({ id, status, justificativa })
+          }
+        />
       </section>
     </div>
   )
+}
+
+function PropostasWorkflow({
+  optimizacoes,
+  optimizacoesLoading,
+  propostas,
+  propostasLoading,
+  onCriarProposta,
+  onAtualizarProposta,
+}: {
+  optimizacoes: CustosOptimizationsData | undefined
+  optimizacoesLoading: boolean
+  propostas: PropostaOtimizacao[] | undefined
+  propostasLoading: boolean
+  onCriarProposta: (s: SugestaoOtimizacao) => void
+  onAtualizarProposta: (id: string, status: string, justificativa: string) => void
+}) {
+  const [aba, setAba] = useState<'detectadas' | 'pendentes' | 'aprovadas' | 'implementadas' | 'rejeitadas'>('detectadas')
+  const [justificativa, setJustificativa] = useState('')
+  const [acaoId, setAcaoId] = useState<string | null>(null)
+
+  const pendentes = propostas?.filter((p) => p.status === 'pendente') ?? []
+  const aprovadas = propostas?.filter((p) => p.status === 'aprovada') ?? []
+  const implementadas = propostas?.filter((p) => p.status === 'implementada') ?? []
+  const rejeitadas = propostas?.filter((p) => p.status === 'rejeitada') ?? []
+
+  const sugestoesJaPropostas = new Set(
+    propostas?.map((p) => `${p.tipo}:${p.agente}`) ?? []
+  )
+
+  const abas = [
+    { key: 'detectadas' as const, label: `Detectadas (${optimizacoes?.sugestoes.length ?? 0})` },
+    { key: 'pendentes' as const, label: `Pendentes (${pendentes.length})` },
+    { key: 'aprovadas' as const, label: `Aprovadas (${aprovadas.length})` },
+    { key: 'implementadas' as const, label: `Implementadas (${implementadas.length})` },
+    { key: 'rejeitadas' as const, label: `Rejeitadas (${rejeitadas.length})` },
+  ]
+
+  return (
+    <div className="space-y-3">
+      {/* Abas */}
+      <div className="flex flex-wrap gap-1">
+        {abas.map((a) => (
+          <button
+            key={a.key}
+            onClick={() => setAba(a.key)}
+            className={cn(
+              'text-[10px] px-2 py-1 rounded-md font-medium transition-colors',
+              aba === a.key
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            )}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+
+      {optimizacoesLoading || propostasLoading ? (
+        <div className="py-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 size={16} className="animate-spin" />
+          Carregando…
+        </div>
+      ) : aba === 'detectadas' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {optimizacoes?.sugestoes.map((s: SugestaoOtimizacao, i: number) => {
+            const jaExiste = sugestoesJaPropostas.has(`${s.tipo}:${s.agente}`)
+            return (
+              <div
+                key={`${s.tipo}-${s.agente}-${i}`}
+                className={cn(
+                  'p-3 rounded-md border space-y-2 transition-all',
+                  s.severidade === 'alta'
+                    ? 'border-red-200 bg-red-50/30 dark:bg-red-900/10'
+                    : s.severidade === 'media'
+                      ? 'border-orange-200 bg-orange-50/30 dark:bg-orange-900/10'
+                      : 'border-border/50 bg-muted/30'
+                )}
+              >
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-primary" />
+                  {s.tipo} — {s.agente}
+                </div>
+                <p className="text-muted-foreground leading-relaxed">{s.detalhe}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    Economia: R$ {s.economia_brl.toFixed(2)}
+                  </span>
+                  <span className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded font-medium uppercase',
+                    s.severidade === 'alta' ? 'bg-red-100 text-red-700' :
+                    s.severidade === 'media' ? 'bg-orange-100 text-orange-700' :
+                    'bg-muted text-muted-foreground'
+                  )}>
+                    {s.severidade}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-[10px] h-7"
+                  disabled={jaExiste}
+                  onClick={() => onCriarProposta(s)}
+                >
+                  {jaExiste ? 'Já proposta' : 'Criar Proposta'}
+                </Button>
+              </div>
+            )
+          })}
+          {!optimizacoes?.sugestoes?.length && (
+            <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
+              Nenhuma oportunidade detectada no período. 🎉
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {(aba === 'pendentes' ? pendentes :
+            aba === 'aprovadas' ? aprovadas :
+            aba === 'implementadas' ? implementadas :
+            rejeitadas
+          ).map((p) => (
+            <div key={p.id} className="p-3 rounded-md border border-border/50 bg-muted/20 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="font-semibold text-foreground">{p.titulo}</div>
+                <StatusPropostaBadge status={p.status} />
+              </div>
+              <p className="text-muted-foreground">{p.descricao}</p>
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Economia estimada: R$ {Number(p.economia_brl_estimada).toFixed(2)}</span>
+                <span>{new Date(p.criado_em).toLocaleDateString('pt-BR')}</span>
+              </div>
+
+              {/* Ações */}
+              {p.status === 'pendente' && (
+                <div className="flex gap-2 pt-1">
+                  {acaoId === p.id ? (
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Justificativa (opcional)"
+                        className="w-full px-2 py-1 rounded border text-[10px]"
+                        value={justificativa}
+                        onChange={(e) => setJustificativa(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="h-7 text-[10px]" onClick={() => { onAtualizarProposta(p.id, 'aprovada', justificativa); setAcaoId(null); setJustificativa('') }}>
+                          <CheckCircle2 size={12} className="mr-1" /> Aprovar
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => { onAtualizarProposta(p.id, 'rejeitada', justificativa); setAcaoId(null); setJustificativa('') }}>
+                          <XCircle size={12} className="mr-1" /> Rejeitar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => { setAcaoId(null); setJustificativa('') }}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAcaoId(p.id)}>
+                      <CircleDashed size={12} className="mr-1" /> Ação
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {p.status === 'aprovada' && (
+                <div className="flex gap-2 pt-1">
+                  {acaoId === p.id ? (
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Observação do resultado"
+                        className="w-full px-2 py-1 rounded border text-[10px]"
+                        value={justificativa}
+                        onChange={(e) => setJustificativa(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="h-7 text-[10px]" onClick={() => { onAtualizarProposta(p.id, 'implementada', justificativa); setAcaoId(null); setJustificativa('') }}>
+                          <Archive size={12} className="mr-1" /> Marcar Implementada
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => { setAcaoId(null); setJustificativa('') }}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAcaoId(p.id)}>
+                      <Archive size={12} className="mr-1" /> Implementar
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {p.justificativa_aprovacao && (
+                <div className="text-[10px] text-muted-foreground italic">
+                  Justificativa: {p.justificativa_aprovacao}
+                </div>
+              )}
+            </div>
+          ))}
+          {!(aba === 'pendentes' ? pendentes :
+            aba === 'aprovadas' ? aprovadas :
+            aba === 'implementadas' ? implementadas :
+            rejeitadas).length && (
+            <div className="py-8 text-center text-muted-foreground text-sm">
+              Nenhuma proposta nesta categoria.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StatusPropostaBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; className: string }> = {
+    pendente: { label: 'Pendente', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+    aprovada: { label: 'Aprovada', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+    implementada: { label: 'Implementada', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+    rejeitada: { label: 'Rejeitada', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+    cancelada: { label: 'Cancelada', className: 'bg-gray-100 text-gray-700' },
+  }
+  const cfg = map[status] ?? { label: status, className: 'bg-muted text-muted-foreground' }
+  return (
+    <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-medium uppercase', cfg.className)}>
+      {cfg.label}
+    </span>
+  )
+}
+
+function exportarCSV(rows: RelatorioCustoRow[] | undefined, periodo: Periodo) {
+  if (!rows?.length) return
+  const header = ['Data', 'Cidade', 'Bairro', 'Status', 'Tempo(s)', 'Tokens', 'Custo(BRL)']
+  const lines = rows.map((r) => [
+    new Date(r.created_at).toISOString(),
+    r.cidade ?? '',
+    r.bairro ?? '',
+    r.status,
+    String(r.tempo_execucao_segundos ?? ''),
+    String(r.tokens_total ?? ''),
+    String(r.custo_brl ?? ''),
+  ])
+  const csv = [header, ...lines].map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `custos_${periodo}_${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 function MetricCard({

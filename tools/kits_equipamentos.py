@@ -54,6 +54,7 @@ def tamanho_para_modelo_financeiro(
     """
     if tamanho_base not in _ORDEM_TAMANHOS:
         return tamanho_base
+    # pyrefly: ignore [bad-argument-type]
     idx = _ORDEM_TAMANHOS.index(tamanho_base)
     if modelo_financeiro == "low":
         return _ORDEM_TAMANHOS[max(0, idx - 1)]

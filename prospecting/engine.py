@@ -19,6 +19,7 @@ from prospecting.config import Config
 from prospecting.matcher import match_opportunities
 from prospecting.enricher import enrich_opportunity
 from prospecting.webhook import send_opportunity_webhook
+from tools.telemetry import span
 
 
 def _get_client():
@@ -27,6 +28,7 @@ def _get_client():
     return create_client(Config.SUPABASE_URL, Config.SUPABASE_SERVICE_ROLE_KEY)
 
 
+@span("prospeccao.engine.run")
 def run_prospeccao(
     *,
     cidade: str,
@@ -44,13 +46,14 @@ def run_prospeccao(
     Retorna dict com estatísticas da execução.
     """
     client = _get_client()
-    oportunidades = match_opportunities(
-        cidade=cidade,
-        uf=uf,
-        dias=dias,
-        limit=limit,
-        cno_dir=cno_dir,
-    )
+    with span("prospeccao.match", cidade=cidade, uf=uf, dias=dias):
+        oportunidades = match_opportunities(
+            cidade=cidade,
+            uf=uf,
+            dias=dias,
+            limit=limit,
+            cno_dir=cno_dir,
+        )
 
     stats = {
         "total_match": len(oportunidades),

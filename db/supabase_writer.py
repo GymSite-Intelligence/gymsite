@@ -62,6 +62,7 @@ def _get_client():
     if not url or not key:
         return None
     try:
+        # pyrefly: ignore [missing-import]
         from supabase import create_client
         return create_client(url, key)
     except Exception as e:

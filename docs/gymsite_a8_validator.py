@@ -179,7 +179,9 @@ class A8ValidadorCruzado:
         breakeven_claims = [c for c in claims if c.valor and "break" in c.texto.lower()]
 
         if payback_claims and breakeven_claims:
+            # pyrefly: ignore [missing-attribute]
             pb = float(payback_claims[0].valor.replace(",", "."))
+            # pyrefly: ignore [missing-attribute]
             be = float(breakeven_claims[0].valor.replace(",", "."))
             if pb < be * 0.8:
                 self.alertas.append(AlertaValidacao(

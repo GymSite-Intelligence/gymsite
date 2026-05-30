@@ -420,6 +420,7 @@ def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> 
     renda_data = buscar_renda(mun["codigo"])
     renda = float(renda_data["renda_media"])
 
+    # pyrefly: ignore [unnecessary-type-conversion]
     score = float(calcular_score_demografico(pop_faixa, renda))
 
     if score >= 8.0:

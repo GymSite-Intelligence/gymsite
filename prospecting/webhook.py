@@ -16,8 +16,11 @@ from typing import Any
 import requests
 
 from prospecting.config import Config
+from tools.telemetry import span
+from tools.sanitize import mask_cnpj, mask_phone, mask_email
 
 
+@span("prospeccao.webhook.send")
 def send_opportunity_webhook(
     oportunidade: dict[str, Any],
     client=None,
@@ -131,14 +134,15 @@ def send_opportunity_webhook(
 
 
 def _montar_payload(opp: dict[str, Any]) -> dict[str, Any]:
-    """Monta o payload canônico do webhook."""
+    """Monta o payload canônico do webhook com sanitização LGPD."""
+    contato = opp.get("contato_cnpj") or {}
     return {
         "event": "prospeccao.oportunidade.qualificada",
         "version": "1.0",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "data": {
             "oportunidade_id": opp.get("id"),
-            "cnpj": opp.get("cnpj"),
+            "cnpj": mask_cnpj(opp.get("cnpj")),
             "cno": opp.get("cno"),
             "razao_social": opp.get("razao_social"),
             "nome_fantasia": opp.get("nome_fantasia"),
@@ -157,7 +161,13 @@ def _montar_payload(opp: dict[str, Any]) -> dict[str, Any]:
             "score_match": opp.get("score_match"),
             "motivo_match": opp.get("motivo_match"),
             "prioridade": opp.get("prioridade"),
-            "contato": opp.get("contato_cnpj"),
+            "contato": {
+                "decision_maker": contato.get("decision_maker"),
+                "cargo": contato.get("cargo"),
+                "email": mask_email(contato.get("email")),
+                "whatsapp": mask_phone(contato.get("whatsapp")),
+                "linkedin": contato.get("linkedin"),
+            },
             "projecao_receita": opp.get("projecao_receita"),
             "capacidade_matriculas": opp.get("capacidade_matriculas"),
         },

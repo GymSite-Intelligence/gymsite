@@ -8,7 +8,7 @@
  *
  * Ambas via Supabase JS direto + RLS. Owner/admin enxerga tudo da org.
  */
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/lib/auth'
 import { supabase, API_BASE } from '@/lib/supabase'
 
@@ -167,6 +167,164 @@ export function useCustosAPI(relatorioId: string | null) {
         throw new Error(`Erro ao buscar custos de API: ${res.statusText}`)
       }
       return res.json()
+    },
+  })
+}
+
+export interface SugestaoOtimizacao {
+  tipo: string
+  agente: string
+  modelo_atual: string
+  modelo_sugerido?: string
+  economia_brl: number
+  detalhe: string
+  severidade: 'alta' | 'media' | 'baixa'
+}
+
+export interface CustosOptimizationsData {
+  periodo_dias: number
+  total_chamadas: number
+  total_custo_brl: number
+  por_agente: Record<string, {
+    tokens_in: number
+    tokens_out: number
+    calls: number
+    model: string
+    custo_brl: number
+    finish_reasons: Record<string, number>
+  }>
+  sugestoes: SugestaoOtimizacao[]
+  economia_total_estimada: number
+}
+
+export function useCustosOptimizations(dias: number = 30) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['custos-optimizations', user?.id ?? 'anon', dias],
+    enabled: !!user,
+    queryFn: async (): Promise<CustosOptimizationsData> => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: HeadersInit = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+      const res = await fetch(`${API_BASE}/api/custos/optimizations?dias=${dias}`, { headers })
+      if (!res.ok) {
+        throw new Error(`Erro ao buscar otimizações: ${res.statusText}`)
+      }
+      return res.json()
+    },
+  })
+}
+
+export interface PropostaOtimizacao {
+  id: string
+  org_id: string
+  criado_por: string | null
+  criado_em: string
+  tipo: string
+  agente: string
+  modelo_atual: string
+  modelo_sugerido: string
+  titulo: string
+  descricao: string
+  economia_brl_estimada: number
+  severidade: string
+  status: string
+  aprovado_por: string | null
+  aprovado_em: string | null
+  justificativa_aprovacao: string | null
+  implementado_por: string | null
+  implementado_em: string | null
+  resultado_observacao: string | null
+  economia_brl_real: number | null
+  referencia_dados: Record<string, unknown> | null
+}
+
+export function usePropostasOtimizacao(status?: string) {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['propostas-otimizacao', user?.id ?? 'anon', status],
+    enabled: !!user,
+    queryFn: async (): Promise<PropostaOtimizacao[]> => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: HeadersInit = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+      let url = `${API_BASE}/api/custos/propostas`
+      if (status) url += `?status=${encodeURIComponent(status)}`
+      const res = await fetch(url, { headers })
+      if (!res.ok) {
+        throw new Error(`Erro ao buscar propostas: ${res.statusText}`)
+      }
+      return res.json()
+    },
+  })
+}
+
+export interface PropostaOtimizacaoInput {
+  tipo: string
+  agente: string
+  modelo_atual: string
+  modelo_sugerido: string
+  titulo: string
+  descricao: string
+  economia_brl_estimada: number
+  severidade: string
+  referencia_dados: Record<string, unknown> | null
+}
+
+export function useCriarPropostaOtimizacao() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: PropostaOtimizacaoInput) => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+      const res = await fetch(`${API_BASE}/api/custos/propostas`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        throw new Error(`Erro ao criar proposta: ${res.statusText}`)
+      }
+      return res.json() as Promise<PropostaOtimizacao>
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['propostas-otimizacao'] })
+    },
+  })
+}
+
+export function useAtualizarPropostaOtimizacao() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status, justificativa, resultado_observacao, economia_brl_real }: { id: string; status: string; justificativa?: string; resultado_observacao?: string; economia_brl_real?: number }) => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+      const res = await fetch(`${API_BASE}/api/custos/propostas/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status, justificativa, resultado_observacao, economia_brl_real }),
+      })
+      if (!res.ok) {
+        throw new Error(`Erro ao atualizar proposta: ${res.statusText}`)
+      }
+      return res.json() as Promise<PropostaOtimizacao>
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['propostas-otimizacao'] })
     },
   })
 }

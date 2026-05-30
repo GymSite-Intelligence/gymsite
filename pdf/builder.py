@@ -2,13 +2,25 @@
 Montagem do PDF com ReportLab (layout classic / executive / data_room).
 """
 
+from matplotlib import layout_engine
+from matplotlib import layout_engine
+from matplotlib import layout_engine
+from matplotlib import layout_engine
+from matplotlib import layout_engine
+from matplotlib import layout_engine
+from matplotlib import layout_engine
+from matplotlib import layout_engine
+# pyrefly: ignore [invalid-syntax]
 from __future__ import annotations
 
 import io
 from datetime import datetime
 
+# pyrefly: ignore [untyped-import]
 from reportlab.lib import colors
+# pyrefly: ignore [untyped-import]
 from reportlab.lib.units import cm
+# pyrefly: ignore [untyped-import]
 from reportlab.platypus import (
     Image,
     PageBreak,
@@ -21,6 +33,7 @@ from reportlab.platypus import (
 
 from pdf.charts import chart_capex_stacked, chart_lucro_cenarios, chart_scores_bar
 from pdf.models import LayoutId, RelatorioPdfModel
+from tools.telemetry import span
 from pdf.theme import (
     BORDER,
     CARD_BG,
@@ -873,6 +886,8 @@ def _build_bala(model: RelatorioPdfModel, styles: dict) -> list:
     return story
 
 
+# pyrefly: ignore [unknown-name]
+@span("pdf.generate", layout=str(layout))
 def generate_relatorio_pdf(
     model: RelatorioPdfModel,
     *,

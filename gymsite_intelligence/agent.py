@@ -34,19 +34,38 @@ from tools.token_telemetry import (
 )
 # Diagnóstico de state (debug #124): registra keys do state após cada agente.
 from tools.state_diagnostics import after_agent_state_dump as _state_dump
+# OpenTelemetry spans por agente (A0–A6)
+from tools.agent_telemetry import before_agent_callback as _otel_before, after_agent_callback as _otel_after
+
+
+def _chain_callbacks(existing, new):
+    """Encadeia dois callbacks: chama existing primeiro, depois new."""
+    if existing is None:
+        return new
+    if existing is new:
+        return existing
+    def _chained(ctx):
+        existing(ctx)
+        new(ctx)
+    return _chained
 
 
 def _attach_telemetry(*agents):
-    """Anexa callbacks: before_agent (run_id) + after_model (tokens reais) + after_agent (state dump)."""
+    """Anexa callbacks: before_agent (run_id + otel) + after_model (tokens) + after_agent (otel + state dump)."""
     for ag in agents:
         try:
-            if getattr(ag, "before_agent_callback", None) is None:
-                ag.before_agent_callback = _telemetry_before
+            ag.before_agent_callback = _chain_callbacks(
+                getattr(ag, "before_agent_callback", None), _otel_before
+            )
             if getattr(ag, "after_model_callback", None) is None:
                 ag.after_model_callback = _telemetry_after_model
-            # Não pisa em callbacks já definidos (A6 tem _a6_after_agent_callback).
-            if getattr(ag, "after_agent_callback", None) is None:
-                ag.after_agent_callback = _state_dump
+            ag.after_agent_callback = _chain_callbacks(
+                getattr(ag, "after_agent_callback", None), _otel_after
+            )
+            # State dump vai depois do otel_after para manter ordem
+            ag.after_agent_callback = _chain_callbacks(
+                ag.after_agent_callback, _state_dump
+            )
         except Exception:
             pass  # falha silenciosa — telemetria não bloqueia
 

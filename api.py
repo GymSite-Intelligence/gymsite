@@ -46,6 +46,7 @@ logger = logging.getLogger("gymsite.api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
 
 from tools.google_maps_key import warn_if_missing_maps_key
+from tools.telemetry import span
 
 warn_if_missing_maps_key()
 
@@ -194,59 +195,60 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
     from tools.api_cost_tracker import current_relatorio_id
     token = current_relatorio_id.set(relatorio_id)
     try:
-        set_a0_research_provider(payload.a0_research_provider or "auto")
+        with span("pipeline.adk.run", relatorio_id=relatorio_id, cidade=payload.cidade):
+            set_a0_research_provider(payload.a0_research_provider or "auto")
 
-        # Reset run_id pra cada tentativa — telemetria fica separada por tentativa.
-        reset_run_id()
+            # Reset run_id pra cada tentativa — telemetria fica separada por tentativa.
+            reset_run_id()
 
-        session_service = InMemorySessionService()
-        session_id = f"api_{relatorio_id}_{int(time.time())}"
-        user_id = "api_user"
+            session_service = InMemorySessionService()
+            session_id = f"api_{relatorio_id}_{int(time.time())}"
+            user_id = "api_user"
 
-        await session_service.create_session(
-            app_name="gymsite",
-            user_id=user_id,
-            session_id=session_id,
-            state={
-                "relatorio_id": relatorio_id,
-                # Params estruturados acessíveis via tool_context.state em qualquer
-                # tool — usado por A1 GeoScout (listings OLX+ImovelWeb filtra por
-                # area_min/max) e potencialmente A4 (estacionamento, tipo_negocio).
-                "input_params": {
-                    "cidade": payload.cidade,
-                    "uf": payload.uf,
-                    "bairro": payload.bairro,
-                    "area_m2_min": payload.area_m2_min,
-                    "area_m2_max": payload.area_m2_max,
-                    "tamanho_preset": payload.tamanho_preset,
-                    "tipo_negocio": payload.tipo_negocio,
-                    "publico_alvo": payload.publico_alvo,
-                    "genero_alvo": payload.genero_alvo,
-                    "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
-                    "a0_research_provider": payload.a0_research_provider or "auto",
+            await session_service.create_session(
+                app_name="gymsite",
+                user_id=user_id,
+                session_id=session_id,
+                state={
+                    "relatorio_id": relatorio_id,
+                    # Params estruturados acessíveis via tool_context.state em qualquer
+                    # tool — usado por A1 GeoScout (listings OLX+ImovelWeb filtra por
+                    # area_min/max) e potencialmente A4 (estacionamento, tipo_negocio).
+                    "input_params": {
+                        "cidade": payload.cidade,
+                        "uf": payload.uf,
+                        "bairro": payload.bairro,
+                        "area_m2_min": payload.area_m2_min,
+                        "area_m2_max": payload.area_m2_max,
+                        "tamanho_preset": payload.tamanho_preset,
+                        "tipo_negocio": payload.tipo_negocio,
+                        "publico_alvo": payload.publico_alvo,
+                        "genero_alvo": payload.genero_alvo,
+                        "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
+                        "a0_research_provider": payload.a0_research_provider or "auto",
+                    },
                 },
-            },
-        )
+            )
 
-        runner = Runner(
-            agent=root_agent,
-            app_name="gymsite",
-            session_service=session_service,
-        )
+            runner = Runner(
+                agent=root_agent,
+                app_name="gymsite",
+                session_service=session_service,
+            )
 
-        prompt = _build_pipeline_prompt(payload)
-        message = Content(role="user", parts=[Part(text=prompt)])
+            prompt = _build_pipeline_prompt(payload)
+            message = Content(role="user", parts=[Part(text=prompt)])
 
-        async for _event in runner.run_async(
-            user_id=user_id,
-            session_id=session_id,
-            new_message=message,
-        ):
-            pass
+            async for _event in runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=message,
+            ):
+                pass
 
-        run_id = _get_run_id()
-        sb = _supabase_client()
-        return _agregar_e_persistir_custos(sb, relatorio_id, run_id)
+            run_id = _get_run_id()
+            sb = _supabase_client()
+            return _agregar_e_persistir_custos(sb, relatorio_id, run_id)
     finally:
         current_relatorio_id.reset(token)
 
@@ -511,6 +513,17 @@ def _resolve_user_and_org(request: Request) -> tuple[str | None, str]:
         return None, default_org
 
 
+def _user_org_ids(sb, user_id: str) -> list[str]:
+    """Retorna todas as org_ids que o usuário pertence."""
+    if not user_id:
+        return []
+    try:
+        mem = sb.table("organization_members").select("org_id").eq("user_id", user_id).execute()
+        return [str(r["org_id"]) for r in (mem.data or [])]
+    except Exception:
+        return []
+
+
 def create_relatorio_stub(
     payload: NovoRelatorioInput,
     *,
@@ -563,23 +576,24 @@ async def create_relatorio(
     request: Request,
 ) -> RelatorioStub:
     """Cria stub do relatório + dispara pipeline em background. Retorna ID pra polling."""
-    user_id, org_from_jwt = _resolve_user_and_org(request)
-    try:
-        relatorio_id, created_at = create_relatorio_stub(
-            payload,
-            org_id=payload.org_id or org_from_jwt,
-            user_id=user_id,
+    with span("api.relatorios.create", cidade=payload.cidade, uf=payload.uf):
+        user_id, org_from_jwt = _resolve_user_and_org(request)
+        try:
+            relatorio_id, created_at = create_relatorio_stub(
+                payload,
+                org_id=payload.org_id or org_from_jwt,
+                user_id=user_id,
+            )
+        except RuntimeError as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+        background_tasks.add_task(_run_pipeline_async_wrapper, relatorio_id, payload)
+
+        return RelatorioStub(
+            id=relatorio_id,
+            status="queued",
+            created_at=created_at,
         )
-    except RuntimeError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-    background_tasks.add_task(_run_pipeline_async_wrapper, relatorio_id, payload)
-
-    return RelatorioStub(
-        id=relatorio_id,
-        status="queued",
-        created_at=created_at,
-    )
 
 
 def _run_pipeline_async_wrapper(relatorio_id: str, payload: NovoRelatorioInput) -> None:
@@ -934,6 +948,121 @@ def get_relatorio_custos_api(relatorio_id: str) -> dict:
     }
 
 
+@app.get("/api/custos/optimizations")
+def get_custos_optimizations(dias: int = 30) -> dict:
+    """Retorna sugestões de otimização de custo baseadas no tokens_pipeline.csv."""
+    from tools.cost_optimizations import gerar_optimizacoes
+    with span("api.custos.optimizations", dias=dias):
+        return gerar_optimizacoes(dias=dias)
+
+
+# ── Propostas de Otimização — Governança de Custo ──────────────────────────
+
+from pydantic import BaseModel
+
+class PropostaCreateInput(BaseModel):
+    tipo: str
+    agente: str
+    modelo_atual: str = ""
+    modelo_sugerido: str = ""
+    titulo: str
+    descricao: str
+    economia_brl_estimada: float = 0.0
+    severidade: str = "media"
+    referencia_dados: dict | None = None
+
+
+class PropostaUpdateInput(BaseModel):
+    status: str
+    justificativa: str = ""
+    resultado_observacao: str = ""
+    economia_brl_real: float | None = None
+
+
+@app.get("/api/custos/propostas")
+def list_propostas_otimizacao(status: str | None = None) -> list[dict]:
+    """Lista propostas de otimização da org do usuário autenticado."""
+    sb = _supabase_client()
+    user = sb.auth.get_user().user
+    orgs = _user_org_ids(sb, user.id if user else "")
+    if not orgs:
+        return []
+
+    q = sb.table("otimizacoes_custo").select("*").in_("org_id", orgs).order("criado_em", desc=True)
+    if status:
+        q = q.eq("status", status)
+    res = q.execute()
+    return res.data or []
+
+
+@app.post("/api/custos/propostas")
+def criar_proposta_otimizacao(body: PropostaCreateInput) -> dict:
+    """Cria uma proposta de otimização. Aceita service_role ou user autenticado."""
+    sb = _supabase_client()
+    user = sb.auth.get_user().user
+    orgs = _user_org_ids(sb, user.id if user else "")
+    if not orgs:
+        raise HTTPException(status_code=403, detail="Usuário sem org")
+
+    record = {
+        "org_id": orgs[0],
+        "criado_por": user.id if user else None,
+        "tipo": body.tipo,
+        "agente": body.agente,
+        "modelo_atual": body.modelo_atual,
+        "modelo_sugerido": body.modelo_sugerido,
+        "titulo": body.titulo,
+        "descricao": body.descricao,
+        "economia_brl_estimada": body.economia_brl_estimada,
+        "severidade": body.severidade,
+        "referencia_dados": body.referencia_dados,
+    }
+    res = sb.table("otimizacoes_custo").insert(record).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Falha ao criar proposta")
+    return res.data[0]
+
+
+@app.patch("/api/custos/propostas/{proposta_id}")
+def atualizar_proposta_otimizacao(proposta_id: str, body: PropostaUpdateInput) -> dict:
+    """Atualiza status de uma proposta (aprovar, rejeitar, implementar)."""
+    sb = _supabase_client()
+    user = sb.auth.get_user().user
+    if not user:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+
+    # Busca proposta para validar permissão
+    res_get = sb.table("otimizacoes_custo").select("*").eq("id", proposta_id).single().execute()
+    if not res_get.data:
+        raise HTTPException(status_code=404, detail="Proposta não encontrada")
+
+    proposta = res_get.data
+    orgs = _user_org_ids(sb, user.id)
+    if str(proposta["org_id"]) not in orgs:
+        raise HTTPException(status_code=403, detail="Sem permissão")
+
+    update: dict = {"status": body.status}
+    now = datetime.now(timezone.utc).isoformat()
+
+    if body.status == "aprovada":
+        update["aprovado_por"] = user.id
+        update["aprovado_em"] = now
+        update["justificativa_aprovacao"] = body.justificativa
+    elif body.status == "implementada":
+        update["implementado_por"] = user.id
+        update["implementado_em"] = now
+        update["resultado_observacao"] = body.resultado_observacao
+        if body.economia_brl_real is not None:
+            update["economia_brl_real"] = body.economia_brl_real
+    elif body.status == "rejeitada":
+        update["justificativa_aprovacao"] = body.justificativa
+
+    res = sb.table("otimizacoes_custo").update(update).eq("id", proposta_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Falha ao atualizar proposta")
+    return res.data[0]
+
+
 @app.get("/api/relatorios")
 def list_relatorios(
     cidade: Optional[str] = None,
@@ -982,22 +1111,23 @@ def executar_prospeccao(
     background_tasks: BackgroundTasks,
 ) -> dict:
     """Dispara engine de cruzamento CNPJ × CNO em background."""
-    def _run():
-        from prospecting.engine import run_prospeccao
-        return run_prospeccao(
-            cidade=payload.cidade,
-            uf=payload.uf,
-            dias=payload.dias,
-            limit=payload.limit,
-            org_id=payload.org_id,
-            webhook_url=payload.webhook_url,
-        )
+    with span("api.prospeccao.executar", cidade=payload.cidade, uf=payload.uf):
+        def _run():
+            from prospecting.engine import run_prospeccao
+            return run_prospeccao(
+                cidade=payload.cidade,
+                uf=payload.uf,
+                dias=payload.dias,
+                limit=payload.limit,
+                org_id=payload.org_id,
+                webhook_url=payload.webhook_url,
+            )
 
-    background_tasks.add_task(_run)
-    return {
-        "status": "started",
-        "message": f"Prospecção iniciada para {payload.cidade}/{payload.uf}",
-    }
+        background_tasks.add_task(_run)
+        return {
+            "status": "started",
+            "message": f"Prospecção iniciada para {payload.cidade}/{payload.uf}",
+        }
 
 
 @app.get("/api/prospeccao/oportunidades")
