@@ -5,7 +5,7 @@
 # =============================================================================
 set -euo pipefail
 
-PROJECT_ID="${GCP_PROJECT_ID:-gen-lang-client-0662901510}"
+PROJECT_ID="${GCP_PROJECT_ID:-gen-lang-client-0106729343}"
 ZONE="${GCP_ZONE:-southamerica-east1-a}"
 VM_NAME="${GCP_VM_NAME:-gymsite-api}"
 MACHINE_TYPE="${GCP_MACHINE_TYPE:-e2-medium}"   # 2 vCPU, 4 GB — ajuste conforme carga

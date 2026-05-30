@@ -48,9 +48,9 @@ def check_env():
         raise RuntimeError(
             "GOOGLE_GENAI_USE_VERTEXAI != 'true'. Setar no .env."
         )
-    if project != "gen-lang-client-0662901510":
+    if project != "gen-lang-client-0106729343":
         raise RuntimeError(
-            f"GOOGLE_CLOUD_PROJECT={project!r} (esperado 'gen-lang-client-0662901510')"
+            f"GOOGLE_CLOUD_PROJECT={project!r} (esperado 'gen-lang-client-0106729343')"
         )
     if location != "us-central1":
         raise RuntimeError(

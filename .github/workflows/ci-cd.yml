@@ -185,7 +185,7 @@ jobs:
           
           # Autentica
           echo '${{ secrets.GCP_SA_KEY }}' | gcloud auth activate-service-account --key-file=-
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID || 'gen-lang-client-0662901510' }}
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID || 'gen-lang-client-0106729343' }}
           
           # Obtém IP externo da VM
           VM_IP=$(gcloud compute instances describe ${{ secrets.GCP_VM_NAME }} \
