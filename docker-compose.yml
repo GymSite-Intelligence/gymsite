@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   api:
     build:
@@ -8,18 +10,34 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Monta o dataset CNO do host dentro do container.
-      # Configure no .env: CNO_DATA_DIR_HOST=C:\Users\marce\Downloads\cno_extract
-      - ${CNO_DATA_DIR_HOST}:/data/cno:ro
+      # CNO dataset (read-only) — Configure no .env: CNO_DATA_DIR_HOST=C:\Users\marce\Downloads\cno_extract
+      - ${CNO_DATA_DIR_HOST:-./cno_data}:/data/cno:ro
+      # Cache de pip (opcional, pra rebuild rápido em dev)
+      - pip_cache:/home/appuser/.cache/pip:rw
+      # Playwright cache (reutilizável entre restarts)
+      - playwright_cache:/home/appuser/.local/share/ms-playwright:rw
     env_file:
       - .env
     environment:
-      # Performance pipeline (P0) — sobrescreve .env se ainda tiver valores antigos
+      # Performance pipeline (P0)
       DEEP_RESEARCH_AGENT: deep-research-preview-04-2026
       DEEP_RESEARCH_TIMEOUT_SEC: "420"
       CNPJ_ENRIQUECER_MAX: "3"
+      # Logging estruturado (JSON pra Grafana)
+      LOG_LEVEL: info
+    # Resource limits (prod)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    # Graceful shutdown
+    stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8000/health"]
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://127.0.0.1:8000/health', timeout=4)"]
       interval: 30s
       timeout: 5s
       start_period: 40s
@@ -35,3 +53,9 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+volumes:
+  pip_cache:
+    driver: local
+  playwright_cache:
+    driver: local
