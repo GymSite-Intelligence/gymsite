@@ -1046,11 +1046,16 @@ def patch_status_oportunidade(
     payload: ProspeccaoStatusPatch,
 ) -> dict:
     """Atualiza status do pipeline de prospecção."""
-    from prospecting.engine import update_status
-    ok = update_status(oportunidade_id, payload.status)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
-    return {"status": "updated", "id": oportunidade_id, "novo_status": payload.status}
+    from prospecting.engine import update_status, OportunidadeNotFoundError, WebhookDeliveryError
+    try:
+        update_status(oportunidade_id, payload.status)
+        return {"status": "updated", "id": oportunidade_id, "novo_status": payload.status}
+    except OportunidadeNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except WebhookDeliveryError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno ao atualizar status: {str(e)}")
 
 
 @app.post("/api/prospeccao/webhook/configure")
@@ -1064,3 +1069,10 @@ def configurar_webhook_claw(payload: WebhookConfigureInput) -> dict:
         return {"status": "ok", "org_id": payload.org_id, "webhook_url": payload.webhook_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Preflight catch-all — garante 204 mesmo se o router não capturar
+@app.options("/{path:path}")
+async def preflight_catchall(path: str) -> None:
+    return None
+

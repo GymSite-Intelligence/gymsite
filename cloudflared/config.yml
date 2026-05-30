@@ -5,9 +5,19 @@ ingress:
   - hostname: api.vectracargo.com.br
     service: http://api:8000
     originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      keepAliveConnections: 100
+      http2Origin: false
       noTLSVerify: true
+
   - hostname: gymsite-api.vectracargo.com.br
     service: http://api:8000
     originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      keepAliveConnections: 100
+      http2Origin: false
       noTLSVerify: true
+
   - service: http_status:404

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/spec/main/schema.json",
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server@latest",
+        "--access-token",
+        "${SUPABASE_ACCESS_TOKEN}"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@github/mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "gemini-api": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@google/gemini-mcp-server"
+      ],
+      "env": {
+        "GEMINI_API_KEY": "AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  }
+}

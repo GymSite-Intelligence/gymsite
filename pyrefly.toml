@@ -1,0 +1,34 @@
+# Pyrefly configuration for GymSite Intelligence
+# Docs: https://pyrefly.org/
+
+# Python version target for type checking
+python-version = "3.14"
+
+# Files to include in type checking
+project-includes = ["**/*.py"]
+
+# Files/directories to exclude
+project-excludes = [
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    "frontend",
+    "next-app",
+    "node_modules",
+    "cloudflared",
+    "cloudflared;C",
+    "metrics",
+    "competitor_cache",
+    "artifacts",
+    ".git",
+    ".cursor",
+    ".claude",
+    ".openclaw-edge",
+    ".playwright-mcp",
+    ".serena",
+    ".adk",
+]
+
+[errors]
+# Suppress missing-import errors for libraries without type stubs
+missing-import = false
