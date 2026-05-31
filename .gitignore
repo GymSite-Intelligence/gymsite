@@ -90,3 +90,15 @@ competitor_cache/*.md
 # Scratch e ferramentas locais do Gemini Antigravity
 scratch/
 .gemini/
+
+# Cursor local plans
+.cursor/plans/
+
+# Supabase CLI temp files
+supabase/.temp/
+
+# Agent skills lock (gerado localmente)
+skills-lock.json
+
+# Artefatos estranhos
+=5.0.0
