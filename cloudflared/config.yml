@@ -1,4 +1,4 @@
-tunnel: dbad2419-2271-42e1-840f-40864fa53298
+tunnel: 12675577-d94b-4a19-b1df-a86713dbaf80
 credentials-file: /etc/cloudflared/credentials.json
 
 ingress:
