@@ -54,4 +54,22 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend/dist --project-name=gymsite-3p0
+          command: pages deploy frontend/dist --project-name=gymsite-3p0 --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Health check (pages.dev)
+        run: |
+          echo "=== Verificando deploy em https://gymsite-3p0.pages.dev ==="
+          for i in 1 2 3; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://gymsite-3p0.pages.dev/ || echo "000")
+            echo "Tentativa $i: HTTP $status"
+            if [ "$status" = "200" ] || [ "$status" = "304" ]; then
+              echo "✅ Deploy OK"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "⚠️ Deploy não respondeu 200. Verifique o dashboard do Cloudflare Pages."
+          exit 1
