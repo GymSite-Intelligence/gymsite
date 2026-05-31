@@ -1,21 +1,18 @@
-# Vincula gymsite.vectracargo.com.br ao projeto Cloudflare Pages gymsite-3p0 (GYM-03)
+# Vincula gymsite.vectracargo.com.br ao Cloudflare Pages gymsite-3p0 (GYM-03)
 #
 # Uso:
-#   $env:CLOUDFLARE_API_TOKEN = "..."   # Account -> Cloudflare Pages:Edit
+#   $env:CLOUDFLARE_API_TOKEN = "..."   # Zone.DNS Edit + Account Cloudflare Pages:Edit
 #   .\scripts\setup-cloudflare-pages-domain.ps1
 #
-# Ou manualmente no dashboard:
-#   https://dash.cloudflare.com/361e9e1383bfa8e95e1db54e6c2a3bba/pages/view/gymsite-3p0
-#   -> Custom domains -> Add -> gymsite.vectracargo.com.br
-#
-# Secrets GitHub (para .github/workflows/pages.yml):
-#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
-#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+# O endpoint Pages /domains retorna 404 em alguns tokens — fallback: CNAME DNS na zona.
 
 $ErrorActionPreference = "Stop"
 
 $ProjectName = "gymsite-3p0"
 $CustomDomain = "gymsite.vectracargo.com.br"
+$PagesTarget = "$ProjectName.pages.dev"
+$ZoneName = "vectracargo.com.br"
+$RecordName = "gymsite"
 $AccountId = "361e9e1383bfa8e95e1db54e6c2a3bba"
 $DashboardUrl = "https://dash.cloudflare.com/$AccountId/pages/view/$ProjectName"
 
@@ -27,11 +24,11 @@ $token = $env:CLOUDFLARE_API_TOKEN
 if (-not $token) {
     Write-Host "CLOUDFLARE_API_TOKEN não definido."
     Write-Host ""
-    Write-Host "Opção A — Dashboard (recomendado):"
-    Write-Host "  1. Abra: $DashboardUrl"
-    Write-Host "  2. Custom domains -> Add -> $CustomDomain"
+    Write-Host "Opção A — Dashboard:"
+    Write-Host "  1. $DashboardUrl -> Custom domains -> Add -> $CustomDomain"
+    Write-Host "  2. Ou DNS: CNAME gymsite -> $PagesTarget (proxied)"
     Write-Host ""
-    Write-Host "Opção B — API via script:"
+    Write-Host "Opção B — Script:"
     Write-Host '  $env:CLOUDFLARE_API_TOKEN = "seu-token"'
     Write-Host "  .\scripts\setup-cloudflare-pages-domain.ps1"
     exit 0
@@ -42,51 +39,63 @@ $headers = @{
     "Content-Type" = "application/json"
 }
 
-Write-Host "==> Registrando custom domain via API..."
-$uri = "https://api.cloudflare.com/client/v4/accounts/$AccountId/pages/projects/$ProjectName/domains"
-$body = @{ name = $CustomDomain } | ConvertTo-Json
-
-try {
-    $result = Invoke-RestMethod -Method POST -Uri $uri -Headers $headers -Body $body
-    if (-not $result.success) {
-        throw ($result.errors | ConvertTo-Json -Compress)
+function Ensure-DnsCname {
+    Write-Host "==> DNS CNAME: $RecordName.$ZoneName -> $PagesTarget"
+    $zoneResp = Invoke-RestMethod -Method GET `
+        -Uri "https://api.cloudflare.com/client/v4/zones?name=$ZoneName" `
+        -Headers $headers
+    if (-not $zoneResp.success -or $zoneResp.result.Count -eq 0) {
+        throw "Zona $ZoneName não encontrada na conta Cloudflare"
     }
-    Write-Host "    OK: $($result.result.name) -> status $($result.result.status)"
-} catch {
-    $msg = $_.Exception.Message
-    if ($msg -match "already exists|duplicate") {
-        Write-Host "    Domínio já registrado no projeto."
+    $zoneId = $zoneResp.result[0].id
+
+    $existing = Invoke-RestMethod -Method GET `
+        -Uri "https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records?type=CNAME&name=$RecordName.$ZoneName" `
+        -Headers $headers
+
+    $body = @{
+        type = "CNAME"
+        name = $RecordName
+        content = $PagesTarget
+        proxied = $true
+        ttl = 1
+    } | ConvertTo-Json
+
+    if ($existing.result.Count -gt 0) {
+        $recId = $existing.result[0].id
+        $upd = Invoke-RestMethod -Method PUT `
+            -Uri "https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records/$recId" `
+            -Headers $headers -Body $body
+        if (-not $upd.success) { throw ($upd.errors | ConvertTo-Json -Compress) }
+        Write-Host "    CNAME atualizado (id=$recId)"
     } else {
-        Write-Host "    Erro: $msg"
-        Write-Host ""
-        Write-Host "Fallback manual: $DashboardUrl"
-        exit 1
+        $crt = Invoke-RestMethod -Method POST `
+            -Uri "https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records" `
+            -Headers $headers -Body $body
+        if (-not $crt.success) { throw ($crt.errors | ConvertTo-Json -Compress) }
+        Write-Host "    CNAME criado (id=$($crt.result.id))"
     }
 }
 
-Write-Host ""
-Write-Host "==> Aguardando propagação DNS (15s)..."
-Start-Sleep -Seconds 15
+Write-Host "==> Tentativa 1: Pages custom domain API..."
+$uri = "https://api.cloudflare.com/client/v4/accounts/$AccountId/pages/projects/$ProjectName/domains"
+try {
+    $result = Invoke-RestMethod -Method POST -Uri $uri -Headers $headers -Body (@{ name = $CustomDomain } | ConvertTo-Json)
+    if ($result.success) {
+        Write-Host "    OK: $($result.result.name) status=$($result.result.status)"
+    }
+} catch {
+    Write-Host "    Pages API falhou ($($_.Exception.Message)) — usando DNS CNAME..."
+    Ensure-DnsCname
+}
 
-Write-Host "==> Teste DNS:"
+Write-Host ""
+Write-Host "==> Aguardando propagação (20s)..."
+Start-Sleep -Seconds 20
+
+Write-Host "==> DNS:"
 nslookup $CustomDomain 8.8.8.8
 
 Write-Host ""
-Write-Host "==> Teste HTTP:"
-try {
-    $resp = Invoke-WebRequest -Uri "https://$CustomDomain/" -UseBasicParsing -TimeoutSec 20
-    Write-Host "    Status: $($resp.StatusCode)"
-    if ($resp.Content -match '<title>([^<]+)</title>') {
-        Write-Host "    Title: $($Matches[1])"
-    }
-} catch {
-    Write-Host "    Ainda propagando ou SSL pendente: $($_.Exception.Message)"
-    Write-Host "    Preview: https://$ProjectName.pages.dev"
-}
-
-Write-Host ""
-Write-Host "GitHub secrets (Settings -> Secrets and variables -> Actions):"
-Write-Host "  CLOUDFLARE_API_TOKEN"
-Write-Host "  CLOUDFLARE_ACCOUNT_ID = $AccountId"
-Write-Host "  VITE_SUPABASE_URL"
-Write-Host "  VITE_SUPABASE_ANON_KEY"
+Write-Host "==> Auth check:"
+& (Join-Path $PSScriptRoot "verify-gymsite-domain-auth.ps1")

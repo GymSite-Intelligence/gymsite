@@ -5,7 +5,8 @@ import { useState, useMemo } from 'react'
 import { useSearch } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { Search, Play, ArrowUpDown, ArrowUp, ArrowDown, Settings, Download } from 'lucide-react'
-import { useOportunidades, useExecutarProspeccao, usePatchStatusOportunidade } from '@/hooks/useProspeccao'
+import { useOportunidades, useExecutarProspeccao, usePatchStatusOportunidade, prospeccaoAuthHeaders } from '@/hooks/useProspeccao'
+import { API_BASE } from '@/lib/supabase'
 import { StatusBadge } from '@/components/prospeccao/StatusBadge'
 import { PrioridadeBadge } from '@/components/prospeccao/PrioridadeBadge'
 import { OportunidadeDrawer } from '@/components/prospeccao/OportunidadeDrawer'
@@ -20,14 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-interface SearchParams {
-  cidade?: string
-  status?: string
-  prioridade?: string
-}
-
 export function ProspeccaoPage() {
-  const search = useSearch({ strict: false }) as SearchParams
+  const search = useSearch({ from: '/prospeccao' })
   const [cidade, setCidade] = useState(search.cidade ?? '')
   const [status, setStatus] = useState(search.status ?? '')
   const [prioridade, setPrioridade] = useState(search.prioridade ?? '')
@@ -100,9 +95,9 @@ export function ProspeccaoPage() {
     if (!webhookUrl || !webhookOrgId) return
     setSavingWebhook(true)
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/prospeccao/webhook/configure`, {
+      const res = await fetch(`${API_BASE}/api/prospeccao/webhook/configure`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await prospeccaoAuthHeaders(true),
         body: JSON.stringify({ org_id: webhookOrgId, webhook_url: webhookUrl }),
       })
       if (!res.ok) throw new Error('Falha ao salvar')

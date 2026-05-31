@@ -26,6 +26,7 @@ import json
 from pathlib import Path
 
 from google.adk.agents import Agent
+from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
 _GENERATE_CONFIG = types.GenerateContentConfig(
@@ -67,6 +68,67 @@ def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None
         path.write_text(json.dumps(rel, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
         print(f"[A9] aviso: falha patch JSON local: {e}")
+
+
+def _a9_cache_prompt(state: dict) -> str:
+    """Chave semântica A9 — cidade/bairro + hash leve do contexto competitivo."""
+    cidade = str(state.get("cidade") or state.get("input_cidade") or "").strip().lower()
+    bairro = str(state.get("bairro") or state.get("input_bairro") or "").strip().lower()
+    tipo = str(state.get("tipo_negocio") or "academia").strip().lower()
+    ic = state.get("inteligencia_competitiva") or {}
+    n_conc = 0
+    if isinstance(ic, dict):
+        inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+        if isinstance(inner, dict):
+            n_conc = len(inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
+    return f"positioning_a9:{cidade}:{bairro}:{tipo}:conc_{n_conc}"
+
+
+def _a9_before_model_callback(callback_context, llm_request):
+    """LangCache hit → retorna LlmResponse e pula gemini-2.5-pro (~30–90s)."""
+    try:
+        from tools.langcache_client import langcache_search
+
+        state = getattr(callback_context, "state", {}) or {}
+        prompt_key = _a9_cache_prompt(state)
+        cached = langcache_search(prompt_key, similarity_threshold=0.88)
+        if not cached:
+            return None
+        print(f"[A9] LangCache hit: {prompt_key[:80]}")
+        return LlmResponse(
+            content=types.Content(
+                role="model",
+                parts=[types.Part(text=cached)],
+            ),
+            turn_complete=True,
+            custom_metadata={"langcache_hit": True},
+        )
+    except Exception as e:
+        print(f"[A9] LangCache before_model skip: {e}")
+        return None
+
+
+def _a9_after_model_callback(callback_context, llm_response):
+    """Persiste output A9 no LangCache para runs futuros."""
+    try:
+        from tools.langcache_client import langcache_set
+
+        state = getattr(callback_context, "state", {}) or {}
+        content = getattr(llm_response, "content", None)
+        text = ""
+        if content and getattr(content, "parts", None):
+            for part in content.parts:
+                if getattr(part, "text", None):
+                    text += part.text
+        text = text.strip()
+        meta = getattr(llm_response, "custom_metadata", None) or {}
+        if meta.get("langcache_hit"):
+            return llm_response
+        if text:
+            langcache_set(_a9_cache_prompt(state), text)
+    except Exception as e:
+        print(f"[A9] LangCache after_model skip: {e}")
+    return llm_response
 
 
 def _a9_after_agent_callback(callback_context):
@@ -206,5 +268,7 @@ GAP = serviço com penetração < 3 em TODOS os concorrentes.
     generate_content_config=_GENERATE_CONFIG,
     tools=[],
     output_key="relatorio_posicionamento_md",
+    before_model_callback=_a9_before_model_callback,
+    after_model_callback=_a9_after_model_callback,
     after_agent_callback=_a9_after_agent_callback,
 )

@@ -3,7 +3,6 @@ Enricher — enriquece oportunidades com dados do GymSite existentes.
 
 Reusa:
 - tools.apollo_enrichment (contato / decision-maker)
-- tools.cnpj_segment_classifier (segmento_operacao)
 - tools.cnpj_fitness_tools (nome de exibição)
 """
 from __future__ import annotations
@@ -18,7 +17,6 @@ def enrich_opportunity(opp: dict[str, Any]) -> dict[str, Any]:
     Enriquece uma oportunidade com contato, nome limpo e prioridade.
     Modifica o dict in-place e retorna-o.
     """
-    # Nome de exibição limpo
     nome_exib, fantasia_limpa, inferido_de = nome_exibicao_cnpj(
         opp.get("nome_fantasia"), opp.get("razao_social")
     )
@@ -26,24 +24,22 @@ def enrich_opportunity(opp: dict[str, Any]) -> dict[str, Any]:
     opp["nome_fantasia_limpo"] = fantasia_limpa
     opp["nome_inferido_de"] = inferido_de
 
-    # Contato (Apollo / RFB) — best-effort
-    contato = _buscar_contato(opp.get("cnpj"), opp.get("razao_social"), opp.get("nome_fantasia"))
-    opp["contato_cnpj"] = contato
-
-    # Prioridade baseada em score + área
+    opp["contato_cnpj"] = _buscar_contato(
+        organization_name=nome_exib or opp.get("nome_fantasia") or opp.get("razao_social"),
+        cidade=opp.get("cidade"),
+    )
     opp["prioridade"] = _calcular_prioridade(opp)
 
     return opp
 
 
 def _buscar_contato(
-    cnpj: str | None,
-    razao_social: str | None,
-    nome_fantasia: str | None,
+    *,
+    organization_name: str | None,
+    cidade: str | None = None,
 ) -> dict[str, Any]:
     """
-    Tenta enriquecer contato via Apollo ou dados RFB locais.
-    Retorna dict padronizado; nunca falha.
+    Tenta enriquecer contato via Apollo. Retorna dict padronizado; nunca falha.
     """
     contato: dict[str, Any] = {
         "telefone": None,
@@ -51,28 +47,26 @@ def _buscar_contato(
         "whatsapp_link": None,
         "decision_maker": None,
         "cargo": None,
+        "linkedin": None,
         "fonte": None,
     }
 
-    # 1. Apollo enrichment (best-effort)
+    if not organization_name:
+        return contato
+
     try:
         from tools.apollo_enrichment import enriquecer_empresa_com_apollo
 
-        if cnpj:
-            apollo = enriquecer_empresa_com_apollo(cnpj)
-            if apollo and apollo.get("status") == "ok":
-                pessoas = apollo.get("pessoas") or []
-                if pessoas:
-                    top = pessoas[0]
-                    contato["decision_maker"] = top.get("nome")
-                    contato["cargo"] = top.get("cargo")
-                    contato["email"] = top.get("email")
-                    contato["telefone"] = top.get("telefone")
-                    contato["fonte"] = "apollo"
+        apollo = enriquecer_empresa_com_apollo(organization_name, cidade=cidade)
+        if apollo:
+            contato["decision_maker"] = apollo.get("nome")
+            contato["cargo"] = apollo.get("cargo")
+            contato["email"] = apollo.get("email_direto")
+            contato["linkedin"] = apollo.get("linkedin_url")
+            contato["fonte"] = "apollo"
     except Exception:
         pass
 
-    # 2. Fallback: WhatsApp link pelo CNPJ (se telefone existir)
     telefone = contato.get("telefone")
     if telefone:
         digits = "".join(filter(str.isdigit, str(telefone)))

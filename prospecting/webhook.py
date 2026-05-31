@@ -17,7 +17,7 @@ import requests
 
 from prospecting.config import Config
 from tools.telemetry import span
-from tools.sanitize import mask_cnpj, mask_phone, mask_email
+from tools.sanitize import mask_cnpj, mask_phone, mask_email, mask_address
 
 
 @span("prospeccao.webhook.send")
@@ -150,7 +150,11 @@ def _montar_payload(opp: dict[str, Any]) -> dict[str, Any]:
             "segmento": opp.get("segmento_operacao"),
             "cidade": opp.get("cidade"),
             "uf": opp.get("uf"),
-            "endereco": opp.get("endereco_cnpj"),
+            "endereco": mask_address(
+                opp.get("endereco_cnpj"),
+                cidade=opp.get("cidade"),
+                uf=opp.get("uf"),
+            ),
             "obra": {
                 "nome": opp.get("nome_obra"),
                 "situacao": opp.get("situacao_obra"),

@@ -13,6 +13,50 @@ from prospecting.webhook import send_opportunity_webhook
 from prospecting.engine import update_status, OportunidadeNotFoundError, WebhookDeliveryError
 
 
+class TestMatcherScoring(unittest.TestCase):
+    def test_cnpj_responsavel_high_score(self):
+        from prospecting.matcher import _calcular_score
+
+        item = {"segmento_operacao": "academia", "cep": "60175000"}
+        obra = {
+            "area_m2": 800,
+            "situacao_obra": "em_curso",
+            "bairro": "Meireles",
+            "data_inicio": "01/02/2026",
+        }
+        score, _ = _calcular_score("cnpj_responsavel", "alta", item, obra)
+        self.assertGreaterEqual(score, 0.72)
+
+    def test_sem_match_zero(self):
+        from prospecting.matcher import _calcular_score
+
+        score, motivo = _calcular_score(None, None, {}, {})
+        self.assertEqual(score, 0.0)
+        self.assertIn("Sem match", motivo)
+
+
+class TestEnricherApollo(unittest.TestCase):
+    @patch("tools.apollo_enrichment.enriquecer_empresa_com_apollo")
+    def test_buscar_contato_maps_apollo_response(self, mock_apollo):
+        from prospecting.enricher import _buscar_contato
+
+        mock_apollo.return_value = {
+            "nome": "João Silva",
+            "cargo": "Sócio",
+            "email_direto": "joao@academia.com",
+            "linkedin_url": "https://linkedin.com/in/joao",
+        }
+
+        contato = _buscar_contato(organization_name="Academia Forte", cidade="Fortaleza")
+
+        self.assertEqual(contato["decision_maker"], "João Silva")
+        self.assertEqual(contato["cargo"], "Sócio")
+        self.assertEqual(contato["email"], "joao@academia.com")
+        self.assertEqual(contato["linkedin"], "https://linkedin.com/in/joao")
+        self.assertEqual(contato["fonte"], "apollo")
+        mock_apollo.assert_called_once_with("Academia Forte", cidade="Fortaleza")
+
+
 class TestWebhookAndStatus(unittest.TestCase):
     def setUp(self):
         self.mock_client = MagicMock()

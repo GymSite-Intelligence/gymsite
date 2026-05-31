@@ -17,6 +17,8 @@ from typing import Any, Callable
 
 from opentelemetry import trace
 
+from tools.sanitize import safe_span_attribute
+
 
 def get_tracer(name: str = "gymsite") -> trace.Tracer:
     """Retorna tracer nomeado."""
@@ -45,7 +47,11 @@ class span:
         tracer = get_tracer()
         self._span = tracer.start_span(self.name)
         for key, value in self.attributes.items():
-            self._span.set_attribute(key, value)
+            safe = safe_span_attribute(key, value)
+            if safe:
+                self._span.set_attribute(safe[0], safe[1])
+            elif isinstance(value, (str, int, float, bool)):
+                self._span.set_attribute(key, value)
         return self._span
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:

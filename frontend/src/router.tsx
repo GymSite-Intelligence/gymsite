@@ -33,6 +33,7 @@ import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
 import { PrivacidadePage } from '@/routes/PrivacidadePage'
 import { DashboardPage } from '@/routes/DashboardPage'
 import { PdfSmokePage } from '@/routes/PdfSmokePage'
+import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
 import type { Veredito } from '@/types/domain'
 
 // Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
@@ -221,6 +222,22 @@ const custosRoute = createRoute({
   component: CustosPage,
 })
 
+interface ProspeccaoSearch {
+  cidade?: string
+  status?: string
+  prioridade?: string
+}
+const prospeccaoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prospeccao',
+  validateSearch: (search: Record<string, unknown>): ProspeccaoSearch => ({
+    cidade: typeof search.cidade === 'string' ? search.cidade : undefined,
+    status: typeof search.status === 'string' ? search.status : undefined,
+    prioridade: typeof search.prioridade === 'string' ? search.prioridade : undefined,
+  }),
+  component: ProspeccaoPage,
+})
+
 // "/perfil" — edição de nome + foto do user logado.
 const perfilRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -254,6 +271,7 @@ const routeTree = rootRoute.addChildren([
   relatorioDetailRoute,
   comparadorRoute,
   mapaRoute,
+  prospeccaoRoute,
   custosRoute,
   perfilRoute,
   dashboardRoute,

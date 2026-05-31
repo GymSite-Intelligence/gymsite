@@ -343,6 +343,11 @@ def _gravar_cache(cidade: str, bairro: str, tier: str, corpo: str) -> None:
     _cache_path(cidade, bairro).write_text(header + corpo, encoding="utf-8")
 
 
+def _langcache_prompt(cidade: str, bairro: str) -> str:
+    """Chave semântica estável para Deep Research (A0)."""
+    return f"deep_research_a0:{cidade.strip().lower()}:{bairro.strip().lower()}"
+
+
 def rodar_deep_research(cidade: str, bairro: str) -> str:
     """
     Executa Deep Research para (cidade, bairro). Cache + timeout + fallback estático.
@@ -369,6 +374,35 @@ def rodar_deep_research(cidade: str, bairro: str) -> str:
         return cache.read_text(encoding="utf-8")
 
     query = _build_query(cidade, bairro)
+
+    # LangCache semântico (entre disco e Gemini — ~200ms vs minutos)
+    try:
+        from tools.langcache_client import langcache_search, langcache_set
+
+        lc_key = _langcache_prompt(cidade, bairro)
+        lc_hit = langcache_search(lc_key, similarity_threshold=0.92)
+        if not lc_hit:
+            lc_hit = langcache_search(query[:1024], similarity_threshold=0.90)
+        if lc_hit:
+            _last_execution_tier = "langcache"
+            tier = "langcache:semantic"
+            try:
+                _gravar_cache(cidade, bairro, tier, lc_hit)
+            except Exception:
+                pass
+            header = (
+                f"<!-- Deep Research cache\n"
+                f"     cidade: {cidade}\n"
+                f"     bairro: {bairro}\n"
+                f"     tier: {tier}\n"
+                f"     data: {datetime.now().isoformat()}\n"
+                f"-->\n\n"
+            )
+            print(f"[A0] LangCache hit: {cidade}/{bairro}")
+            return header + lc_hit
+    except Exception as e:
+        print(f"[A0] LangCache skip: {e}")
+
     resultado: str | None = None
     tier: str | None = None
 
@@ -385,6 +419,13 @@ def rodar_deep_research(cidade: str, bairro: str) -> str:
     if resultado and tier:
         try:
             _gravar_cache(cidade, bairro, tier, resultado)
+            try:
+                from tools.langcache_client import langcache_set
+
+                langcache_set(_langcache_prompt(cidade, bairro), resultado)
+                langcache_set(query[:1024], resultado)
+            except Exception:
+                pass
             return _cache_path(cidade, bairro).read_text(encoding="utf-8")
         except Exception:
             header = (

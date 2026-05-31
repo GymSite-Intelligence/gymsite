@@ -1,6 +1,8 @@
 # Telemetria de Tokens & Sanitização
 
 > **Escopo:** Como o GymSite Intelligence mede consumo de LLM (tokens) e protege dados sensíveis (LGPD) na telemetria.
+>
+> **Status:** Documentação alinhada ao código em **2026-05-30**. Telemetria e sanitização LGPD **implementadas**; pendências menores em §6.
 
 ---
 
@@ -8,10 +10,11 @@
 
 ### Por que medir tokens?
 
-Cada agente do pipeline A0→A6 chama o Gemini. O custo da API Google é proporcional ao número de tokens (input + output). Sem telemetria:
+Cada agente do pipeline chama o Gemini. O custo da API Google é proporcional ao número de tokens (input + output). Sem telemetria:
+
 - Não sabemos qual agente é o mais caro
 - Não conseguimos estimar custo por relatório
-- Não detectamos anomalias (ex: A3 loop infinito com `finish_reason=MAX_TOKENS`)
+- Não detectamos anomalias (ex: loop com `finish_reason=MAX_TOKENS` ou `MALFORMED_FUNCTION_CALL`)
 
 ### O que é um "token"?
 
@@ -21,26 +24,64 @@ Cada agente do pipeline A0→A6 chama o Gemini. O custo da API Google é proporc
 | **Output (completion)** | Tokens gerados pelo LLM | Resposta em JSON, texto, function call |
 | **Total** | Soma input + output | Usado para billing e quota |
 
+### Pipeline atual (A0 → A9)
+
+| Agente | Nome ADK | Papel |
+|---|---|---|
+| **A0** | ContextBuilder | Deep Research de mercado |
+| **A1** | GeoScout | Zonas comerciais (Google Maps) |
+| **A2** | DemoAnalyst | Demografia IBGE *(paralelo)* |
+| **A3** | CompetitorIntel | Sub-pipeline **A3a → A3b → A3c** *(paralelo)* |
+| **A4** | FinancialEstimator | Viabilidade financeira *(paralelo)* |
+| **A5** | ContactHunter | Decisores e scripts |
+| **A6** | ReportConsolidator | Relatório executivo |
+| **A9** | PositioningStrategist | Posicionamento ERRC |
+| **A7** | *(embutido no A3)* | Gemini Search Grounding — não é agente separado no grafo |
+
+Telemetria é anexada via `_attach_telemetry()` em `gymsite_intelligence/agent.py` a todos os agentes acima (incluindo o sub-pipeline A3).
+
 ### Arquitetura da Telemetria
 
 ```
 ┌─────────────────┐     after_model_callback      ┌─────────────────┐
 │   Agente ADK    │ ─────────────────────────────→│ token_telemetry │
-│   (A0 → A6)     │    (llm_response + context)   │   (Python)      │
+│  (A0 → A9)      │    (llm_response + context)   │   (Python)      │
 └─────────────────┘                               └─────────────────┘
-                                                          │
-                                                          ▼
-                                               ┌─────────────────┐
-                                               │ tokens_pipeline │
-                                               │     .csv        │
-                                               └─────────────────┘
-                                                          │
-                                                          ▼
-                                               ┌─────────────────┐
-                                               │  OpenTelemetry  │
-                                               │   (span attrs)  │
-                                               └─────────────────┘
+         │                                                  │
+         │ before/after_agent_callback                      ▼
+         ▼                                        ┌─────────────────┐
+┌─────────────────┐                               │ tokens_pipeline │
+│ agent_telemetry │                               │     .csv        │
+│  (OTel spans)   │                               └─────────────────┘
+└─────────────────┘                                         │
+                                                            ▼
+                                                  ┌─────────────────┐
+                                                  │ _agregar_e_     │
+                                                  │ persistir_custos│
+                                                  │ (api.py)        │
+                                                  └─────────────────┘
+                                                            │
+                                                            ▼
+                                                  ┌─────────────────┐
+                                                  │ relatorio_      │
+                                                  │ custos_agentes  │
+                                                  │ (Supabase)      │
+                                                  └─────────────────┘
+                                                            │
+                                                            ▼
+                                                  ┌─────────────────┐
+                                                  │  /custos        │
+                                                  │  (frontend)     │
+                                                  └─────────────────┘
 ```
+
+**Fluxo resumido:**
+
+1. Cada chamada LLM → linha em `metrics/tokens_pipeline.csv` (`after_model_callback`)
+2. Ao final do pipeline → `api.py` agrega por `run_id` via `tools/pricing.py` e faz UPSERT em `relatorio_custos_agentes`
+3. Dashboard admin lê Supabase via `GET /api/relatorios/{id}/custos-api`
+
+> **LangCache** (`tools/langcache_client.py`) reduz chamadas Gemini repetidas (A0, A9, grounding), mas **não altera** a contagem de tokens no CSV — hits de cache simplesmente não geram nova linha.
 
 ### Dados Coletados (`metrics/tokens_pipeline.csv`)
 
@@ -52,9 +93,11 @@ Cada agente do pipeline A0→A6 chama o Gemini. O custo da API Google é proporc
 | `tokens_in` | Tokens de prompt |
 | `tokens_out` | Tokens de resposta |
 | `tokens_total` | Soma (fallback: in + out se API não retornar total) |
-| `model` | Modelo usado (gemini-2.5-flash, gemini-2.5-pro) |
-| `fonte_usage` | De onde veio o usage_metadata (debug de captura) |
-| `finish_reason` | STOP / MAX_TOKENS / MALFORMED_FUNCTION_CALL / SAFETY |
+| `model` | Modelo usado (gemini-2.5-flash, gemini-2.5-pro, etc.) |
+| `fonte_usage` | De onde veio o `usage_metadata` (debug de captura) |
+| `finish_reason` | STOP / MAX_TOKENS / MALFORMED_FUNCTION_CALL / SAFETY / ERROR:* |
+
+O CSV **não contém PII** — apenas metadados de consumo LLM.
 
 ### Por que `after_model_callback` e não `after_agent_callback`?
 
@@ -74,7 +117,7 @@ after_model_callback:  3 registros (cada LLM call separada) ← correto
 
 ### O que é sanitização?
 
-**Sanitização** = remover, mascarar ou transformar dados sensíveis antes de gravar em logs, traces ou métricas.
+**Sanitização** = remover, mascarar ou transformar dados sensíveis antes de gravar em logs, traces, métricas ou payloads externos.
 
 ### Por que sanitizar?
 
@@ -87,12 +130,12 @@ after_model_callback:  3 registros (cada LLM call separada) ← correto
 
 | Dado | Risco | Como sanitizar |
 |---|---|---|
-| **CNPJ completo** | LGPD — identifica empresa | `12.***.***/0001-99` (mascarar 4 primeiros dígitos) |
+| **CNPJ completo** | LGPD — identifica empresa | `12.***.***/0001-99` (mascarar dígitos centrais) |
 | **Endereço** | LGPD — localização precisa | Remover número; manter bairro + cidade |
 | **Telefone/WhatsApp** | LGPD — contato direto | `+55 ** *****-9999` (últimos 4 dígitos) |
 | **Email** | LGPD — contato direto | `jo***@academia.com.br` (2 primeiros chars + domínio) |
-| **Chaves de API** | Segurança — vazamento de credenciais | Remover completamente; substituir por `[REDACTED]` |
-| **Nome fantasia** | LGPD — identificação indireta | Manter; não é pessoal natural |
+| **Chaves de API** | Segurança — vazamento de credenciais | Remover; substituir por `[REDACTED]` |
+| **Nome fantasia** | LGPD — identificação indireta | Manter; não é pessoa natural |
 | **Razão social** | LGPD — identificação empresarial | Manter; é dado público (RFB) |
 | **Score / Tokens** | Sem risco | Não sanitizar |
 
@@ -102,164 +145,163 @@ after_model_callback:  3 registros (cada LLM call separada) ← correto
 
 ---
 
-## 3. Implementação — Sanitização no Código
+## 3. Implementação — Estado Atual
 
-### 3.1 Sanitização de CNPJ (reutilizável)
+### 3.1 `tools/sanitize.py` — ✅ Implementado
 
-```python
-# tools/sanitize.py
-import re
-
-
-def mask_cnpj(cnpj: str | None) -> str | None:
-    """Mascara CNPJ: 12.345.678/0001-99 → 12.***.***/0001-99"""
-    if not cnpj:
-        return None
-    digits = re.sub(r"\D", "", cnpj)
-    if len(digits) != 14:
-        return cnpj  # fallback: retorna original se inválido
-    return f"{digits[:2]}.***.***/{digits[8:12]}-{digits[12:]}"
-
-
-def mask_phone(phone: str | None) -> str | None:
-    """Mascara telefone: +5585999999999 → +55 ** *****-9999"""
-    if not phone:
-        return None
-    digits = re.sub(r"\D", "", phone)
-    if len(digits) < 8:
-        return phone
-    return f"+{digits[:2]} ** *****-{digits[-4:]}"
-
-
-def mask_email(email: str | None) -> str | None:
-    """Mascara email: joao@academia.com.br → jo***@academia.com.br"""
-    if not email or "@" not in email:
-        return email
-    user, domain = email.split("@", 1)
-    visible = user[:2] if len(user) >= 2 else user[:1]
-    return f"{visible}***@{domain}"
-
-
-def redact(value: str | None, label: str = "REDACTED") -> str | None:
-    """Remove completamente um valor sensível."""
-    return None if value else None
-
-
-def sanitize_dict(data: dict, rules: dict[str, callable]) -> dict:
-    """
-    Aplica regras de sanitização em um dict.
-
-    rules = {"cnpj": mask_cnpj, "telefone": mask_phone, "api_key": redact}
-    """
-    out = dict(data)
-    for key, fn in rules.items():
-        if key in out:
-            out[key] = fn(out[key])
-    return out
-```
-
-### 3.2 Sanitização nos Spans OpenTelemetry
+Funções: `mask_cnpj`, `mask_phone`, `mask_email`, `mask_address`, `redact`, `sanitize_dict`, `sanitize_state`, `safe_headers`, `safe_span_attribute`.
 
 ```python
-# tools/agent_telemetry.py (atualizado)
-from tools.sanitize import mask_cnpj, mask_phone, mask_email
+from tools.sanitize import mask_cnpj, mask_phone, mask_email, mask_address, sanitize_state
 
-# Chaves do state que podem conter PII
-_SENSITIVE_KEYS = {"cnpj", "telefone", "whatsapp", "email", "contato_cnpj"}
-
-
-def _sanitize_state(state: dict) -> dict:
-    """Retorna cópia do state com dados sensíveis mascarados."""
-    safe = {}
-    for k, v in state.items():
-        if k in ("cnpj",):
-            safe[k] = mask_cnpj(v) if isinstance(v, str) else v
-        elif k in ("telefone", "whatsapp"):
-            safe[k] = mask_phone(v) if isinstance(v, str) else v
-        elif k == "email":
-            safe[k] = mask_email(v) if isinstance(v, str) else v
-        elif k == "contato_cnpj" and isinstance(v, dict):
-            safe[k] = {
-                kk: (mask_phone(vv) if "whatsapp" in kk else
-                     mask_email(vv) if "email" in kk else vv)
-                for kk, vv in v.items()
-            }
-        else:
-            safe[k] = v
-    return safe
+safe = sanitize_state(state_adk)  # para spans OTel
+endereco = mask_address(raw, cidade="Fortaleza", uf="CE")
+headers = safe_headers(request.headers)  # logs de debug
 ```
 
-### 3.3 Sanitização no Webhook Payload
+### 3.2 OpenTelemetry (`tools/agent_telemetry.py`) — ✅ Implementado
+
+- Span por agente (`before_agent_callback` / `after_agent_callback`)
+- `sanitize_state()` antes de gravar atributos — **nunca** dump do state bruto
+- Atributos whitelisted: `cnpj_masked`, `email_masked`, `phone_masked`, `endereco_masked`, `cidade`, `uf`, `bairro`, `contato.*_masked`
+- Dicts/listas grandes viram placeholder (`<dict:N>`) — sem JSON completo no span
+
+`tools/telemetry.py` (`span()` manual) usa `safe_span_attribute()` para mascarar PII passada como kwargs.
+
+### 3.3 Webhook de prospecção (`prospecting/webhook.py`) — ✅ Implementado
+
+**Em `_montar_payload`:**
+
+- ✅ `cnpj` → `mask_cnpj`
+- ✅ `contato.email` → `mask_email`
+- ✅ `contato.whatsapp` → `mask_phone`
+- ✅ `endereco` → `mask_address(endereco_cnpj, cidade, uf)`
+
+Payload sanitizado também é persistido em `webhook_claw_log` / `webhook_payload`.
+
+### 3.4 Logs da API (`api.py`) — ⚠️ Parcial
+
+**Implementado:**
+
+- JWT lido de `Authorization` sem logar o token
+- Rate limit usa IP / bearer hash, não loga header completo
+- Helper `safe_headers()` disponível em `tools/sanitize.py`
+
+**Pendente:**
+
+- Adotar `safe_headers()` nos pontos que passarem a logar request headers
 
 ```python
-# prospecting/webhook.py — já sanitiza antes de enviar
-payload = _montar_payload(oportunidade)
-# payload["data"]["cnpj"] já pode ser mascarado se necessário
+from tools.sanitize import safe_headers
+
+logger.info("Headers: %s", safe_headers(request.headers))
 ```
 
-### 3.4 Sanitização nos Logs de API
+### 3.5 Telemetria de tokens — ✅ Implementado
 
-```python
-# api.py — evitar logar headers de autorização
-import logging
-
-logger = logging.getLogger("gymsite.api")
-
-# ❌ Ruim
-logger.info(f"Headers: {request.headers}")  # pode conter Authorization
-
-# ✅ Bom
-safe_headers = {k: v for k, v in request.headers.items()
-                if k.lower() not in ("authorization", "x-claw-secret")}
-logger.info(f"Headers: {safe_headers}")
-```
+| Componente | Arquivo | Status |
+|---|---|---|
+| Coleta por LLM call | `tools/token_telemetry.py` | ✅ |
+| Wiring nos agentes | `gymsite_intelligence/agent.py` → `_attach_telemetry` | ✅ |
+| Agregação + pricing | `tools/pricing.py` + `api.py` → `_agregar_e_persistir_custos` | ✅ |
+| Persistência Supabase | `relatorio_custos_agentes` | ✅ |
+| CSV ignorado no git | `.gitignore` → `metrics/*.csv` | ✅ |
+| Retenção CSV | `prune_tokens_csv()` no startup da API | ✅ |
 
 ---
 
-## 4. Checklist de Sanitização
+## 4. Checklist de Sanitização & Telemetria
 
-Antes de deployar com telemetria ativa:
+Legenda: ✅ feito · ⚠️ parcial · ❌ pendente
 
-- [ ] Nenhum CNPJ completo em spans OTel, logs CSV, ou webhook payload
-- [ ] Nenhuma chave de API em spans (GOOGLE_API_KEY, SUPABASE_SERVICE_ROLE_KEY)
-- [ ] Telefones mascarados (últimos 4 dígitos visíveis apenas)
-- [ ] Emails mascarados (2 primeiros chars + domínio)
-- [ ] Endereços sem número de porta/predio
-- [ ] Tokens de autenticação redacted em headers de trace
-- [ ] Arquivos CSV de token telemetry protegidos (não commitados, .gitignore)
-- [ ] Retenção de dados definida (ex: apagar CSVs com > 90 dias)
+| # | Item | Status | Notas |
+|---|---|---|---|
+| 1 | Nenhum CNPJ completo em spans OTel | ✅ | `sanitize_state` + `cnpj_masked` |
+| 2 | Nenhum CNPJ completo no CSV de tokens | ✅ | CSV não grava PII |
+| 3 | Nenhum CNPJ completo no webhook | ✅ | `mask_cnpj` em `_montar_payload` |
+| 4 | Nenhuma chave de API em spans/logs | ⚠️ | `safe_span_attribute` + `safe_headers`; falta auditoria Grafana |
+| 5 | Telefones mascarados no webhook | ✅ | `mask_phone` em contato |
+| 6 | Emails mascarados no webhook | ✅ | `mask_email` em contato |
+| 7 | Endereços sem número de porta/prédio | ✅ | `mask_address` no webhook + OTel |
+| 8 | Tokens de auth redacted em traces | ⚠️ | API não loga Bearer; usar `safe_headers` se expandir logs |
+| 9 | CSV de telemetria fora do git | ✅ | `metrics/*.csv` no `.gitignore` |
+| 10 | Retenção de CSVs (> 90 dias) | ✅ | `prune_tokens_csv()` no startup; env `TELEMETRY_CSV_RETENTION_DAYS` |
+| 11 | Custos persistidos por relatório | ✅ | `relatorio_custos_agentes` + migration 20260530 |
+| 12 | Dashboard admin de custos | ✅ | `/custos` (owner/admin only) |
+| 13 | Sanitização OTel completa no state | ✅ | `agent_telemetry._apply_sanitized_state_to_span` |
+| 14 | LangCache configurado (redução de custo) | ✅ | A0, A9, grounding — ver `tools/langcache_client.py` |
 
 ---
 
-## 5. Dashboard de Tokens (Frontend)
+## 5. Dashboard de Custos (Frontend)
 
-Sugestão de página `/telemetria` no frontend:
+**Rota:** `/custos` — **não** `/telemetria`.
+
+**Acesso:** apenas `owner` / `admin` (`useMembership().isOwnerOrAdmin`).
+
+**Implementado em:** `frontend/src/routes/CustosPage.tsx`
 
 ```
 ┌─────────────────────────────────────────┐
-│  Telemetria de Tokens — Último Relatório │
+│  Custos — Período: Este mês             │
 ├─────────────────────────────────────────┤
-│  Custo estimado: R$ 12,45               │
-│  Tokens totais: 145.230                 │
+│  Total período    │ Médio/relatório     │
+│  R$ 124,50        │ R$ 12,45            │
 ├─────────────────────────────────────────┤
-│  Agente          │ Tokens │ %   │ Tempo │
-│  ────────────────┼────────┼─────┼───────│
-│  A0 Contexto     │ 8.351  │ 6%  │ 45s   │
-│  A1 GeoScout     │ 94.590 │ 65% │ 120s  │ ← mais caro
-│  A2 DemoAnalyst  │ 12.004 │ 8%  │ 8s    │
-│  A3 Competitor   │ 18.230 │ 13% │ 90s   │
-│  A4 Financial    │ 2.340  │ 2%  │ 15s   │
-│  A5 Contact      │ 4.120  │ 3%  │ 12s   │
-│  A6 Report       │ 5.595  │ 4%  │ 30s   │
+│  Relatório        │ Tokens │ Custo │ ▶  │
+│  ────────────────┼────────┼───────┼────│
+│  Fortaleza/CE     │ 145k   │ R$12  │ ▶  │  ← expande breakdown
+│  Anápolis/GO      │ 98k    │ R$8   │ ▶  │
+└─────────────────────────────────────────┘
+         ▼ (expandido)
+┌─────────────────────────────────────────┐
+│  Agente              │ Tokens │ Custo  │
+│  ContextBuilder (A0) │ 8.351  │ R$0,42 │
+│  GeoScout (A1)       │ 94.590 │ R$4,80 │ ← mais caro
+│  Positioning (A9)    │ 5.595  │ R$0,28 │
 └─────────────────────────────────────────┘
 ```
 
-Fonte de dados: `GET /api/relatorios/{id}/custos` (agrega tokens_pipeline.csv por run_id).
+### Endpoints da API
+
+| Método | Rota | Uso |
+|---|---|---|
+| `GET` | `/api/relatorios/{id}/custos-api` | Breakdown LLM + APIs externas de um relatório |
+| `GET` | `/api/custos/optimizations?dias=30` | Sugestões de otimização agregadas |
+| `GET/POST/PATCH` | `/api/custos/propostas` | Propostas de otimização (backlog interno) |
+
+**Fonte primária:** Supabase `relatorio_custos_agentes` (populado a partir de `tokens_pipeline.csv` ao concluir o pipeline).
+
+Relatórios gerados **antes** da telemetria exibem: *"Sem telemetria registrada para este relatório"*.
 
 ---
 
-> **Referências:**
-> - `tools/token_telemetry.py` — implementação da coleta
-> - `metrics/tokens_pipeline.csv` — dados brutos
-> - `tools/agent_telemetry.py` — spans OTel por agente
-> - LGPD Art. 7º, 9º, 46º — tratamento de dados empresariais
+## 6. Pendências recomendadas
+
+Itens restantes (baixa prioridade):
+
+1. **Auditoria OTel export** — revisar spans no Grafana Cloud e confirmar zero PII
+2. **Adotar `safe_headers()`** nos logs de debug da API quando forem expandidos
+3. **Cron dedicado** (opcional) — se a API ficar offline por longos períodos, rodar `prune_tokens_csv()` via cron externo
+
+```python
+# Retenção manual / cron
+from tools.token_telemetry import prune_tokens_csv
+print(prune_tokens_csv())  # default 90 dias via TELEMETRY_CSV_RETENTION_DAYS
+```
+
+---
+
+> **Referências**
+>
+> | Arquivo | Papel |
+> |---|---|
+> | `tools/token_telemetry.py` | Coleta por LLM call → CSV |
+> | `tools/agent_telemetry.py` | Spans OTel por agente |
+> | `tools/sanitize.py` | Funções de mascaramento LGPD |
+> | `tools/pricing.py` | Cálculo BRL por modelo |
+> | `api.py` | `_agregar_e_persistir_custos`, endpoints `/custos*` |
+> | `prospecting/webhook.py` | Payload sanitizado para Claw |
+> | `metrics/tokens_pipeline.csv` | Dados brutos locais (gitignored) |
+> | `supabase/migrations/20260530_relatorio_custos_agentes.sql` | Schema Supabase |
+> | LGPD Art. 7º, 9º, 46º | Tratamento de dados empresariais |

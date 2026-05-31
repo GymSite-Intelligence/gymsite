@@ -2,7 +2,7 @@
  * useProspeccao — hooks TanStack Query para o módulo de prospecção.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { API_BASE } from '@/lib/supabase'
+import { API_BASE, supabase } from '@/lib/supabase'
 
 export interface Oportunidade {
   id: string
@@ -37,6 +37,14 @@ export interface ProspeccaoFilters {
   score_min?: number
 }
 
+async function authHeaders(json = false): Promise<HeadersInit> {
+  const { data } = await supabase.auth.getSession()
+  const headers: Record<string, string> = json ? { 'Content-Type': 'application/json' } : {}
+  const token = data.session?.access_token
+  if (token) headers.Authorization = `Bearer ${token}`
+  return headers
+}
+
 async function fetchOportunidades(filters: ProspeccaoFilters & { limit?: number; offset?: number }): Promise<Oportunidade[]> {
   const params = new URLSearchParams()
   if (filters.cidade) params.set('cidade', filters.cidade)
@@ -47,13 +55,17 @@ async function fetchOportunidades(filters: ProspeccaoFilters & { limit?: number;
   params.set('limit', String(filters.limit ?? 100))
   params.set('offset', String(filters.offset ?? 0))
 
-  const res = await fetch(`${API_BASE}/api/prospeccao/oportunidades?${params.toString()}`)
+  const res = await fetch(`${API_BASE}/api/prospeccao/oportunidades?${params.toString()}`, {
+    headers: await authHeaders(),
+  })
   if (!res.ok) throw new Error('Falha ao carregar oportunidades')
   return res.json()
 }
 
 async function fetchOportunidade(id: string): Promise<Oportunidade> {
-  const res = await fetch(`${API_BASE}/api/prospeccao/oportunidades/${id}`)
+  const res = await fetch(`${API_BASE}/api/prospeccao/oportunidades/${id}`, {
+    headers: await authHeaders(),
+  })
   if (!res.ok) throw new Error('Oportunidade não encontrada')
   return res.json()
 }
@@ -61,7 +73,7 @@ async function fetchOportunidade(id: string): Promise<Oportunidade> {
 async function executarProspeccao(payload: { cidade: string; uf?: string; dias?: number; limit?: number }) {
   const res = await fetch(`${API_BASE}/api/prospeccao/executar`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(true),
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error('Falha ao iniciar prospecção')
@@ -71,6 +83,7 @@ async function executarProspeccao(payload: { cidade: string; uf?: string; dias?:
 async function reenviarWebhook(id: string) {
   const res = await fetch(`${API_BASE}/api/prospeccao/oportunidades/${id}/webhook`, {
     method: 'POST',
+    headers: await authHeaders(),
   })
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
@@ -82,7 +95,7 @@ async function reenviarWebhook(id: string) {
 async function patchStatus(id: string, status: string) {
   const res = await fetch(`${API_BASE}/api/prospeccao/oportunidades/${id}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(true),
     body: JSON.stringify({ status }),
   })
   if (!res.ok) {
@@ -136,3 +149,5 @@ export function usePatchStatusOportunidade() {
     },
   })
 }
+
+export { authHeaders as prospeccaoAuthHeaders }

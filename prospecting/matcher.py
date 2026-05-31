@@ -3,14 +3,22 @@ Matcher — cruza CNPJ fitness entrantes com obras CNO.
 
 Reusa a lógica consagrada de tools.cno_fitness_tools.cruzar_entrantes_obras_cno
 e normaliza o resultado em objetos planos para persistência.
+
+Scoring (MODULO_PROSPECCAO §3):
+  30% área m² · 25% situação obra · 20% segmento CNPJ · 15% bairro · 10% idade obra
 """
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import Any
 
-from tools.cno_fitness_tools import _digits
-from tools.cno_fitness_tools import cruzar_entrantes_obras_cno
+from tools.bairro_normalize import normalizar_bairro
+from tools.cno_fitness_tools import _digits, _parse_date_br, cruzar_entrantes_obras_cno
+
+_FITNESS_SEGMENT_KEYWORDS = (
+    "academia", "fitness", "studio", "crossfit", "musculacao", "pilates", "funcional",
+)
 
 
 def match_opportunities(
@@ -24,13 +32,6 @@ def match_opportunities(
     """
     Executa o cruzamento CNPJ × CNO e retorna uma lista flat de oportunidades
     normalizadas, prontas para enriquecimento e persistência.
-
-    Campos de saída (dict):
-      - cnpj, razao_social, nome_fantasia, segmento_operacao
-      - data_inicio_atividade, situacao_cadastral, cep, endereco_cnpj
-      - cno, nome_obra, situacao_obra, area_total_m2
-      - data_inicio_obra, data_situacao_obra, endereco_cno
-      - score_match, motivo_match, match_metodo, match_confianca
     """
     if cno_dir is None:
         from prospecting.config import Config
@@ -61,7 +62,6 @@ def match_opportunities(
         metodo = item.get("match_cno")
         confianca = item.get("match_confianca")
 
-        # Score numérico baseado na confiança do match existente
         score, motivo = _calcular_score(metodo, confianca, item, obra)
 
         opp: dict[str, Any] = {
@@ -104,17 +104,108 @@ def match_opportunities(
     return oportunidades
 
 
+def _score_area(area_m2: float | None) -> float:
+    if not area_m2 or area_m2 <= 0:
+        return 0.0
+    if area_m2 >= 500:
+        return 1.0
+    if area_m2 >= 300:
+        return 0.75
+    if area_m2 >= 150:
+        return 0.5
+    return 0.25
+
+
+def _score_situacao_obra(situacao: str | None) -> float:
+    s = (situacao or "").lower()
+    if "curso" in s or s == "em_curso":
+        return 1.0
+    if "encerr" in s or "finaliz" in s:
+        return 0.55
+    return 0.35
+
+
+def _score_segmento(segmento: str | None) -> float:
+    s = (segmento or "").lower()
+    if any(k in s for k in _FITNESS_SEGMENT_KEYWORDS):
+        return 1.0
+    # Entrantes já filtrados como fitness — pontuação base alta
+    return 0.85 if segmento else 0.7
+
+
+def _score_bairro(item: dict, obra: dict | None, metodo: str | None) -> float:
+    b_cnpj = normalizar_bairro(item.get("bairro") or "")
+    b_obra = normalizar_bairro((obra or {}).get("bairro") or "")
+    if b_cnpj and b_obra and b_cnpj == b_obra:
+        return 1.0
+    cep_cnpj = _digits(item.get("cep"))[:8]
+    cep_obra = _digits((obra or {}).get("cep") or "")[:8]
+    if cep_cnpj and cep_obra and cep_cnpj == cep_obra:
+        return 0.65
+    if metodo == "nome_obra_cep8":
+        return 0.5
+    return 0.0
+
+
+def _score_idade_obra(data_inicio: str | None) -> float:
+    dt = _parse_date_br(data_inicio or "")
+    if not dt:
+        return 0.4
+    months = (date.today() - dt).days / 30.44
+    if months <= 6:
+        return 1.0
+    if months <= 12:
+        return 0.7
+    if months <= 24:
+        return 0.45
+    return 0.2
+
+
 def _calcular_score(
     metodo: str | None,
     confianca: str | None,
     item: dict,
     obra: dict | None,
 ) -> tuple[float, str]:
-    """Converte método+confiança em score numérico 0.0–1.0 e descrição."""
-    if metodo == "cnpj_responsavel":
-        return 0.95, "CNPJ responsável da obra idêntico ao CNPJ do estabelecimento"
-    if metodo == "nome_obra_cep8":
-        return 0.75, "Nome da obra coincide com fantasia no mesmo CEP"
-    if metodo == "cep8_multiplas_obras":
-        return 0.35, "Várias obras no mesmo CEP sem match por nome"
-    return 0.0, "Sem match CNO"
+    """
+    Score composto 0.0–1.0 conforme MODULO_PROSPECCAO §3.
+    Sem match CNO válido → 0.0.
+    """
+    if not metodo:
+        return 0.0, "Sem match CNO"
+
+    area = None
+    if isinstance(obra, dict):
+        try:
+            area = float(obra.get("area_m2") or 0) or None
+        except (TypeError, ValueError):
+            area = None
+
+    s_area = _score_area(area)
+    s_sit = _score_situacao_obra((obra or {}).get("situacao_obra") if obra else None)
+    s_seg = _score_segmento(item.get("segmento_operacao"))
+    s_bairro = _score_bairro(item, obra, metodo)
+    s_idade = _score_idade_obra((obra or {}).get("data_inicio") if obra else None)
+
+    weighted = (
+        0.30 * s_area
+        + 0.25 * s_sit
+        + 0.20 * s_seg
+        + 0.15 * s_bairro
+        + 0.10 * s_idade
+    )
+
+    method_floor = {
+        "cnpj_responsavel": 0.72,
+        "nome_obra_cep8": 0.52,
+        "cep8_multiplas_obras": 0.28,
+    }.get(metodo, 0.0)
+
+    score = round(min(1.0, max(weighted, method_floor)), 4)
+
+    motivo = (
+        f"Match {metodo} ({confianca or '?'}) — "
+        f"área={s_area:.0%} situação={s_sit:.0%} segmento={s_seg:.0%} "
+        f"bairro={s_bairro:.0%} idade={s_idade:.0%}"
+    )
+    return score, motivo

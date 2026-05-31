@@ -4,8 +4,8 @@ Engine — orquestração do módulo de prospecção.
 Fluxo:
   1. fetch  → matcher.match_opportunities()
   2. enrich → enricher.enrich_opportunity()
-  3. persist → UPSERT em oportunidades_prospeccao (idempotente por cnpj+cno)
-  4. webhook → webhook.send_opportunity_webhook() para score >= threshold
+  3. persist → UPSERT em oportunidades_prospeccao (status inicial: novo)
+  4. webhook → apenas via update_status(webhook_enviado) ou reenviar_webhook()
 """
 from __future__ import annotations
 
@@ -59,46 +59,26 @@ def run_prospeccao(
         "total_match": len(oportunidades),
         "qualificados": 0,
         "persistidos": 0,
-        "webhooks_entregues": 0,
-        "webhooks_falhos": 0,
-        "webhooks_skipped": 0,
     }
 
     for opp in oportunidades:
-        # Enriquecimento
         enrich_opportunity(opp)
 
-        # Qualificação por score
         score = opp.get("score_match") or 0.0
         if score < Config.SCORE_MATCH_MIN:
             continue
         stats["qualificados"] += 1
 
-        # Adiciona metadatas de execução
         opp["cidade"] = cidade
         opp["uf"] = uf
         opp["org_id"] = org_id
         if webhook_url:
             opp["webhook_url"] = webhook_url
 
-        # Persistência (UPSERT por cnpj + cno)
         if not dry_run:
             persisted = _upsert_oportunidade(opp, client)
             if persisted:
                 stats["persistidos"] += 1
-                opp.update(persisted)  # injeta id, created_at, etc.
-
-            # Webhook
-            if opp.get("id"):
-                result = send_opportunity_webhook(opp, client=client)
-                status = result.get("status")
-                if status == "entregue":
-                    stats["webhooks_entregues"] += 1
-                    _update_status(opp["id"], "webhook_enviado", client)
-                elif status == "idempotente":
-                    stats["webhooks_skipped"] += 1
-                else:
-                    stats["webhooks_falhos"] += 1
         else:
             stats["persistidos"] += 1
 
@@ -154,7 +134,7 @@ def _upsert_oportunidade(opp: dict[str, Any], client) -> dict[str, Any] | None:
             "endereco_cno": opp.get("endereco_cno"),
             "score_match": opp.get("score_match"),
             "motivo_match": opp.get("motivo_match"),
-            "status": "qualificado",
+            "status": "novo",
             "prioridade": opp.get("prioridade", "media"),
             "webhook_url": opp.get("webhook_url"),
         }
@@ -162,11 +142,11 @@ def _upsert_oportunidade(opp: dict[str, Any], client) -> dict[str, Any] | None:
         if existing.data:
             record = existing.data[0]
             record_id = record["id"]
-            # Atualiza preservando status avançado do pipeline
-            if record.get("status") in ("engajado", "fechado", "descartado"):
-                row.pop("status", None)
+            # Atualiza dados; preserva status do pipeline (SDR controla transições)
+            row.pop("status", None)
             client.table("oportunidades_prospeccao").update(row).eq("id", record_id).execute()
-            return record
+            res = client.table("oportunidades_prospeccao").select("*").eq("id", record_id).limit(1).execute()
+            return res.data[0] if res.data else record
         else:
             result = client.table("oportunidades_prospeccao").insert(row).execute()
             if result.data:
@@ -177,15 +157,9 @@ def _upsert_oportunidade(opp: dict[str, Any], client) -> dict[str, Any] | None:
     return None
 
 
-def _update_status(opp_id: str, status: str, client) -> None:
-    try:
-        client.table("oportunidades_prospeccao").update({"status": status}).eq("id", opp_id).execute()
-    except Exception:
-        pass
-
-
 def list_oportunidades(
     *,
+    org_id: str | None = None,
     cidade: str | None = None,
     uf: str | None = None,
     status: str | None = None,
@@ -197,6 +171,9 @@ def list_oportunidades(
     """Lista oportunidades persistidas com filtros."""
     client = _get_client()
     query = client.table("oportunidades_prospeccao").select("*")
+
+    if org_id:
+        query = query.eq("org_id", org_id)
 
     if cidade:
         query = query.eq("cidade", cidade)

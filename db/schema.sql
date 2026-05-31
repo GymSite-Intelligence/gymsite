@@ -27,6 +27,7 @@ create table organizations (
   slug text unique not null,
   plano text not null default 'free' check (plano in ('free','pro','enterprise')),
   limite_relatorios_mes integer not null default 5,
+  webhook_claw_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

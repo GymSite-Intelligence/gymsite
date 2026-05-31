@@ -127,11 +127,21 @@ def _gravar_cache(query: str, text: str, cache_key_override: Optional[str] = Non
 
 def _executar_grounding_sync(query: str, cache_key_override: Optional[str] = None) -> str:
     """Chamada síncrona com cache + retry. Roda em thread via asyncio.to_thread."""
-    # 1. Tenta cache primeiro
+    # 1. Cache local (disco)
     cached = _ler_cache(query, cache_key_override)
     if cached is not None:
         _bump_stat("hit")
         return cached + "\n\n[cache hit]"
+
+    # 2. LangCache semântico (Redis Cloud)
+    from tools.langcache_client import langcache_search, langcache_set
+
+    lc_cached = langcache_search(query)
+    if lc_cached is not None:
+        _bump_stat("langcache_hit")
+        _gravar_cache(query, lc_cached, cache_key_override)
+        return lc_cached + "\n\n[langcache hit]"
+
     _bump_stat("miss")
 
     from google.genai import types
@@ -172,6 +182,7 @@ def _executar_grounding_sync(query: str, cache_key_override: Optional[str] = Non
 
             if text:
                 _gravar_cache(query, text, cache_key_override)
+                langcache_set(query, text)
                 return text
             last_error = "resposta vazia"
         except Exception as e:

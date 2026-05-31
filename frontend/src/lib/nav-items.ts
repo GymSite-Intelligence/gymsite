@@ -5,6 +5,7 @@ import {
   GitCompareIcon,
   LayoutDashboardIcon,
   MapIcon,
+  TargetIcon,
 } from 'lucide-react'
 
 export type SidebarNavItem = {
@@ -33,6 +34,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Comparar',
     to: '/comparar',
     icon: GitCompareIcon,
+  },
+  {
+    title: 'Prospecção',
+    to: '/prospeccao',
+    icon: TargetIcon,
   },
 ]
 

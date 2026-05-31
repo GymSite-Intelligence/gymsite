@@ -26,6 +26,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """Rate limiting via Redis Token Bucket."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        # Preflight CORS — não consome bucket; CORSMiddleware responde
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         try:
             r = await get_redis()
         except Exception:

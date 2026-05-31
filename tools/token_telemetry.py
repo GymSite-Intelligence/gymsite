@@ -15,7 +15,7 @@ import csv
 import os
 import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 METRICS_DIR = Path(__file__).resolve().parent.parent / "metrics"
@@ -223,6 +223,57 @@ def reset_run_id() -> None:
 
 def caminho_csv() -> Path:
     return CSV_PATH
+
+
+def prune_tokens_csv(max_age_days: int | None = None) -> int:
+    """
+    Remove linhas do CSV com timestamp anterior a max_age_days.
+
+    Env: TELEMETRY_CSV_RETENTION_DAYS (default 90). Use 0 para desabilitar.
+    Retorna quantidade de linhas removidas.
+    """
+    if max_age_days is None:
+        max_age_days = int(os.getenv("TELEMETRY_CSV_RETENTION_DAYS", "90"))
+    if max_age_days <= 0 or not CSV_PATH.exists():
+        return 0
+
+    cutoff = datetime.now() - timedelta(days=max_age_days)
+    removed = 0
+    kept_rows: list[list] = []
+
+    with _WRITE_LOCK:
+        try:
+            with CSV_PATH.open("r", encoding="utf-8", newline="") as f:
+                reader = csv.reader(f)
+                header = next(reader, None)
+                if not header:
+                    return 0
+                kept_rows.append(header)
+                for row in reader:
+                    if len(row) < 2:
+                        kept_rows.append(row)
+                        continue
+                    try:
+                        ts = datetime.fromisoformat(row[1])
+                    except ValueError:
+                        kept_rows.append(row)
+                        continue
+                    if ts >= cutoff:
+                        kept_rows.append(row)
+                    else:
+                        removed += 1
+
+            if removed == 0:
+                return 0
+
+            tmp = CSV_PATH.with_suffix(".csv.tmp")
+            with tmp.open("w", encoding="utf-8", newline="") as f:
+                csv.writer(f).writerows(kept_rows)
+            tmp.replace(CSV_PATH)
+        except Exception:
+            return 0
+
+    return removed
 
 
 # ── Callbacks ADK ───────────────────────────────────────────────

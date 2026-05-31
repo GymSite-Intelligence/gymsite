@@ -29,7 +29,11 @@ import logging
 import os
 import time
 import traceback
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any, Optional
+
+from supabase import create_client  # type: ignore[reportAttributeAccessIssue]
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
@@ -72,7 +76,6 @@ def _supabase_client():
             status_code=500,
             detail="Supabase não configurado (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY ausentes em .env)",
         )
-    from supabase import create_client
     return create_client(url, key)
 
 
@@ -100,6 +103,52 @@ def _resolve_relatorio_uuid(sb, relatorio_id: str) -> str:
     return relatorio_id
 
 
+_STALE_PIPELINE_HOURS = int(os.getenv("PIPELINE_STALE_HOURS", "6"))
+_STALE_MSG = (
+    "Pipeline interrompido (restart do servidor ou timeout). "
+    "Use «Gerar novamente» para reprocessar."
+)
+
+
+def _recover_stale_running_reports(sb, *, relatorio_id: str | None = None) -> int:
+    """Marca como failed relatórios running/queued órfãos (sem output)."""
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=_STALE_PIPELINE_HOURS)).isoformat()
+    try:
+        q = (
+            sb.table("relatorios")
+            .select("id, status, updated_at")
+            .in_("status", ["running", "queued"])
+            .lt("updated_at", cutoff)
+        )
+        if relatorio_id:
+            q = q.eq("id", _resolve_relatorio_uuid(sb, relatorio_id))
+        rows = q.execute().data or []
+        recovered = 0
+        for row in rows:
+            rid = row["id"]
+            out = (
+                sb.table("relatorio_outputs")
+                .select("relatorio_id")
+                .eq("relatorio_id", rid)
+                .limit(1)
+                .execute()
+            )
+            if out.data:
+                continue
+            sb.table("relatorios").update({
+                "status": "failed",
+                "erro_mensagem": _STALE_MSG,
+            }).eq("id", rid).execute()
+            recovered += 1
+            logger.warning("relatório órfão recuperado: %s (era %s)", rid, row.get("status"))
+        return recovered
+    except Exception as e:
+        logger.warning("recover_stale_running_reports: %s", e)
+        return 0
+
+
 # Observability + graceful shutdown
 _shutdown_mgr = GracefulShutdownManager(timeout_sec=30)
 _metrics_mw_instance: MetricsMiddleware | None = None
@@ -114,6 +163,7 @@ class _CapturedMetricsMiddleware(MetricsMiddleware):
         _metrics_mw_instance = self
 
 
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan com graceful shutdown + RedisQueue worker."""
     logger.info("GymSite API iniciando...")
@@ -123,6 +173,22 @@ async def lifespan(app: FastAPI):
     _queue = RedisQueue(gymsite_worker)
     worker_task = asyncio.create_task(_queue.start_worker())
     _shutdown_mgr.register(worker_task)
+
+    try:
+        n = _recover_stale_running_reports(_supabase_client())
+        if n:
+            logger.info("Recuperados %d relatório(s) running/queued órfãos", n)
+    except Exception as e:
+        logger.warning("Startup stale recovery skip: %s", e)
+
+    try:
+        from tools.token_telemetry import prune_tokens_csv
+
+        removed = prune_tokens_csv()
+        if removed:
+            logger.info("Telemetria CSV: %d linha(s) antiga(s) removida(s)", removed)
+    except Exception as e:
+        logger.warning("Telemetria CSV retention skip: %s", e)
 
     yield
 
@@ -151,22 +217,28 @@ else:
         "CORS_ORIGINS nao definida em .env — somente localhost:* via regex liberado"
     )
 
-# Middleware stack (ordem: último adicionado = mais externo)
-# Request flow: Tracing → RateLimit → CORS → Cache → Caching → Metrics → endpoint
+# Regex extras: localhost dev + Cloudflare Pages (preview hash.gymsite-3p0.pages.dev)
+_cors_origin_regex = (
+    r"http://localhost:\d+"
+    r"|https://([a-z0-9-]+\.)*gymsite-3p0\.pages\.dev"
+)
+
+# Middleware stack — último add_middleware = mais externo (roda primeiro).
+# CORS deve ser o mais externo para OPTIONS/preflight responder antes de rate limit/cache.
 app.add_middleware(_CapturedMetricsMiddleware)
 app.add_middleware(CachingMiddleware)
 app.add_middleware(RedisCacheMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(TracingMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_origin_regex=r"http://localhost:\d+",
+    allow_origin_regex=_cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition", "X-Request-ID", "X-Process-Time", "X-RateLimit-Remaining", "X-Cache"],
 )
-app.add_middleware(RateLimitMiddleware)
-app.add_middleware(TracingMiddleware)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -594,6 +666,41 @@ def _user_org_ids(sb, user_id: str) -> list[str]:
         return []
 
 
+def _require_authenticated(request: Request) -> tuple[str, str]:
+    """Exige JWT válido; retorna (user_id, org_id)."""
+    user_id, org_id = _resolve_user_and_org(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+    return user_id, org_id
+
+
+def _require_org_access(request: Request, org_id: str) -> str:
+    """Exige que o usuário pertença à org informada."""
+    user_id, _ = _require_authenticated(request)
+    sb = _supabase_client()
+    orgs = _user_org_ids(sb, user_id)
+    if org_id not in orgs:
+        raise HTTPException(status_code=403, detail="Sem permissão para esta organização")
+    return user_id
+
+
+def _assert_oportunidade_access(request: Request, oportunidade_id: str) -> dict:
+    """Carrega oportunidade e valida org do usuário."""
+    from prospecting.engine import get_oportunidade
+
+    user_id, org_id = _require_authenticated(request)
+    opp = get_oportunidade(oportunidade_id)
+    if not opp:
+        raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
+    opp_org = opp.get("org_id")
+    if opp_org:
+        sb = _supabase_client()
+        orgs = _user_org_ids(sb, user_id)
+        if str(opp_org) not in orgs:
+            raise HTTPException(status_code=403, detail="Sem permissão")
+    return opp
+
+
 def create_relatorio_stub(
     payload: NovoRelatorioInput,
     *,
@@ -677,6 +784,7 @@ def get_status(relatorio_id: str) -> dict:
     """Polling leve. Retorna só status + erro se falhou."""
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _recover_stale_running_reports(sb, relatorio_id=rid)
     res = sb.table("relatorios").select(
         "id, status, erro_mensagem, tempo_execucao_segundos, data_execucao"
     ).eq("id", rid).single().execute()
@@ -721,59 +829,6 @@ def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
     }
 
 
-@app.get("/api/relatorios/{relatorio_id}/custos-api")
-def get_relatorio_custos_api(relatorio_id: str) -> dict:
-    """Breakdown de custos LLM + APIs externas (Places, SearchAPI, Geocoding)."""
-    sb = _supabase_client()
-    rid = _resolve_relatorio_uuid(sb, relatorio_id)
-    
-    # 1. Busca custos LLM
-    llm_res = sb.table("relatorio_custos_agentes").select("*").eq("relatorio_id", rid).execute()
-    llm_records = llm_res.data or []
-    
-    llm_total = sum(float(r.get("custo_brl") or 0.0) for r in llm_records)
-    llm_por_agente = {}
-    for r in llm_records:
-        agente = r.get("agente")
-        if agente:
-            llm_por_agente[agente] = {
-                "tokens_in": r.get("tokens_in", 0),
-                "tokens_out": r.get("tokens_out", 0),
-                "custo_brl": float(r.get("custo_brl") or 0.0),
-                "modelo": r.get("modelo") or "",
-            }
-            
-    # 2. Busca custos API
-    # Usando try-except em caso de migração de banco pendente (fail-safe)
-    api_records = []
-    try:
-        api_res = sb.table("relatorio_api_calls").select("*").eq("relatorio_id", rid).execute()
-        api_records = api_res.data or []
-    except Exception:
-        pass
-    
-    api_total = sum(float(r.get("custo_brl") or 0.0) for r in api_records)
-    api_por_sku = {}
-    for r in api_records:
-        sku = r.get("api_sku")
-        if sku:
-            slot = api_por_sku.setdefault(sku, {"calls": 0, "custo_brl": 0.0})
-            slot["calls"] += r.get("num_calls", 1)
-            slot["custo_brl"] = round(slot["custo_brl"] + float(r.get("custo_brl") or 0.0), 6)
-            
-    return {
-        "llm": {
-            "total_brl": round(llm_total, 4),
-            "por_agente": llm_por_agente,
-        },
-        "api": {
-            "total_brl": round(api_total, 4),
-            "por_sku": api_por_sku,
-        },
-        "total_brl": round(llm_total + api_total, 4),
-    }
-
-
 @app.get("/api/relatorios/{relatorio_id}")
 def get_relatorio(relatorio_id: str) -> dict:
     """Detail completo: joins de todas as tabelas filhas."""
@@ -791,7 +846,6 @@ class EntranteValidacaoInput(BaseModel):
 def patch_entrante_validacao(relatorio_id: str, body: EntranteValidacaoInput) -> dict:
     """Marca contato do entrant como validado manualmente (persiste em entrantes_cnpj_90d)."""
     import re
-    from datetime import datetime, timezone
 
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
@@ -1178,9 +1232,11 @@ class WebhookConfigureInput(BaseModel):
 
 @app.post("/api/prospeccao/executar")
 async def executar_prospeccao(
+    request: Request,
     payload: ProspeccaoExecutarInput,
 ) -> dict:
     """Enfileira engine de cruzamento CNPJ × CNO no Redis."""
+    _, org_id = _require_authenticated(request)
     with span("api.prospeccao.executar", cidade=payload.cidade, uf=payload.uf):
         if _queue is None:
             raise HTTPException(status_code=503, detail="Task queue não inicializado")
@@ -1192,7 +1248,7 @@ async def executar_prospeccao(
                 "uf": payload.uf,
                 "dias": payload.dias,
                 "limit": payload.limit,
-                "org_id": payload.org_id,
+                "org_id": payload.org_id or org_id,
                 "webhook_url": payload.webhook_url,
             },
         })
@@ -1204,6 +1260,7 @@ async def executar_prospeccao(
 
 @app.get("/api/prospeccao/oportunidades")
 def list_oportunidades_prospeccao(
+    request: Request,
     cidade: Optional[str] = None,
     uf: Optional[str] = None,
     status: Optional[str] = None,
@@ -1213,8 +1270,10 @@ def list_oportunidades_prospeccao(
     offset: int = 0,
 ) -> list[dict]:
     """Lista oportunidades de prospecção com filtros."""
+    _, org_id = _require_authenticated(request)
     from prospecting.engine import list_oportunidades
     return list_oportunidades(
+        org_id=org_id,
         cidade=cidade,
         uf=uf,
         status=status,
@@ -1226,28 +1285,27 @@ def list_oportunidades_prospeccao(
 
 
 @app.get("/api/prospeccao/oportunidades/{oportunidade_id}")
-def get_oportunidade_prospeccao(oportunidade_id: str) -> dict:
+def get_oportunidade_prospeccao(request: Request, oportunidade_id: str) -> dict:
     """Retorna detalhe de uma oportunidade."""
-    from prospecting.engine import get_oportunidade
-    opp = get_oportunidade(oportunidade_id)
-    if not opp:
-        raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
-    return opp
+    return _assert_oportunidade_access(request, oportunidade_id)
 
 
 @app.post("/api/prospeccao/oportunidades/{oportunidade_id}/webhook")
-def reenviar_webhook_oportunidade(oportunidade_id: str) -> dict:
+def reenviar_webhook_oportunidade(request: Request, oportunidade_id: str) -> dict:
     """Reenvia webhook manualmente para o Claw."""
+    _assert_oportunidade_access(request, oportunidade_id)
     from prospecting.engine import reenviar_webhook
     return reenviar_webhook(oportunidade_id)
 
 
 @app.patch("/api/prospeccao/oportunidades/{oportunidade_id}/status")
 def patch_status_oportunidade(
+    request: Request,
     oportunidade_id: str,
     payload: ProspeccaoStatusPatch,
 ) -> dict:
     """Atualiza status do pipeline de prospecção."""
+    _assert_oportunidade_access(request, oportunidade_id)
     from prospecting.engine import update_status, OportunidadeNotFoundError, WebhookDeliveryError
     try:
         update_status(oportunidade_id, payload.status)
@@ -1261,8 +1319,9 @@ def patch_status_oportunidade(
 
 
 @app.post("/api/prospeccao/webhook/configure")
-def configurar_webhook_claw(payload: WebhookConfigureInput) -> dict:
+def configurar_webhook_claw(request: Request, payload: WebhookConfigureInput) -> dict:
     """Configura URL do webhook do Claw por organização."""
+    _require_org_access(request, payload.org_id)
     sb = _supabase_client()
     try:
         sb.table("organizations").update({
