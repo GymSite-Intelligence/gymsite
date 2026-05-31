@@ -110,6 +110,7 @@ class RelatorioPdfModel:
 
     resumo_executivo: str | None = None
     posicionamento: str | None = None
+    posicionamento_estrategico: dict | None = None
     market: MarketContextPdf | None = None
 
     candidatos: list[CandidatoPdf] = field(default_factory=list)

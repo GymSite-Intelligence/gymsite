@@ -227,6 +227,11 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
         total_raio=_int(out.get("total_encontrados_raio")),
         resumo_executivo=str(resumo) if resumo else None,
         posicionamento=str(out.get("posicionamento_recomendado") or "") or None,
+        posicionamento_estrategico=(
+            out.get("posicionamento_estrategico")
+            if isinstance(out.get("posicionamento_estrategico"), dict)
+            else None
+        ),
         market=_map_market(mc_raw if isinstance(mc_raw, dict) else None),
         candidatos=candidatos,
         cenarios=cenarios,

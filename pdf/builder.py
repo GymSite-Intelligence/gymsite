@@ -1,16 +1,6 @@
 """
 Montagem do PDF com ReportLab (layout classic / executive / data_room).
 """
-
-from matplotlib import layout_engine
-from matplotlib import layout_engine
-from matplotlib import layout_engine
-from matplotlib import layout_engine
-from matplotlib import layout_engine
-from matplotlib import layout_engine
-from matplotlib import layout_engine
-from matplotlib import layout_engine
-# pyrefly: ignore [invalid-syntax]
 from __future__ import annotations
 
 import io
@@ -418,11 +408,131 @@ def _competition_section(model: RelatorioPdfModel, styles: dict) -> list:
     return flow
 
 
+def _posicionamento_veredito_color(veredito: str | None):
+    if not veredito:
+        return SLATE
+    key = veredito.upper().strip()
+    if key == "OCEANO_AZUL":
+        return TEAL
+    if key == "TRANSICAO":
+        return colors.HexColor("#D97706")
+    if key == "VERMELHO":
+        return colors.HexColor("#DC2626")
+    return SLATE
+
+
+def _posicionamento_estrategico_flow(
+    pos: dict | None,
+    styles: dict,
+    *,
+    section_fn,
+    table_fn,
+    body_style: str,
+) -> list:
+    """Seção A9: veredito ERRC, GAPs e ticket recomendado."""
+    if not pos or not isinstance(pos, dict):
+        return []
+    flow: list = []
+    veredito = str(pos.get("veredito_posicionamento") or "—")
+    justificativa = str(pos.get("justificativa_veredito") or "")
+    flow.extend(section_fn("7b. Posicionamento estratégico (ERRC)", styles))
+    badge = Table(
+        [[Paragraph(f"<b>Veredito:</b> {veredito}", styles.get("h2", styles[body_style]))]],
+        colWidths=[CONTENT_W],
+    )
+    badge.setStyle(
+        TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), _posicionamento_veredito_color(veredito)),
+            ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]),
+    )
+    flow.append(badge)
+    flow.append(Spacer(1, 6))
+    if justificativa:
+        flow.append(_para(justificativa[:1200], body_style, styles))
+        flow.append(Spacer(1, 6))
+
+    errc = pos.get("framework_errc") or {}
+    if isinstance(errc, dict) and any(errc.get(k) for k in ("eliminar", "reduzir", "aumentar", "criar")):
+        data = [["Dimensão", "Recomendações"]]
+        labels = [
+            ("eliminar", "Eliminar"),
+            ("reduzir", "Reduzir"),
+            ("aumentar", "Aumentar"),
+            ("criar", "Criar"),
+        ]
+        for key, label in labels:
+            items = errc.get(key) or []
+            if isinstance(items, list) and items:
+                data.append([label, "<br/>".join(f"• {i}" for i in items[:5])])
+        if len(data) > 1:
+            flow.append(Paragraph("Framework ERRC", styles.get("h2", styles[body_style])))
+            flow.append(Spacer(1, 4))
+            rows = []
+            for row in data:
+                rows.append([
+                    Paragraph(str(row[0]), styles[body_style]),
+                    Paragraph(str(row[1]), styles[body_style]),
+                ])
+            flow.append(table_fn(rows, [3.5 * cm, CONTENT_W - 3.5 * cm]))
+            flow.append(Spacer(1, 8))
+
+    gaps = pos.get("gaps_identificados") or []
+    if isinstance(gaps, list) and gaps:
+        flow.append(Paragraph("GAPs de mercado", styles.get("h2", styles[body_style])))
+        flow.append(Spacer(1, 4))
+        gdata = [["GAP", "Potencial ticket", "Dificuldade"]]
+        for g in gaps[:5]:
+            if not isinstance(g, dict):
+                continue
+            gdata.append([
+                str(g.get("gap") or "—")[:40],
+                str(g.get("potencial_ticket") or "—"),
+                str(g.get("dificuldade_implementacao") or "—"),
+            ])
+        if len(gdata) > 1:
+            flow.append(table_fn(gdata, [6 * cm, 4 * cm, CONTENT_W - 10 * cm]))
+            flow.append(Spacer(1, 8))
+
+    ticket = pos.get("recomendacao_ticket") or {}
+    if isinstance(ticket, dict) and ticket.get("ticket_recomendado") is not None:
+        rec = ticket.get("ticket_recomendado")
+        tmin = ticket.get("ticket_minimo")
+        tmax = ticket.get("ticket_maximo")
+        flow.append(
+            _para(
+                f"<b>Ticket recomendado:</b> R$ {rec}/mês "
+                f"(faixa R$ {tmin or '—'} – R$ {tmax or '—'}). "
+                f"{ticket.get('justificativa') or ''}"[:800],
+                body_style,
+                styles,
+            ),
+        )
+        comp = ticket.get("comparativo_mercado") or {}
+        if isinstance(comp, dict) and comp:
+            parts = [f"{k}: R$ {v}" for k, v in list(comp.items())[:6]]
+            flow.append(_para("Comparativo: " + " | ".join(parts), body_style, styles))
+    return flow
+
+
 def _extras_section(model: RelatorioPdfModel, styles: dict) -> list:
     flow: list = []
     if model.posicionamento:
         flow.extend(_section_title("7. Posicionamento recomendado", styles))
         flow.append(_para(model.posicionamento[:3500], "body", styles))
+
+    flow.extend(
+        _posicionamento_estrategico_flow(
+            model.posicionamento_estrategico,
+            styles,
+            section_fn=_section_title,
+            table_fn=_table,
+            body_style="body",
+        ),
+    )
 
     if model.bairros_alternativos:
         flow.extend(_section_title("8. Bairros alternativos", styles))
@@ -818,6 +928,16 @@ def _extras_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
         flow.extend(_section_title_bala("7. Posicionamento recomendado", styles))
         flow.append(_para(model.posicionamento[:3500], "bala_body", styles))
 
+    flow.extend(
+        _posicionamento_estrategico_flow(
+            model.posicionamento_estrategico,
+            styles,
+            section_fn=_section_title_bala,
+            table_fn=_table_bala,
+            body_style="bala_body",
+        ),
+    )
+
     if model.bairros_alternativos:
         flow.extend(_section_title_bala("8. Bairros alternativos", styles))
         data = [["Bairro", "Prioridade", "Concorrentes", "Motivo"]]
@@ -886,8 +1006,7 @@ def _build_bala(model: RelatorioPdfModel, styles: dict) -> list:
     return story
 
 
-# pyrefly: ignore [unknown-name]
-@span("pdf.generate", layout=str(layout))
+@span("pdf.generate")
 def generate_relatorio_pdf(
     model: RelatorioPdfModel,
     *,

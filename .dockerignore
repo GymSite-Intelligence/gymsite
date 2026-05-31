@@ -54,3 +54,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# CI/CD / Infra (não necessários no container)
+scripts/
+nginx/
+.github/
+docker-compose*.yml

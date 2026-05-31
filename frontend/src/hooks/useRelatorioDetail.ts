@@ -62,6 +62,8 @@ export interface OutputConsolidado {
   aluguel_max_m2_observado?: number | null
   fonte_aluguel?: string | null
   posicionamento_recomendado?: string | null
+  /** Schema v1.8: output A9 PositioningStrategist (ERRC / oceano azul) */
+  posicionamento_estrategico?: PosicionamentoEstrategicoJSON | null
   resumo_executivo?: string | null
   top_3_candidatos: CandidatoJSON[]
   competitors_set?: CompetidorJSON[]
@@ -99,6 +101,37 @@ export interface OutputConsolidado {
   entrantes_cnpj_90d?: EntrantesCnpj90dJSON
   /** Obras fitness em andamento (CNO) + benchmark tempo obra. */
   obras_cno_em_curso?: ObrasCnoEmCursoJSON
+}
+
+export interface PosicionamentoEstrategicoJSON {
+  framework_errc?: {
+    eliminar?: string[]
+    reduzir?: string[]
+    aumentar?: string[]
+    criar?: string[]
+  }
+  mapa_servicos?: {
+    concorrente?: string
+    servicos?: Record<string, number>
+  }[]
+  gaps_identificados?: {
+    gap?: string
+    descricao?: string
+    potencial_ticket?: string
+    dificuldade_implementacao?: string
+  }[]
+  recomendacao_ticket?: {
+    ticket_recomendado?: number
+    ticket_minimo?: number
+    ticket_maximo?: number
+    justificativa?: string
+    comparativo_mercado?: Record<string, number>
+  }
+  veredito_posicionamento?: string
+  justificativa_veredito?: string
+  markdown?: string
+  erro?: string
+  raw_output?: string
 }
 
 export interface ComposicaoSegmentoJSON {

@@ -32,8 +32,20 @@ import traceback
 from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from backend_improvements import (
+    setup_json_logging,
+    CachingMiddleware,
+    MetricsMiddleware,
+    TracingMiddleware,
+    GracefulShutdownManager,
+    _register_signal_handlers,
+)
+from tools.redis_rate_limit import RateLimitMiddleware
+from tools.redis_cache import RedisCacheMiddleware
+from tools.redis_queue import RedisQueue, gymsite_worker
+from tools.redis_pubsub import notify_relatorio_pronto, notify_prospeccao_pronta
 from pydantic import BaseModel, Field
 from pathlib import Path
 
@@ -42,8 +54,7 @@ load_dotenv(_ROOT / ".env")
 load_dotenv(_ROOT / "frontend" / ".env", override=False)
 load_dotenv(_ROOT / "gymsite_intelligence" / ".env", override=False)
 
-logger = logging.getLogger("gymsite.api")
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
+logger = setup_json_logging(os.getenv("LOG_LEVEL", "INFO"))
 
 from tools.google_maps_key import warn_if_missing_maps_key
 from tools.telemetry import span
@@ -89,7 +100,44 @@ def _resolve_relatorio_uuid(sb, relatorio_id: str) -> str:
     return relatorio_id
 
 
-app = FastAPI(title="GymSite Intelligence API", version="1.0.0")
+# Observability + graceful shutdown
+_shutdown_mgr = GracefulShutdownManager(timeout_sec=30)
+_metrics_mw_instance: MetricsMiddleware | None = None
+_queue: RedisQueue | None = None
+
+
+class _CapturedMetricsMiddleware(MetricsMiddleware):
+    """Captures the middleware instance so /api/metrics can read from it."""
+    def __init__(self, app):
+        super().__init__(app)
+        global _metrics_mw_instance
+        _metrics_mw_instance = self
+
+
+async def lifespan(app: FastAPI):
+    """Lifespan com graceful shutdown + RedisQueue worker."""
+    logger.info("GymSite API iniciando...")
+    _register_signal_handlers(_shutdown_mgr)
+
+    global _queue
+    _queue = RedisQueue(gymsite_worker)
+    worker_task = asyncio.create_task(_queue.start_worker())
+    _shutdown_mgr.register(worker_task)
+
+    yield
+
+    logger.info("GymSite API encerrando gracefully...")
+    if _queue:
+        _queue.stop()
+    await _shutdown_mgr.drain()
+    logger.info("GymSite API encerrado")
+
+
+app = FastAPI(
+    title="GymSite Intelligence API",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 # CORS: dev libera localhost:* via regex; producao vem de CORS_ORIGINS (.env),
 # comma-separated. Ex: CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
@@ -103,6 +151,11 @@ else:
         "CORS_ORIGINS nao definida em .env — somente localhost:* via regex liberado"
     )
 
+# Middleware stack (ordem: último adicionado = mais externo)
+# Request flow: Tracing → RateLimit → CORS → Cache → Caching → Metrics → endpoint
+app.add_middleware(_CapturedMetricsMiddleware)
+app.add_middleware(CachingMiddleware)
+app.add_middleware(RedisCacheMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -110,8 +163,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Content-Disposition"],
+    expose_headers=["Content-Disposition", "X-Request-ID", "X-Process-Time", "X-RateLimit-Remaining", "X-Cache"],
 )
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(TracingMiddleware)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -301,6 +356,10 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
             f"pipeline {relatorio_id} done em {elapsed}s — "
             f"tokens={custos.get('tokens_total')} custo=R$ {custos.get('custo_brl_total', 0):.4f}"
         )
+        try:
+            await notify_relatorio_pronto(relatorio_id, payload.cidade, status="done")
+        except Exception as e:
+            logger.warning(f"Falha ao notificar relatório pronto: {e}")
 
     except BaseException as e:
         logger.error(f"pipeline {relatorio_id} falhou: {e}\n{traceback.format_exc()}")
@@ -449,6 +508,17 @@ def health() -> dict:
     return {"status": "ok", "service": "gymsite-intelligence-api"}
 
 
+@app.get("/api/metrics")
+def get_metrics() -> Response:
+    """Métricas Prometheus-compatible (latência, throughput por rota)."""
+    if _metrics_mw_instance is None:
+        raise HTTPException(status_code=503, detail="Metrics middleware não inicializado")
+    return Response(
+        content=_metrics_mw_instance.render_prometheus(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
+
+
 @app.get("/health/maps")
 def health_maps() -> dict:
     """Diagnóstico Google Maps + status do fallback OSM."""
@@ -572,10 +642,9 @@ def create_relatorio_stub(
 @app.post("/api/relatorios", response_model=RelatorioStub)
 async def create_relatorio(
     payload: NovoRelatorioInput,
-    background_tasks: BackgroundTasks,
     request: Request,
 ) -> RelatorioStub:
-    """Cria stub do relatório + dispara pipeline em background. Retorna ID pra polling."""
+    """Cria stub do relatório + enfileira pipeline no Redis. Retorna ID pra polling."""
     with span("api.relatorios.create", cidade=payload.cidade, uf=payload.uf):
         user_id, org_from_jwt = _resolve_user_and_org(request)
         try:
@@ -587,18 +656,20 @@ async def create_relatorio(
         except RuntimeError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
-        background_tasks.add_task(_run_pipeline_async_wrapper, relatorio_id, payload)
+        if _queue is None:
+            raise HTTPException(status_code=503, detail="Task queue não inicializado")
+
+        await _queue.enqueue({
+            "type": "pipeline",
+            "relatorio_id": relatorio_id,
+            "payload": payload.model_dump(),
+        })
 
         return RelatorioStub(
             id=relatorio_id,
             status="queued",
             created_at=created_at,
         )
-
-
-def _run_pipeline_async_wrapper(relatorio_id: str, payload: NovoRelatorioInput) -> None:
-    """BackgroundTasks só aceita callables sync — wrapeia o async."""
-    asyncio.run(_run_pipeline_async(relatorio_id, payload))
 
 
 @app.get("/api/relatorios/{relatorio_id}/status")
@@ -1106,27 +1177,28 @@ class WebhookConfigureInput(BaseModel):
 
 
 @app.post("/api/prospeccao/executar")
-def executar_prospeccao(
+async def executar_prospeccao(
     payload: ProspeccaoExecutarInput,
-    background_tasks: BackgroundTasks,
 ) -> dict:
-    """Dispara engine de cruzamento CNPJ × CNO em background."""
+    """Enfileira engine de cruzamento CNPJ × CNO no Redis."""
     with span("api.prospeccao.executar", cidade=payload.cidade, uf=payload.uf):
-        def _run():
-            from prospecting.engine import run_prospeccao
-            return run_prospeccao(
-                cidade=payload.cidade,
-                uf=payload.uf,
-                dias=payload.dias,
-                limit=payload.limit,
-                org_id=payload.org_id,
-                webhook_url=payload.webhook_url,
-            )
+        if _queue is None:
+            raise HTTPException(status_code=503, detail="Task queue não inicializado")
 
-        background_tasks.add_task(_run)
+        await _queue.enqueue({
+            "type": "prospeccao",
+            "kwargs": {
+                "cidade": payload.cidade,
+                "uf": payload.uf,
+                "dias": payload.dias,
+                "limit": payload.limit,
+                "org_id": payload.org_id,
+                "webhook_url": payload.webhook_url,
+            },
+        })
         return {
             "status": "started",
-            "message": f"Prospecção iniciada para {payload.cidade}/{payload.uf}",
+            "message": f"Prospecção enfileirada para {payload.cidade}/{payload.uf}",
         }
 
 

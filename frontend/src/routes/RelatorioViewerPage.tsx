@@ -59,6 +59,7 @@ import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTab
 import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairrosTable'
 import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativosTable'
 import { TextoSecao } from '@/components/domain/TextoSecao'
+import { PosicionamentoCard } from '@/components/domain/PosicionamentoCard'
 import { AlertasGlobais } from '@/components/domain/AlertasGlobais'
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { Button } from '@/components/ui/button'
@@ -405,6 +406,13 @@ function RelatorioViewerContent({
           texto={out.posicionamento_recomendado}
           collapsible
         />
+      )}
+
+      {/* 7.1 Posicionamento Estratégico A9 (ERRC) */}
+      {out.posicionamento_estrategico && (
+        <Section title="🎯 Posicionamento Estratégico (ERRC)" collapsible>
+          <PosicionamentoCard data={out.posicionamento_estrategico} />
+        </Section>
       )}
 
       {/* 7.4 Novos entrantes CNPJ (90d) */}

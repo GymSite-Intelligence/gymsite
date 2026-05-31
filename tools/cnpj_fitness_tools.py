@@ -328,7 +328,7 @@ def listar_entrantes_cnpj_fitness(
     """
     sb = _supabase_client()
     hoje = date.today()
-    cutoff = hoje - timedelta(days=max(int(dias), 1))
+    cutoff = hoje - timedelta(days=max(dias, 1))
     if sb is None:
         return {
             "status": "indisponivel",
@@ -351,7 +351,7 @@ def listar_entrantes_cnpj_fitness(
         .select(fields_base)
         .gte("data_inicio_atividade", cutoff.isoformat())
         .order("data_inicio_atividade", desc=True)
-        .limit(max(1, min(int(limit), 200)))
+        .limit(max(1, min(limit, 200)))
     )
     if cidade:
         q = q.eq("cidade", cidade)
@@ -370,7 +370,7 @@ def listar_entrantes_cnpj_fitness(
                 )
                 .gte("data_inicio_atividade", cutoff.isoformat())
                 .order("data_inicio_atividade", desc=True)
-                .limit(max(1, min(int(limit), 200)))
+                .limit(max(1, min(limit, 200)))
             )
             if cidade:
                 q = q.eq("cidade", cidade)
@@ -413,7 +413,7 @@ def listar_entrantes_cnpj_fitness(
         "status": "ok",
         "cidade": cidade,
         "uf": uf[:2].upper() if uf else "",
-        "dias": int(dias),
+        "dias": dias,
         "cutoff": cutoff.isoformat(),
         "total": len(entrantes),
         "entrantes": entrantes,
@@ -488,7 +488,7 @@ def _resumo_cnpj_from_lista(
         "status": "ok",
         "cidade": cidade,
         "uf": uf[:2].upper() if uf else "",
-        "dias": int(dias),
+        "dias": dias,
         "cutoff": lista.get("cutoff"),
         "novos_cnpj_fitness_90d": lista.get("total", len(rows)),
         "parque_ativo_total": parque_ativo,
@@ -531,7 +531,7 @@ def _segmento_lider(contagens: dict[str, int]) -> tuple[str | None, int]:
     if not contagens:
         return None, 0
     seg, n = max(contagens.items(), key=lambda kv: kv[1])
-    return seg, int(n)
+    return seg, n
 
 
 def dados_parque_cnpj_para_a0(
@@ -624,7 +624,7 @@ def dados_parque_cnpj_para_a0(
         "cidade": cidade,
         "uf": resumo.get("uf") or uf[:2].upper(),
         "bairro_alvo": bairro or None,
-        "dias_janela": int(dias),
+        "dias_janela": dias,
         "metricas_objetivas": {
             "parque_ativo_total": resumo.get("parque_ativo_total"),
             "parque_comercial_total": parque_com,
