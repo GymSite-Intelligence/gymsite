@@ -575,3 +575,37 @@ def write_relatorio_failsafe(
             "traceback": traceback.format_exc()[:500],
         })
         return None
+
+
+def write_posicionamento_to_supabase(
+    relatorio_id: str,
+    posicionamento: dict,
+) -> bool:
+    """
+    Atualiza relatorio_outputs.posicionamento_estrategico após A9.
+    Chamado pelo callback do A9 — coluna pode não existir em schemas antigos.
+    """
+    client = _get_client()
+    if client is None:
+        _log("info", "no-op posicionamento (credenciais ausentes)", {"relatorio_id": relatorio_id})
+        return False
+    if not relatorio_id or not isinstance(posicionamento, dict):
+        return False
+    client.table("relatorio_outputs").update(
+        {"posicionamento_estrategico": posicionamento},
+    ).eq("relatorio_id", relatorio_id).execute()
+    _log("success", "posicionamento_estrategico gravado", {"relatorio_id": relatorio_id})
+    return True
+
+
+def write_posicionamento_failsafe(relatorio_id: str, posicionamento: dict) -> bool:
+    """Wrapper fail-safe para patch de posicionamento pós-A9."""
+    try:
+        return write_posicionamento_to_supabase(relatorio_id, posicionamento)
+    except Exception as e:
+        _log("error", f"falha gravar posicionamento: {e}", {
+            "relatorio_id": relatorio_id,
+            "exception": type(e).__name__,
+            "traceback": traceback.format_exc()[:500],
+        })
+        return False
