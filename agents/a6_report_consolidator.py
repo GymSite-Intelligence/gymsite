@@ -1759,6 +1759,7 @@ def _a6_after_agent_callback(callback_context):
             json.dumps(relatorio, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        callback_context.state["relatorio_local_id"] = relatorio["id"]
 
         # Gravação paralela no Supabase (fail-safe — não bloqueia em erro)
         try:

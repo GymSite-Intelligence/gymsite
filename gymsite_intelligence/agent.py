@@ -23,6 +23,7 @@ from agents.a3c_competitor_mapper import competitor_mapper_agent
 from agents.a4_financial_estimator import financial_estimator_agent
 from agents.a5_contact_hunter import contact_hunter_agent
 from agents.a6_report_consolidator import report_consolidator_agent
+from agents.a9_positioning_strategist import positioning_strategist_agent
 # a7_market_research é importado dentro de a3a/a4 como função (não AgentTool)
 
 # Telemetria de tokens — registra consumo por agente em metrics/tokens_pipeline.csv
@@ -75,6 +76,7 @@ _attach_telemetry(
     competitor_search_agent, competitor_analysis_agent, competitor_mapper_agent,
     financial_estimator_agent,
     contact_hunter_agent, report_consolidator_agent,
+    positioning_strategist_agent,
 )
 
 # ── Sub-pipeline competitivo: A3a (busca) → A3b (análise) → A3c (oferta real) ──
@@ -108,7 +110,8 @@ pipeline = SequentialAgent(
     name="GymSitePipeline",
     description=(
         "Pipeline sequencial: contexto de mercado (Deep Research) → "
-        "localização → análise paralela → contato → relatório final."
+        "localização → análise paralela → contato → relatório final → "
+        "posicionamento estratégico (ERRC)."
     ),
     sub_agents=[
         context_builder_agent,        # A0 — Deep Research (NOVO em v0.4)
@@ -116,6 +119,7 @@ pipeline = SequentialAgent(
         parallel_analysis,             # A2 + A3 + A4
         contact_hunter_agent,          # A5
         report_consolidator_agent,     # A6
+        positioning_strategist_agent,  # A9 — Posicionamento ERRC
     ],
 )
 
@@ -164,15 +168,16 @@ Se o usuário mencionar "indicações da comunidade", "formulário", "campanha",
 como `bairros_indicados=[...]`. O ReportConsolidator (A6) renderá uma seção
 especial "📣 Demanda Social Detectada" no relatório final.
 
-## AGENTES NO PIPELINE (v0.4)
+## AGENTES NO PIPELINE (v0.5)
 
-1. **ContextBuilder (A0)** — Deep Research de mercado (NOVO) — primeiro do pipe
+1. **ContextBuilder (A0)** — Deep Research de mercado — primeiro do pipe
 2. **GeoScout (A1)** — Localiza zonas comerciais via Google Maps
 3. **DemoAnalyst (A2)** — Analisa potencial demográfico via IBGE (paralelo)
 4. **CompetitorIntel (A3)** — Mapeia concorrência + reviews + horários pico (paralelo)
 5. **FinancialEstimator (A4)** — Estima viabilidade financeira em 3 cenários (paralelo)
 6. **ContactHunter (A5)** — Identifica decisores e gera scripts de abordagem
 7. **ReportConsolidator (A6)** — Sintetiza tudo num relatório executivo
+8. **PositioningStrategist (A9)** — Análise de posicionamento via Framework ERRC
 
 ## ROTEAMENTO
 
@@ -180,7 +185,7 @@ Para QUALQUER pedido de análise (academia em X bairro, avaliação de imóvel,
 prospecção, "quanto custa", "horários de pico", "o que falam dessa academia") →
 **transfer_to_agent("GymSitePipeline")**.
 
-O pipeline é completo: GeoScout (A1) → Análise Paralela (A2/A3/A4) → ContactHunter (A5) → ReportConsolidator (A6).
+O pipeline é completo: GeoScout (A1) → Análise Paralela (A2/A3/A4) → ContactHunter (A5) → ReportConsolidator (A6) → PositioningStrategist (A9).
 
 Internamente, o **A3 CompetitorIntel já usa Gemini Search Grounding (A7)** como
 fallback automático quando o Playwright scraper falha. Você não precisa
