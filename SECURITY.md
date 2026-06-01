@@ -1,21 +1,38 @@
 # Security Policy
 
-## Supported Versions
+## Vulnerability Disclosure
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+If you discover a security vulnerability, please email: security@vectracargo.com.br
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+Do not create public GitHub issues for security vulnerabilities.
 
-## Reporting a Vulnerability
+## Incident Log
 
-Use this section to tell people how to report a vulnerability.
+### 2026-06-01: Exposed Google Distance Matrix API Key
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+**Status:** REMEDIATED ✅
+
+- **Discovery Date:** 2026-06-01
+- **Exposure Date:** 2026-05-30 03:18:06 UTC
+- **Exposed Credential:** Google Distance Matrix API Key
+- **Duration:** ~2 hours
+- **Root Cause:** Accidental commit to .env.example in public repository
+
+**Actions Taken:**
+- ✅ API Key rotated and deleted from GCP (2026-06-01T11:23:17Z)
+- ✅ Removed from git history using git filter-repo
+- ✅ Enabled GitHub Secret scanning
+- ✅ Enabled GitHub Push protection
+- ✅ Team training on credential management
+
+**Restrictions on Exposed Key:**
+- Limited to Google Maps APIs only
+- No billing permissions
+- No unrestricted access
+
+## Best Practices
+
+- Never commit .env files to version control
+- Use GitHub Secret scanning and Push protection
+- Rotate credentials immediately upon exposure
+- Maintain audit logs of all deployments
