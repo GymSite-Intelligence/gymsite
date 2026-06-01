@@ -45,9 +45,11 @@ def _chain_callbacks(existing, new):
         return new
     if existing is new:
         return existing
-    def _chained(ctx):
-        existing(ctx)
-        new(ctx)
+
+    def _chained(*args, **kwargs):
+        existing(*args, **kwargs)
+        new(*args, **kwargs)
+
     return _chained
 
 

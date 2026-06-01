@@ -1,8 +1,11 @@
 # agents/a6_report_consolidator.py
 """A6: Consolidador final — relatório executivo markdown com gap + bairros alternativos + crowdsource."""
 import json
+import logging
 import time
 from datetime import datetime
+
+logger = logging.getLogger("gymsite.a6")
 from pathlib import Path
 from google.adk.agents import Agent
 from google.genai import types
@@ -15,7 +18,7 @@ from tools.token_telemetry import before_agent_callback as _telemetry_before
 # thinking alto melhora consistência e tie-breaker do Top 3.
 # tools=[] — sem function_calling_config necessário (não chama tools).
 _GENERATE_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(thinking_budget=8192),
+    thinking_config=types.ThinkingConfig(thinking_budget=8192),  # pyright: ignore[reportCallIssue]
 )
 
 
@@ -286,9 +289,13 @@ def _bairro_alvo_da_busca(state) -> str:
         ctx = _parse_market_context(state.get("market_context"))
         if isinstance(ctx, dict):
             inner = ctx.get("market_context") if isinstance(ctx.get("market_context"), dict) else ctx
-            return (inner.get("bairro") or "").strip()
+            return (inner.get("bairro") or "").strip()  # pyright: ignore[reportOptionalMemberAccess]
     except Exception:
-        pass
+        logger.warning(
+            "A6 market_context fallback falhou ao extrair bairro alvo",
+            exc_info=True,
+            extra={"agent": "A6", "context": "_bairro_alvo_da_busca"},
+        )
     return ""
 
 
@@ -431,7 +438,12 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
                                 concorrentes = osm_list
                                 fonte_parte = "overpass_osm"
                     except Exception:
-                        pass
+                        logger.warning(
+                            "A6 fallback OSM (Overpass) falhou para parte=%s",
+                            parte,
+                            exc_info=True,
+                            extra={"agent": "A6", "context": "bairros_osm_fallback"},
+                        )
 
                 # Canal 3: CNPJ RFB — parque ativo no bairro (Supabase)
                 if not concorrentes:
@@ -445,7 +457,12 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
                             concorrentes = cnpj_list
                             fonte_parte = "cnpj_rfb"
                     except Exception:
-                        pass
+                        logger.warning(
+                            "A6 fallback CNPJ RFB falhou para parte=%s",
+                            parte,
+                            exc_info=True,
+                            extra={"agent": "A6", "context": "bairros_cnpj_fallback"},
+                        )
 
                 if fonte_parte:
                     fontes_busca.append(fonte_parte)
@@ -480,7 +497,11 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
                         )
                         bairro_concorrente = normalizar_bairro(bairro_concorrente_raw)
                     except Exception:
-                        pass
+                        logger.debug(
+                            "A6 extrair_bairro_endereco skip",
+                            exc_info=True,
+                            extra={"agent": "A6", "context": "extrair_bairro_endereco"},
+                        )
                     if bairro_alvo_chave and bairro_concorrente == bairro_alvo_chave:
                         continue
 
@@ -672,25 +693,53 @@ def _a6_precompute_callback(callback_context):
 
     Também invoca `_telemetry_before` no fim para preservar `run_id` no CSV.
     """
+    start = time.perf_counter()
+
     try:
         result = bairros_alternativos_inteligentes(callback_context)
         callback_context.state["bairros_alternativos_pronto"] = result
     except Exception:
-        pass  # falha silenciosa — não bloqueia o pipeline
+        logger.error(
+            "A6 precompute bairros_alternativos falhou — seção será omitida ou fabricada pelo LLM",
+            exc_info=True,
+            extra={"agent": "A6", "step": "precompute_bairros"},
+        )
+
     try:
         callback_context.state["entrantes_cnpj_pronto"] = _precompute_entrantes_cnpj(
             callback_context
         )
     except Exception:
-        pass
+        logger.error(
+            "A6 precompute entrantes_cnpj falhou",
+            exc_info=True,
+            extra={"agent": "A6"},
+        )
+
     try:
         callback_context.state["obras_cno_pronto"] = _precompute_obras_cno(callback_context)
     except Exception:
-        pass
+        logger.error(
+            "A6 precompute obras_cno falhou",
+            exc_info=True,
+            extra={"agent": "A6"},
+        )
+
     try:
         _telemetry_before(callback_context)
     except Exception:
-        pass
+        logger.warning(
+            "A6 telemetry_before falhou",
+            exc_info=True,
+            extra={"agent": "A6"},
+        )
+
+    elapsed = time.perf_counter() - start
+    logger.info(
+        "A6 precompute completed in %.2fs",
+        elapsed,
+        extra={"agent": "A6"},
+    )
 
 
 def _escape_md_pipe(s) -> str:
@@ -829,6 +878,11 @@ def _renderizar_secao_ofertas_mapeadas(oferta_raw, concorrentes: list) -> str:
         try:
             oferta_raw = json.loads(txt)
         except Exception:
+            logger.warning(
+                "A6 oferta_concorrentes JSON inválido em _renderizar_secao_ofertas_mapeadas",
+                exc_info=True,
+                extra={"agent": "A6", "context": "_renderizar_ofertas_json"},
+            )
             return ""
 
     if not isinstance(oferta_raw, dict):
@@ -966,7 +1020,11 @@ def _renderizar_secao_novos_entrantes(entrantes_block: dict) -> str:
             dt = datetime.strptime(abertura, "%Y-%m-%d")
             abertura = dt.strftime("%d/%m/%Y")
         except Exception:
-            pass
+            logger.debug(
+                "A6 formatação data_abertura skip",
+                exc_info=True,
+                extra={"agent": "A6", "context": "_renderizar_novos_entrantes_data"},
+            )
 
         # Nome
         nome = e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—"
@@ -1033,8 +1091,10 @@ def _a6_before_model_callback(callback_context, llm_request):
         state = getattr(callback_context, "state", None)
         if state is None:
             return
-        
-        # 1. Bairros Alternativos e Distribuição Geográfica
+
+        sections_injected = []
+
+        # 1. Bairros Alternativos
         pronto = state.get("bairros_alternativos_pronto")
         if pronto:
             markdown_bairros = _renderizar_secao_bairros_alternativos(pronto)
@@ -1043,11 +1103,17 @@ def _a6_before_model_callback(callback_context, llm_request):
                 try:
                     existing_si = llm_request.config.system_instruction or ""
                 except Exception:
+                    logger.debug(
+                        "A6 existing_si parse skip",
+                        exc_info=True,
+                        extra={"agent": "A6", "context": "before_model_bairros_si"},
+                    )
                     existing_si = ""
                 if "SEÇÃO PRÉ-COMPUTADA — BAIRROS ALTERNATIVOS" not in existing_si:
                     llm_request.append_instructions([markdown_bairros])
+                    sections_injected.append("bairros_alternativos")
 
-        # 2. Ofertas Mapeadas dos Concorrentes (Retirada do Shadow para o Markdown)
+        # 2. Ofertas Mapeadas
         from tools.competitor_tools import _parse_market_context
         oferta_raw = state.get("oferta_concorrentes")
         ic_raw = _parse_market_context(state.get("inteligencia_competitiva"))
@@ -1061,11 +1127,17 @@ def _a6_before_model_callback(callback_context, llm_request):
                 try:
                     existing_si = llm_request.config.system_instruction or ""
                 except Exception:
+                    logger.debug(
+                        "A6 existing_si parse skip",
+                        exc_info=True,
+                        extra={"agent": "A6", "context": "before_model_ofertas_si"},
+                    )
                     existing_si = ""
                 if "SEÇÃO PRÉ-COMPUTADA — MENSALIDADES E DIFERENCIAIS REAIS DOS CONCORRENTES" not in existing_si:
                     llm_request.append_instructions([markdown_ofertas])
+                    sections_injected.append("ofertas_mapeadas")
 
-        # 3. Novos Entrantes (RFB CNPJ Aberto)
+        # 3. Novos Entrantes
         entrantes_block = state.get("entrantes_cnpj_pronto")
         if entrantes_block:
             markdown_entrantes = _renderizar_secao_novos_entrantes(entrantes_block)
@@ -1074,12 +1146,30 @@ def _a6_before_model_callback(callback_context, llm_request):
                 try:
                     existing_si = llm_request.config.system_instruction or ""
                 except Exception:
+                    logger.debug(
+                        "A6 existing_si parse skip",
+                        exc_info=True,
+                        extra={"agent": "A6", "context": "before_model_entrantes_si"},
+                    )
                     existing_si = ""
                 if "SEÇÃO PRÉ-COMPUTADA — NOVOS ENTRANTES DE MERCADO" not in existing_si:
                     llm_request.append_instructions([markdown_entrantes])
+                    sections_injected.append("novos_entrantes")
+
+        if sections_injected:
+            logger.info(
+                "A6 before_model injected %d sections: %s",
+                len(sections_injected),
+                ", ".join(sections_injected),
+                extra={"agent": "A6"},
+            )
 
     except Exception:
-        pass  # falha silenciosa — nunca bloqueia o pipeline
+        logger.error(
+            "A6 before_model_callback falhou — LLM gerará relatório SEM seções pré-computadas (ALTO RISCO DE ALUCINAÇÃO)",
+            exc_info=True,
+            extra={"agent": "A6"},
+        )
 
 
 # ── Saída estruturada para o CRUD futuro (VEC-379 fase 1C) ───────────
@@ -1132,8 +1222,8 @@ def _enriquecer_candidato_investigacao(c: dict) -> dict:
         "implicacao_site": res.get("implicacao_site"),
         "evidencias": (res.get("evidencias") or [])[:3],
         "tier": ir.get("tier"),
-        "tipo_imovel_label": tipo_inf.get("tipo_imovel_label"),
-        "tipo_imovel_codigo_onr": tipo_inf.get("tipo_imovel_codigo_onr"),
+        "tipo_imovel_label": tipo_inf.get("tipo_imovel_label"),  # pyright: ignore[reportOptionalMemberAccess]
+        "tipo_imovel_codigo_onr": tipo_inf.get("tipo_imovel_codigo_onr"),  # pyright: ignore[reportOptionalMemberAccess]
     }
     return out
 
@@ -1179,6 +1269,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             import json
             oferta_raw = json.loads(txt)
         except Exception:
+            logger.warning(
+                "A6 oferta_concorrentes JSON inválido em _extrair_relatorio_estruturado",
+                exc_info=True,
+                extra={"agent": "A6", "context": "_extrair_oferta_json"},
+            )
             oferta_raw = None
 
     mapeamento_ofertas = {}
@@ -1213,10 +1308,13 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 else str(raw_mc)[:200]
             )
             tipo = type(raw_mc).__name__
-            print(
-                f"[A6 _extrair] inner_mc VAZIO mas state.market_context tem "
-                f"type={tipo} len={len(raw_mc) if hasattr(raw_mc,'__len__') else '?'} "
-                f"preview={preview!r}"
+            logger.warning(
+                "A6 inner_mc VAZIO mas state.market_context tem conteúdo",
+                extra={
+                    "agent": "A6",
+                    "raw_type": tipo,
+                    "preview": preview[:200] if preview else "",
+                },
             )
             # Fallback 2: se mc tem chaves mas não 'market_context', tenta usar mc direto
             if isinstance(mc, dict) and mc:
@@ -1225,9 +1323,16 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                     inner_mc = mc
                     cidade = inner_mc.get("cidade", "")
                     bairro = inner_mc.get("bairro", "")
-                    print(f"[A6 _extrair] Recuperado via fallback flat: chaves={list(mc.keys())[:10]}")
-        except Exception as e:
-            print(f"[A6 _extrair] diagnostic falhou: {type(e).__name__}: {e}")
+                    logger.info(
+                        "A6 inner_mc recuperado via fallback flat",
+                        extra={"agent": "A6", "keys": list(mc.keys())[:10]},
+                    )
+        except Exception:
+            logger.warning(
+                "A6 diagnostic fallback falhou",
+                exc_info=True,
+                extra={"agent": "A6"},
+            )
 
     # ── Output: análise competitiva (A3b) ──
     ic_raw = _parse_market_context(state.get("inteligencia_competitiva"))
@@ -1266,7 +1371,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         if isinstance(geo_raw.get("candidatos"), list)
         else []
     )
-    ranked = _rank_candidatos_for_top3(candidatos)
+    ranked = _rank_candidatos_for_top3(candidatos)  # pyright: ignore[reportArgumentType]
     top_3 = [_enriquecer_candidato_investigacao(c) for c in (ranked[:3] if ranked else [])]
     investigacoes_resumo = (
         geo_raw.get("investigacoes_imoveis")
@@ -1306,6 +1411,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 cidade_efetiva, uf_mc, dias=90, limit=50
             )
         except Exception:
+            logger.warning(
+                "A6 entrantes_cnpj fallback falhou — seção CNPJ pode ficar vazia",
+                exc_info=True,
+                extra={"agent": "A6", "context": "entrantes_cnpj_fallback"},
+            )
             entrantes_block = {}
 
     obras_cno_block = state.get("obras_cno_pronto") or {}
@@ -1316,6 +1426,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         try:
             obras_cno_block = _precompute_obras_cno(type("Ctx", (), {"state": state})())
         except Exception:
+            logger.warning(
+                "A6 obras_cno fallback falhou — seção obras pode ficar vazia",
+                exc_info=True,
+                extra={"agent": "A6", "context": "obras_cno_fallback"},
+            )
             obras_cno_block = {}
 
     # Fallback: A0 pode ter embutido obras no fatos_parque_cnpj
@@ -1336,7 +1451,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                     benchmark_tempo=bench_emb if isinstance(bench_emb, dict) else None,
                 )
             except Exception:
-                pass
+                logger.error(
+                    "A6 slim_obras_para_relatorio (embedded CNO) falhou",
+                    exc_info=True,
+                    extra={"agent": "A6", "context": "obras_cno_slim_embedded"},
+                )
 
     # ── distribuicao_geografica: tenta 3 fontes em ordem ──
     # 1. bairros_alternativos_pronto (computado no _a6_precompute_callback)
@@ -1636,15 +1755,15 @@ def _build_cobertura_redes_a0(
         # ADK pode serializar output_key como lista quando o LLM retornou só
         # array (sem o envelope dict esperado). Loga pra debugar — caller cai
         # no fallback abaixo (deduz cobertura a partir do inner_ic).
-        print(
-            "[a6:_build_cobertura_redes_a0] WARN: cs_raw veio como list, "
-            f"esperado dict — usando fallback A3b. (len={len(cs_raw)})"
+        logger.warning(
+            "A6 cs_raw veio como list, esperado dict — usando fallback A3b",
+            extra={"agent": "A6", "cs_raw_len": len(cs_raw)},
         )
         src = {}
     elif cs_raw is not None:
-        print(
-            f"[a6:_build_cobertura_redes_a0] WARN: cs_raw tipo inesperado "
-            f"{type(cs_raw).__name__} — usando fallback."
+        logger.warning(
+            "A6 cs_raw tipo inesperado — usando fallback",
+            extra={"agent": "A6", "cs_raw_type": type(cs_raw).__name__},
         )
 
     redes_cobertas = src.get("redes_a0_cobertas") if isinstance(src.get("redes_a0_cobertas"), list) else []
@@ -1669,12 +1788,12 @@ def _build_cobertura_redes_a0(
                 for c in comp_set:
                     nome = (c.get("nome") or "").lower() if isinstance(c, dict) else ""
                     if rede_lc and rede_lc in nome:
-                        redes_cobertas.append(rede)
+                        redes_cobertas.append(rede)  # pyright: ignore[reportOptionalMemberAccess]
                         break
 
     # Deriva nao_encontradas se ainda vazio (rede solicitada que NÃO está em cobertas)
     if not redes_nao_encontradas and redes_solicitadas:
-        cobertas_set = {r.lower() for r in redes_cobertas}
+        cobertas_set = {r.lower() for r in redes_cobertas}  # pyright: ignore[reportOptionalIterable]
         redes_nao_encontradas = [
             r for r in redes_solicitadas if r.lower() not in cobertas_set
         ]
@@ -1697,17 +1816,21 @@ def _build_cobertura_redes_a0(
                 if redes_locais_osm:
                     redes_cobertas = list(redes_locais_osm)
             except Exception:
-                pass
+                logger.error(
+                    "A6 inferir_redes_de_concorrentes falhou",
+                    exc_info=True,
+                    extra={"agent": "A6", "context": "_build_cobertura_redes_inferir"},
+                )
 
-    redes_locais_validadas = list(dict.fromkeys(redes_cobertas))
+    redes_locais_validadas = list(dict.fromkeys(redes_cobertas))  # pyright: ignore[reportArgumentType]
 
     return {
         "redes_solicitadas": redes_solicitadas,
         "redes_cobertas": redes_locais_validadas,
         "redes_locais_validadas": redes_locais_validadas,
         "redes_detectadas_osm": redes_locais_osm,
-        "redes_nao_encontradas": list(dict.fromkeys(redes_nao_encontradas)),
-        "concorrentes_excluidos": concorrentes_excluidos[:10],  # cap pra não inflar JSON
+        "redes_nao_encontradas": list(dict.fromkeys(redes_nao_encontradas)),  # pyright: ignore[reportArgumentType]
+        "concorrentes_excluidos": concorrentes_excluidos[:10],  # cap pra não inflar JSON  # pyright: ignore[reportOptionalSubscript]
         "tem_redes_fantasma": bool(redes_nao_encontradas),
         "fonte_redes_locais": (
             "overpass_osm"
@@ -1727,18 +1850,15 @@ def _a6_after_agent_callback(callback_context):
     Falhas no Supabase NUNCA bloqueiam pipeline — só geram entrada em
     metrics/supabase_writes/writer.log.
     """
+    start = time.perf_counter()
     try:
         relatorio = _extrair_relatorio_estruturado(callback_context)
 
-        # ── A3c CompetitorMapper (modo SHADOW — GymSite #127) ──
-        # A3c grava `oferta_concorrentes` no state. A6 NÃO consome no JSON
-        # principal (shadow), mas anexamos aqui pro writer persistir em
-        # competidores.oferta_mapeada e nós inspecionarmos via SQL.
+        # Shadow A3c
         try:
             state_shadow = getattr(callback_context, "state", {}) or {}
             oferta_raw = state_shadow.get("oferta_concorrentes")
             if oferta_raw:
-                # pode vir como string JSON do LLM com fence ```json
                 if isinstance(oferta_raw, str):
                     txt = oferta_raw.strip()
                     if txt.startswith("```"):
@@ -1747,11 +1867,20 @@ def _a6_after_agent_callback(callback_context):
                     try:
                         oferta_raw = json.loads(txt)
                     except Exception:
+                        logger.warning(
+                            "A6 shadow A3c oferta JSON inválido",
+                            exc_info=True,
+                            extra={"agent": "A6", "context": "shadow_a3c_oferta_json"},
+                        )
                         oferta_raw = None
                 if isinstance(oferta_raw, dict):
                     relatorio["oferta_concorrentes"] = oferta_raw
         except Exception:
-            pass  # shadow nunca bloqueia
+            logger.warning(
+                "A6 shadow A3c parsing falhou",
+                exc_info=True,
+                extra={"agent": "A6"},
+            )
 
         _RELATORIOS_DIR.mkdir(parents=True, exist_ok=True)
         path = _RELATORIOS_DIR / f"{relatorio['id']}.json"
@@ -1761,25 +1890,21 @@ def _a6_after_agent_callback(callback_context):
         )
         callback_context.state["relatorio_local_id"] = relatorio["id"]
 
-        # Gravação paralela no Supabase (fail-safe — não bloqueia em erro)
+        # Supabase + A8
         try:
             from db.supabase_writer import write_relatorio_failsafe
             state = getattr(callback_context, "state", {}) or {}
             markdown = state.get("relatorio_md") if isinstance(state.get("relatorio_md"), str) else None
-            # Modo API HTTP: state["relatorio_id"] aponta pro stub pré-criado
-            # pelo endpoint POST /api/relatorios. Quando ausente (CLI/adk web),
-            # o writer insere um novo header com UUID gerado pelo Postgres.
             relatorio_id = state.get("relatorio_id") if isinstance(state.get("relatorio_id"), str) else None
             write_relatorio_failsafe(relatorio, markdown, relatorio_id=relatorio_id)
 
-            # A8 — validação cruzada pós-A6 (fail-safe)
             try:
                 import os
                 from tools.a8_runner import persist_validacao, run_a8_validation
 
                 validacao = run_a8_validation(
                     markdown or "",
-                    state if isinstance(state, dict) else {},
+                    state,
                     relatorio=relatorio,
                 )
                 if validacao:
@@ -1797,11 +1922,32 @@ def _a6_after_agent_callback(callback_context):
                     if rid:
                         persist_validacao(str(rid), str(org_id), validacao)
             except Exception:
-                pass
+                logger.warning(
+                    "A6 A8 validation/persist falhou",
+                    exc_info=True,
+                    extra={"agent": "A6"},
+                )
         except Exception:
-            pass  # falha total do import/writer não bloqueia o pipeline
+            logger.warning(
+                "A6 Supabase writer falhou — filesystem é source-of-truth",
+                exc_info=True,
+                extra={"agent": "A6"},
+            )
+
+        elapsed = time.perf_counter() - start
+        logger.info(
+            "A6 after_agent completed in %.2fs | id=%s",
+            elapsed,
+            relatorio.get("id"),
+            extra={"agent": "A6"},
+        )
+
     except Exception:
-        pass
+        logger.error(
+            "A6 after_agent_callback FALHA TOTAL — relatório NÃO persistido",
+            exc_info=True,
+            extra={"agent": "A6"},
+        )
 
 
 report_consolidator_agent = Agent(

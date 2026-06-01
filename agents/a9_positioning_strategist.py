@@ -22,15 +22,20 @@ SAÍDAS:
 
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
+import time
 from pathlib import Path
+
+logger = logging.getLogger("gymsite.a9")
 
 from google.adk.agents import Agent
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
 _GENERATE_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(thinking_budget=8192),
+    thinking_config=types.ThinkingConfig(thinking_budget=8192),  # pyright: ignore[reportCallIssue]
 )
 
 _RELATORIOS_DIR = Path(__file__).resolve().parent.parent / "metrics" / "relatorios"
@@ -57,6 +62,11 @@ def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None
         return
     path = _RELATORIOS_DIR / f"{relatorio_local_id}.json"
     if not path.is_file():
+        logger.warning(
+            "A9 patch: arquivo não encontrado %s",
+            path,
+            extra={"agent": "A9"},
+        )
         return
     try:
         rel = json.loads(path.read_text(encoding="utf-8"))
@@ -66,22 +76,58 @@ def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None
             rel["output_consolidado"] = out
         out["posicionamento_estrategico"] = posicionamento
         path.write_text(json.dumps(rel, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info(
+            "A9 patch JSON local OK id=%s",
+            relatorio_local_id,
+            extra={"agent": "A9"},
+        )
     except Exception as e:
-        print(f"[A9] aviso: falha patch JSON local: {e}")
+        logger.warning(
+            "A9 patch JSON local falhou id=%s: %s",
+            relatorio_local_id,
+            e,
+            exc_info=True,
+            extra={"agent": "A9"},
+        )
 
 
 def _a9_cache_prompt(state: dict) -> str:
-    """Chave semântica A9 — cidade/bairro + hash leve do contexto competitivo."""
+    """
+    Chave semântica A9 com hash de concorrentes para evitar false positives.
+
+    Inclui hash dos top-5 place_ids/nomes para distinguir bairros com mesmo
+    número de concorrentes mas perfis competitivos diferentes.
+    """
     cidade = str(state.get("cidade") or state.get("input_cidade") or "").strip().lower()
     bairro = str(state.get("bairro") or state.get("input_bairro") or "").strip().lower()
     tipo = str(state.get("tipo_negocio") or "academia").strip().lower()
+
+    # Hash dos top-5 concorrentes para evitar false positives
     ic = state.get("inteligencia_competitiva") or {}
-    n_conc = 0
-    if isinstance(ic, dict):
-        inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
-        if isinstance(inner, dict):
-            n_conc = len(inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
-    return f"positioning_a9:{cidade}:{bairro}:{tipo}:conc_{n_conc}"
+    inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+    concorrentes = (
+        (inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
+        if isinstance(inner, dict)
+        else []
+    )
+
+    # Extrai identificadores únicos dos top-5 concorrentes
+    top5_ids = []
+    for c in concorrentes[:5]:
+        if isinstance(c, dict):
+            pid = c.get("place_id") or c.get("nome") or ""
+            if pid:
+                top5_ids.append(str(pid).strip().lower())
+
+    # Hash determinístico dos concorrentes
+    conc_hash = "none"
+    if top5_ids:
+        sorted_ids = sorted(top5_ids)
+        conc_hash = hashlib.md5("|".join(sorted_ids).encode()).hexdigest()[:8]
+
+    n_conc = len(concorrentes) if isinstance(concorrentes, list) else 0
+
+    return f"positioning_a9:{cidade}:{bairro}:{tipo}:conc_{n_conc}:{conc_hash}"
 
 
 def _a9_before_model_callback(callback_context, llm_request):
@@ -91,10 +137,24 @@ def _a9_before_model_callback(callback_context, llm_request):
 
         state = getattr(callback_context, "state", {}) or {}
         prompt_key = _a9_cache_prompt(state)
-        cached = langcache_search(prompt_key, similarity_threshold=0.88)
+
+        # Hash do prompt completo como atributo para evitar false positives
+        # quando dois prompts diferentes têm os mesmos primeiros 1024 chars
+        full_prompt_hash = hashlib.sha256(prompt_key.encode()).hexdigest()[:16]
+
+        cached = langcache_search(
+            prompt_key,
+            similarity_threshold=0.88,
+            attributes={"prompt_hash": full_prompt_hash, "agent": "a9"},
+        )
         if not cached:
             return None
-        print(f"[A9] LangCache hit: {prompt_key[:80]}")
+
+        logger.info(
+            "A9 LangCache HIT: %s",
+            prompt_key[:80],
+            extra={"agent": "A9", "cache_hit": True},
+        )
         return LlmResponse(
             content=types.Content(
                 role="model",
@@ -103,8 +163,12 @@ def _a9_before_model_callback(callback_context, llm_request):
             turn_complete=True,
             custom_metadata={"langcache_hit": True},
         )
-    except Exception as e:
-        print(f"[A9] LangCache before_model skip: {e}")
+    except Exception:
+        logger.warning(
+            "A9 LangCache before_model falhou — prosseguindo sem cache",
+            exc_info=True,
+            extra={"agent": "A9"},
+        )
         return None
 
 
@@ -121,18 +185,33 @@ def _a9_after_model_callback(callback_context, llm_response):
                 if getattr(part, "text", None):
                     text += part.text
         text = text.strip()
+
         meta = getattr(llm_response, "custom_metadata", None) or {}
         if meta.get("langcache_hit"):
             return llm_response
+
         if text:
-            langcache_set(_a9_cache_prompt(state), text)
-    except Exception as e:
-        print(f"[A9] LangCache after_model skip: {e}")
+            prompt_key = _a9_cache_prompt(state)
+            full_prompt_hash = hashlib.sha256(prompt_key.encode()).hexdigest()[:16]
+
+            langcache_set(
+                prompt_key,
+                text,
+                attributes={"prompt_hash": full_prompt_hash, "agent": "a9"},
+            )
+            logger.debug("A9 LangCache SET OK", extra={"agent": "A9"})
+    except Exception:
+        logger.warning(
+            "A9 LangCache after_model falhou",
+            exc_info=True,
+            extra={"agent": "A9"},
+        )
     return llm_response
 
 
 def _a9_after_agent_callback(callback_context):
     """Parseia JSON do output_key e persiste no state + JSON local + Supabase."""
+    start = time.perf_counter()
     try:
         state = getattr(callback_context, "state", {}) or {}
         raw = state.get("relatorio_posicionamento_md")
@@ -148,7 +227,13 @@ def _a9_after_agent_callback(callback_context):
         veredito = parsed.get("veredito_posicionamento", "N/A")
         gaps = len(parsed.get("gaps_identificados") or [])
         ticket = (parsed.get("recomendacao_ticket") or {}).get("ticket_recomendado", "N/A")
-        print(f"[A9] Posicionamento gerado: veredito={veredito}, gaps={gaps}, ticket=R${ticket}")
+        logger.info(
+            "A9 posicionamento OK: veredito=%s gaps=%d ticket=R$%s",
+            veredito,
+            gaps,
+            ticket,
+            extra={"agent": "A9"},
+        )
 
         local_id = state.get("relatorio_local_id")
         if isinstance(local_id, str) and local_id:
@@ -161,7 +246,19 @@ def _a9_after_agent_callback(callback_context):
 
                 write_posicionamento_failsafe(rel_uuid, parsed)
             except Exception as e:
-                print(f"[A9] aviso: Supabase posicionamento: {e}")
+                logger.warning(
+                    "A9 Supabase posicionamento falhou: %s",
+                    e,
+                    exc_info=True,
+                    extra={"agent": "A9"},
+                )
+
+        elapsed = time.perf_counter() - start
+        logger.info(
+            "A9 after_agent completed in %.2fs",
+            elapsed,
+            extra={"agent": "A9"},
+        )
 
     except json.JSONDecodeError as e:
         st = getattr(callback_context, "state", {}) or {}
@@ -170,12 +267,20 @@ def _a9_after_agent_callback(callback_context):
             "erro": f"Falha ao parsear JSON: {e}",
             "raw_output": raw_preview,
         }
-        print(f"[A9] ERRO ao parsear JSON: {e}")
+        logger.error(
+            "A9 ERRO ao parsear JSON",
+            exc_info=True,
+            extra={"agent": "A9"},
+        )
     except Exception as e:
         callback_context.state["relatorio_posicionamento"] = {
             "erro": f"Erro inesperado: {e}",
         }
-        print(f"[A9] ERRO inesperado: {e}")
+        logger.error(
+            "A9 ERRO inesperado no after_agent",
+            exc_info=True,
+            extra={"agent": "A9"},
+        )
 
 
 positioning_strategist_agent = Agent(

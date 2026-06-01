@@ -44,6 +44,8 @@ metrics/
 .env.*.local
 *.pem
 *.key
+*-sa-key.json
+gymsite-pipeline-sa-key.json
 
 # Docs (nao precisam no container)
 docs/

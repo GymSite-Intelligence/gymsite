@@ -75,10 +75,17 @@ jobs:
 
       - name: Smoke test container
         run: |
-          docker run -d --name gymsite-smoke -p 8000:8000 --env-file .env.example gymsite-api:test
-          sleep 10
-          curl -sf http://localhost:8000/health || (docker logs gymsite-smoke && exit 1)
-          docker stop gymsite-smoke
+          docker run -d --name gymsite-smoke -p 8000:8000 --env-file .env.production.example gymsite-api:test
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:8000/health; then
+              docker stop gymsite-smoke
+              exit 0
+            fi
+            sleep 5
+          done
+          docker logs gymsite-smoke
+          docker stop gymsite-smoke || true
+          exit 1
 
   # ═══════════════════════════════════════════════════════════════════════════
   # CD — Push to GHCR + Deploy

@@ -6,6 +6,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import threading
+import time
 from typing import Any, Optional
 
 logger = logging.getLogger("gymsite.a8")
@@ -23,16 +25,36 @@ async def run_a8_validation_async(
     custo_brl: Optional[float] = None,
 ) -> Optional[dict[str, Any]]:
     if not a8_habilitado():
+        logger.debug("A8 desabilitado via env var", extra={"agent": "A8"})
         return None
-    from agents.a8_validator import A8ValidadorCruzado
 
-    validador = A8ValidadorCruzado()
-    return await validador.validar(
-        relatorio_markdown,
-        state,
-        relatorio=relatorio,
-        custo_brl=custo_brl,
-    )
+    start = time.perf_counter()
+    try:
+        from agents.a8_validator import A8ValidadorCruzado
+
+        validador = A8ValidadorCruzado()
+        result = await validador.validar(
+            relatorio_markdown, state, relatorio=relatorio, custo_brl=custo_brl
+        )
+        elapsed = time.perf_counter() - start
+        logger.info(
+            "A8 validation completed in %.2fs | status=%s | claims=%d",
+            elapsed,
+            result.get("status_validacao") if result else "NONE",
+            result.get("claims_verificadas", 0) if result else 0,
+            extra={"agent": "A8"},
+        )
+        return result
+    except Exception as e:
+        elapsed = time.perf_counter() - start
+        logger.error(
+            "A8 validation falhou após %.2fs: %s",
+            elapsed,
+            e,
+            exc_info=True,
+            extra={"agent": "A8"},
+        )
+        return None
 
 
 def run_a8_validation(
@@ -50,6 +72,7 @@ def run_a8_validation(
 
         if loop and loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(
                     asyncio.run,
@@ -58,9 +81,9 @@ def run_a8_validation(
                         state,
                         relatorio=relatorio,
                         custo_brl=custo_brl,
-                    )
+                    ),
                 )
-                return future.result()
+                return future.result(timeout=120)
         else:
             return asyncio.run(
                 run_a8_validation_async(
@@ -71,21 +94,26 @@ def run_a8_validation(
                 )
             )
     except Exception as e:
-        logger.warning("A8 falhou: %s", e)
+        logger.warning(
+            "A8 run_a8_validation falhou: %s",
+            e,
+            exc_info=True,
+            extra={"agent": "A8"},
+        )
         return None
 
 
-def persist_validacao(
-    relatorio_id: str,
-    org_id: str,
-    validacao: dict[str, Any],
-) -> bool:
-    """INSERT em validacoes. Retorna False se falhar (não bloqueia pipeline)."""
+def _persist_validacao_sync(relatorio_id: str, org_id: str, validacao: dict[str, Any]) -> None:
+    """Executa INSERT síncrono em thread separada."""
     try:
         url = os.getenv("SUPABASE_URL", "").strip()
         key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
         if not url or not key:
-            return False
+            logger.warning(
+                "A8 persist: SUPABASE_URL ou KEY ausentes",
+                extra={"agent": "A8"},
+            )
+            return
         from supabase import create_client
 
         sb = create_client(url, key)
@@ -106,7 +134,37 @@ def persist_validacao(
             "payload": validacao,
         }
         sb.table("validacoes").insert(row).execute()
+        logger.info(
+            "A8 persist_validacao OK rel=%s",
+            relatorio_id,
+            extra={"agent": "A8"},
+        )
+    except Exception as e:
+        logger.warning(
+            "A8 persist_validacao falhou rel=%s: %s",
+            relatorio_id,
+            e,
+            exc_info=True,
+            extra={"agent": "A8"},
+        )
+
+
+def persist_validacao(relatorio_id: str, org_id: str, validacao: dict[str, Any]) -> bool:
+    """Enfileira persistência em background thread. Retorna imediatamente."""
+    try:
+        t = threading.Thread(
+            target=_persist_validacao_sync,
+            args=(relatorio_id, org_id, validacao),
+            daemon=True,
+            name="a8-persist",
+        )
+        t.start()
         return True
     except Exception as e:
-        logger.warning("persist validacao falhou rel=%s: %s", relatorio_id, e)
+        logger.warning(
+            "A8 failed to spawn persist thread: %s",
+            e,
+            exc_info=True,
+            extra={"agent": "A8"},
+        )
         return False
