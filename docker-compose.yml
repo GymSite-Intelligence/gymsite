@@ -12,12 +12,17 @@ services:
     volumes:
       # CNO dataset (read-only) — Configure no .env: CNO_DATA_DIR_HOST=C:\Users\marce\Downloads\cno_extract
       - ${CNO_DATA_DIR_HOST:-./cno_data}:/data/cno:ro
+      # Service Account Vertex (opcional): credentials/service-account.json
+      - ./credentials:/app/credentials:ro
       # Cache de pip (opcional, pra rebuild rápido em dev)
       - pip_cache:/home/appuser/.cache/pip:rw
       # Playwright cache (reutilizável entre restarts)
       - playwright_cache:/home/appuser/.local/share/ms-playwright:rw
     env_file:
       - .env
+    # OpenClaw Kimi (porta 8001 no host) — OPENCLAW_URL=http://host.docker.internal:8001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       # Performance pipeline (P0)
       DEEP_RESEARCH_AGENT: deep-research-preview-04-2026

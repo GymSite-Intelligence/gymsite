@@ -169,6 +169,28 @@ async def lifespan(app: FastAPI):
     logger.info("GymSite API iniciando...")
     _register_signal_handlers(_shutdown_mgr)
 
+    try:
+        from tools._genai_client import is_vertex_mode
+
+        if is_vertex_mode():
+            creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+            if creds and not os.path.isfile(creds):
+                logger.error(
+                    "GOOGLE_APPLICATION_CREDENTIALS=%s não encontrado — pipeline ADK vai falhar",
+                    creds,
+                )
+        else:
+            gkey = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
+            if gkey.startswith("AQ."):
+                logger.error(
+                    "GOOGLE_API_KEY formato AQ.* inválido para pipeline ADK (401). "
+                    "Use AIzaSy... de https://aistudio.google.com/apikey ou Vertex."
+                )
+            elif not gkey:
+                logger.warning("GOOGLE_API_KEY ausente — agentes Gemini falharão")
+    except Exception as e:
+        logger.warning("Gemini auth startup check skip: %s", e)
+
     global _queue
     _queue = RedisQueue(gymsite_worker)
     worker_task = asyncio.create_task(_queue.start_worker())
@@ -1105,11 +1127,11 @@ class PropostaUpdateInput(BaseModel):
 
 
 @app.get("/api/custos/propostas")
-def list_propostas_otimizacao(status: str | None = None) -> list[dict]:
+def list_propostas_otimizacao(request: Request, status: str | None = None) -> list[dict]:
     """Lista propostas de otimização da org do usuário autenticado."""
+    user_id, _ = _require_authenticated(request)
     sb = _supabase_client()
-    user = sb.auth.get_user().user
-    orgs = _user_org_ids(sb, user.id if user else "")
+    orgs = _user_org_ids(sb, user_id)
     if not orgs:
         return []
 
@@ -1121,17 +1143,17 @@ def list_propostas_otimizacao(status: str | None = None) -> list[dict]:
 
 
 @app.post("/api/custos/propostas")
-def criar_proposta_otimizacao(body: PropostaCreateInput) -> dict:
-    """Cria uma proposta de otimização. Aceita service_role ou user autenticado."""
+def criar_proposta_otimizacao(request: Request, body: PropostaCreateInput) -> dict:
+    """Cria uma proposta de otimização para a org do usuário autenticado."""
+    user_id, _ = _require_authenticated(request)
     sb = _supabase_client()
-    user = sb.auth.get_user().user
-    orgs = _user_org_ids(sb, user.id if user else "")
+    orgs = _user_org_ids(sb, user_id)
     if not orgs:
         raise HTTPException(status_code=403, detail="Usuário sem org")
 
     record = {
         "org_id": orgs[0],
-        "criado_por": user.id if user else None,
+        "criado_por": user_id,
         "tipo": body.tipo,
         "agente": body.agente,
         "modelo_atual": body.modelo_atual,
@@ -1149,12 +1171,12 @@ def criar_proposta_otimizacao(body: PropostaCreateInput) -> dict:
 
 
 @app.patch("/api/custos/propostas/{proposta_id}")
-def atualizar_proposta_otimizacao(proposta_id: str, body: PropostaUpdateInput) -> dict:
+def atualizar_proposta_otimizacao(
+    request: Request, proposta_id: str, body: PropostaUpdateInput
+) -> dict:
     """Atualiza status de uma proposta (aprovar, rejeitar, implementar)."""
+    user_id, _ = _require_authenticated(request)
     sb = _supabase_client()
-    user = sb.auth.get_user().user
-    if not user:
-        raise HTTPException(status_code=401, detail="Não autenticado")
 
     # Busca proposta para validar permissão
     res_get = sb.table("otimizacoes_custo").select("*").eq("id", proposta_id).single().execute()
@@ -1162,7 +1184,7 @@ def atualizar_proposta_otimizacao(proposta_id: str, body: PropostaUpdateInput) -
         raise HTTPException(status_code=404, detail="Proposta não encontrada")
 
     proposta = res_get.data
-    orgs = _user_org_ids(sb, user.id)
+    orgs = _user_org_ids(sb, user_id)
     if str(proposta["org_id"]) not in orgs:
         raise HTTPException(status_code=403, detail="Sem permissão")
 
@@ -1170,11 +1192,11 @@ def atualizar_proposta_otimizacao(proposta_id: str, body: PropostaUpdateInput) -
     now = datetime.now(timezone.utc).isoformat()
 
     if body.status == "aprovada":
-        update["aprovado_por"] = user.id
+        update["aprovado_por"] = user_id
         update["aprovado_em"] = now
         update["justificativa_aprovacao"] = body.justificativa
     elif body.status == "implementada":
-        update["implementado_por"] = user.id
+        update["implementado_por"] = user_id
         update["implementado_em"] = now
         update["resultado_observacao"] = body.resultado_observacao
         if body.economia_brl_real is not None:

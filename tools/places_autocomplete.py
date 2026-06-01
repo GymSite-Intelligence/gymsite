@@ -6,6 +6,7 @@ Chave server-side: GOOGLE_MAPS_API_KEY (ver tools/google_maps_key.py).
 """
 from __future__ import annotations
 
+import json
 import logging
 import unicodedata
 from typing import Any, Optional
@@ -50,7 +51,34 @@ def _matches_municipio(
 def _places_http_error(status_code: int, detail: str) -> str:
     """Mensagem amigável para 401/403 da Places API (New)."""
     detail_norm = (detail or "").lower()
+    google_msg = ""
+    try:
+        payload = json.loads(detail)
+        google_msg = (
+            (payload.get("error") or {}).get("message") or ""
+        ).strip()
+        if google_msg:
+            detail_norm = f"{detail_norm} {google_msg.lower()}"
+    except Exception:
+        pass
+
     if status_code in (401, 403):
+        if "billing" in detail_norm or "enable billing" in detail_norm:
+            return (
+                "Billing desativado no projeto Google Cloud desta chave: "
+                "https://console.cloud.google.com/billing — depois ative "
+                "Places API (New) e Geocoding API. Valide em GET /health/maps."
+            )
+        if (
+            google_msg.lower() == "the caller does not have permission"
+            or "permission_denied" in detail_norm
+        ):
+            return (
+                "Places API (New) negou acesso (403): habilite billing no projeto, "
+                "ative Places API (New) + Geocoding na Library e inclua ambas nas "
+                "restrições da chave (ou Don't restrict em dev). "
+                "Diagnóstico: GET /health/maps"
+            )
         if "api_key_service_blocked" in detail_norm or "are blocked" in detail_norm:
             return (
                 "API key bloqueada para Places API (New): em Credentials, edite a chave e "

@@ -2,7 +2,7 @@
 # Docs: https://pyrefly.org/
 
 # Python version target for type checking
-python-version = "3.14"
+python-version = "3.12"
 
 # Files to include in type checking
 project-includes = ["**/*.py"]

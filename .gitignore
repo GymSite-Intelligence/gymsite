@@ -4,6 +4,7 @@
 .env.*.local
 .env.tunnel
 .env.production
+openclaw_kimi_server.env
 .env.production.*.local
 credentials/
 *.pem
