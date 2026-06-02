@@ -6,15 +6,42 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import threading
 import time
 from typing import Any, Optional
 
 logger = logging.getLogger("gymsite.a8")
 
+_UUID_RE = (
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+)
+
+_A8_TIMEOUT_SEC = int(os.getenv("A8_VALIDATION_TIMEOUT_SEC", "120"))
+
 
 def a8_habilitado() -> bool:
     return os.getenv("A8_VALIDATOR_ENABLED", "1").lower() not in ("0", "false", "no")
+
+
+def _resolve_relatorio_uuid(sb, relatorio_id: str) -> str | None:
+    """UUID Supabase a partir de UUID ou adk_run_id (`rpt_*`)."""
+    rid = (relatorio_id or "").strip()
+    if not rid:
+        return None
+    if re.match(_UUID_RE, rid, re.I):
+        return rid
+    if rid.startswith("rpt_"):
+        res = (
+            sb.table("relatorios")
+            .select("id")
+            .eq("adk_run_id", rid)
+            .maybe_single()
+            .execute()
+        )
+        if res.data:
+            return str(res.data["id"])
+    return None
 
 
 async def run_a8_validation_async(
@@ -34,7 +61,10 @@ async def run_a8_validation_async(
 
         validador = A8ValidadorCruzado()
         result = await validador.validar(
-            relatorio_markdown, state, relatorio=relatorio, custo_brl=custo_brl
+            relatorio_markdown,
+            state,
+            relatorio=relatorio,
+            custo_brl=custo_brl,
         )
         elapsed = time.perf_counter() - start
         logger.info(
@@ -83,16 +113,15 @@ def run_a8_validation(
                         custo_brl=custo_brl,
                     ),
                 )
-                return future.result(timeout=120)
-        else:
-            return asyncio.run(
-                run_a8_validation_async(
-                    relatorio_markdown,
-                    state,
-                    relatorio=relatorio,
-                    custo_brl=custo_brl,
-                )
+                return future.result(timeout=_A8_TIMEOUT_SEC)
+        return asyncio.run(
+            run_a8_validation_async(
+                relatorio_markdown,
+                state,
+                relatorio=relatorio,
+                custo_brl=custo_brl,
             )
+        )
     except Exception as e:
         logger.warning(
             "A8 run_a8_validation falhou: %s",
@@ -103,8 +132,12 @@ def run_a8_validation(
         return None
 
 
-def _persist_validacao_sync(relatorio_id: str, org_id: str, validacao: dict[str, Any]) -> None:
-    """Executa INSERT síncrono em thread separada."""
+def _persist_validacao_sync(
+    relatorio_id: str,
+    org_id: str,
+    validacao: dict[str, Any],
+) -> None:
+    """INSERT síncrono em validacoes (service role)."""
     try:
         url = os.getenv("SUPABASE_URL", "").strip()
         key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
@@ -114,13 +147,23 @@ def _persist_validacao_sync(relatorio_id: str, org_id: str, validacao: dict[str,
                 extra={"agent": "A8"},
             )
             return
+        # pyrefly: ignore [missing-module-attribute]
         from supabase import create_client
 
         sb = create_client(url, key)
+        rel_uuid = _resolve_relatorio_uuid(sb, relatorio_id)
+        if not rel_uuid:
+            logger.warning(
+                "A8 persist: relatorio_id inválido ou não encontrado no Supabase: %s",
+                relatorio_id,
+                extra={"agent": "A8"},
+            )
+            return
+
         row = {
-            "relatorio_id": relatorio_id,
+            "relatorio_id": rel_uuid,
             "org_id": org_id,
-            "validacao_id": validacao.get("validacao_id") or f"val_{relatorio_id[:8]}",
+            "validacao_id": validacao.get("validacao_id") or f"val_{rel_uuid[:8]}",
             "status_validacao": validacao.get("status_validacao") or "APROVADO_MINOR_ISSUES",
             "score_validacao": validacao.get("score_validacao") or 0,
             "alertas": validacao.get("alertas") or [],
@@ -136,7 +179,7 @@ def _persist_validacao_sync(relatorio_id: str, org_id: str, validacao: dict[str,
         sb.table("validacoes").insert(row).execute()
         logger.info(
             "A8 persist_validacao OK rel=%s",
-            relatorio_id,
+            rel_uuid,
             extra={"agent": "A8"},
         )
     except Exception as e:
@@ -149,8 +192,14 @@ def _persist_validacao_sync(relatorio_id: str, org_id: str, validacao: dict[str,
         )
 
 
-def persist_validacao(relatorio_id: str, org_id: str, validacao: dict[str, Any]) -> bool:
+def persist_validacao(
+    relatorio_id: str,
+    org_id: str,
+    validacao: dict[str, Any],
+) -> bool:
     """Enfileira persistência em background thread. Retorna imediatamente."""
+    if not relatorio_id or not validacao:
+        return False
     try:
         t = threading.Thread(
             target=_persist_validacao_sync,

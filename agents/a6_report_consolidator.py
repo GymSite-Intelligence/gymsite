@@ -1915,7 +1915,9 @@ def _a6_after_agent_callback(callback_context):
             state = getattr(callback_context, "state", {}) or {}
             markdown = state.get("relatorio_md") if isinstance(state.get("relatorio_md"), str) else None
             relatorio_id = state.get("relatorio_id") if isinstance(state.get("relatorio_id"), str) else None
-            write_relatorio_failsafe(relatorio, markdown, relatorio_id=relatorio_id)
+            supabase_uuid = write_relatorio_failsafe(
+                relatorio, markdown, relatorio_id=relatorio_id
+            )
 
             try:
                 import os
@@ -1932,7 +1934,7 @@ def _a6_after_agent_callback(callback_context):
                         json.dumps(relatorio, ensure_ascii=False, indent=2),
                         encoding="utf-8",
                     )
-                    rid = relatorio_id or relatorio.get("id")
+                    rid = supabase_uuid or relatorio_id or relatorio.get("id")
                     org_id = (
                         relatorio.get("org_id")
                         or os.getenv("SUPABASE_GYMSITE_ORG_ID")
