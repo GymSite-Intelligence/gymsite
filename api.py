@@ -598,8 +598,14 @@ def _build_pipeline_prompt(p: NovoRelatorioInput) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 
 @app.get("/health")
-def health() -> dict:
-    return {"status": "ok", "service": "gymsite-intelligence-api"}
+def health(probe: bool = False) -> dict:
+    """
+  Liveness + componentes críticos.
+  ?probe=1 — ping Supabase (útil em deploy/CI; evite em probes de alta frequência).
+    """
+    from tools.health_components import health_payload
+
+    return health_payload(probe_supabase=probe)
 
 
 @app.get("/api/metrics")
