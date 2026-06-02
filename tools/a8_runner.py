@@ -20,6 +20,17 @@ _UUID_RE = (
 _A8_TIMEOUT_SEC = int(os.getenv("A8_VALIDATION_TIMEOUT_SEC", "120"))
 
 
+def _supabase_client():
+    """Cliente service-role; None se env ausente ou pacote indisponível."""
+    from supabase import create_client  # type: ignore[reportAttributeAccessIssue]
+
+    url = os.getenv("SUPABASE_URL", "").strip()
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if not url or not key:
+        return None
+    return create_client(url, key)
+
+
 def a8_habilitado() -> bool:
     return os.getenv("A8_VALIDATOR_ENABLED", "1").lower() not in ("0", "false", "no")
 
@@ -139,18 +150,13 @@ def _persist_validacao_sync(
 ) -> None:
     """INSERT síncrono em validacoes (service role)."""
     try:
-        url = os.getenv("SUPABASE_URL", "").strip()
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
-        if not url or not key:
+        sb = _supabase_client()
+        if sb is None:
             logger.warning(
                 "A8 persist: SUPABASE_URL ou KEY ausentes",
                 extra={"agent": "A8"},
             )
             return
-        # pyrefly: ignore [missing-module-attribute]
-        from supabase import create_client
-
-        sb = create_client(url, key)
         rel_uuid = _resolve_relatorio_uuid(sb, relatorio_id)
         if not rel_uuid:
             logger.warning(
