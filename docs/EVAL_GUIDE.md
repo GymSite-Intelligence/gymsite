@@ -27,22 +27,19 @@ python eval/run_eval.py --with-positioning
 |------------------|--------|
 | `python eval/run_eval.py --all` | ❌ Não implementado |
 | `cno_validation.json` (arquivo separado) | ❌ Regras ficam em `expected_output.json` → `cno_validation` |
-| `structural_eval.py` | ❌ Pendente |
-| `financial_consistency.py` | ❌ Pendente |
+| `structural_eval.py` | ✅ Gate PR (default) |
+| `financial_consistency_eval.py` | ✅ Gate PR (default) |
 | Leitura de `cno.csv` no CI | ❌ Usa snapshots JSON + `full_report.json` |
 
 ---
 
-## Output esperado (CNO)
+## Output esperado (CNO + structural + financial)
 
 ```text
-[--] anapolis_anapolis_city_20260529 — CNO SKIP
-[--] curitiba_batel_20260512 — CNO SKIP
-[OK] fortaleza_aldeota_20260601 — CNO PASS
-[OK] fortaleza_parangaba_20260528 — CNO PASS
-[OK] niteroi_camboinhas_20260513 — CNO PASS
+[OK] fortaleza_parangaba_20260528 — CNO PASS — STR OK PASS — FIN OK PASS
+[--] anapolis_anapolis_city_20260529 — CNO SKIP — STR OK PASS — FIN OK PASS
 
-5 casos | CNO FAIL: 0
+10 casos | CNO FAIL: 0 | STR FAIL: 0 | FIN FAIL: 0
 ```
 
 | Ícone | Significado |
@@ -52,7 +49,12 @@ python eval/run_eval.py --with-positioning
 | `[XX]` | FAIL (exit code 1) |
 | `[--]` | SKIP (sem `cno_validation` no golden ou eval desabilitado) |
 
-**Exit code:** `0` se nenhum FAIL; `1` se algum caso CNO falhar.
+**Exit code:** `0` se nenhum FAIL em CNO, structural ou financial; `1` se qualquer um falhar.
+
+```powershell
+# Apenas CNO (comportamento legado)
+python eval/run_eval.py --cno-only
+```
 
 ---
 
@@ -82,8 +84,16 @@ python scripts/extract_golden_case.py <uuid>
 
 | Evaluator | Arquivo | Gate PR | Nightly |
 |-----------|---------|---------|---------|
-| CNO consistency | `eval/evaluators/cno_consistency_eval.py` | ✅ (`ci-cd.yml`) | — |
+| CNO consistency | `eval/evaluators/cno_consistency_eval.py` | ✅ | — |
+| Structural | `eval/evaluators/structural_eval.py` | ✅ | — |
+| Financial consistency | `eval/evaluators/financial_consistency_eval.py` | ✅ | — |
 | Positioning quality (LLM) | `eval/evaluators/positioning_quality_eval.py` | ❌ | ✅ (`eval-positioning.yml`) |
+
+### Regras structural / financial (resumo)
+
+- **Structural:** `critical_fields` + `tolerance_fields` vs `output_consolidado`; input `cidade`/`bairro`/`uf`; contagens `candidatos_count` / `competidores_count` com tolerância ±2 (WARN).
+- **Financial:** coerência `veredito` × `score_top1` (APROVADO ≥ 8, RESSALVAS ≥ 6); `modelo_recomendado`; ticket por cenário A4 só quando `viabilidade_3_cenarios` existir no JSON.
+- **SKIP:** `structural_validation.required: false` ou `financial_validation.required: false` no golden.
 
 ---
 

@@ -12,7 +12,7 @@
 
 ## Restrições críticas (não ignorar)
 
-1. **`structural_eval.py` e `financial_consistency.py` não existem.** Não sugira código sem confirmação explícita.
+1. **Eval determinísticos:** `structural_eval.py` + `financial_consistency_eval.py` rodam no default de `run_eval.py` (gate PR). Positioning LLM continua só com `--with-positioning`.
 2. **CLI eval:** `python eval/run_eval.py` ou `--case <case_id>`. **Não existe** `--all`.
 3. **Golden:** regras CNO em `expected_output.json` → `cno_validation`. **Não existe** `cno_validation.json`.
 4. **Encoding CNO:** nunca remova `encoding="latin-1", errors="replace"` nos CSVs (quebra no Windows).
@@ -30,10 +30,13 @@ python -c "import tools.cno_fitness_tools; import agents.a6_report_consolidator;
 # OK
 
 python eval/run_eval.py
-# 10 casos | CNO FAIL: 0  (6 PASS, 4 SKIP)
+# 10 casos | CNO FAIL: 0 | STR FAIL: 0 | FIN FAIL: 0  (WARN em curadoria conhecida)
 
 python eval/run_eval.py --with-positioning
 # POS: SKIP em todos (sem posicionamento_estrategico nos snapshots ainda)
+
+python eval/run_eval.py --cno-only
+# só CNO (legado)
 ```
 
 ---
@@ -45,8 +48,8 @@ python eval/run_eval.py --with-positioning
 | **#1 Silent Failures** | ✅ Produção | Logging A6/A8/A9; fail-safe Supabase writer |
 | **#2 LangCache** | ✅ Produção | TTL 7d, hash concorrentes, métricas hit/miss |
 | **#3 Avaliação (CNO)** | ✅ CI | Job `eval-golden-dataset`; **10** golden cases |
+| **#3 Avaliação (structural/financial)** | ✅ CI | `structural_eval.py`, `financial_consistency_eval.py` |
 | **#3 Avaliação (LLM)** | ✅ Nightly | `positioning_quality_eval.py` + `eval-positioning.yml` |
-| structural_eval / financial_consistency | ⏳ Pendente | **Não existem** no repo |
 
 ---
 
@@ -64,9 +67,11 @@ gymsite_intelligence/
 │   ├── a8_runner.py                 # timeout, persist async, resolve rpt_* → UUID
 │   └── langcache_client.py
 ├── eval/
-│   ├── run_eval.py                  # CNO; --with-positioning para LLM
+│   ├── run_eval.py                  # CNO+STR+FIN; --with-positioning LLM; --cno-only
 │   ├── evaluators/
 │   │   ├── cno_consistency_eval.py
+│   │   ├── structural_eval.py
+│   │   ├── financial_consistency_eval.py
 │   │   └── positioning_quality_eval.py
 │   └── golden_dataset/              # 10 casos
 ├── frontend/                        # Custos: propostas via Supabase RLS (não API)
@@ -192,7 +197,7 @@ Working tree: só `scripts/_debug_cno_niteroi.py` untracked (debug).
 
 | Ação | Motivo |
 |------|--------|
-| Assumir structural/financial eval existem | Não implementados |
+| Ignorar WARN structural (contagens DB vs markdown) | Ver `notes.md` por caso |
 | `run_eval.py --all` ou `cno_validation.json` | Não existem |
 | Remover `errors="replace"` nos CSVs CNO | Windows |
 | Commitar `.env` | Segurança |
@@ -203,11 +208,11 @@ Working tree: só `scripts/_debug_cno_niteroi.py` untracked (debug).
 
 ## Próximos passos (backlog)
 
-1. **Golden com A9:** re-extrair casos após pipeline com `posicionamento_estrategico` (destrava POS eval).
+1. **Golden com A9:** re-extrair 1–2 casos após pipeline com `posicionamento_estrategico` (destrava POS eval).
 2. **Caso `REPROVADO`:** quando existir no Supabase, extrair via `list_golden_candidates.py`.
-3. **structural_eval + financial_consistency** — implementar e registrar em `run_eval.py`.
-4. **Golden 10 → 20** — curadoria + `cno_validation` nos SKIP.
-5. **Secret `GOOGLE_API_KEY`** no GitHub para workflow positioning.
+3. **Golden 10 → 20** — curadoria + `cno_validation` nos SKIP.
+4. **Secret `GOOGLE_API_KEY`** no GitHub para workflow positioning.
+5. **Cenários A4 no JSON:** quando `viabilidade_3_cenarios` entrar nos snapshots, financial valida ticket×modelo.
 
 ---
 

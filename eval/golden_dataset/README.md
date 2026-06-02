@@ -41,13 +41,23 @@ Cada pasta contém `input.json`, `expected_output.json`, `full_report.json` e `n
 | **Referência municipal** | Unidade fora do raio = contexto de preço, não concorrente georreferenciado |
 | **Campo vazio** | `nivel_saturacao` ou concorrentes=0 exige exceção ou fix antes de eval estrito |
 
-## Próximo passo
+## Evaluators
+
+| Evaluator | Arquivo | Gate |
+|-----------|---------|------|
+| CNO | `cno_consistency_eval.py` | PR |
+| Structural | `structural_eval.py` | PR (default) |
+| Financial | `financial_consistency_eval.py` | PR (default) |
+| Positioning (LLM) | `positioning_quality_eval.py` | nightly |
 
 ```powershell
-python eval/run_eval.py                    # CNO (gate PR)
-python eval/run_eval.py --with-positioning   # CNO + LLM A9 (nightly)
+python eval/run_eval.py                      # CNO + structural + financial
+python eval/run_eval.py --cno-only             # só CNO
+python eval/run_eval.py --with-positioning     # + LLM A9 (nightly)
 python eval/run_eval.py --case fortaleza_parangaba_20260528
 ```
+
+## Próximo passo (curadoria)
 
 Ver `docs/EVAL_GUIDE.md` para CLI completa.
 
