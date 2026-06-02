@@ -1,0 +1,55 @@
+{
+  "municipio_rfb": "5865",
+  "cidade": "Niterói",
+  "uf": "RJ",
+  "benchmark_tempo_obra": {
+    "status": "amostra_insuficiente",
+    "cidade": "Niterói",
+    "uf": "RJ",
+    "fonte": "CNO — obras fitness encerradas (município)",
+    "total_encerradas_filtradas": 0,
+    "amostra_valida": 0,
+    "rejeitadas": {
+      "datas_invalidas": 0,
+      "duracao_fora_faixa": 0,
+      "dias_por_m2_fora_faixa": 0
+    },
+    "metricas": {
+      "n": 0
+    },
+    "por_porte_m2": {
+      "pequena": {
+        "n": 0
+      },
+      "media": {
+        "n": 0
+      },
+      "grande": {
+        "n": 0
+      }
+    },
+    "obras_referencia": [],
+    "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento."
+  },
+  "total_fitness_municipio": 0,
+  "bairros": {
+    "Itaipu": {
+      "em_curso_municipio": 0,
+      "em_curso_bairro": 0,
+      "obras_em_curso": [],
+      "todas_situacoes": []
+    },
+    "Piratininga": {
+      "em_curso_municipio": 0,
+      "em_curso_bairro": 0,
+      "obras_em_curso": [],
+      "todas_situacoes": []
+    },
+    "Camboinhas": {
+      "em_curso_municipio": 0,
+      "em_curso_bairro": 0,
+      "obras_em_curso": [],
+      "todas_situacoes": []
+    }
+  }
+}

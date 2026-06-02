@@ -1,0 +1,13 @@
+{
+  "cidade": "Niterói",
+  "bairro": "Camboinhas",
+  "uf": "RJ",
+  "area_m2_min": 300,
+  "area_m2_max": 600,
+  "publico_alvo": "25-40",
+  "genero_alvo": "misto",
+  "tipo_negocio": "academia",
+  "tamanho_preset": "m",
+  "estacionamento_obrigatorio": true,
+  "bairros_indicados": []
+}

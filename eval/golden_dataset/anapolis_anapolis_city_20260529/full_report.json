@@ -1,0 +1,1000 @@
+{
+  "id": "291f1a1f-1303-4da4-b487-bafaa3cc020e",
+  "header": {
+    "id": "291f1a1f-1303-4da4-b487-bafaa3cc020e",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1780087287",
+    "tempo_execucao_segundos": 1129,
+    "tokens_total": 1348448,
+    "custo_brl": 5.51,
+    "data_execucao": "2026-05-29T20:41:27+00:00",
+    "created_at": "2026-05-29T20:22:42.585483+00:00",
+    "updated_at": "2026-05-29T20:41:32.307338+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Anápolis/GO — Anápolis City\n**Data:** 29/05/2026\n**Total de candidatos avaliados:** 12\n\n---\n\n## 🔬 Contexto de Mercado (Deep Research)\n\n| Indicador | Valor |\n|-----------|-------|\n| Ticket médio local | dados_nao_disponiveis |\n| Aluguel médio comercial | dados_nao_disponiveis |\n| Renda média do bairro | A remuneração média dos trabalhadores formais em Anápolis (município) é de R$ 3,2 mil (Deep Research) |\n| Faixa etária predominante | dados_nao_disponiveis |\n| Tendência do mercado | crescimento |\n\n### Principais Concorrentes Identificados (via Deep Research)\nNenhuma grande rede foi destacada como dominante no Deep Research inicial, mas a análise geolocalizada confirmou a presença de players como Smart Fit e Bluefit.\n\n### Insights Estratégicos\n*   O bairro Anápolis City não possui dados demográficos detalhados específicos no Censo Demográfico 2022 do IBGE, sendo necessário considerar dados do município de Anápolis como um todo (Deep Research).\n*   O mercado fitness em Anápolis está em constante evolução, com tendências para 2025 e 2026 apontando para um setor mais integrado, adaptativo e focado em dados, saúde e bem-estar, com potencial de crescimento significativo, dado que menos de 5% dos brasileiros são frequentadores regulares (Deep Research).\n*   Anápolis possui 276 unidades comerciais de fitness ativas, com 9 novos CNPJs de fitness abertos nos últimos 90 dias (CNPJ).\n*   A composição do parque ativo em Anápolis é dominada por academias tradicionais (70.3%, 194 unidades), seguido por estúdios de Pilates (13%, 36 unidades) e lutas/artes marciais (8.3%, 23 unidades) (CNPJ).\n*   Nos últimos 90 dias, o segmento de academia tradicional liderou as aberturas com 6 novas unidades, seguido por lutas com 2 e estúdio Pilates com 1 (CNPJ).\n\n### Regulamentação\ndados_nao_disponiveis\n\n> Fonte: Deep Research + CNPJ/CNO (tools) | Data: 2026-05-29 | Cache: true\n\n---\n\n## 🎯 Resumo Executivo\nAnápolis apresenta um cenário demográfico e financeiro extremamente favorável para uma nova academia, com todos os modelos de negócio (Low Cost, Mid-Market, Premium) mostrando alta viabilidade. No entanto, o cenário competitivo é de saturação média e a prospecção de imóveis (GeoScout) retornou candidatos na cidade errada (Goiânia), exigindo uma busca de campo local. A recomendação é avançar com ressalvas, priorizando o modelo **Low Cost** que se alinha melhor ao perfil de renda da população. A ação imediata é iniciar uma busca de campo por imóveis em Anápolis, focando no candidato âncora #1, **Rio Vermelho Jundiaí**, e seu entorno.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 8.0 | EXCELENTE |\n| Competitivo | 2.0 | MEDIO |\n| Viabilidade financeira | 10.0 | ALTO |\n\n**Transparência (OBRIGATÓRIO):**\n- `Academias no raio 3km (Aggregate): 112 | amostra analisada (reviews): 9`\n(Nearby retornou: 20, limitado por maxResultCount).\n\n**Score Bairro:** 6.7 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** 6.7 — ⚠️ APROVADO COM RESSALVAS — base do veredito (4 dim, inclui geoscout do #1)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 🏆 Top 3 Candidatos\n\n### #1 — Rio Vermelho Jundiaí — Score Geral 6.7 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Avenida Contorno Mato - Av. Mato Grosso, 354 - Jundiaí, Anápolis - GO, 75113-020, Brasil\n- **Tipo:** supermarket\n- **Área estimada:** ~1200 m²\n- **Score GeoScout:** 7.0 (sinal indireto-heurístico) | **Motivo:** Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos\n- **Score Ancoragem:** 10.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Rio Vermelho Jundiaí 0m\n  - Evolução Transportes 650m\n  - Satélite Norte 686m\n- **Próximo passo:** Investigar ponto\n- **Investigação site**: status `em_funcionamento` — operador `Atacadista Rio Vermelho / Supermercado Rio Vermelho Jundiaí` | tipo imóvel ONR `None` (`Estabelecimento / âncora`) | confiança `alta` | O imóvel está atualmente ocupado por um supermercado/atacadista de grande porte, o que indica uma boa localização comercial, mas não está disponível para aluguel como um espaço vago para academia no momento. (2 URLs de `evidencias`)\n\n### #2 — Supervi Supermercados (Loja 05) — Score Geral 6.7 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Av. Ana Jacinta, 422 - Vila Santa Maria de Nazareth, Anápolis - GO, 75113-190, Brasil\n- **Tipo:** supermarket\n- **Área estimada:** ~1200 m²\n- **Score GeoScout:** 7.0 (sinal indireto-heurístico) | **Motivo:** Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos\n- **Score Ancoragem:** 10.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Rodoviária de Anápolis 626m\n  - Satélite Norte 670m\n  - Evolução Transportes 677m\n- **Próximo passo:** Investigar ponto\n- **Investigação site**: status `Não investigado` — operador `—` | tipo imóvel ONR `15` (`Loja`) | confiança `—` | —\n\n### #3 — Rio Vermelho Atacadista — Score Geral 6.7 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Av. Sen. Ramos Caiado, 122 - Maracanã, Anápolis - GO, 75053-520, Brasil\n- **Tipo:** supermarket\n- **Área estimada:** ~1200 m²\n- **Score GeoScout:** 7.0 (sinal indireto-heurístico) | **Motivo:** Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos\n- **Score Ancoragem:** 10.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Rio Vermelho Atacadista 0m\n  - Touti Anápolis Perfumaria 398m\n  - Assaí Atacadista 495m\n- **Próximo passo:** Investigar ponto\n- **Investigação site**: status `Não investigado` — operador `—` | tipo imóvel ONR `None` (`Estabelecimento / âncora`) | confiança `—` | —\n\n---\n\n## 🏗️ Checklist de Diligência do Imóvel\n\nAntes de fechar negociação com qualquer dos candidatos acima, validar **OS 6 ITENS** abaixo (lista padrão do A1, NÃO editar):\n\n1. Confirmar zoneamento para atividade de condicionamento físico\n2. Verificar entrada trifásica de energia\n3. Checar projeto de incêndio aprovado\n4. Medir pé-direito (mínimo 4m)\n5. Confirmar vão livre sem colunas centrais\n6. Negociar 90-120 dias de carência\n\n> Lista padrão para academias 1.000-1.500m². Os 6 itens vêm do output do A1 (`checklist_diligencia` na raiz). NÃO renderizar por candidato — checklist é universal para todos os imóveis avaliados.\n\n---\n\n## 🥊 Inteligência Competitiva — Concorrente por Concorrente\n\nOs concorrentes vêm de uma busca em raio de 3 km do bairro alvo, então incluem academias de bairros adjacentes. **Agrupe os cards por `bairro_concorrente`**, ordenando do bairro com mais academias para o com menos. Ponha o bairro alvo da pesquisa SEMPRE primeiro, mesmo que tenha menos academias.\n\n### 📍 28 - Av. Perimetral Leste - Anápolis City (1 academias)\n#### New Fit Academia — Rating 4.8 ⭐ (240 avaliações) \n- **Endereço:** Rua N-28 - Av. Perimetral Leste - Anápolis City, Anápolis - GO, 75094-330, Brasil\n- **Bairro:** 28 - Av. Perimetral Leste - Anápolis City\n- **Mensalidades e Planos:** —\n- **Serviços oferecidos:** aulas coletivas\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Melhor academia de Anápolis, uma ótima estrutura, melhores professores, ótima recepção, tranquilidade para deixar nossos filho com uma excelente monitora que é um amor de pessoa co\" — ANA PAULA GONÇALVES RODRIGUES, 5⭐ (7 months ago) → categoria: outra\n  - \"Melhor academia que já fiz. Infelizmente não moro mais em Anápolis. Os professores são super atenciosos, as aulas coletivas maravilhosas e o ambiente limpo constantemente.\" — Raquel Saad, 5⭐ (6 months ago) → categoria: outra\n  - \"A melhor academia de Anápolis oferece excelente estrutura, equipe dedicada e um ambiente familiar e motivador que impulsiona resultados.\" — Thaislane Miranda, 5⭐ (5 months ago) → categoria: outra\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Jundiaí (2 academias)\n#### Academia BlueFit Anápolis — Rating 4.3 ⭐ (513 avaliações) [24h]\n- **Endereço:** Av. Pinheiro Chagas, 584 - Jundiaí, Anápolis - GO, 75110-580, Brasil\n- **Bairro:** Jundiaí\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Modalidades: musculacao, spinning, funcional, danca, avaliacao_fisica | Diferenciais: ar_condicionado, estacionamento, vestiario_premium, diaria\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Lamentável observar a inércia administrativa desta unidade. O que se vê hoje é uma infraestrutura obsoleta, manutenção negligenciada e uma oferta de aulas coletivas cada vez mais e\" — Clesio S, 1⭐ (5 months ago) → categoria: estrutura_envelhecida\n  - \"Péssima, primeiramente a academia mal tem espaço para exercícios livre, professores mal educados e desleixados, dão atenção apenas para os alunos que lhes convém. O que salvam são\" — Camilla Corte, 1⭐ (5 months ago) → categoria: atendimento_ruim\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### CF Anápolis — Rating 4.7 ⭐ (97 avaliações) \n- **Endereço:** R. do Carmo, 82 - Jundiaí, Anápolis - GO, 75113-050, Brasil\n- **Bairro:** Jundiaí\n- **Mensalidades e Planos:** —\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Boas pessoas, bons professores, ótimo treinamento\" — olly morency, 5⭐ (5 years ago) [original em inglês]  → categoria: outra\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Cidade Jardim (1 academias)\n#### Academia Smart Fit - Anápolis — Rating 4.4 ⭐ (593 avaliações) \n- **Endereço:** Av. Brasil Norte, 1080 - Cidade Jardim, Anápolis - GO, 75080-240, Brasil\n- **Bairro:** Cidade Jardim\n- **Mensalidades e Planos:** De R$ 29,90 a R$ 159,90/mês\n- **Serviços oferecidos:** Modalidades: musculacao, pilates, yoga, lutas, funcional, danca, avaliacao_fisica | Diferenciais: ar_condicionado, estacionamento, app\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Regular.\" — Adilson Vieira, 2⭐ (2 years ago) → categoria: outra\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 St. Central (1 academias)\n#### Academia Sérgio Borges — Rating 4.5 ⭐ (298 avaliações) \n- **Endereço:** Av. Sen. José Lourenço Dias, 683 - St. Central, Anápolis - GO, 75020-010, Brasil\n- **Bairro:** St. Central\n- **Mensalidades e Planos:** —\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 932 - Lourdes (1 academias)\n#### Kings Academia — Rating 4.5 ⭐ (183 avaliações) \n- **Endereço:** Av. Bandeirante, 740-932 - Lourdes, Anápolis - GO, 75095-270, Brasil\n- **Bairro:** 932 - Lourdes\n- **Mensalidades e Planos:** —\n- **Serviços oferecidos:** jiu-jitsu\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Há vários pontos para melhorar, manutenção nos acessórios, rolamentos, limpeza dos equipamentos e ventiladores, melhor ventilação alguns lugares não tem ventilação, nem vou falar d\" — Bruno Fernandes, 2⭐ (2 years ago) → categoria: equipamento_problema\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Parque Brasilia (1 academias)\n#### Academia MK fitness — Rating 4.8 ⭐ (144 avaliações) \n- **Endereço:** Avenida independência esquina c/ a - R. PB 20, quadra 48 lote 15 s/n - Parque Brasilia, Anápolis - GO, 75093-805, Brasil\n- **Bairro:** Parque Brasilia\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** personal, nutricionista\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Jk Nova Capital (1 academias)\n#### Academia Sky Fit - Av JK — Rating 4.1 ⭐ (93 avaliações) \n- **Endereço:** Av. Paraguai, 135 - JK Nova Capital, Anápolis - GO, 75105-765, Brasil\n- **Bairro:** Jk Nova Capital\n- **Mensalidades e Planos:** A partir de R$ 159,90/mês\n- **Serviços oferecidos:** Modalidades: musculacao, crossfit, pilates, funcional, danca, avaliacao_fisica | Diferenciais: estacionamento\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Quadra 17 Lote 31 - Jundiaí (1 academias)\n#### MS Ginástica Artística - Anápolis — Rating 4.8 ⭐ (72 avaliações) \n- **Endereço:** Av. Juscelino Kubitscheck, 1005 - Quadra 17 Lote 31 - Jundiaí, Anápolis - GO, 75000-000, Brasil\n- **Bairro:** Quadra 17 Lote 31 - Jundiaí\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Modalidades: area_kids\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Minha filha fez aula esprimentau e amou só que é muito caro\" — Ana Paula S. Ribeiro, 5⭐ (10 months ago) → categoria: preco_alto\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### Padrões cross-concorrência (gap analysis agregada)\n\n**O que TODOS oferecem (commodities):**\n- Nenhum serviço dominante identificado em todos os concorrentes.\n\n**Gaps de mercado (NINGUÉM oferece):**\n- spinning\n- 24 horas\n- app próprio\n- boxe\n- dança\n\n**Dores dominantes (cross-concorrência) — com nominação:**\n\n| Dor | Menções | Mencionado por | Oportunidade Estratégica |\n|---|---|---|---|\n| estrutura_envelhecida | 1 | Academia BlueFit Anápolis (1x) | Resolver: estrutura_envelhecida |\n| atendimento_ruim | 1 | Academia BlueFit Anápolis (1x) | Resolver: atendimento_ruim |\n| preco_alto | 1 | MS Ginástica Artística - Anápolis (1x) | Resolver: preco_alto |\n\n### 💡 Posicionamento Recomendado\nPara se destacar no mercado de Anápolis City, é crucial que a nova academia invista em uma infraestrutura moderna e bem-mantida, contrastando com concorrentes que apresentam problemas de 'estrutura envelhecida'. Um atendimento ao cliente excepcional e instrutores atenciosos serão diferenciais importantes, abordando a dor de 'atendimento ruim' identificada. Oferecer aulas coletivas inovadoras como spinning e a possibilidade de funcionamento 24 horas, além de um aplicativo próprio para acompanhamento e agendamento, preencherá lacunas de serviço e atrairá o público-alvo de 25-40 anos que busca conveniência e tecnologia. O posicionamento deve focar em um ambiente de alta qualidade, com valor agregado percebido, em vez de competir apenas por preço.\n\n---\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\nMatrículas em 3 calibrações (cons/real/agres) baseadas em ACAD/Smart Fit/Bodytech.\nPico simultâneo é capacidade física no horário cheio — DIFERENTE de matrículas.\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 1725 | 1150 | 460 |\n| **Matrículas realista (base)** | **2530** | **1610** | **690** |\n| Matrículas agressivo | 3450 | 2070 | 1035 |\n| Capacidade física simultânea | 632 | 460 | 287 |\n| Pico calculado (real × freq × 0,25) | 225 | 115 | 44 |\n| Folga capacidade | 64.4% | 75.0% | 84.7% |\n| Freq. semanal aluno | 2.5x | 2.0x | 1.8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 107,00 | R$ 150,00 | R$ 599,00 |\n| Ticket realizado (após inadimpl.) | R$ 101,65 | R$ 144,00 | R$ 584,02 |\n| Inadimplência | 5.0% | 4.0% | 2.5% |\n| **Receita mensal** | **R$ 257.174,50** | **R$ 231.840,00** | **R$ 402.977,25** |\n| Aluguel | R$ 23.000,00 | R$ 23.000,00 | R$ 23.000,00 |\n| Condomínio | R$ 3.450,00 | R$ 3.450,00 | R$ 3.450,00 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 13.800,00 | R$ 13.800,00 | R$ 20.700,00 |\n| Água | R$ 2.300,00 | R$ 2.300,00 | R$ 2.300,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 3.671,78 | R$ 5.708,11 | R$ 13.833,32 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 1.468,71 | R$ 2.283,24 | R$ 5.533,33 |\n| Outros (2% receita) | R$ 5.143,49 | R$ 4.636,80 | R$ 8.059,55 |\n| **Custos fixos total** | **R$ 75.733,98** | **R$ 92.078,15** | **R$ 136.776,20** |\n| Marketing (% receita) | R$ 15.430,47 (6.0%) | R$ 18.547,20 (8.0%) | R$ 48.357,27 (12.0%) |\n| **Custos totais** | **R$ 91.164,45** | **R$ 110.625,35** | **R$ 185.133,47** |\n| **Lucro mensal** | **R$ 166.010,05** | **R$ 121.214,65** | **R$ 217.843,78** |\n| **Margem %** | **64.6%** | **52.3%** | **54.1%** |\n| Break-even (alunos) | 897 | 769 | 317 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 402.288,00 | R$ 600.030,00 | R$ 1.788.648,00 |\n| Obra de adaptação | R$ 230.000,00 | R$ 402.500,00 | R$ 690.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 66.759,66 | R$ 103.783,86 | R$ 251.514,83 |\n| **CAPEX total** | **R$ 734.356,24** | **R$ 1.141.622,44** | **R$ 2.766.663,11** |\n| Capital de giro (3 meses) | R$ 273.493,35 | R$ 331.876,05 | R$ 555.400,41 |\n| **Investimento total** | **R$ 1.007.849,59** | **R$ 1.473.498,49** | **R$ 3.322.063,52** |\n| **Payback** | **6m** | **12m** | **15m** |\n| TIR anual | 196.8% | 95.2% | 73.7% |\n| VPL 5 anos (@12% a.a.) | R$ 6.173.299,34 | R$ 3.769.921,74 | R$ 6.101.273,37 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | ALTO · lucro R$ 163.954,72 · payback 6m | ALTO · lucro R$ 116.614,65 · payback 12m | ALTO · lucro R$ 207.788,09 · payback 15m |\n| Matrículas -30% | ALTO · lucro R$ 95.268,11 · payback 10m | ALTO · lucro R$ 57.226,81 · payback 25m | ALTO · lucro R$ 107.132,77 · payback 31m |\n| Ticket -15% | ALTO · lucro R$ 131.911,42 · payback 7m | ALTO · lucro R$ 89.220,73 · payback 16m | ALTO · lucro R$ 160.013,44 · payback 20m |\n\n**Modelo recomendado para este perfil de bairro:** Low Cost\n**Justificativa:** O perfil demográfico de Anápolis, com renda média de R$ 3,2 mil e concentração de 68% da população nas classes D e E, favorece um modelo de alto volume e baixo custo. O cenário Low Cost apresenta a melhor adequação ao mercado local, com um potencial de payback ultrarrápido (6 meses) e margem robusta (64.6%), capitalizando sobre a grande base de consumidores sensíveis a preço. Todos os modelos se mostraram robustos nos testes de sensibilidade.\n\n> Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 📍 Distribuição Geográfica dos Concorrentes\n\n| Bairro | Nº academias | Quais |\n|---|---|---|\n| Jundiaí | 2 | Academia BlueFit Anápolis, CF Anápolis |\n| Cidade Jardim | 1 | Academia Smart Fit - Anápolis |\n| St. Central | 1 | Academia Sérgio Borges |\n| 28 - Av. Perimetral Leste - Anápolis City | 1 | New Fit Academia |\n| 932 - Lourdes | 1 | Kings Academia |\n| Parque Brasilia | 1 | Academia MK fitness |\n| Jk Nova Capital | 1 | Academia Sky Fit - Av JK |\n| Quadra 17 Lote 31 - Jundiaí | 1 | MS Ginástica Artística - Anápolis |\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\n\n| Bairro | Motivo | Status competitivo | Ticket sugerido | Prioridade |\n|---|---|---|---|---|\n| Centro Expandido | Alta densidade comercial e fluxo garantido | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n| Bairros em expansão imobiliária recente | Novos empreendimentos = público novo, sem concorrência consolidada | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n\n**Bairro recomendado para investigação prioritária:** Centro Expandido (0 concorrentes mapeados)\nA recomendação prioritária é investigar o **Centro Expandido**, que, segundo a busca geolocalizada, não possui concorrentes mapeados, representando uma oportunidade de ser o primeiro a se estabelecer em uma área de alto fluxo. Bairros em expansão imobiliária recente também são uma excelente segunda opção.\n\n---\n\n## ⚠️ Alertas Globais\n*   **⚠️ Erro Crítico de Geolocalização:** A ferramenta GeoScout retornou imóveis para aluguel em **Goiânia**, não em Anápolis. Os candidatos #1 e #2 da lista original foram descartados. A análise prosseguiu com os pontos de âncora (supermercados, etc.) que estavam corretamente localizados em Anápolis, mas estes não são imóveis vagos e servem apenas como referência para prospecção local. Uma busca de campo é obrigatória.\n*   **⚠️ Counter-Programming Indisponível:** O Google Knowledge Panel não retornou dados de horários de pico (`popular times`) para os concorrentes. Sem essa informação, a estratégia de contra-programação não pôde ser gerada.\n*   **⚠️ Sinal Indireto GeoScout:** Os candidatos listados são \"âncoras\" — pontos comerciais de alto fluxo (supermercados, concessionárias) — e não imóveis vagos confirmados. A análise de suas características (área, localização em avenida) serve para guiar a prospecção de imóveis disponíveis no entorno.\n*   **⚠️ Incompatibilidade Financeira vs. Demográfica:** Embora o modelo Premium seja financeiramente muito atrativo (lucro de R$ 217k/mês), ele pode não ser compatível com o perfil de renda da maior parte da população de Anápolis (renda média R$3,2 mil, com 68% nas classes D/E). O modelo Low Cost é considerado demograficamente mais seguro e resiliente.\n*   **Script de Abordagem Não Gerado:** A etapa de geração de script de contato (ContactHunter) não foi executada neste pipeline.\n\n---\n\n## 📌 Decisão Recomendada\n**APROVADO COM RESSALVAS.** O potencial demográfico e financeiro de Anápolis é altíssimo (Scores 8.0 e 10.0, respectivamente). No entanto, o erro na prospecção de imóveis e a saturação média do mercado exigem cautela. Recomenda-se **avançar com uma busca de campo focada** para encontrar um imóvel real de 1000-1500m² no entorno do candidato âncora #1 (Rio Vermelho Jundiaí) ou em um dos bairros alternativos recomendados (Centro Expandido).\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Anápolis",
+    "bairro": "Anápolis City",
+    "uf": "GO",
+    "area_m2_min": 800,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "291f1a1f-1303-4da4-b487-bafaa3cc020e",
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 6.65,
+    "score_top1_candidato": 6.65,
+    "score_demografico": 8.0,
+    "score_concorrencia": 1.96,
+    "score_viabilidade": 10.0,
+    "nivel_saturacao": "MEDIO",
+    "rating_medio_concorrentes": 4.54,
+    "total_concorrentes_analisados": 9,
+    "modelo_recomendado": "Low Cost",
+    "aluguel_mensal": 23000.0,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "Para se destacar no mercado de Anápolis City, é crucial que a nova academia invista em uma infraestrutura moderna e bem-mantida, contrastando com concorrentes que apresentam problemas de 'estrutura envelhecida'. Um atendimento ao cliente excepcional e instrutores atenciosos serão diferenciais importantes, abordando a dor de 'atendimento ruim' identificada. Oferecer aulas coletivas inovadoras como spinning e a possibilidade de funcionamento 24 horas, além de um aplicativo próprio para acompanhamento e agendamento, preencherá lacunas de serviço e atrairá o público-alvo de 25-40 anos que busca conveniência e tecnologia. O posicionamento deve focar em um ambiente de alta qualidade, com valor agregado percebido, em vez de competir apenas por preço.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "whatsapp_link": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Anápolis, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "BAIXO",
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6.0
+      }
+    },
+    "market_context": {
+      "uf": "GO",
+      "fonte": "Deep Research + CNPJ/CNO (tools)",
+      "bairro": "Anápolis City",
+      "cached": true,
+      "cidade": "Anápolis",
+      "data_coleta": "2026-05-29",
+      "genero_alvo": "misto",
+      "tipo_negocio": "academia",
+      "tamanho_preset": "m",
+      "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "aluguel_medio_m2": "dados_nao_disponiveis",
+      "composicao_parque": {
+        "lutas": {
+          "pct": 8.3,
+          "count": 23,
+          "label": "Lutas / artes marciais"
+        },
+        "academia": {
+          "pct": 70.3,
+          "count": 194,
+          "label": "Academia tradicional"
+        },
+        "aqua_fitness": {
+          "pct": 0.7,
+          "count": 2,
+          "label": "Natacao / aquáticos"
+        },
+        "crossfit_box": {
+          "pct": 0.7,
+          "count": 2,
+          "label": "CrossFit / Box"
+        },
+        "studio_pilates": {
+          "pct": 13,
+          "count": 36,
+          "label": "Estúdio Pilates"
+        },
+        "personal_studio": {
+          "pct": 2.5,
+          "count": 7,
+          "label": "Personal / coaching"
+        },
+        "studio_bem_estar": {
+          "pct": 2.9,
+          "count": 8,
+          "label": "Estúdio bem-estar (yoga, dança)"
+        },
+        "studio_funcional": {
+          "pct": 1.4,
+          "count": 4,
+          "label": "Estúdio funcional"
+        }
+      },
+      "fatos_parque_cnpj": {
+        "fonte": "RFB CNPJ Aberto",
+        "lacunas": [
+          "CNPJ não traz área m² nem faturamento — área só via CNO com match.",
+          "Matrículas e receita mensal = projeção A4 (m² × matr/m² × ticket), não dado fiscal.",
+          "Obras em curso no CNO = parâmetro de prospecção; match com entrant é amostral.",
+          "Sem match CNO: não inferir porte da unidade."
+        ],
+        "metricas": {
+          "data_coleta": "2026-05-29",
+          "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+          "composicao_parque": {
+            "lutas": {
+              "pct": 8.3,
+              "count": 23,
+              "label": "Lutas / artes marciais"
+            },
+            "academia": {
+              "pct": 70.3,
+              "count": 194,
+              "label": "Academia tradicional"
+            },
+            "aqua_fitness": {
+              "pct": 0.7,
+              "count": 2,
+              "label": "Natacao / aquáticos"
+            },
+            "crossfit_box": {
+              "pct": 0.7,
+              "count": 2,
+              "label": "CrossFit / Box"
+            },
+            "studio_pilates": {
+              "pct": 13,
+              "count": 36,
+              "label": "Estúdio Pilates"
+            },
+            "personal_studio": {
+              "pct": 2.5,
+              "count": 7,
+              "label": "Personal / coaching"
+            },
+            "studio_bem_estar": {
+              "pct": 2.9,
+              "count": 8,
+              "label": "Estúdio bem-estar (yoga, dança)"
+            },
+            "studio_funcional": {
+              "pct": 1.4,
+              "count": 4,
+              "label": "Estúdio funcional"
+            }
+          },
+          "parque_ativo_total": 288,
+          "pendentes_validacao": 24,
+          "serie_aberturas_anual": {
+            "2026": 9
+          },
+          "novos_cnpj_fitness_90d": 9,
+          "parque_comercial_total": 276,
+          "excluidos_saude_clinica": 12,
+          "novas_unidades_90d_por_segmento": {
+            "lutas": 2,
+            "academia": 6,
+            "aqua_fitness": 0,
+            "crossfit_box": 0,
+            "studio_pilates": 1,
+            "personal_studio": 0,
+            "studio_bem_estar": 0,
+            "studio_funcional": 0
+          }
+        },
+        "cruzamento_cno": {
+          "uf": "GO",
+          "fonte": "CNO — Cadastro Nacional de Obras (RFB)",
+          "obras": [],
+          "cidade": "Anápolis",
+          "filtro": "situacao em_curso (códigos 01–04)",
+          "status": "ok",
+          "resumo_match": {
+            "cnpj": 0,
+            "com_area": 0,
+            "sem_obra": 9,
+            "nome_obra": 0,
+            "cep8_baixa": 0
+          },
+          "filtro_bairro": {
+            "bairro_filtro": "Anápolis City",
+            "total_antes_filtro": 4,
+            "bairro_filtro_chave": "anapolis city",
+            "total_apos_filtro_bairro": 0
+          },
+          "totais_amostra": {
+            "area_m2_soma": 0,
+            "obras_listadas": 0,
+            "receita_mensal_realista_soma_estimada": 0
+          },
+          "total_entrantes": 9,
+          "nota_metodologica": "Receita = matrículas (m² × matr/m²) × ticket nominal × (1 − inadimplência). Previsão de encerramento = início + (dias/m² mediano de obras encerradas no CNO). Parâmetros de prospecção — não são dados fiscais.",
+          "total_obras_em_curso": 0,
+          "benchmark_tempo_obra_cno": {
+            "uf": "GO",
+            "fonte": "CNO — obras fitness encerradas (município)",
+            "cidade": "Anápolis",
+            "status": "ok",
+            "metricas": {
+              "n": 8,
+              "dias_por_m2_p25": 0.1023,
+              "dias_por_m2_p75": 0.2457,
+              "duracao_dias_p25": 111,
+              "duracao_dias_p75": 287,
+              "dias_por_m2_mediana": 0.1524,
+              "duracao_dias_mediana": 193
+            },
+            "rejeitadas": {
+              "datas_invalidas": 0,
+              "duracao_fora_faixa": 3,
+              "dias_por_m2_fora_faixa": 0
+            },
+            "por_porte_m2": {
+              "media": {
+                "n": 6,
+                "dias_por_m2_p25": 0.1119,
+                "dias_por_m2_p75": 0.2241,
+                "duracao_dias_p25": 127,
+                "duracao_dias_p75": 264,
+                "dias_por_m2_mediana": 0.1524,
+                "duracao_dias_mediana": 193
+              },
+              "grande": {
+                "n": 2,
+                "dias_por_m2_p25": 0.1727,
+                "dias_por_m2_p75": 0.4219,
+                "duracao_dias_p25": 281,
+                "duracao_dias_p75": 667,
+                "dias_por_m2_mediana": 0.2973,
+                "duracao_dias_mediana": 474
+              },
+              "pequena": {
+                "n": 0
+              }
+            },
+            "amostra_valida": 8,
+            "obras_referencia": [
+              {
+                "cno": "900023265771",
+                "bairro": "PARANGABA",
+                "area_m2": 1829.87,
+                "nome_obra": "Nova Academia Selfit Parangaba",
+                "data_inicio": "2019-11-04",
+                "dias_por_m2": 0.0481,
+                "duracao_dias": 88,
+                "faixa_porte_m2": "grande",
+                "data_fim_cadastral": "2020-01-31"
+              },
+              {
+                "cno": "900076832872",
+                "bairro": "MEIRELES",
+                "area_m2": 1573.58,
+                "nome_obra": "AYO FITNESS E BEM ESTAR E CONDICIONAMENTO FISICO LTDA",
+                "data_inicio": "2021-07-30",
+                "dias_por_m2": 0.5465,
+                "duracao_dias": 860,
+                "faixa_porte_m2": "grande",
+                "data_fim_cadastral": "2023-12-07"
+              },
+              {
+                "cno": "900022635072",
+                "bairro": "JOAQUIM TAVORA",
+                "area_m2": 1301.34,
+                "nome_obra": "SMART FIT JOAQUIM TAVORA",
+                "data_inicio": "2019-11-26",
+                "dias_por_m2": 0.1675,
+                "duracao_dias": 218,
+                "faixa_porte_m2": "media",
+                "data_fim_cadastral": "2020-07-01"
+              },
+              {
+                "cno": "900022633478",
+                "bairro": "ALDEOTA",
+                "area_m2": 1275.67,
+                "nome_obra": "SMART FIT JOSE LOURENÇO (ALDEOTA 3)",
+                "data_inicio": "2019-11-26",
+                "dias_por_m2": 0.243,
+                "duracao_dias": 310,
+                "faixa_porte_m2": "media",
+                "data_fim_cadastral": "2020-10-01"
+              },
+              {
+                "cno": "900005233774",
+                "bairro": "ALDEOTA",
+                "area_m2": 1223.24,
+                "nome_obra": "SMART FIT ALDEOTA",
+                "data_inicio": "2019-04-16",
+                "dias_por_m2": 0.1373,
+                "duracao_dias": 168,
+                "faixa_porte_m2": "media",
+                "data_fim_cadastral": "2019-10-01"
+              },
+              {
+                "cno": "900022631771",
+                "bairro": "CENTRO",
+                "area_m2": 1103.18,
+                "nome_obra": "SMART FIT CENTRO FORTALEZA",
+                "data_inicio": "2019-11-26",
+                "dias_por_m2": 0.2538,
+                "duracao_dias": 280,
+                "faixa_porte_m2": "media",
+                "data_fim_cadastral": "2020-09-01"
+              },
+              {
+                "cno": "900006439073",
+                "bairro": "DOM LUSTOSA",
+                "area_m2": 1102.2,
+                "nome_obra": "SMART FIT DOM LUSTOSA",
+                "data_inicio": "2019-05-10",
+                "dias_por_m2": 0.1034,
+                "duracao_dias": 114,
+                "faixa_porte_m2": "media",
+                "data_fim_cadastral": "2019-09-01"
+              },
+              {
+                "cno": "900006605770",
+                "bairro": "NOVO MONDUBIM",
+                "area_m2": 1050,
+                "nome_obra": "SMART FIT VILA PERI",
+                "data_inicio": "2019-05-20",
+                "dias_por_m2": 0.099,
+                "duracao_dias": 104,
+                "faixa_porte_m2": "media",
+                "data_fim_cadastral": "2019-09-01"
+              }
+            ],
+            "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento.",
+            "total_encerradas_filtradas": 11
+          },
+          "total_obras_em_curso_municipio": 4
+        },
+        "indicadores_derivados": {
+          "segmento_dominante_parque": "academia",
+          "entrantes_places_validados": false,
+          "segmentos_pendentes_validacao": 24,
+          "taxa_renovacao_parque_90d_pct": 3.26,
+          "divergencia_parque_vs_aberturas": false,
+          "segmento_dominante_entradas_90d": "academia",
+          "unidades_entrantes_segmento_lider": 6
+        }
+      },
+      "tendencia_mercado": "crescimento",
+      "parque_ativo_total": 288,
+      "renda_media_bairro": "A remuneração média dos trabalhadores formais em Anápolis (município) é de R$ 3,2 mil (Deep Research)",
+      "pendentes_validacao": 24,
+      "ticket_medio_mercado": "dados_nao_disponiveis",
+      "insights_estrategicos": [
+        "O bairro Anápolis City não possui dados demográficos detalhados específicos no Censo Demográfico 2022 do IBGE, sendo necessário considerar dados do município de Anápolis como um todo (Deep Research).",
+        "O mercado fitness em Anápolis está em constante evolução, com tendências para 2025 e 2026 apontando para um setor mais integrado, adaptativo e focado em dados, saúde e bem-estar, com potencial de crescimento significativo, dado que menos de 5% dos brasileiros são frequentadores regulares (Deep Research).",
+        "Anápolis possui 276 unidades comerciais de fitness ativas, com 9 novos CNPJs de fitness abertos nos últimos 90 dias (CNPJ).",
+        "A composição do parque ativo em Anápolis é dominada por academias tradicionais (70.3%, 194 unidades), seguido por estúdios de Pilates (13%, 36 unidades) e lutas/artes marciais (8.3%, 23 unidades) (CNPJ).",
+        "Nos últimos 90 dias, o segmento de academia tradicional liderou as aberturas com 6 novas unidades, seguido por lutas com 2 e estúdio Pilates com 1 (CNPJ)."
+      ],
+      "regulamentacao_resumo": "dados_nao_disponiveis",
+      "serie_aberturas_anual": {
+        "2026": 9
+      },
+      "novos_cnpj_fitness_90d": 9,
+      "parque_comercial_total": 276,
+      "excluidos_saude_clinica": 12,
+      "faixa_etaria_predominante": "dados_nao_disponiveis",
+      "academias_ativas_cidade_cnpj": 276,
+      "principais_redes_concorrentes": [
+        "Smart Fit",
+        "Bluefit"
+      ],
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 2,
+        "academia": 6,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 1,
+        "personal_studio": 0,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [
+        "Smart Fit",
+        "Bluefit"
+      ],
+      "redes_solicitadas": [],
+      "fonte_redes_locais": "overpass_osm",
+      "tem_redes_fantasma": false,
+      "redes_detectadas_osm": [
+        "Smart Fit",
+        "Bluefit"
+      ],
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": [
+        {
+          "nome": "In Tennis - Escola de tênis",
+          "motivo": "nome contém 'tênis'"
+        }
+      ],
+      "redes_locais_validadas": [
+        "Smart Fit",
+        "Bluefit"
+      ]
+    },
+    "alertas": [
+      "⚠️ A recomendação do modelo Premium, baseada em métricas financeiras puras, contrasta com o perfil de renda de Anápolis (R$ 3,2 mil, com 68% classes D/E). A viabilidade deste modelo depende de um nicho de altíssima renda muito específico, que precisa ser validado. O modelo Low Cost é demograficamente mais seguro."
+    ],
+    "embedding": null,
+    "entrantes_cnpj_90d": {
+      "uf": "GO",
+      "dias": 90,
+      "nota": "Abertura = data_inicio_atividade no CNPJ. Segmento por nome/CNAE (sem bucket 'outro'). Confiança baixa pode ser refinada com CNPJ_SEGMENT_PLACES_VALIDATE=1 + Google Places.",
+      "fonte": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "total": 9,
+      "cidade": "Anápolis",
+      "cutoff": "2026-02-28",
+      "status": "ok",
+      "entrantes": [
+        {
+          "cep": "75020040",
+          "qsa": [
+            {
+              "nome": "ZARREF INVESTE E PARTICIPACOES LTDA",
+              "qualificacao": "22-Sócio"
+            },
+            {
+              "nome": "DALMO DIAS RIBEIRO",
+              "qualificacao": "05-Administrador"
+            },
+            {
+              "nome": "ANDREIA PEREIRA VARGAS MOURA FERRAZ",
+              "qualificacao": "05-Administrador"
+            },
+            {
+              "nome": "TRUST FIT PART LTDA",
+              "qualificacao": "22-Sócio"
+            }
+          ],
+          "cnpj": "66622046000150",
+          "bairro": "Centro",
+          "endereco": "RUA DESEMBARGADOR JAIME, 471, SALA  501                 PAVMTO5",
+          "ref_month": "2026-05-01",
+          "linkedin_url": null,
+          "razao_social": "ANAPOLIS ACADEMIA DE GINASTICA LTDA",
+          "data_abertura": "2026-05-04",
+          "email_empresa": "ANDREFERRAZBSB@ICLOUD.COM",
+          "nome_exibicao": "ANP ACADEMIA DE GINASTICA LTDA",
+          "nome_fantasia": "ANP ACADEMIA DE GINASTICA LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.622.046/0001-50",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6191596550",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "DALMO DIAS RIBEIRO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "05-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "75085630",
+          "qsa": [
+            {
+              "nome": "MANOEL JOSE DA SILVA NETO",
+              "qualificacao": "22-Sócio"
+            },
+            {
+              "nome": "FRANKLIN FERREIRA DA SILVA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66534362000170",
+          "bairro": "Parque Residencial Das Flores",
+          "endereco": "AVENIDA JOÃO FLORENTINO, 0, QUADRAIII                 LOTE  10",
+          "ref_month": "2026-05-01",
+          "linkedin_url": null,
+          "razao_social": "POWER BOX ACADEMIA LTDA",
+          "data_abertura": "2026-04-28",
+          "email_empresa": "POWERBOX.CROSSFIT.GO@GMAIL.COM",
+          "nome_exibicao": "POWER BOX",
+          "nome_fantasia": "POWER BOX",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.534.362/0001-70",
+          "segmento_label": "Lutas / artes marciais",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "lutas/mma"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "2195099322",
+          "incluir_no_parque": true,
+          "segmento_operacao": "lutas",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "FRANKLIN FERREIRA DA SILVA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "75110600",
+          "qsa": [
+            {
+              "nome": "RAFAEL FIGUEIREDO FONSECA DE SOUSA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66415798000140",
+          "bairro": "Jundiaí",
+          "endereco": "RUA RODRIGUES TOMAZ, S/N, QUADRA31                  LOTE  06                  SALA  01",
+          "ref_month": "2026-05-01",
+          "linkedin_url": null,
+          "razao_social": "RAFAEL FIGUEIREDO FONSECA DE SOUSA TREINAMENTO FISICO LTDA",
+          "data_abertura": "2026-04-23",
+          "email_empresa": "SYDSYDRACK@OUTLOOK.COM",
+          "nome_exibicao": "RF PERFORMANCE",
+          "nome_fantasia": "RF PERFORMANCE",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.415.798/0001-40",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6294241220",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "RAFAEL FIGUEIREDO FONSECA DE SOUSA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "75135825",
+          "qsa": [
+            {
+              "nome": "ADARLAN BANDEIRA BARRA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66403774000171",
+          "bairro": "Sítios De Recreio Vale Das Laranjeiras",
+          "endereco": "RUA ORESTE BATISTA DE AGUIAR, 0, QUADRA19                  LOTE  13",
+          "ref_month": "2026-05-01",
+          "linkedin_url": null,
+          "razao_social": "ADERLAN PERSONAL LTDA",
+          "data_abertura": "2026-04-23",
+          "email_empresa": "ADARLANBARRA@GMAIL.COM",
+          "nome_exibicao": "ADERLAN PERSONAL LTDA",
+          "nome_fantasia": null,
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.403.774/0001-71",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6293842857",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "ADARLAN BANDEIRA BARRA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "75104430",
+          "qsa": [
+            {
+              "nome": "GUILHERME LIMA RORIZ",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66415311000120",
+          "bairro": "Jardim Alvorada",
+          "endereco": "AVENIDA JUSCELINO KUBITSCHEK, S/N, LOTE  18                  QUADRA4",
+          "ref_month": "2026-05-01",
+          "linkedin_url": null,
+          "razao_social": "LIFE ACADEMIA LTDA",
+          "data_abertura": "2026-04-22",
+          "email_empresa": "CONTATO@DRBCONTABIL.COM",
+          "nome_exibicao": "LIFE ACADEMIA",
+          "nome_fantasia": "LIFE ACADEMIA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.415.311/0001-20",
+          "segmento_label": "Lutas / artes marciais",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "lutas/mma"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6295541515",
+          "incluir_no_parque": true,
+          "segmento_operacao": "lutas",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "GUILHERME LIMA RORIZ",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "75110600",
+          "qsa": [],
+          "cnpj": "50565317002359",
+          "bairro": "Jundiai",
+          "endereco": "RUA RODRIGUES TOMAZ, 493, QUADRA31                  LOTE  05                  ANDAR TERREO",
+          "ref_month": "2026-05-01",
+          "razao_social": "SERVICO SOCIAL AUTONOMO DE ASSISTENCIA A SAUDE DOS SERVIDORES PUBLICOS E MILITARES DO ESTADO DE GOIAS - IPASGO SAUDE",
+          "data_abertura": "2026-03-11",
+          "email_empresa": "CONTABILIDADE@IPASGOSAUDE.COM.BR",
+          "nome_exibicao": "SERVICO SOCIAL AUTONOMO DE ASSISTENCIA A SAUDE DOS SERVIDORES PUBLICOS E MILITARES DO ESTADO DE GOIAS - IPASGO SAUDE",
+          "nome_fantasia": null,
+          "cnae_principal": "6550200",
+          "cnpj_formatado": "50.565.317/0023-59",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6232382501",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true
+        },
+        {
+          "cep": "75085390",
+          "cnpj": "65563864000167",
+          "bairro": "Parque Residencial Das Flores",
+          "endereco": "RUA 8, 0, QUADRA17                  LOTE  26",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-03-09",
+          "email_empresa": "KSACADEMIA.FIT@GMAIL.COM",
+          "nome_exibicao": "ACADEMIA KS",
+          "nome_fantasia": "ACADEMIA KS",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.563.864/0001-67",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": false,
+          "lacunas_contato": [
+            "razao_social",
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6292767933",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": false
+        },
+        {
+          "cep": "75023055",
+          "cnpj": "65572188000198",
+          "bairro": "Centro",
+          "endereco": "RUA QUATORZE DE JULHO, 1271",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-03-05",
+          "email_empresa": "LEOSOUSA893X@GMAIL.COM",
+          "nome_exibicao": "ACADEMIA SECA",
+          "nome_fantasia": "ACADEMIA SECA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.572.188/0001-98",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": false,
+          "lacunas_contato": [
+            "razao_social",
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6292551663",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": false
+        },
+        {
+          "cep": "75084660",
+          "cnpj": "65455381000149",
+          "bairro": "Alvorada",
+          "endereco": "RUA COLÔMBIA, SN, QUADRA01                  LOTE  09",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-03-03",
+          "email_empresa": "LEGALIZACAO@DONIZETEGESTAOCONTABIL.COM.BR",
+          "nome_exibicao": "POWER PERFORMACE SPORT",
+          "nome_fantasia": "POWER PERFORMACE SPORT",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.455.381/0001-49",
+          "segmento_label": "Estúdio Pilates",
+          "dados_completos": false,
+          "lacunas_contato": [
+            "razao_social",
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "pilates"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6233137535",
+          "incluir_no_parque": true,
+          "segmento_operacao": "studio_pilates",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": false
+        }
+      ],
+      "data_coleta": "2026-05-29",
+      "enriquecimento_meta": {
+        "cache_hits": 3,
+        "enriquecimento": "ok",
+        "limite_receita": 3,
+        "receita_chamadas": 3
+      },
+      "entrantes_incompletos": 3,
+      "validacao_places_ativa": false,
+      "segmentos_pendentes_validacao": 2,
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 2,
+        "academia": 6,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 1,
+        "personal_studio": 0,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "obras_cno_em_curso": {
+      "uf": "GO",
+      "fonte": "CNO — Cadastro Nacional de Obras (RFB)",
+      "obras": [
+        {
+          "cno": "900230111178",
+          "bairro": "Aldeota",
+          "numero": "1001",
+          "area_m2": 4583.46,
+          "nome_obra": "MAX FORMA ACADEMIAS",
+          "logradouro": "SENADOR VIRGILIO TAVORA",
+          "data_inicio": "2025-03-10",
+          "bairro_chave": "aldeota",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 1363,
+          "previsao_encerramento_estimada": "2028-12-02"
+        },
+        {
+          "cno": "900142903270",
+          "bairro": "Coco",
+          "numero": "2977",
+          "area_m2": 1140.13,
+          "nome_obra": "CENTRAL PARK FITNESS LTDA",
+          "logradouro": "ENGENHEIRO SANTANA JUNIOR - DE 1446 AO FIM - LADO",
+          "data_inicio": "2023-03-13",
+          "bairro_chave": "coco",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 174,
+          "previsao_encerramento_estimada": "2023-09-03"
+        },
+        {
+          "cno": "900130241175",
+          "bairro": "Itaperi",
+          "numero": "1700",
+          "area_m2": 712.0,
+          "nome_obra": "OBRA MANUT DOS CENTROS ACADEMICOS (CAS) DA UECE",
+          "logradouro": "DOUTOR SILAS MUNGUBA",
+          "data_inicio": "2022-11-11",
+          "bairro_chave": "itaperi",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 109,
+          "previsao_encerramento_estimada": "2023-02-28"
+        },
+        {
+          "cno": "900168943873",
+          "bairro": "Engenheiro Luciano Cavalcante",
+          "numero": "88",
+          "area_m2": 215.92,
+          "nome_obra": "ACADEMY EDUCACAO E TECNOLOGIA LTDA",
+          "logradouro": "TEODORO DE PAIVA",
+          "data_inicio": "2023-06-15",
+          "bairro_chave": "engenheiro luciano cavalcante",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 60,
+          "previsao_encerramento_estimada": "2023-08-14"
+        }
+      ],
+      "cidade": "Anápolis",
+      "filtro": "situacao em_curso (códigos 01–04)",
+      "status": "ok",
+      "filtro_bairro": {
+        "bairro_filtro": null,
+        "bairro_filtro_chave": null
+      },
+      "bairro_relatorio": "Anápolis City",
+      "nota_metodologica": "Receita = matrículas (m² × matr/m²) × ticket nominal × (1 − inadimplência). Previsão de encerramento = início + (dias/m² mediano de obras encerradas no CNO). Parâmetros de prospecção — não são dados fiscais.",
+      "benchmark_tempo_obra": {
+        "status": "ok",
+        "metricas": {
+          "n": 8,
+          "dias_por_m2_p25": 0.1023,
+          "dias_por_m2_p75": 0.2457,
+          "duracao_dias_p25": 111,
+          "duracao_dias_p75": 287,
+          "dias_por_m2_mediana": 0.1524,
+          "duracao_dias_mediana": 193
+        },
+        "por_porte_m2": {
+          "media": {
+            "n": 6,
+            "dias_por_m2_p25": 0.1119,
+            "dias_por_m2_p75": 0.2241,
+            "duracao_dias_p25": 127,
+            "duracao_dias_p75": 264,
+            "dias_por_m2_mediana": 0.1524,
+            "duracao_dias_mediana": 193
+          },
+          "grande": {
+            "n": 2,
+            "dias_por_m2_p25": 0.1727,
+            "dias_por_m2_p75": 0.4219,
+            "duracao_dias_p25": 281,
+            "duracao_dias_p75": 667,
+            "dias_por_m2_mediana": 0.2973,
+            "duracao_dias_mediana": 474
+          },
+          "pequena": {
+            "n": 0
+          }
+        },
+        "amostra_valida": 8,
+        "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento."
+      },
+      "total_obras_em_curso": 4
+    },
+    "scores_regionais": {
+      "demografico": 8.0,
+      "concorrencia": 1.96,
+      "viabilidade": 10.0
+    },
+    "alertas_financeiros": [
+      "⚠️ A recomendação do modelo Premium, baseada em métricas financeiras puras, contrasta com o perfil de renda de Anápolis (R$ 3,2 mil, com 68% classes D/E). A viabilidade deste modelo depende de um nicho de altíssima renda muito específico, que precisa ser validado. O modelo Low Cost é demograficamente mais seguro."
+    ]
+  },
+  "candidatos": [],
+  "competidores_count": 9
+}

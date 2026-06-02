@@ -1,0 +1,2875 @@
+{
+  "id": "8845b104-4536-444e-98d6-03b7319cbf08",
+  "header": {
+    "id": "8845b104-4536-444e-98d6-03b7319cbf08",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1780008001",
+    "tempo_execucao_segundos": 1825,
+    "tokens_total": 2340084,
+    "custo_brl": 8.28,
+    "data_execucao": "2026-05-28T22:40:01+00:00",
+    "created_at": "2026-05-28T22:09:37.481338+00:00",
+    "updated_at": "2026-05-29T00:50:41.986254+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Fortaleza/CE — Parangaba\n**Data:** 28/05/2026\n**Total de candidatos avaliados:** 14\n\n---\n\n## 🔬 Contexto de Mercado (Deep Research)\n\n| Indicador | Valor |\n|-----------|-------|\n| Ticket médio local | R$ 99,90 a R$ 159,90 (Low Cost/High Value); > R$ 250,00 (Premium) |\n| Aluguel médio comercial | R$ 16,00/m² a R$ 20,00/m² para grandes portes (>1000m²) |\n| Renda média do bairro | R$ 2.620,58 (Censo 2022) |\n| Faixa etária predominante | 20 a 59 anos (62,2% da população do bairro) |\n| Tendência do mercado | crescimento |\n\n### Principais Concorrentes Identificados (via Deep Research)\n*   Smart Fit\n\n### Insights Estratégicos\n*   Fortaleza consolidou-se como o segundo maior mercado fitness do Norte e Nordeste, abrigando mais de 1.100 academias ativas e rivalizando com o número de farmácias na capital (Deep Research).\n*   O bairro de Parangaba apresenta um rendimento médio mensal de R$ 2.620,58, posicionando-se como um vetor estratégico para redes de custo-benefício (modelo Low Cost) e Centros de Treinamento (Deep Research).\n*   O ecossistema fitness em Fortaleza já ultrapassa a marca de 1.115 CNPJs ativos vinculados a atividades de condicionamento físico (CNPJ).\n*   A taxa de renovação do parque de academias nos últimos 90 dias é de 2.77% (CNPJ).\n*   Existe uma obra de academia encerrada na Parangaba, a 'Nova Academia Selfit Parangaba', com uma área de 1829.87 m² (CNO).\n\n### Regulamentação\nEmissão de Alvará de Funcionamento via sistema eletrônico 'Fortaleza Online', exigindo Consulta de Adequabilidade, AVCB (Bombeiros), Licenças Sanitária e Ambiental. O CREF5 (Conselho Regional de Educação Física) exige registro de Pessoa Jurídica, CNPJ regularizado e designação de um Profissional de Educação Física como Responsável Técnico, com fiscalização ativa para evitar operações irregulares (Deep Research).\n\n> Fonte: Deep Research + CNPJ/CNO (tools) | Data: 2026-05-28 | Cache: false\n\n---\n\n## 🎯 Resumo Executivo\nO mercado em Parangaba, Fortaleza, é promissor do ponto de vista demográfico e financeiro, mas apresenta um cenário competitivo desafiador, com um score de concorrência baixo (1.94/10). A renda média local (R$ 2.620,58) favorece modelos de negócio Mid Market ou Low Cost. A análise financeira indica que todos os cenários são altamente lucrativos, com o modelo Mid Market oferecendo o melhor equilíbrio entre investimento e retorno (payback de 6 meses). O candidato #1, um imóvel de 1400m² anunciado na Av. Pinto Bandeira, é recomendado para abordagem, mas a investigação indica que está vago, exigindo uma visita de campo imediata para validação da estrutura.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 8.0 | EXCELENTE |\n| Competitivo | 1.9 | MEDIO |\n| Viabilidade financeira | 9.5 | ALTO |\n\n**Transparência:** Academias no raio 3km (Aggregate): 197 | amostra analisada (reviews): 10 (Nearby retornou: 20, limitado por maxResultCount)\n\n**Score Bairro:** 6.5 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** 7.0 — ⚠️ APROVADO COM RESSALVAS — base do veredito (4 dim, inclui geoscout do #1)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 🏆 Top 3 Candidatos\n\n### #1 — Imóvel anunciado · 1400m² · IMOVELWEB — Score Geral 7.0 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Avenida Pinto Bandeira, 499 Engenheiro Luciano Cavalcante, Fortaleza\n- **Tipo:** imovel_anunciado\n- **Área estimada:** ~1400m²\n- **Score GeoScout:** 8.5 (sinal indireto-heurístico) | **Motivo:** Imóvel anunciado para aluguel em IMOVELWEB — R$ 13.900. Acessar listing_url pra contato direto com a imobiliária.\n- **Score Ancoragem:** 0.0 — visibilidade: a_confirmar_no_field\n- **Polos geradores próximos:**\n  - — sem polos geradores no raio de 2km\n- **Próximo passo:** Contatar imobiliária para visita técnica\n- **Investigação site**: status `vago` — operador `—` | tipo imóvel ONR `None` (`Comercial (listing)`) | confiança `baixa` | O ponto apresenta uma área promissora (1400m²) e ausência de operador atual conhecido, o que pode indicar uma oportunidade para uma academia, mas requer visita in loco para confirmar o estado real e a compatibilidade da estrutura. (https://www.imovelweb.com.br/propriedades/casa-engenheiro-luciano-cavalcante-fortaleza-ce-3022154896.html, https://www.google.com/search?q=negócio+Avenida+Pinto+Bandeira+499+Engenheiro+Luciano+Cavalcante+Fortaleza+CE)\n\n### #2 — Imóvel anunciado · 1000m² · IMOVELWEB — Score Geral 7.0 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** José Ferreira de Pontes Papicu, Fortaleza\n- **Tipo:** imovel_anunciado\n- **Área estimada:** ~1000m²\n- **Score GeoScout:** 8.5 (sinal indireto-heurístico) | **Motivo:** Imóvel anunciado para aluguel em IMOVELWEB — R$ 8.800. Acessar listing_url pra contato direto com a imobiliária.\n- **Score Ancoragem:** 0.0 — visibilidade: a_confirmar_no_field\n- **Polos geradores próximos:**\n  - — sem polos geradores no raio de 2km\n- **Próximo passo:** Contatar imobiliária para visita técnica\n- **Investigação site**: status `vago` — operador `—` | tipo imóvel ONR `None` (`Comercial (listing)`) | confiança `alta` | O imóvel está vago e disponível para locação, com área total de 1000 m² e já foi utilizado para um evento de grande porte, o que sugere potencial para adaptação a uma academia, mas a infraestrutura específica para pé-direito alto ou vão livre (se não for galpão) precisaria ser confirmada em visita. (https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHq5eOMuIIAeM_ZqdglaSzvLMqFlGWKNOrasoQhHE7Mo2-hA6NpqVP46jY2Tvfts3_UJRYrzKjBqo0AgeJu8sBpCG0I1B4UZQ944z-YE3cDown_IxN_7I50cZYQdqq5dsT5zetgGRg0eFiOz3p6Zx03Up-7ZfUR0358j-4bvO_mPIY9Z79Yn969KAa8T3-Fr7jiLljZ, https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFfWDrq0M0vw1GHEIvnfc-XcmxfVtgH9aEm9flZBtyIsXeU2Qj2__q_2k-lweLJrA8D6UOLbXvQdGIw2h2E8Zmm3MSLOtQlB77nN36ZGUkMpTk0R4hbwButbBn5FMO4qH_XmQm6EhZPLkazCEvNmx6H3QtLuiEqIoKm2XEE9QGIuRfABjef053Mq0jiKkuCQebFeHwUY22NxGbk2yfen2E_76ENug==)\n\n### #3 — Imóvel anunciado · 1000m² · IMOVELWEB — Score Geral 7.0 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Rua 5A 201 Novo Maracanaú, Maracanaú\n- **Tipo:** imovel_anunciado\n- **Área estimada:** ~1000m²\n- **Score GeoScout:** 8.5 (sinal indireto-heurístico) | **Motivo:** Imóvel anunciado para aluguel em IMOVELWEB — R$ 15.000. Acessar listing_url pra contato direto com a imobiliária.\n- **Score Ancoragem:** 0.0 — visibilidade: a_confirmar_no_field\n- **Polos geradores próximos:**\n  - — sem polos geradores no raio de 2km\n- **Próximo passo:** Contatar imobiliária para visita técnica\n- **Investigação site**: status `incerto` — operador `null` | tipo imóvel ONR `None` (`Comercial (listing)`) | confiança `baixa` | A ausência de informação sobre o operador atual e a inacessibilidade do anúncio de aluguel tornam uma visita in loco essencial para verificar a vacância e a compatibilidade do galpão para academia. (https://www.imovelweb.com.br/propriedades/galpao-para-alugar-1000-m-por-r$-15.000-00-mes-3036083669.html, https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHGCCSi8d9-EMaRYn7pDpkTjDk6qHnRf-LlQKURfxumrhBG335N-LXRqHhOKIz9vsXwyCc9ycdQEzk7LNW1zuDFBUUO0BLtsSfr2zmt8j5mlWsQUXzuoPEwkfzwZxL0cUCXf7wSPlEMogBc5AevlLeABkPE)\n\n---\n\n## 🏗️ Checklist de Diligência do Imóvel\n\nAntes de fechar negociação com qualquer dos candidatos acima, validar **OS 6 ITENS** abaixo:\n\n1. Confirmar zoneamento para atividade de condicionamento físico\n2. Verificar entrada trifásica de energia\n3. Checar projeto de incêndio aprovado\n4. Medir pé-direito (mínimo 4m)\n5. Confirmar vão livre sem colunas centrais\n6. Negociar 90-120 dias de carência\n\n> Lista padrão para academias 1.000-1.500m².\n\n---\n\n## 🔍 Cobertura do Deep Research (A0) — validação cruzada\n\n**Redes solicitadas pelo Deep Research:** Smart Fit\n\n**Redes confirmadas no raio do bairro alvo:** Smart Fit\n\n---\n\n## 🥊 Inteligência Competitiva — Concorrente por Concorrente\n\n### 📍 Parangaba (2 academias)\n#### Arena Champions — Rating 4.7 ⭐ (2098 avaliações) \n- **Endereço:** Rua Conselheiro Galvão, 77 - Parangaba, Fortaleza - CE, 60710-100, Brasil\n- **Bairro:** Parangaba\n- **Serviços oferecidos:** Aulas de lutas, musculação básica, aeróbico.\n- **Reclamações dos alunos**:\n  - Falta de variedade em equipamentos modernos de musculação.\n- **Pontos fortes mencionados:** Foco em comunidade, bom ambiente para treinos de artes marciais.\n\n#### Max Forma Academia — Rating 4.5 ⭐ (588 avaliações) \n- **Endereço:** Rua Germano Franck, 767 - Parangaba, Fortaleza - CE, 60740-020, Brasil\n- **Bairro:** Parangaba\n- **Serviços oferecidos:** Musculação, ginástica aeróbica, avaliação por bioimpedância.\n- **Preços e Planos:** Plano Vitalidade (R$ 109,99 a R$ 119,99/mês) e Plano Saúde Livre (R$ 139,99/mês).\n- **Diferenciais:** Oferece 12 avaliações de bioimpedância por ano e 7 passes livres para convidados por mês.\n- **Reclamações dos alunos**:\n  - Sensação de \"abandono de instrutores\" (falta de atenção e acompanhamento dos professores no salão).\n- **Pontos fortes mencionados:** Boa localização e facilidade de acesso.\n\n### 📍 Jóquei Clube (1 academia)\n#### Academia Smart Fit - Jóquei Clube — Rating 4.3 ⭐ (1648 avaliações) \n- **Endereço:** Av. Senador Fernandes Távora, 820 - Loja 09 - Jóquei Clube, Fortaleza - CE, 60510-290, Brasil\n- **Bairro:** Jóquei Clube\n- **Serviços oferecidos:** Musculação, aeróbico, Smart Box, Smart Shape.\n- **Preços e Planos:** Plano Fit (R$ 119,90/mês), Plano Smart (R$ 139,90/mês) e Plano Black (R$ 159,90/mês com acesso à rede).\n- **Diferenciais:** Infraestrutura moderna, novos equipamentos e acesso nacional no plano Black.\n- **Reclamações dos alunos**:\n  - Superlotação severa nos horários de pico (noite das 18h às 20h), inviabilizando treinos fluidos.\n- **Pontos fortes mencionados:** Equipamentos novos e boa infraestrutura.\n\n### 📍 Maraponga (1 academia)\n#### Greenlife Academias | Maraponga — Rating 4.2 ⭐ (482 avaliações) \n- **Endereço:** Av. Godofredo Maciel, 2540 - Maraponga, Fortaleza - CE, 60710-684, Brasil\n- **Bairro:** Maraponga\n- **Serviços oferecidos:** Musculação, spinning, pilates, aulas coletivas de dança, funcional, espaço kids.\n- **Preços e Planos:** Mensalidades variando entre R$ 170,00 e R$ 250,00+ dependendo do contrato de fidelidade.\n- **Diferenciais:** Modelo de academia familiar e premium de grande porte, infraestrutura tecnológica avançada e ampla grade de atividades físicas coletivas.\n- **Reclamações dos alunos**:\n  - Excesso de burocracia na recepção e suporte administrativo, dificultando cancelamento ou trancamento.\n- **Pontos fortes mencionados:** Grade de aulas excelente, espaço kids e ambiente de alto nível.\n\n### 📍 Serrinha (1 academia)\n#### Selfit Academia - Serrinha — Rating 4.6 ⭐ (189 avaliações) \n- **Endereço:** Av. Dr. Silas Munguba, 3640 - Serrinha, Fortaleza - CE, 60714-502, Brasil\n- **Bairro:** Serrinha\n- **Serviços oferecidos:** Musculação, aeróbico, circuito Self Extreme (alta intensidade), área Self Flappy.\n- **Preços e Planos:** Plano Light (R$ 119,90/mês) e Plano Plus (R$ 149,90/mês).\n- **Diferenciais:** Espaço físico amplo (1.200 m² de área de treino útil) e ambiente altamente climatizado.\n- **Reclamações dos alunos**:\n  - Superlotação considerável no horário noturno das 17h às 20h.\n- **Pontos fortes mencionados:** Climatização excepcional e ambiente amplo.\n\n### 📍 Damas (1 academia)\n#### Academia Max Forma Sede João Pessoa — Rating 4.4 ⭐ (167 avaliações) [24h]\n- **Endereço:** R. Des. Praxedes, 163 - Damas, Fortaleza - CE, 60426-052, Brasil\n- **Bairro:** Damas\n- **Serviços oferecidos:** Musculação, aeróbicos e ginástica 24 horas.\n- **Preços e Planos:** Plano Vitalidade (R$ 109,99 a R$ 119,99/mês) e Plano Saúde Livre (R$ 139,99/mês).\n- **Diferenciais:** Funcionamento 24 horas e bioimpedâncias periódicas inclusas.\n- **Reclamações dos alunos**:\n  - Instrutores dispersos no salão de treino e pouca orientação aos alunos.\n\n### 📍 Loja 15 - Maraponga (1 academia)\n#### b7 bodyfitness — Rating 4.0 ⭐ (141 avaliações) \n- **Endereço:** Av. Godofredo Maciel, 1945 - Loja 15 - Maraponga, Fortaleza - CE, 60710-683, Brasil\n- **Bairro:** Maraponga\n- **Serviços oferecidos:** Musculação, ergonomia adaptada.\n- **Preços e Planos:** Plano Flex (R$ 119,90/mês no recorrente) e Plano Plus (R$ 149,90/mês no recorrente).\n- **Diferenciais:** Ambiente climatizado, foco em ergonomia.\n- **Reclamações dos alunos**:\n  - Atendimento ineficiente ou pouco simpático na recepção; problemas pontuais com a limpeza dos banheiros.\n- **Pontos fortes mencionados:** Equipamento bem conservado.\n\n### 📍 Montese (1 academia)\n#### Greenlife Academias - Montese — Rating 4.2 ⭐ (130 avaliações) [24h]\n- **Endereço:** R. 15 de Novembro, 340 - Montese, Fortaleza - CE, 60421-076, Brasil\n- **Bairro:** Montese\n- **Serviços oferecidos:** Musculação, ginástica coletiva e funcionamento 24h.\n- **Preços e Planos:** Planos de R$ 170,00 a R$ 250,00+.\n- **Reclamações dos alunos**:\n  - Dificuldade operacional para estornos e burocracia para cancelamentos.\n\n### Padrões cross-concorrência (gap analysis agregada)\n\n**O que TODOS oferecem (commodities):**\n- Área básica de musculação e esteiras para aeróbicos.\n- Climatização (ar condicionado).\n- Planos de pagamento via cartão recorrente.\n\n**Gaps de mercado (NINGUÉM oferece):**\n- Gestão ativa da lotação para garantir treinos fluidos (sem filas ou revezamento exaustivo).\n- Atendimento e instrução proativa de alto nível (focado em evitar o abandono do aluno).\n- Suporte administrativo simplificado e 100% digital (sem as burocracias vistas na Greenlife).\n\n**Dores dominantes (cross-concorrência) — com nominação:**\n\n| Dor | Menções | Mencionado por | Oportunidade Estratégica |\n|---|---|---|---|\n| **superlotacao_pico** | 2 | Smart Fit Jóquei, Selfit Serrinha | Oferecer aplicativo com indicação de lotação em tempo real ou incentivos para horários alternativos. |\n| **abandono_instrutor** | 2 | Max Forma Academia, Max Forma João Pessoa | Garantir um programa de onboarding robusto para iniciantes e instrutores proativos no salão. |\n| **atendimento_ruim** | 1 | b7 bodyfitness | Investimento na recepção amigável e no atendimento ao cliente. |\n| **burocracia_cancelamento** | 2 | Greenlife Maraponga, Greenlife Montese | Modelo de assinatura recorrente sem taxas abusivas e cancelamento 100% online em 1 clique. |\n\n### 💡 Posicionamento Recomendado\nRecomenda-se posicionar a nova academia no modelo **Mid Market** (R$ 139,90 a R$ 149,90), aproveitando a classe média consolidada de Parangaba que busca uma experiência melhor que a superlotação e o abandono de instrução vistos no modelo Low Cost tradicional (Smart Fit, Selfit e Max Forma), mas sem pagar o ticket elevado da Greenlife (R$ 170 a R$ 250+). O diferencial deve focar na **alta resolutividade das dores dos concorrentes**: instrutores atuantes que de fato orientam o aluno (para contrapor a dor de 'professores ausentes' da Max Forma), um sistema eficiente de acompanhamento digital, processos administrativos ágeis e sem burocracia (contrapondo a Greenlife), e um projeto físico e operacional otimizado para dispersar o fluxo e mitigar o impacto de horários de pico (diferencial em relação a Smart Fit e Selfit).\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\nMatrículas em 3 calibrações (cons/real/agres) baseadas em ACAD/Smart Fit/Bodytech.\nPico simultâneo é capacidade física no horário cheio — DIFERENTE de matrículas.\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 1725 | 1150 | 460 |\n| **Matrículas realista (base)** | **2530** | **1610** | **690** |\n| Matrículas agressivo | 3450 | 2070 | 1035 |\n| Capacidade física simultânea | 632 | 460 | 287 |\n| Pico calculado (real × freq × 0,25) | 225 | 115 | 44 |\n| Folga capacidade | 64.4% | 75.0% | 84.7% |\n| Freq. semanal aluno | 2.5x | 2.0x | 1.8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 80,00 | R$ 250,00 | R$ 1.000,00 |\n| Ticket realizado (após inadimpl.) | R$ 76,00 | R$ 240,00 | R$ 975,00 |\n| Inadimplência | 5.0% | 4.0% | 2.5% |\n| **Receita mensal** | **R$ 192.280,00** | **R$ 386.400,00** | **R$ 672.750,00** |\n| Aluguel | R$ 34.500,00 | R$ 34.500,00 | R$ 34.500,00 |\n| Condomínio | R$ 5.175,00 | R$ 5.175,00 | R$ 5.175,00 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 13.800,00 | R$ 13.800,00 | R$ 20.700,00 |\n| Água | R$ 2.300,00 | R$ 2.300,00 | R$ 2.300,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 3.833,11 | R$ 5.869,44 | R$ 14.010,66 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 1.533,24 | R$ 2.347,78 | R$ 5.604,26 |\n| Outros (2% receita) | R$ 3.845,60 | R$ 7.728,00 | R$ 13.455,00 |\n| **Custos fixos total** | **R$ 87.886,95** | **R$ 108.620,22** | **R$ 155.644,92** |\n| Marketing (% receita) | R$ 11.536,80 (6.0%) | R$ 30.912,00 (8.0%) | R$ 80.730,00 (12.0%) |\n| **Custos totais** | **R$ 99.423,75** | **R$ 139.532,22** | **R$ 236.374,92** |\n| **Lucro mensal** | **R$ 92.856,25** | **R$ 246.867,78** | **R$ 436.375,08** |\n| **Margem %** | **48.3%** | **63.9%** | **64.9%** |\n| Break-even (alunos) | 1309 | 582 | 243 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 402.288,00 | R$ 600.030,00 | R$ 1.788.648,00 |\n| Obra de adaptação | R$ 230.000,00 | R$ 402.500,00 | R$ 690.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 69.692,89 | R$ 106.717,09 | R$ 254.739,26 |\n| **CAPEX total** | **R$ 766.621,78** | **R$ 1.173.887,98** | **R$ 2.802.131,90** |\n| Capital de giro (3 meses) | R$ 298.271,25 | R$ 418.596,66 | R$ 709.124,76 |\n| **Investimento total** | **R$ 1.064.893,03** | **R$ 1.592.484,64** | **R$ 3.511.256,66** |\n| **Payback** | **11m** | **6m** | **8m** |\n| TIR anual | 101.5% | 185.0% | 147.5% |\n| VPL 5 anos (@12% a.a.) | R$ 2.951.818,97 | R$ 9.086.352,54 | R$ 15.365.157,38 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | ALTO · lucro R$ 87.858,81 · payback 12m | ALTO · lucro R$ 239.967,78 · payback 6m | ALTO · lucro R$ 420.367,08 · payback 8m |\n| Matrículas -30% | ALTO · lucro R$ 39.965,08 · payback 26m | ALTO · lucro R$ 140.221,38 · payback 11m | ALTO · lucro R$ 251.548,68 · payback 13m |\n| Ticket -15% | ALTO · lucro R$ 67.361,95 · payback 15m | ALTO · lucro R$ 193.544,58 · payback 8m | ALTO · lucro R$ 339.830,28 · payback 10m |\n\n**Modelo recomendado para este perfil de bairro:** Mid Market\n**Justificativa:** O perfil demográfico de Parangaba, com renda média de R$ 2.620,58, e a alta densidade populacional favorecem um modelo com forte apelo de custo-benefício. O modelo Mid Market se mostra o mais robusto, capturando um ticket médio superior ao Low Cost, com um payback extremamente rápido (6 meses) e margem líquida de 63.9%, indicando uma operação altamente lucrativa e resiliente.\n\n> Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 📍 Distribuição Geográfica dos Concorrentes\n\n| Bairro | Nº academias | Quais |\n|---|---|---|\n| **Parangaba** | **2** | **Arena Champions, Max Forma Academia** |\n| Loja 09 - Jóquei Clube | 1 | Academia Smart Fit - Jóquei Clube |\n| Maraponga | 1 | Greenlife Academias / Maraponga |\n| Vila Peri | 1 | CTO - Centro de Treinamento Oriental |\n| Serrinha | 1 | Selfit Academia - Serrinha |\n| Damas | 1 | Academia Max Forma Sede João Pessoa |\n| Loja 15 - Maraponga | 1 | b7 bodyfitness |\n| Montese | 1 | Greenlife Academias - Montese |\n| Pan-Americano | 1 | PANFIT ACADEMIA |\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\n\n| Bairro | Motivo | Status competitivo | Ticket sugerido | Prioridade |\n|---|---|---|---|---|\n| Papicu / Edson Queiroz | Crescimento imobiliário acelerado, público jovem | 🔴 muito saturado (5 academias: Academia Smart Fit - Papicu, Academia Unifor, Academia Smart Fit - Washington Soares, Carranca Crossfit, Elite Escola de Ginastica) | mid | BAIXA |\n| Cocó / Guararapes | Alto poder aquisitivo, baixa oferta fitness premium | 🔴 muito saturado (10 academias: CT Greenlife, Eikō Artes Marciais, Complexo REK CrossFit, Academia Smart Fit - Papicu, Academia Vera Passos, Instituto Le Santé, Altere Academia, AYO Gym - Unidade Guararapes, Live State Studio, Max Forma Academias Rogaciano Leite) | mid | BAIXA |\n| Maraponga / Montese | Alta densidade populacional, ticket low-cost viável | 🔴 muito saturado (10 academias: Mufasa Maraponga, Academia C3 Fitness, Greenlife Academias / Maraponga, TP FITNESS ACADEMIAS / MARAPONGA, Academia Fitness Evolution, 𝐕𝟐 𝐀𝐜𝐚𝐝𝐞𝐦𝐢𝐚, Movifit, unisports academia, Greenlife Academias - Montese, Selfit Academias Montese) | mid | BAIXA |\n| Cidade dos Funcionários / Cambeba | Classe média consolidada, poucos concorrentes | 🔴 muito saturado (12 academias: The House GYM - Cidade, Academia Swims, Estação Corpo e Saúde, Academia Smart Fit - Oliveira Paiva, Floresta Urbana Sombra do Cajueiro, Academia Hedla Lopes, Box Insano, Galatians Box Cambeba, Academia Bio Fitness, Arena Society do Lago, ... (+2)) | mid | BAIXA |\n\n**Bairro recomendado para investigação prioritária:** nenhum\nA busca por bairros alternativos com baixa concorrência não encontrou opções viáveis; todos os bairros pré-mapeados como estratégicos já apresentam um cenário competitivo muito saturado. Recomenda-se expandir a pesquisa para outras regiões da cidade ou municípios da região metropolitana que ainda não foram explorados.\n\n---\n\n## 📞 Script de Abordagem — Top 1\n\n**Canal recomendado:** WHATSAPP\n**Melhor horário:** Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde\n\n```\n📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Imóvel anunciado · 1400m² · IMOVELWEB — Avenida Pinto Bandeira, 499\nEngenheiro Luciano Cavalcante, Fortaleza\n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em Avenida Pinto Bandeira, 499\nEngenheiro Luciano Cavalcante, Fortaleza, Fortaleza, como um ponto com potencial excelente\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.\n```\n\n**Próximos passos:**\n1. Confirmar disponibilidade do imóvel 'Imóvel anunciado · 1400m² · IMOVELWEB' para locação ou venda\n2. Pesquisar imobiliária ou administradora que gerencia o imóvel\n3. Identificar CNPJ do estabelecimento atual via consulta na Receita Federal\n4. Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica\n\n---\n\n## ⚠️ Alertas Globais\n*   **Sinal GeoScout Indireto:** Os candidatos de maior pontuação são âncoras comerciais (supermercados, concessionárias) ou listings imobiliários. A disponibilidade real do ponto para locação ou venda deve ser confirmada ativamente. O score indica o potencial da *localização*, não a vacância do imóvel.\n*   **Estratégia de Counter-Programming Indisponível:** Não foi possível construir a estratégia de horários alternativos, pois os dados de horários de pico (popular times) não foram retornados para os concorrentes analisados.\n\n---\n\n## 📌 Decisão Recomendada\n**AVANÇAR COM RESSALVAS.** O Score Top 1 de 7.0 e a robusta viabilidade financeira em todos os cenários justificam a prospecção. No entanto, o baixo score competitivo (1.9) exige um posicionamento de mercado muito bem definido. A recomendação é abordar o candidato #1, **Imóvel anunciado · 1400m² · IMOVELWEB**, para uma visita técnica imediata e validar as condições para a implementação de um modelo Mid Market, que apresentou o retorno mais rápido (payback de 6 meses).\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Fortaleza",
+    "bairro": "Parangaba",
+    "uf": "CE",
+    "area_m2_min": 800,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "8845b104-4536-444e-98d6-03b7319cbf08",
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 6.48,
+    "score_top1_candidato": 6.99,
+    "score_demografico": 8.0,
+    "score_concorrencia": 1.94,
+    "score_viabilidade": 9.5,
+    "nivel_saturacao": "MEDIO",
+    "rating_medio_concorrentes": 4.4,
+    "total_concorrentes_analisados": 10,
+    "modelo_recomendado": "Mid Market",
+    "aluguel_mensal": 34500.0,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "Recomenda-se posicionar a nova academia de Parangaba focando no modelo Mid Market com ticket em torno de R$ 139,90 a R$ 149,90. O principal diferencial competitivo deve ser um forte trabalho na experiência do cliente com atendimento próximo no salão (combatendo a dor de 'abandono de professores' observada na Max Forma, oferecendo bioimpedâncias regulares, por exemplo, 12/ano como a Max Forma faz) e controle de superlotação em horários de pico (combatendo as severas dores de superlotação da Smart Fit e da Selfit Serrinha). Adicionalmente, o funcionamento 24h e um ambiente climatizado e higienizado com recepção amigável e processos não-burocráticos ajudarão a capturar clientes insatisfeitos com a concorrência local.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "tipo_ponto": "COMERCIAL_GENERICO",
+      "whatsapp_link": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Imóvel anunciado · 1400m² · IMOVELWEB' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Imóvel anunciado · 1400m² · IMOVELWEB — Avenida Pinto Bandeira, 499\nEngenheiro Luciano Cavalcante, Fortaleza\n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em Avenida Pinto Bandeira, 499\nEngenheiro Luciano Cavalcante, Fortaleza, Fortaleza, como um ponto com potencial excelente\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "MEDIO",
+      "top_candidato_referencia": {
+        "nome": "Imóvel anunciado · 1400m² · IMOVELWEB",
+        "endereco": "Avenida Pinto Bandeira, 499\nEngenheiro Luciano Cavalcante, Fortaleza",
+        "tipo_ponto": "COMERCIAL_GENERICO",
+        "score_geoscout": 8.5
+      }
+    },
+    "market_context": {
+      "uf": "CE",
+      "fonte": "Deep Research + CNPJ/CNO (tools)",
+      "bairro": "Parangaba",
+      "cached": false,
+      "cidade": "Fortaleza",
+      "data_coleta": "2026-05-28",
+      "genero_alvo": "misto",
+      "tipo_negocio": "academia",
+      "tamanho_preset": "m",
+      "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "aluguel_medio_m2": "R$ 16,00/m² a R$ 20,00/m² para grandes portes (>1000m²); R$ 23,00/m² a R$ 30,00/m² para médios (100-500m²); R$ 26,00/m² a R$ 55,00/m² para compactos (<60m²)",
+      "composicao_parque": {
+        "lutas": {
+          "pct": 8.7,
+          "count": 151,
+          "label": "Lutas / artes marciais"
+        },
+        "academia": {
+          "pct": 77.8,
+          "count": 1348,
+          "label": "Academia tradicional"
+        },
+        "aqua_fitness": {
+          "pct": 0.4,
+          "count": 7,
+          "label": "Natacao / aquáticos"
+        },
+        "crossfit_box": {
+          "pct": 1.2,
+          "count": 20,
+          "label": "CrossFit / Box"
+        },
+        "studio_pilates": {
+          "pct": 6.7,
+          "count": 116,
+          "label": "Estúdio Pilates"
+        },
+        "personal_studio": {
+          "pct": 2.9,
+          "count": 50,
+          "label": "Personal / coaching"
+        },
+        "studio_bem_estar": {
+          "pct": 1.6,
+          "count": 28,
+          "label": "Estúdio bem-estar (yoga, dança)"
+        },
+        "studio_funcional": {
+          "pct": 0.8,
+          "count": 13,
+          "label": "Estúdio funcional"
+        }
+      },
+      "fatos_parque_cnpj": {
+        "fonte": "RFB CNPJ Aberto",
+        "lacunas": [
+          "CNPJ não traz área m² nem faturamento — área só via CNO com match.",
+          "Matrículas e receita mensal = projeção A4 (m² × matr/m² × ticket), não dado fiscal.",
+          "Obras em curso no CNO = parâmetro de prospecção; match com entrant é amostral.",
+          "Sem match CNO: não inferir porte da unidade."
+        ],
+        "metricas": {
+          "data_coleta": "2026-05-28",
+          "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+          "composicao_parque": {
+            "lutas": {
+              "pct": 8.7,
+              "count": 151,
+              "label": "Lutas / artes marciais"
+            },
+            "academia": {
+              "pct": 77.8,
+              "count": 1348,
+              "label": "Academia tradicional"
+            },
+            "aqua_fitness": {
+              "pct": 0.4,
+              "count": 7,
+              "label": "Natacao / aquáticos"
+            },
+            "crossfit_box": {
+              "pct": 1.2,
+              "count": 20,
+              "label": "CrossFit / Box"
+            },
+            "studio_pilates": {
+              "pct": 6.7,
+              "count": 116,
+              "label": "Estúdio Pilates"
+            },
+            "personal_studio": {
+              "pct": 2.9,
+              "count": 50,
+              "label": "Personal / coaching"
+            },
+            "studio_bem_estar": {
+              "pct": 1.6,
+              "count": 28,
+              "label": "Estúdio bem-estar (yoga, dança)"
+            },
+            "studio_funcional": {
+              "pct": 0.8,
+              "count": 13,
+              "label": "Estúdio funcional"
+            }
+          },
+          "parque_ativo_total": 1828,
+          "pendentes_validacao": 319,
+          "serie_aberturas_anual": {
+            "2026": 48
+          },
+          "novos_cnpj_fitness_90d": 48,
+          "parque_comercial_total": 1733,
+          "excluidos_saude_clinica": 95,
+          "novas_unidades_90d_por_segmento": {
+            "lutas": 3,
+            "academia": 38,
+            "aqua_fitness": 0,
+            "crossfit_box": 0,
+            "studio_pilates": 3,
+            "personal_studio": 1,
+            "studio_bem_estar": 0,
+            "studio_funcional": 0
+          }
+        },
+        "cruzamento_cno": {
+          "lacunas": [
+            "Sem match CNO para unidades entrantes recentes, não é possível estimar m² ou capacidade de matrículas."
+          ],
+          "resumo_match": {
+            "cnpj": 0,
+            "com_area": 0,
+            "sem_obra": 47,
+            "nome_obra": 0,
+            "cep8_baixa": 1
+          },
+          "obras_referencia": [
+            {
+              "cno": "900023265771",
+              "bairro": "PARANGABA",
+              "area_m2": 1829.87,
+              "nome_obra": "Nova Academia Selfit Parangaba",
+              "data_inicio": "2019-11-04",
+              "dias_por_m2": 0.0481,
+              "duracao_dias": 88,
+              "faixa_porte_m2": "grande",
+              "data_fim_cadastral": "2020-01-31"
+            }
+          ]
+        },
+        "indicadores_derivados": {
+          "segmento_dominante_parque": "academia",
+          "entrantes_places_validados": true,
+          "segmentos_pendentes_validacao": 319,
+          "taxa_renovacao_parque_90d_pct": 2.77,
+          "divergencia_parque_vs_aberturas": false,
+          "segmento_dominante_entradas_90d": "academia",
+          "unidades_entrantes_segmento_lider": 38
+        }
+      },
+      "tendencia_mercado": "crescimento",
+      "parque_ativo_total": 1828,
+      "renda_media_bairro": "R$ 2.620,58 (Censo 2022)",
+      "pendentes_validacao": 319,
+      "ticket_medio_mercado": "R$ 99,90 a R$ 159,90 (Low Cost/High Value); > R$ 250,00 (Premium)",
+      "insights_estrategicos": [
+        "Fortaleza consolidou-se como o segundo maior mercado fitness do Norte e Nordeste, abrigando mais de 1.100 academias ativas e rivalizando com o número de farmácias na capital (Deep Research).",
+        "O bairro de Parangaba apresenta um rendimento médio mensal de R$ 2.620,58, posicionando-se como um vetor estratégico para redes de custo-benefício (modelo Low Cost) e Centros de Treinamento (Deep Research).",
+        "O ecossistema fitness em Fortaleza já ultrapassa a marca de 1.115 CNPJs ativos vinculados a atividades de condicionamento físico (CNPJ).",
+        "A taxa de renovação do parque de academias nos últimos 90 dias é de 2.77% (CNPJ).",
+        "Existe uma obra de academia encerrada na Parangaba, a 'Nova Academia Selfit Parangaba', com uma área de 1829.87 m² (CNO)."
+      ],
+      "regulamentacao_resumo": "Emissão de Alvará de Funcionamento via sistema eletrônico 'Fortaleza Online', exigindo Consulta de Adequabilidade, AVCB (Bombeiros), Licenças Sanitária e Ambiental. O CREF5 (Conselho Regional de Educação Física) exige registro de Pessoa Jurídica, CNPJ regularizado e designação de um Profissional de Educação Física como Responsável Técnico, com fiscalização ativa para evitar operações irregulares (Deep Research).",
+      "serie_aberturas_anual": {
+        "2026": 48
+      },
+      "novos_cnpj_fitness_90d": 48,
+      "parque_comercial_total": 1733,
+      "excluidos_saude_clinica": 95,
+      "faixa_etaria_predominante": "20 a 59 anos (62,2% da população do bairro)",
+      "academias_ativas_cidade_cnpj": 1348,
+      "principais_redes_concorrentes": [
+        "Smart Fit"
+      ],
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 3,
+        "academia": 38,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 3,
+        "personal_studio": 1,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [
+        "Smart Fit"
+      ],
+      "redes_solicitadas": [
+        "Smart Fit"
+      ],
+      "fonte_redes_locais": "busca_georreferenciada",
+      "tem_redes_fantasma": false,
+      "redes_detectadas_osm": [],
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": [],
+      "redes_locais_validadas": [
+        "Smart Fit"
+      ]
+    },
+    "alertas": [],
+    "embedding": null,
+    "entrantes_cnpj_90d": {
+      "uf": "CE",
+      "dias": 90,
+      "nota": "Abertura = data_inicio_atividade no CNPJ. Segmento por nome/CNAE (sem bucket 'outro'). Confiança baixa pode ser refinada com CNPJ_SEGMENT_PLACES_VALIDATE=1 + Google Places.",
+      "fonte": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "total": 48,
+      "cidade": "Fortaleza",
+      "cutoff": "2026-02-27",
+      "status": "ok",
+      "entrantes": [
+        {
+          "cep": "60355512",
+          "cnpj": "66649668000172",
+          "bairro": "PRESIDENTE KENNEDY",
+          "endereco": "AVENIDA SARGENTO HERMINIO SAMPAIO, 3100, SALA 111",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-05-07",
+          "email_empresa": "JANAINAASSESSORIACONTABIL1@GMAIL.COM",
+          "nome_exibicao": "POSTURE PILATES",
+          "nome_fantasia": "POSTURE PILATES",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.649.668/0001-72",
+          "segmento_label": "Estúdio Pilates",
+          "dados_completos": false,
+          "lacunas_contato": [
+            "razao_social",
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "pilates"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8596990509",
+          "incluir_no_parque": true,
+          "segmento_operacao": "studio_pilates",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": false
+        },
+        {
+          "cep": "60713480",
+          "cnpj": "66649755000120",
+          "bairro": "MANOEL SATIRO",
+          "endereco": "RUA FERNANDO FARIAS DE MELO, 1133",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-05-07",
+          "email_empresa": "DREAMLIFECROSS2021@GMAIL.COM",
+          "nome_exibicao": "DREAMLIFE CT",
+          "nome_fantasia": "DREAMLIFE CT",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.649.755/0001-20",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": false,
+          "lacunas_contato": [
+            "razao_social",
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8596600952",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": false
+        },
+        {
+          "cep": "60861500",
+          "cnpj": "66636001000135",
+          "bairro": "PASSARE",
+          "endereco": "RUA DOUTOR PEDRO SAMPAIO, 193",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-05-06",
+          "email_empresa": "ROSALBAMATTOS@GMAIL.COM",
+          "nome_exibicao": "R&V PERFORMANCE E SAUDE",
+          "nome_fantasia": "R&V PERFORMANCE E SAUDE",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.636.001/0001-35",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": false,
+          "lacunas_contato": [
+            "razao_social",
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8587146631",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": false
+        },
+        {
+          "cep": "60020061",
+          "cnpj": "66604785000110",
+          "bairro": "BENFICA",
+          "endereco": "RUA MARECHAL DEODORO, 1274",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-05-04",
+          "email_empresa": "LUCAS_FDORNAS@HOTMAIL.COM",
+          "nome_exibicao": null,
+          "nome_fantasia": null,
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.604.785/0001-10",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": false,
+          "lacunas_contato": [
+            "razao_social",
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8585162226",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": true
+        },
+        {
+          "cep": "60160196",
+          "qsa": [
+            {
+              "nome": "DIEGO SOARES DE FREITAS",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66548567000105",
+          "bairro": "ALDEOTA",
+          "endereco": "AVENIDA DOM LUIS, 300, LJ256",
+          "ref_month": "2026-05-01",
+          "razao_social": "DIEGO DE FREITAS PERFORMANCE LTDA",
+          "data_abertura": "2026-04-30",
+          "email_empresa": "DIEGODEFREITASPERFORMANCE@GMAIL.COM",
+          "nome_exibicao": "DIEGO DE FREITAS PERFORMANCE LTDA",
+          "nome_fantasia": "DIEGO DE FREITAS PERFORMANCE LTDA",
+          "cnae_principal": "8591100",
+          "cnpj_formatado": "66.548.567/0001-05",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8599752880",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "DIEGO SOARES DE FREITAS",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60440131",
+          "qsa": [
+            {
+              "nome": "CHARLES DOUGLAS SAMPAIO VIEIRA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66520460000159",
+          "bairro": "PAN-AMERICANO",
+          "endereco": "RUA RIO GRANDE DO SUL, 860, LOJA 02",
+          "ref_month": "2026-05-01",
+          "razao_social": "ACADEMIA DUMBBELLS PANAMERICANO LTDA",
+          "data_abertura": "2026-04-28",
+          "email_empresa": "DUMBBELLSACADEMIA@GMAIL.COM",
+          "nome_exibicao": "ACADEMIA DUMBBELLS PANAMERICANO",
+          "nome_fantasia": "ACADEMIA DUMBBELLS PANAMERICANO",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.520.460/0001-59",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8589769930",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "CHARLES DOUGLAS SAMPAIO VIEIRA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60740002",
+          "qsa": [
+            {
+              "nome": "THIAGO MEDEIROS ARRUDA",
+              "qualificacao": "22-Sócio"
+            },
+            {
+              "nome": "FRANKLIN WILLGSON ALVES DO VALE",
+              "qualificacao": "22-Sócio"
+            },
+            {
+              "nome": "TIAGO ASSUNCAO SARAIVA ABRAAO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66492937000130",
+          "bairro": "PARANGABA",
+          "endereco": "AVENIDA DOUTOR SILAS MUNGUBA, 450",
+          "ref_month": "2026-05-01",
+          "razao_social": "ARENA BEACH PLAY LTDA",
+          "data_abertura": "2026-04-28",
+          "email_empresa": "CG_CONTABILIDADE@HOTMAIL.COM",
+          "nome_exibicao": "ARENA BEACH PLAY",
+          "nome_fantasia": "ARENA BEACH PLAY",
+          "cnae_principal": "9311500",
+          "cnpj_formatado": "66.492.937/0001-30",
+          "segmento_label": "Lutas / artes marciais",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "lutas/mma"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8588989492",
+          "incluir_no_parque": true,
+          "segmento_operacao": "lutas",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "TIAGO ASSUNCAO SARAIVA ABRAAO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60025062",
+          "qsa": [
+            {
+              "nome": "RAFAEL ALCANTARA DA CUNHA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66523930000138",
+          "bairro": "FATIMA",
+          "endereco": "RUA BARAO DO RIO BRANCO, 3030, S-01",
+          "ref_month": "2026-05-01",
+          "razao_social": "JLLC FITNESS LTDA",
+          "data_abertura": "2026-04-28",
+          "email_empresa": "PANOBIANCOMARACANAU@GMAIL.COM",
+          "nome_exibicao": "JLLC FITNESS LTDA",
+          "nome_fantasia": "JLLC FITNESS LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.523.930/0001-38",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8530643100",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "RAFAEL ALCANTARA DA CUNHA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60455410",
+          "qsa": [
+            {
+              "nome": "LARISSA FERREIRA DOS SANTOS",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66470455000189",
+          "bairro": "PARQUELANDIA",
+          "endereco": "AVENIDA JOVITA FEITOSA, 3116",
+          "ref_month": "2026-05-01",
+          "razao_social": "LF LARISSA FERREIRA DOS SANTOS LTDA",
+          "data_abertura": "2026-04-27",
+          "email_empresa": "LARISSA1.FERREIRA1.SANTOS@GMAIL.COM",
+          "nome_exibicao": "STUDIO LF PILATES E BEM-ESTAR",
+          "nome_fantasia": "STUDIO LF PILATES E BEM-ESTAR",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.470.455/0001-89",
+          "segmento_label": "Estúdio Pilates",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "pilates"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8599999999",
+          "incluir_no_parque": true,
+          "segmento_operacao": "studio_pilates",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "LARISSA FERREIRA DOS SANTOS",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60510291",
+          "qsa": [
+            {
+              "nome": "VINICIUS SAMPAIO LIMA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66434596000146",
+          "bairro": "HENRIQUE JORGE",
+          "endereco": "AVENIDA SENADOR FERNANDES TAVORA, 1547, CASA 03",
+          "ref_month": "2026-05-01",
+          "razao_social": "VS TRAINER & CONSULTING LTDA",
+          "data_abertura": "2026-04-24",
+          "email_empresa": "VINICIUS.SAMPAIO9@HOTMAIL.COM",
+          "nome_exibicao": "VS TRAINER & CONSULTING LTDA",
+          "nome_fantasia": "VS TRAINER & CONSULTING LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.434.596/0001-46",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8586994893",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "VINICIUS SAMPAIO LIMA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60150190",
+          "qsa": [
+            {
+              "nome": "REBECA SERRA FRANKLIN THOMAZ",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66488691000122",
+          "bairro": "ALDEOTA",
+          "endereco": "RUA MARCOS MACEDO, 791",
+          "ref_month": "2026-05-01",
+          "razao_social": "HYLAB ESTUDIO LTDA",
+          "data_abertura": "2026-04-23",
+          "email_empresa": "DILAVORCONTABILIDADE@GMAIL.COM",
+          "nome_exibicao": "HYLAB ESTUDIO LTDA",
+          "nome_fantasia": "HYLAB ESTUDIO LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.488.691/0001-22",
+          "segmento_label": "Lutas / artes marciais",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "lutas/mma"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8532825172",
+          "incluir_no_parque": true,
+          "segmento_operacao": "lutas",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "REBECA SERRA FRANKLIN THOMAZ",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60335015",
+          "qsa": [],
+          "cnpj": "66522613000105",
+          "bairro": "ALVARO WEYNE",
+          "endereco": "AVENIDA PRESIDENTE CASTELO BRANCO, 3481, LOJA B",
+          "ref_month": "2026-05-01",
+          "razao_social": "DIANA MENDES FERREIRA",
+          "data_abertura": "2026-04-23",
+          "email_empresa": "PERSONALBATISTALEITE@GMAIL.COM",
+          "nome_exibicao": "ACADEMIA FORCA & SAUDE",
+          "nome_fantasia": "ACADEMIA FORCA & SAUDE",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.522.613/0001-05",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8596443484",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false
+        },
+        {
+          "cep": "60346285",
+          "qsa": [
+            {
+              "nome": "CARLOS EDUARDO CANDIDO LOURENCO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66379688000170",
+          "bairro": "JARDIM GUANABARA",
+          "endereco": "RUA PEDRO SAMPAIO, 205, CASA A",
+          "ref_month": "2026-05-01",
+          "razao_social": "CARLOS EDUARDO CANDIDO LOURENCO LTDA",
+          "data_abertura": "2026-04-22",
+          "email_empresa": "CANDIDOTST@GMAIL.COM",
+          "nome_exibicao": "CARLOS EDUARDO CANDIDO LOURENCO LTDA",
+          "nome_fantasia": "CARLOS EDUARDO CANDIDO LOURENCO LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.379.688/0001-70",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8592239627",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "CARLOS EDUARDO CANDIDO LOURENCO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60731534",
+          "qsa": [
+            {
+              "nome": "RONALDO GERMANO DE ANDRADE",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66438305000198",
+          "bairro": "BOM JARDIM",
+          "endereco": "AVENIDA GENERAL OSORIO DE PAIVA, 5070",
+          "ref_month": "2026-05-01",
+          "razao_social": "CTFLEX GYM ACADEMIA LTDA",
+          "data_abertura": "2026-04-22",
+          "email_empresa": "CONTATO.A.GASSESSORIAECONSUL@GMAIL.COM",
+          "nome_exibicao": "CTFLEX GYM ACADEMIA LTDA",
+          "nome_fantasia": "CTFLEX GYM ACADEMIA LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.438.305/0001-98",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8588834645",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "RONALDO GERMANO DE ANDRADE",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60110355",
+          "qsa": [
+            {
+              "nome": "DANIEL ADOLFO RIESENHUBER PASCUAL",
+              "qualificacao": "38-Sócio Pessoa Física Residente no Exterior"
+            },
+            {
+              "nome": "LEONARDO CARAPEBA LUNDGAARD JENSEN",
+              "qualificacao": "05-Administrador"
+            },
+            {
+              "nome": "JAIME RUBIO DIAZ",
+              "qualificacao": "38-Sócio Pessoa Física Residente no Exterior"
+            }
+          ],
+          "cnpj": "66384300000120",
+          "bairro": "MEIRELES",
+          "endereco": "RUA JOAO CORDEIRO, 831",
+          "ref_month": "2026-05-01",
+          "razao_social": "DAJAI LTDA",
+          "data_abertura": "2026-04-20",
+          "email_empresa": "CONTABILIDADE@LUNDGAARDJENSEN.COM",
+          "nome_exibicao": "DAJAI LTDA",
+          "nome_fantasia": "DAJAI LTDA",
+          "cnae_principal": "6810201",
+          "cnpj_formatado": "66.384.300/0001-20",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8530379931",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "LEONARDO CARAPEBA LUNDGAARD JENSEN",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "05-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60810460",
+          "qsa": [
+            {
+              "nome": "MARKELMA MARQUES RODRIGUES",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66368126000121",
+          "bairro": "ENGENHEIRO LUCIANO CAVALCANTE",
+          "endereco": "RUA DOUTOR THOMPSON BULCAO, 523, LJ04",
+          "ref_month": "2026-05-01",
+          "razao_social": "VITALIZE - PILATES & SAUDE LTDA",
+          "data_abertura": "2026-04-20",
+          "email_empresa": "MARKELMA.MARQUES@GMAIL.COM",
+          "nome_exibicao": "VITALIZE - PILATES & SAUDE LTDA",
+          "nome_fantasia": "VITALIZE - PILATES & SAUDE LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.368.126/0001-21",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8597334470",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "MARKELMA MARQUES RODRIGUES",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60720640",
+          "qsa": [
+            {
+              "nome": "HILDENIZA BALTASAR RIBEIRO DE MORAES",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66313810000106",
+          "bairro": "PARANGABA",
+          "endereco": "RUA JULIO BRAGA, 434, C",
+          "ref_month": "2026-05-01",
+          "razao_social": "CONSCIENCIA CORPORAL EM MOVIMENTO LTDA",
+          "data_abertura": "2026-04-16",
+          "email_empresa": "HILDENIZA@YAHOO.COM.BR",
+          "nome_exibicao": "CONSCIENCIA CORPORAL EM MOVIMENTO LTDA",
+          "nome_fantasia": "CONSCIENCIA CORPORAL EM MOVIMENTO LTDA",
+          "cnae_principal": "8650004",
+          "cnpj_formatado": "66.313.810/0001-06",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8581155090",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "HILDENIZA BALTASAR RIBEIRO DE MORAES",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60025000",
+          "qsa": [
+            {
+              "nome": "BRUNO SALES QUINTINO",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "VICTOR GABRIEL ARAUJO LEITAO",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "RHUAN BARKLEY DE ARAUJO MOREIRA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66304997000181",
+          "bairro": "CENTRO",
+          "endereco": "RUA SENADOR POMPEU, 834, LOJA 16",
+          "ref_month": "2026-05-01",
+          "razao_social": "BGR ESPORTES E SERVICOS LTDA",
+          "data_abertura": "2026-04-16",
+          "email_empresa": "PROF.LEITAO@ADESUL.ORG",
+          "nome_exibicao": "BGR ESPORTES",
+          "nome_fantasia": "BGR ESPORTES",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.304.997/0001-81",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8520001218",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "BRUNO SALES QUINTINO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60165011",
+          "qsa": [
+            {
+              "nome": "DANIO JOHAN CEDER",
+              "qualificacao": "22-Sócio"
+            },
+            {
+              "nome": "INGRID BEATRIZ REIS BATISTA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66285452000175",
+          "bairro": "PRAIA DE IRACEMA",
+          "endereco": "AVENIDA MONSENHOR TABOSA, 201",
+          "ref_month": "2026-05-01",
+          "razao_social": "THE CAVE EXCLUSIVE SERVICOS E COMERCIO LTDA",
+          "data_abertura": "2026-04-15",
+          "email_empresa": "THECAVEEXCLUSIVEBRAZIL@GMAIL.COM",
+          "nome_exibicao": "THE CAVE EXCLUSIVE",
+          "nome_fantasia": "THE CAVE EXCLUSIVE",
+          "cnae_principal": "9602501",
+          "cnpj_formatado": "66.285.452/0001-75",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8591941586",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "INGRID BEATRIZ REIS BATISTA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60810250",
+          "qsa": [
+            {
+              "nome": "THAYSE SARAIVA DE ALBUQUERQUE",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66268827000199",
+          "bairro": "GUARARAPES",
+          "endereco": "RUA JAIME PINHEIRO, 36",
+          "ref_month": "2026-05-01",
+          "razao_social": "THAYSE SARAIVA DE ALBUQUERQUE SERVICOS LTDA",
+          "data_abertura": "2026-04-15",
+          "email_empresa": "CONTATO@XMSCONTABIL.COM.BR",
+          "nome_exibicao": "THAYSE SARAIVA DE ALBUQUERQUE SERVICOS LTDA",
+          "nome_fantasia": "THAYSE SARAIVA DE ALBUQUERQUE SERVICOS LTDA",
+          "cnae_principal": "8211300",
+          "cnpj_formatado": "66.268.827/0001-99",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8597496148",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "THAYSE SARAIVA DE ALBUQUERQUE",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60872509",
+          "qsa": [
+            {
+              "nome": "LUANA RABELO DA SILVA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66265095000183",
+          "bairro": "PAUPINA",
+          "endereco": "RUA CENTRAL DO LOTEAMENTO PARQUE MESSEJANA, 100, BLOCO 07 - APTO 005",
+          "ref_month": "2026-05-01",
+          "razao_social": "L. RABELO DA SILVA LTDA",
+          "data_abertura": "2026-04-14",
+          "email_empresa": "LUANNA.RABELLO@HOTMAIL.COM",
+          "nome_exibicao": "LUANA RABELO TRAINERS",
+          "nome_fantasia": "LUANA RABELO TRAINERS",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.265.095/0001-83",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "6899069695",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "LUANA RABELO DA SILVA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60540469",
+          "qsa": [
+            {
+              "nome": "ISABELA MUNIZ DA SILVA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66218879000150",
+          "bairro": "GRANJA LISBOA",
+          "endereco": "RUA SAO LUIS DO OESTE, 112",
+          "ref_month": "2026-05-01",
+          "razao_social": "ACADEMIA MIX GYM LTDA",
+          "data_abertura": "2026-04-13",
+          "email_empresa": "MUNIZSILVAISABELLA@GMAIL.COM",
+          "nome_exibicao": "ACADEMIA MIX GYM",
+          "nome_fantasia": "ACADEMIA MIX GYM",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.218.879/0001-50",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8594138144",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "ISABELA MUNIZ DA SILVA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60355503",
+          "qsa": [
+            {
+              "nome": "SERGIO ROBERTO RODRIGUES DOS SANTOS",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66180091000100",
+          "bairro": "PRESIDENTE KENNEDY",
+          "endereco": "AVENIDA SARGENTO HERMINIO SAMPAIO, 3919",
+          "ref_month": "2026-05-01",
+          "razao_social": "CT RAUL COLLEMAN GYM LTDA",
+          "data_abertura": "2026-04-09",
+          "email_empresa": "SERGIO.R.SANTOS81@GMAIL.COM",
+          "nome_exibicao": "CT RAUL COLLEMAN GYM",
+          "nome_fantasia": "CT RAUL COLLEMAN GYM",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.180.091/0001-00",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8581987803",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "SERGIO ROBERTO RODRIGUES DOS SANTOS",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60710683",
+          "qsa": [
+            {
+              "nome": "JOAO IRAN DE VASCONCELOS FILHO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66131943000161",
+          "bairro": "MARAPONGA",
+          "endereco": "AVENIDA GODOFREDO MACIEL, 1733",
+          "ref_month": "2026-05-01",
+          "razao_social": "PORAO ACADEMIA MARAPONGA LTDA",
+          "data_abertura": "2026-04-08",
+          "email_empresa": "JOAOIRAN@HOTMAIL.COM",
+          "nome_exibicao": "PORAO ACADEMIA MARAPONGA LTDA",
+          "nome_fantasia": "PORAO ACADEMIA MARAPONGA LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.131.943/0001-61",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8591985849",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "JOAO IRAN DE VASCONCELOS FILHO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60055401",
+          "qsa": [
+            {
+              "nome": "JOAO IRAN DE VASCONCELOS FILHO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66146104000117",
+          "bairro": "FATIMA",
+          "endereco": "AVENIDA AGUANAMBI, 1637",
+          "ref_month": "2026-05-01",
+          "razao_social": "PORAO ACADEMIA FATIMA II LTDA",
+          "data_abertura": "2026-04-08",
+          "email_empresa": "ADMINISTRATIVO@PORAOAACADEMIA.COM.BR",
+          "nome_exibicao": "PORAO ACADEMIA FATIMA II LTDA",
+          "nome_fantasia": "PORAO ACADEMIA FATIMA II LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.146.104/0001-17",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8591985849",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "JOAO IRAN DE VASCONCELOS FILHO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60843285",
+          "qsa": [
+            {
+              "nome": "JOAO IRAN DE VASCONCELOS FILHO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66146856000188",
+          "bairro": "MESSEJANA",
+          "endereco": "AVENIDA WASHINGTON SOARES, 9333, PAVIMENTO 1 LOJA 01",
+          "ref_month": "2026-05-01",
+          "razao_social": "PORAO ACADEMIA EUSEBIO LTDA",
+          "data_abertura": "2026-04-08",
+          "email_empresa": "ADMINISTRATIVO@PORAOAACADEMIA.COM.BR",
+          "nome_exibicao": "PORAO ACADEMIA EUSEBIO LTDA",
+          "nome_fantasia": "PORAO ACADEMIA EUSEBIO LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.146.856/0001-88",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8591985849",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "JOAO IRAN DE VASCONCELOS FILHO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60110535",
+          "qsa": [
+            {
+              "nome": "F42 HOLDINGS, S.L.",
+              "qualificacao": "37-Sócio Pessoa Jurídica Domiciliado no Exterior"
+            },
+            {
+              "nome": "PEDRO HENRIQUE BRUCHER CAMARA",
+              "qualificacao": "05-Administrador"
+            },
+            {
+              "nome": "GISELA BRUCHER CAMARA",
+              "qualificacao": "05-Administrador"
+            }
+          ],
+          "cnpj": "66120292000104",
+          "bairro": "JOAQUIM TAVORA",
+          "endereco": "RUA JOAO CORDEIRO, 3069",
+          "ref_month": "2026-05-01",
+          "razao_social": "SAU BRASIL LTDA",
+          "data_abertura": "2026-04-07",
+          "email_empresa": "ADM.SAUBRASIL@GMAIL.COM",
+          "nome_exibicao": "SAU BRASIL LTDA",
+          "nome_fantasia": "SAU BRASIL LTDA",
+          "cnae_principal": "6462000",
+          "cnpj_formatado": "66.120.292/0001-04",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "2185450254",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "PEDRO HENRIQUE BRUCHER CAMARA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "05-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60425232",
+          "qsa": [
+            {
+              "nome": "PEDRO HENRIQUE DIAS DE CARVALHO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66125033000176",
+          "bairro": "BOM FUTURO",
+          "endereco": "RUA EDITE BRAGA, 1018",
+          "ref_month": "2026-05-01",
+          "razao_social": "DOJO PEDRO DIAS LTDA",
+          "data_abertura": "2026-04-07",
+          "email_empresa": "PEDRODIASBJJ18@GMAIL.COM",
+          "nome_exibicao": "DOJO PEDRO DIAS LTDA",
+          "nome_fantasia": "DOJO PEDRO DIAS LTDA",
+          "cnae_principal": "8591100",
+          "cnpj_formatado": "66.125.033/0001-76",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8597663135",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "PEDRO HENRIQUE DIAS DE CARVALHO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60120002",
+          "qsa": [
+            {
+              "nome": "ALANA BRAGA TEIXEIRA MENDES",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "CAROLINA PIMENTEL RUIVO SILVA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66137036000120",
+          "bairro": "JOAQUIM TAVORA",
+          "endereco": "AVENIDA BARAO DE STUDART, 2360, SALA 1807",
+          "ref_month": "2026-05-01",
+          "razao_social": "LONGEVITTA RESIDENCE SENIOR LTDA",
+          "data_abertura": "2026-04-07",
+          "email_empresa": "CONTATO@ESACON-CE.COM.BR",
+          "nome_exibicao": "LONGEVITTA RESIDENCE SENIOR LTDA",
+          "nome_fantasia": "LONGEVITTA RESIDENCE SENIOR LTDA",
+          "cnae_principal": "8711501",
+          "cnpj_formatado": "66.137.036/0001-20",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8532194046",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "ALANA BRAGA TEIXEIRA MENDES",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60110535",
+          "qsa": [
+            {
+              "nome": "ROMULO VERAS DA SILVA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66092973000106",
+          "bairro": "JOAQUIM TAVORA",
+          "endereco": "RUA JOAO CORDEIRO, 3069",
+          "ref_month": "2026-05-01",
+          "razao_social": "ROMULO VERAS TREINAMENTO FISICO ESPECIALIZADO LTDA",
+          "data_abertura": "2026-04-06",
+          "email_empresa": "R_VERAS@HOTMAIL.COM",
+          "nome_exibicao": "RV CONSULTORIA E PERSONAL TRAINER",
+          "nome_fantasia": "RV CONSULTORIA E PERSONAL TRAINER",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.092.973/0001-06",
+          "segmento_label": "Personal / coaching",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "personal/coaching"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8500000000",
+          "incluir_no_parque": true,
+          "segmento_operacao": "personal_studio",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "ROMULO VERAS DA SILVA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60872685",
+          "qsa": [
+            {
+              "nome": "KLEBER DE MENEZES SILVA",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "JUCILIANE NOGUEIRA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66109566000164",
+          "bairro": "PAUPINA",
+          "endereco": "RUA OSCAR LEITAO, 260",
+          "ref_month": "2026-05-01",
+          "razao_social": "JK SERVICOS DE CONDICIONAMENTO FISICO LTDA",
+          "data_abertura": "2026-04-06",
+          "email_empresa": "ORTEGA_KLEBER@HOTMAIL.COM",
+          "nome_exibicao": "TK ESPORTES",
+          "nome_fantasia": "TK ESPORTES",
+          "cnae_principal": "8591100",
+          "cnpj_formatado": "66.109.566/0001-64",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8588291282",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "KLEBER DE MENEZES SILVA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60170020",
+          "qsa": [
+            {
+              "nome": "FLAVIA SOBREIRA BOTELHO LIMA",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "TAILANDIA VIANA SAMPAIO",
+              "qualificacao": "22-Sócio"
+            },
+            {
+              "nome": "CARLOS AUGUSTO SILVA RODRIGUES",
+              "qualificacao": "22-Sócio"
+            }
+          ],
+          "cnpj": "66033292000177",
+          "bairro": "MEIRELES",
+          "endereco": "RUA BARBOSA DE FREITAS, 585",
+          "ref_month": "2026-05-01",
+          "razao_social": "LONGEVA CENTRO INTEGRADO DE BEM ESTAR PARA IDOSOS LTDA",
+          "data_abertura": "2026-04-01",
+          "email_empresa": "FISIOTERAPIALONGEVA@GMAIL.COM",
+          "nome_exibicao": "LONGEVA CENTRO INTEGRADO DE BEM ESTAR PARA IDOSOS LTDA",
+          "nome_fantasia": "LONGEVA CENTRO INTEGRADO DE BEM ESTAR PARA IDOSOS LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.033.292/0001-77",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8584663587",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "FLAVIA SOBREIRA BOTELHO LIMA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60740145",
+          "qsa": [
+            {
+              "nome": "ADSON DA SILVA CARDOSO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66007880000136",
+          "bairro": "PARANGABA",
+          "endereco": "RUA D (LOT. CENTRO SUL), 81, SALA-01",
+          "ref_month": "2026-05-01",
+          "razao_social": "ADSON CARDOSO PERSONAL TRAINER LTDA",
+          "data_abertura": "2026-03-31",
+          "email_empresa": "YADSONPERSONALTRAINERR@GMAIL.COM",
+          "nome_exibicao": "ADSON CARDOSO PERSONAL TRAINER LTDA",
+          "nome_fantasia": "ADSON CARDOSO PERSONAL TRAINER LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.007.880/0001-36",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8596696863",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "ADSON DA SILVA CARDOSO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60025000",
+          "qsa": [
+            {
+              "nome": "ALEX COSTA CAVALCANTE",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66002662000109",
+          "bairro": "CENTRO",
+          "endereco": "RUA SENADOR POMPEU, 834, SALA 415",
+          "ref_month": "2026-05-01",
+          "razao_social": "ALEX COSTA CAVALCANTE LTDA",
+          "data_abertura": "2026-03-31",
+          "email_empresa": "ALEXSCIPRIANO@GMAIL.COM",
+          "nome_exibicao": "ALEX COSTA CAVALCANTE LTDA",
+          "nome_fantasia": "ALEX COSTA CAVALCANTE LTDA",
+          "cnae_principal": "8211300",
+          "cnpj_formatado": "66.002.662/0001-09",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8598004113",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "ALEX COSTA CAVALCANTE",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60760000",
+          "qsa": [
+            {
+              "nome": "TERESA CRISTINA DE MELO MONTEIRO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "66022101000171",
+          "bairro": "PREFEITO JOSE WALTER",
+          "endereco": "AVENIDA BERNARDO MANUEL, 13781, LOJA B",
+          "ref_month": "2026-05-01",
+          "razao_social": "HIBRIDO COLOSSO LTDA",
+          "data_abertura": "2026-03-31",
+          "email_empresa": "TERESACRISTINAMELO13@GMAIL.COM",
+          "nome_exibicao": "HIBRIDO COLOSSO LTDA",
+          "nome_fantasia": "HIBRIDO COLOSSO LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.022.101/0001-71",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8581573460",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "TERESA CRISTINA DE MELO MONTEIRO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60861350",
+          "qsa": [
+            {
+              "nome": "LUAN RODRIGUES DE SOUSA",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "PAULO VICTOR NOBRE PESSOA",
+              "qualificacao": "22-Sócio"
+            },
+            {
+              "nome": "MATEUS XAVIER CASTRO",
+              "qualificacao": "22-Sócio"
+            }
+          ],
+          "cnpj": "66004729000144",
+          "bairro": "PASSARE",
+          "endereco": "RUA MOURA MATOS, 1405",
+          "ref_month": "2026-05-01",
+          "razao_social": "LPM ACADEMIA LTDA",
+          "data_abertura": "2026-03-31",
+          "email_empresa": "JOELSONCONTABIL@YAHOO.COM.BR",
+          "nome_exibicao": "FITZONE PASSARE",
+          "nome_fantasia": "FITZONE PASSARE",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "66.004.729/0001-44",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8587363644",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "LUAN RODRIGUES DE SOUSA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60710100",
+          "qsa": [],
+          "cnpj": "66008106000140",
+          "bairro": "PARANGABA",
+          "endereco": "RUA CONSELHEIRO GALVAO, 77",
+          "ref_month": "2026-05-01",
+          "razao_social": "DANIELE ALVES DA COSTA",
+          "data_abertura": "2026-03-31",
+          "email_empresa": "DANYFISIO_35@OUTLOOK.COM",
+          "nome_exibicao": "DANIELE PILATES",
+          "nome_fantasia": "DANIELE PILATES",
+          "cnae_principal": "8650004",
+          "cnpj_formatado": "66.008.106/0001-40",
+          "segmento_label": "Estúdio Pilates",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "pilates"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8584131486",
+          "incluir_no_parque": true,
+          "segmento_operacao": "studio_pilates",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false
+        },
+        {
+          "cep": "60140140",
+          "qsa": [
+            {
+              "nome": "LUCIANA RODRIGUES NEVES",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65981678000148",
+          "bairro": "ALDEOTA",
+          "endereco": "RUA JOAO CARVALHO, 800, SALA 406",
+          "ref_month": "2026-05-01",
+          "razao_social": "AQUALU MOVIMENTO LTDA",
+          "data_abertura": "2026-03-30",
+          "email_empresa": "CONTATO@PSICOCONSULTORIA.COM.BR",
+          "nome_exibicao": "AQUALU MOVIMENTO",
+          "nome_fantasia": "AQUALU MOVIMENTO",
+          "cnae_principal": "8591100",
+          "cnpj_formatado": "65.981.678/0001-48",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8588356964",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "LUCIANA RODRIGUES NEVES",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60824245",
+          "qsa": [
+            {
+              "nome": "BRUNO FELIX DE LIMA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65927132000109",
+          "bairro": "PARQUE IRACEMA",
+          "endereco": "AVENIDA MINISTRO JOSE AMERICO, 720, A",
+          "ref_month": "2026-05-01",
+          "razao_social": "COMPLEXO BIO FITNESS LTDA",
+          "data_abertura": "2026-03-26",
+          "email_empresa": "BIOFITNESSFORTALEZA@OUTLOOK.COM",
+          "nome_exibicao": "COMPLEXO BIO FITNESS",
+          "nome_fantasia": "COMPLEXO BIO FITNESS",
+          "cnae_principal": "8650002",
+          "cnpj_formatado": "65.927.132/0001-09",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "academia/fitness"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8592597635",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "BRUNO FELIX DE LIMA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60135460",
+          "qsa": [
+            {
+              "nome": "NAYARA TAVARES LUCENA DE ANDRADE",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "ARMENIA THAYS BIZERRA CASTELO",
+              "qualificacao": "22-Sócio"
+            }
+          ],
+          "cnpj": "65919000000135",
+          "bairro": "DIONISIO TORRES",
+          "endereco": "RUA ISRAEL BEZERRA, 577",
+          "ref_month": "2026-05-01",
+          "razao_social": "TRIE TEMPO, RITMO E INFANCIA LTDA",
+          "data_abertura": "2026-03-25",
+          "email_empresa": "XXX@XXX.COM.BR",
+          "nome_exibicao": "TRIE TEMPO, RITMO E INFANCIA",
+          "nome_fantasia": "TRIE TEMPO, RITMO E INFANCIA",
+          "cnae_principal": "8650003",
+          "cnpj_formatado": "65.919.000/0001-35",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8588888888",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "NAYARA TAVARES LUCENA DE ANDRADE",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60115191",
+          "qsa": [
+            {
+              "nome": "ALEXYA KAYANE PAIVA MARANHAO MATIAS",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65865674000102",
+          "bairro": "ALDEOTA",
+          "endereco": "RUA MONSENHOR BRUNO, 1153, SALA 1423",
+          "ref_month": "2026-05-01",
+          "razao_social": "ALEXYA KAYANE PAIVA MARANHAO MATIAS LTDA",
+          "data_abertura": "2026-03-23",
+          "email_empresa": "ADRIANO9DIAS2CONTADOR@GMAIL.COM",
+          "nome_exibicao": "ALEXYA KAYANE PAIVA MARANHAO MATIAS LTDA",
+          "nome_fantasia": "ALEXYA KAYANE PAIVA MARANHAO MATIAS LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.865.674/0001-02",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8585134478",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "ALEXYA KAYANE PAIVA MARANHAO MATIAS",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60150162",
+          "qsa": [],
+          "cnpj": "07594978084177",
+          "bairro": "ALDEOTA",
+          "endereco": "AVENIDA SANTOS DUMONT, 3000, LOJAS 38 E 39",
+          "ref_month": "2026-05-01",
+          "razao_social": "SMARTFIT ESCOLA DE GINASTICA E DANCA S.A",
+          "data_abertura": "2026-03-20",
+          "email_empresa": "FISCAL@BIORITMO.COM.BR",
+          "nome_exibicao": "SMARTFIT ESCOLA DE GINASTICA E DANCA S.A",
+          "nome_fantasia": "SMARTFIT ESCOLA DE GINASTICA E DANCA S.A",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "07.594.978/0841-77",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "1133650800",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true
+        },
+        {
+          "cep": "60125055",
+          "qsa": [
+            {
+              "nome": "RAQUEL RODRIGUES RODICIO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65810890000142",
+          "bairro": "ALDEOTA",
+          "endereco": "RUA JOAQUIM NABUCO, 950, LOJA 1",
+          "ref_month": "2026-05-01",
+          "razao_social": "VIVENCIE PILATES E FISIOTERAPIA LTDA",
+          "data_abertura": "2026-03-20",
+          "email_empresa": "RAQUELRODICIO@HOTMAIL.COM",
+          "nome_exibicao": "VIVENCIE PILATES E FISIOTERAPIA",
+          "nome_fantasia": "VIVENCIE PILATES E FISIOTERAPIA",
+          "cnae_principal": "8650004",
+          "cnpj_formatado": "65.810.890/0001-42",
+          "segmento_label": "Clínica / reabilitação",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "keyword saude/clinica"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8596454442",
+          "incluir_no_parque": false,
+          "segmento_operacao": "saude_clinica",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "RAQUEL RODRIGUES RODICIO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60821572",
+          "qsa": [
+            {
+              "nome": "DEBORA CRISTINA FREITAS DOS SANTOS",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65757276000164",
+          "bairro": "PARQUE MANIBURA",
+          "endereco": "RUA ENGENHEIRO RONALDO DE CASTRO BARBOSA, 500, LOJA A",
+          "ref_month": "2026-05-01",
+          "razao_social": "MOVIMENTO CERTO PILATES E FISIOTERAPIA LTDA",
+          "data_abertura": "2026-03-18",
+          "email_empresa": "MOOVIMENTOCERTO@GMAIL.COM",
+          "nome_exibicao": "MOVIMENTO CERTO PILATES E FISIOTERAPIA",
+          "nome_fantasia": "MOVIMENTO CERTO PILATES E FISIOTERAPIA",
+          "cnae_principal": "8650004",
+          "cnpj_formatado": "65.757.276/0001-64",
+          "segmento_label": "Clínica / reabilitação",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "keyword saude/clinica"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8597476035",
+          "incluir_no_parque": false,
+          "segmento_operacao": "saude_clinica",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "DEBORA CRISTINA FREITAS DOS SANTOS",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60820290",
+          "qsa": [
+            {
+              "nome": "JOSE WAGNER NASCIMENTO DE BRITO",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "JOAO WILTOR NASCIMENTO DE BRITO",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65763202000130",
+          "bairro": "JARDIM DAS OLIVEIRAS",
+          "endereco": "AVENIDA PLACIDO CASTELO, 469",
+          "ref_month": "2026-05-01",
+          "razao_social": "ACADEMIA B4 FITNESS LTDA",
+          "data_abertura": "2026-03-18",
+          "email_empresa": "VLCONTABILIDADE2018@GMAIL.COM",
+          "nome_exibicao": "ACADEMIA B4 FITNESS LTDA",
+          "nome_fantasia": "ACADEMIA B4 FITNESS LTDA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.763.202/0001-30",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8532461799",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "JOSE WAGNER NASCIMENTO DE BRITO",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60416030",
+          "qsa": [
+            {
+              "nome": "NATHALIA COSTA VIEIRA",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65568805000181",
+          "bairro": "JARDIM AMERICA",
+          "endereco": "RUA DELMIRO DE FARIAS, 100, LJ 02",
+          "ref_month": "2026-05-01",
+          "razao_social": "ZELLO SAUDE PILATES ESTETICA E FISIOTERAPIA LTDA",
+          "data_abertura": "2026-03-09",
+          "email_empresa": "NATHALIA-COSTA@HOTMAIL.COM",
+          "nome_exibicao": "ZELLO SAUDE PILATES ESTETICA E FISIOTERAPIA",
+          "nome_fantasia": "ZELLO SAUDE PILATES ESTETICA E FISIOTERAPIA",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.568.805/0001-81",
+          "segmento_label": "Clínica / reabilitação",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "keyword saude/clinica"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8597487091",
+          "incluir_no_parque": false,
+          "segmento_operacao": "saude_clinica",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "NATHALIA COSTA VIEIRA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60866140",
+          "qsa": [
+            {
+              "nome": "RAIMUNDO JOSE VIEIRA CHAGAS",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65532876000124",
+          "bairro": "JANGURUSSU",
+          "endereco": "RUA 101 DO CONJUNTO HABITACIONAL SAO CRISTOVAO, 95",
+          "ref_month": "2026-05-01",
+          "razao_social": "R J V AUTOS E SERVICOS LTDA",
+          "data_abertura": "2026-03-06",
+          "email_empresa": "PODECOPIAR@GMAIL.COM",
+          "nome_exibicao": "R J V AUTOS E SERVICOS LTDA",
+          "nome_fantasia": "R J V AUTOS E SERVICOS LTDA",
+          "cnae_principal": "4511102",
+          "cnpj_formatado": "65.532.876/0001-24",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8587771018",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "RAIMUNDO JOSE VIEIRA CHAGAS",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        },
+        {
+          "cep": "60761282",
+          "qsa": [
+            {
+              "nome": "GABRIELLE RODRIGUES BARBOSA",
+              "qualificacao": "49-Sócio-Administrador"
+            },
+            {
+              "nome": "KAYQUE FERREIRA RIBEIRO",
+              "qualificacao": "22-Sócio"
+            }
+          ],
+          "cnpj": "65397586000115",
+          "bairro": "RACHEL DE QUEIROZ",
+          "endereco": "AVENIDA BERNARDO MANUEL, 10070, SALA 04",
+          "ref_month": "2026-05-01",
+          "razao_social": "FERREIRA'S TEAM ASSESSORIA ESPORTIVA LTDA",
+          "data_abertura": "2026-03-01",
+          "email_empresa": "FERREIRASTEAMASSESSORIA2026@GMAIL.COM",
+          "nome_exibicao": "FERREIRA'S TEAM",
+          "nome_fantasia": "FERREIRA'S TEAM",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.397.586/0001-15",
+          "segmento_label": "Lutas / artes marciais",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "lutas/mma"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8588864789",
+          "incluir_no_parque": true,
+          "segmento_operacao": "lutas",
+          "segmento_confianca": "alta",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "GABRIELLE RODRIGUES BARBOSA",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": false,
+          "telefone_socio_administrador": null
+        }
+      ],
+      "data_coleta": "2026-05-28",
+      "enriquecimento_meta": {
+        "cache_hits": 44,
+        "enriquecimento": "ok",
+        "limite_receita": 20,
+        "receita_chamadas": 0
+      },
+      "entrantes_incompletos": 4,
+      "validacao_places_ativa": false,
+      "segmentos_pendentes_validacao": 24,
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 3,
+        "academia": 38,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 3,
+        "personal_studio": 1,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "obras_cno_em_curso": {
+      "uf": "CE",
+      "fonte": "CNO — Cadastro Nacional de Obras (RFB)",
+      "obras": [
+        {
+          "cno": "900230111178",
+          "bairro": "Aldeota",
+          "numero": "1001",
+          "area_m2": 4583.46,
+          "nome_obra": "MAX FORMA ACADEMIAS",
+          "logradouro": "SENADOR VIRGILIO TAVORA",
+          "data_inicio": "2025-03-10",
+          "bairro_chave": "aldeota",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 1363,
+          "previsao_encerramento_estimada": "2028-12-02"
+        },
+        {
+          "cno": "900142903270",
+          "bairro": "Coco",
+          "numero": "2977",
+          "area_m2": 1140.13,
+          "nome_obra": "CENTRAL PARK FITNESS LTDA",
+          "logradouro": "ENGENHEIRO SANTANA JUNIOR - DE 1446 AO FIM - LADO",
+          "data_inicio": "2023-03-13",
+          "bairro_chave": "coco",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 174,
+          "previsao_encerramento_estimada": "2023-09-03"
+        },
+        {
+          "cno": "900130241175",
+          "bairro": "Itaperi",
+          "numero": "1700",
+          "area_m2": 712.0,
+          "nome_obra": "OBRA MANUT DOS CENTROS ACADEMICOS (CAS) DA UECE",
+          "logradouro": "DOUTOR SILAS MUNGUBA",
+          "data_inicio": "2022-11-11",
+          "bairro_chave": "itaperi",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 109,
+          "previsao_encerramento_estimada": "2023-02-28"
+        },
+        {
+          "cno": "900168943873",
+          "bairro": "Engenheiro Luciano Cavalcante",
+          "numero": "88",
+          "area_m2": 215.92,
+          "nome_obra": "ACADEMY EDUCACAO E TECNOLOGIA LTDA",
+          "logradouro": "TEODORO DE PAIVA",
+          "data_inicio": "2023-06-15",
+          "bairro_chave": "engenheiro luciano cavalcante",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 60,
+          "previsao_encerramento_estimada": "2023-08-14"
+        }
+      ],
+      "cidade": "Fortaleza",
+      "filtro": "situacao em_curso (códigos 01–04)",
+      "status": "ok",
+      "filtro_bairro": {
+        "bairro_filtro": null,
+        "bairro_filtro_chave": null
+      },
+      "bairro_relatorio": "Parangaba",
+      "nota_metodologica": "Receita = matrículas (m² × matr/m²) × ticket nominal × (1 − inadimplência). Previsão de encerramento = início + (dias/m² mediano de obras encerradas no CNO). Parâmetros de prospecção — não são dados fiscais.",
+      "benchmark_tempo_obra": {
+        "status": "ok",
+        "metricas": {
+          "n": 8,
+          "dias_por_m2_p25": 0.1023,
+          "dias_por_m2_p75": 0.2457,
+          "duracao_dias_p25": 111,
+          "duracao_dias_p75": 287,
+          "dias_por_m2_mediana": 0.1524,
+          "duracao_dias_mediana": 193
+        },
+        "por_porte_m2": {
+          "media": {
+            "n": 6,
+            "dias_por_m2_p25": 0.1119,
+            "dias_por_m2_p75": 0.2241,
+            "duracao_dias_p25": 127,
+            "duracao_dias_p75": 264,
+            "dias_por_m2_mediana": 0.1524,
+            "duracao_dias_mediana": 193
+          },
+          "grande": {
+            "n": 2,
+            "dias_por_m2_p25": 0.1727,
+            "dias_por_m2_p75": 0.4219,
+            "duracao_dias_p25": 281,
+            "duracao_dias_p75": 667,
+            "dias_por_m2_mediana": 0.2973,
+            "duracao_dias_mediana": 474
+          },
+          "pequena": {
+            "n": 0
+          }
+        },
+        "amostra_valida": 8,
+        "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento."
+      },
+      "total_obras_em_curso": 4
+    },
+    "scores_regionais": {
+      "demografico": 8.0,
+      "concorrencia": 1.94,
+      "viabilidade": 9.5
+    },
+    "alertas_financeiros": []
+  },
+  "candidatos": [
+    {
+      "id": "50969a1b-5c83-4462-b630-a0b79c6f147e",
+      "relatorio_id": "8845b104-4536-444e-98d6-03b7319cbf08",
+      "posicao": 1,
+      "nome": "Imóvel anunciado · 1400m² · IMOVELWEB",
+      "endereco": "Avenida Pinto Bandeira, 499\nEngenheiro Luciano Cavalcante, Fortaleza",
+      "place_id": "listing_imovelweb_3022154896",
+      "tipo": "imovel_anunciado",
+      "area_estimada_m2": 1400,
+      "lat": -3.774413,
+      "lng": -38.486837,
+      "score_geoscout": 8.5,
+      "score_ancoragem": 0.0,
+      "score_geral": null,
+      "motivo": "Imóvel anunciado para aluguel em IMOVELWEB — R$ 13.900. Acessar listing_url pra contato direto com a imobiliária.",
+      "estimativa_visibilidade": "a_confirmar_no_field",
+      "avenida_principal": false,
+      "qualidade_sinal": "direto-listing",
+      "polos_geradores": [],
+      "tipos_google": [
+        "imovel_anunciado",
+        "comercial",
+        "imovelweb"
+      ],
+      "street_view_url": "",
+      "status_business": null,
+      "telefone": null,
+      "website": "https://www.imovelweb.com.br/propriedades/casa-engenheiro-luciano-cavalcante-fortaleza-ce-3022154896.html",
+      "tem_24h": false,
+      "proximo_passo": null,
+      "created_at": "2026-05-28T22:40:03.099141+00:00",
+      "listing_url": "https://www.imovelweb.com.br/propriedades/casa-engenheiro-luciano-cavalcante-fortaleza-ce-3022154896.html",
+      "listing_id": "3022154896",
+      "price_raw": "R$ 13.900",
+      "listing_source": "imovelweb"
+    },
+    {
+      "id": "7418f05e-c06c-4e8c-826e-eca13348ca60",
+      "relatorio_id": "8845b104-4536-444e-98d6-03b7319cbf08",
+      "posicao": 2,
+      "nome": "Imóvel anunciado · 1000m² · IMOVELWEB",
+      "endereco": "José Ferreira de Pontes\nPapicu, Fortaleza",
+      "place_id": "listing_imovelweb_3025103096",
+      "tipo": "imovel_anunciado",
+      "area_estimada_m2": 1000,
+      "lat": -3.740604,
+      "lng": -38.476419,
+      "score_geoscout": 8.5,
+      "score_ancoragem": 0.0,
+      "score_geral": null,
+      "motivo": "Imóvel anunciado para aluguel em IMOVELWEB — R$ 8.800. Acessar listing_url pra contato direto com a imobiliária.",
+      "estimativa_visibilidade": "a_confirmar_no_field",
+      "avenida_principal": false,
+      "qualidade_sinal": "direto-listing",
+      "polos_geradores": [],
+      "tipos_google": [
+        "imovel_anunciado",
+        "comercial",
+        "imovelweb"
+      ],
+      "street_view_url": "",
+      "status_business": null,
+      "telefone": null,
+      "website": "https://www.imovelweb.com.br/propriedades/casa-para-alugar-600-m-por-r$-9.403-13-mes-papicu-3025103096.html",
+      "tem_24h": false,
+      "proximo_passo": null,
+      "created_at": "2026-05-28T22:40:03.099141+00:00",
+      "listing_url": "https://www.imovelweb.com.br/propriedades/casa-para-alugar-600-m-por-r$-9.403-13-mes-papicu-3025103096.html",
+      "listing_id": "3025103096",
+      "price_raw": "R$ 8.800",
+      "listing_source": "imovelweb"
+    },
+    {
+      "id": "0caf97ce-f8d4-4fdf-82dd-c1090d9f9f09",
+      "relatorio_id": "8845b104-4536-444e-98d6-03b7319cbf08",
+      "posicao": 3,
+      "nome": "Imóvel anunciado · 1000m² · IMOVELWEB",
+      "endereco": "Rua 5A 201\nNovo Maracanaú, Maracanaú",
+      "place_id": "listing_imovelweb_3036083669",
+      "tipo": "imovel_anunciado",
+      "area_estimada_m2": 1000,
+      "lat": -3.839135,
+      "lng": -38.585428,
+      "score_geoscout": 8.5,
+      "score_ancoragem": 0.0,
+      "score_geral": null,
+      "motivo": "Imóvel anunciado para aluguel em IMOVELWEB — R$ 15.000. Acessar listing_url pra contato direto com a imobiliária.",
+      "estimativa_visibilidade": "a_confirmar_no_field",
+      "avenida_principal": false,
+      "qualidade_sinal": "direto-listing",
+      "polos_geradores": [],
+      "tipos_google": [
+        "imovel_anunciado",
+        "comercial",
+        "imovelweb"
+      ],
+      "street_view_url": "",
+      "status_business": null,
+      "telefone": null,
+      "website": "https://www.imovelweb.com.br/propriedades/galpao-para-alugar-1000-m-por-r$-15.000-00-mes-3036083669.html",
+      "tem_24h": false,
+      "proximo_passo": null,
+      "created_at": "2026-05-28T22:40:03.099141+00:00",
+      "listing_url": "https://www.imovelweb.com.br/propriedades/galpao-para-alugar-1000-m-por-r$-15.000-00-mes-3036083669.html",
+      "listing_id": "3036083669",
+      "price_raw": "R$ 15.000",
+      "listing_source": "imovelweb"
+    }
+  ],
+  "competidores_count": 10
+}

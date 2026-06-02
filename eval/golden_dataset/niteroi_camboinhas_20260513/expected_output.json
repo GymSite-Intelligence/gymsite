@@ -1,0 +1,65 @@
+{
+  "case_id": "niteroi_camboinhas_20260513",
+  "uuid": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+  "adk_run_id": "rpt_1778633462",
+  "created_at": "2026-05-13T00:36:02.591005+00:00",
+  "data_execucao": "2026-05-12T21:51:02+00:00",
+  "pipeline_version": "1.5",
+  "status": "done",
+  "input_canonico": {
+    "cidade": "Niterói",
+    "bairro": "Camboinhas",
+    "uf": "RJ",
+    "area_m2_min": 300,
+    "area_m2_max": 600,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "expected_veredito": "INVESTIGAR MAIS",
+  "expected_score_top1": 4.99,
+  "expected_modelo_recomendado": "Nenhum",
+  "expected_nivel_saturacao": "MEDIO",
+  "expected_score_bairro": 3.98,
+  "candidatos_count": 3,
+  "competidores_count": 9,
+  "critical_fields": [
+    "veredito",
+    "score_top1_candidato",
+    "modelo_recomendado",
+    "nivel_saturacao"
+  ],
+  "tolerance_fields": {
+    "score_top1_candidato": 0.5,
+    "aluguel_mensal": 0.1
+  },
+  "curator_notes": "",
+  "approved": false,
+  "cno_validation": {
+    "required": false,
+    "validar_supplemento": true,
+    "nota": "Run original sem CNO no full_report. Ground truth: 0 obras fitness keyword no município; cruzamento CNPJ×CNO em cno_cruzamento_cnpj.json.",
+    "expected_status": "ok",
+    "total_obras_em_curso_municipio_fitness": 0,
+    "total_obras_em_curso_bairro_itai_pira": 0,
+    "cruzamento_entrantes": {
+      "total": 25,
+      "com_match_cno": 15,
+      "sem_match_cno": 10,
+      "tolerance": 2
+    },
+    "cruzamento_resumo_match_supplemento": {
+      "cnpj": 0,
+      "endereco": 1,
+      "nome_obra": 0,
+      "cep8_baixa": 14,
+      "sem_obra": 10,
+      "com_area": 1
+    },
+    "cruzamento_resumo_tolerance": 2,
+    "revisar_keyword_em_bairros": ["camboinhas", "itaipu", "piratininga"]
+  }
+}

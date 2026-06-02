@@ -1,0 +1,67 @@
+{
+  "case_id": "fortaleza_aldeota_20260601",
+  "uuid": "daa39e58-cc5a-4353-a021-146d29b8a13f",
+  "adk_run_id": "rpt_1780341163",
+  "created_at": "2026-06-01T18:55:40.096336+00:00",
+  "data_execucao": "2026-06-01T19:12:43+00:00",
+  "pipeline_version": "1.5",
+  "status": "done",
+  "input_canonico": {
+    "cidade": "Fortaleza",
+    "bairro": "Aldeota",
+    "uf": "CE",
+    "area_m2_min": 800,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "expected_veredito": "APROVADO",
+  "expected_score_top1": 9.0,
+  "expected_modelo_recomendado": "Premium",
+  "expected_nivel_saturacao": "",
+  "expected_score_bairro": 9.0,
+  "candidatos_count": 0,
+  "competidores_count": 0,
+  "critical_fields": [
+    "veredito",
+    "score_top1_candidato",
+    "modelo_recomendado",
+    "nivel_saturacao"
+  ],
+  "tolerance_fields": {
+    "score_top1_candidato": 0.5,
+    "aluguel_mensal": 0.1
+  },
+  "curator_notes": "",
+  "approved": false,
+  "cno_validation": {
+    "required": true,
+    "expected_status": "ok",
+    "bairro_chave": "aldeota",
+    "total_obras_em_curso_municipio": 4,
+    "total_obras_em_curso_bairro": 1,
+    "obras_count_tolerance": 2,
+    "obras_em_curso_bairro": [
+      {
+        "cno": "900230111178",
+        "area_m2": 4583.46,
+        "nome_obra": "MAX FORMA ACADEMIAS",
+        "metodos_permitidos": ["keyword", "cnpj_cnae", "cnpj_cnae_area_atipica"]
+      }
+    ],
+    "warn_keyword_only": true,
+    "benchmark_dias_por_m2_mediana": 0.1524,
+    "benchmark_dias_por_m2_tolerance": 0.05,
+    "cruzamento_resumo_match": {
+      "sem_obra": 46,
+      "com_area": 0,
+      "cnpj": 0,
+      "nome_obra": 0,
+      "cep8_baixa": 1
+    }
+  }
+}

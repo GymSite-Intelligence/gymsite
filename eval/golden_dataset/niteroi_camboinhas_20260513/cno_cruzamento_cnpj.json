@@ -1,0 +1,2130 @@
+{
+  "status": "ok",
+  "cidade": "Niterói",
+  "uf": "RJ",
+  "dias": 90,
+  "municipio_rfb": "5865",
+  "fonte_entrantes": "cnpj_fitness_estabelecimentos (Supabase)",
+  "fonte_obras": "CNO — Cadastro Nacional de Obras (RFB)",
+  "total_entrantes_consultados": 25,
+  "total_entrantes_cruzados": 25,
+  "obras_cno_municipio": 1166,
+  "obras_fitness_filtradas_municipio": 0,
+  "obras_fitness_em_curso": {
+    "status": "ok",
+    "cidade": "Niterói",
+    "uf": "RJ",
+    "fonte": "CNO — Cadastro Nacional de Obras (RFB)",
+    "filtro": "situacao em_curso (códigos 01–04)",
+    "total_obras_em_curso_municipio": 0,
+    "total_obras_em_curso": 0,
+    "filtro_bairro": {
+      "bairro_filtro": null,
+      "bairro_filtro_chave": null
+    },
+    "obras": [],
+    "totais_amostra": {
+      "obras_listadas": 0,
+      "area_m2_soma": 0.0,
+      "receita_mensal_realista_soma_estimada": 0.0
+    },
+    "benchmark_tempo_obra": {
+      "status": "amostra_insuficiente",
+      "cidade": "Niterói",
+      "uf": "RJ",
+      "fonte": "CNO — obras fitness encerradas (município)",
+      "total_encerradas_filtradas": 0,
+      "amostra_valida": 0,
+      "rejeitadas": {
+        "datas_invalidas": 0,
+        "duracao_fora_faixa": 0,
+        "dias_por_m2_fora_faixa": 0
+      },
+      "metricas": {
+        "n": 0
+      },
+      "por_porte_m2": {
+        "pequena": {
+          "n": 0
+        },
+        "media": {
+          "n": 0
+        },
+        "grande": {
+          "n": 0
+        }
+      },
+      "obras_referencia": [],
+      "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento."
+    },
+    "nota_metodologica": "Receita = matrículas (m² × matr/m²) × ticket nominal × (1 − inadimplência). Previsão de encerramento = início + (dias/m² mediano de obras encerradas no CNO). Parâmetros de prospecção — não são dados fiscais."
+  },
+  "benchmark_tempo_obra_cno": {
+    "status": "amostra_insuficiente",
+    "cidade": "Niterói",
+    "uf": "RJ",
+    "fonte": "CNO — obras fitness encerradas (município)",
+    "total_encerradas_filtradas": 0,
+    "amostra_valida": 0,
+    "rejeitadas": {
+      "datas_invalidas": 0,
+      "duracao_fora_faixa": 0,
+      "dias_por_m2_fora_faixa": 0
+    },
+    "metricas": {
+      "n": 0
+    },
+    "por_porte_m2": {
+      "pequena": {
+        "n": 0
+      },
+      "media": {
+        "n": 0
+      },
+      "grande": {
+        "n": 0
+      }
+    },
+    "obras_referencia": [],
+    "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento."
+  },
+  "obras_fitness_referencia": [],
+  "resumo_match": {
+    "cnpj": 0,
+    "endereco": 1,
+    "nome_obra": 0,
+    "cep8_baixa": 14,
+    "sem_obra": 10,
+    "com_area": 1
+  },
+  "nota_metodologica": "Fluxo CNPJ->CNO: entrantes fitness 90d primeiro; busca em todo o CNO municipal (obra pode ter nome de SPE/construtora). Área m² só com match confiável. Matrículas/receita = projeção A4, não faturamento CNPJ.",
+  "fluxo": "cnpj_entrantes_90d -> cno_municipio",
+  "escopo": "bairros",
+  "bairro_filtro": null,
+  "bairros_filtro": [
+    "Itaipu",
+    "Piratininga",
+    "Camboinhas"
+  ],
+  "entrantes_municipio": {
+    "total": 25,
+    "com_match_cno": 15,
+    "sem_match_cno": 10
+  },
+  "cruzamentos_municipio": [
+    {
+      "cnpj": "66662911000192",
+      "nome_fantasia": "SARA NEVES FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-05-07",
+      "cep": "24030215",
+      "endereco": "RUA MARQUES DE PARANA, 349, BLOCO 1                   APT   1308",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 65.0,
+        "area_m2_max": 10000.0,
+        "obras_no_cep": 6,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "41919315000203",
+      "nome_fantasia": "QUALITY FISIO",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-05-07",
+      "cep": "24020290",
+      "endereco": "RUA ACADEMICO WALTER GONCALVES, 1, COB 10",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66459596000109",
+      "nome_fantasia": "T.M.F. SPORTS",
+      "razao_social": null,
+      "segmento_operacao": "lutas",
+      "data_abertura": "2026-04-27",
+      "cep": "24030340",
+      "endereco": "RUA PADRE AUGUSTO LAMEGO, 73, CASA  19",
+      "bairro": "Sao Lourenco",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66382012000136",
+      "nome_fantasia": "WELLN3X",
+      "razao_social": null,
+      "segmento_operacao": "lutas",
+      "data_abertura": "2026-04-22",
+      "cep": "24350020",
+      "endereco": "RUA ARI GOMES DA SILVA, 02, SALA  202",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 429.9,
+        "area_m2_max": 429.9,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66391043000153",
+      "nome_fantasia": "FABIO LOPES - PERFORMANCE E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-22",
+      "cep": "24230240",
+      "endereco": "RUA PROFESSOR MIGUEL COUTO, 434, APT   1302",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 533.71,
+        "area_m2_max": 11645.57,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66300572000102",
+      "nome_fantasia": "DRA. GABRIELA LAGOS - FISIOTERAPEUTA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-16",
+      "cep": "24111120",
+      "endereco": "RUA DR. LIBORIO SEABRA, 68",
+      "bairro": "Barreto",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66332033000147",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-15",
+      "cep": "24020320",
+      "endereco": "RUA DOUTOR BORMAN, 43, SALA  1401",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66275463000174",
+      "nome_fantasia": "GAMA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-14",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66247839000137",
+      "nome_fantasia": "CMP FISIO",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-14",
+      "cep": "24220320",
+      "endereco": "RUA NOBREGA, 243, APT   1201",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 101.3,
+        "area_m2_max": 488.44,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66177448000193",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-09",
+      "cep": "24370025",
+      "endereco": "RUA MARECHAL RAUL DE ALBUQUERQUE, 2, SALA  603",
+      "bairro": "Charitas",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66221606000165",
+      "nome_fantasia": "STUDIO ELO CARDOSO FISIOTERAPIA E PILATES",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-09",
+      "cep": "24020070",
+      "endereco": "AVENIDA ERNANI DO AMARAL PEIXOTO, 71, SALA  1010",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 157.55,
+        "area_m2_max": 580.9,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65989575000124",
+      "nome_fantasia": "JAYME SAUDE INTEGRADA NUTRICAO E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-27",
+      "cep": "24350310",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 5982, SALA  204",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 146.0,
+        "area_m2_max": 4246.0,
+        "obras_no_cep": 8,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65953925000100",
+      "nome_fantasia": "ESTUDIO HC",
+      "razao_social": null,
+      "segmento_operacao": "studio_bem_estar",
+      "data_abertura": "2026-03-26",
+      "cep": "24320505",
+      "endereco": "ESTRADA CAETANO MONTEIRO, 906, CASA  PONTO DE REFERENCIA",
+      "bairro": "Mata Paca",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65891807000107",
+      "nome_fantasia": "PEREIRA DE LIMA FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-03-25",
+      "cep": "24020006",
+      "endereco": "AVENIDA VISCONDE DO RIO BRANCO, 767, COND  EDIFICIO S. TAMARINEAPT   0902",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 17223.67,
+        "area_m2_max": 17223.67,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65986185000109",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-25",
+      "cep": "24130315",
+      "endereco": "RUA SANTO ONOFRE, 87",
+      "bairro": "Fonseca",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65884731000192",
+      "nome_fantasia": "WS TRAINING STUDIO",
+      "razao_social": null,
+      "segmento_operacao": "studio_funcional",
+      "data_abertura": "2026-03-24",
+      "cep": "24342702",
+      "endereco": "AVENIDA CENTRAL EWERTON XAVIER, 4255, LOJA  101",
+      "bairro": "Serra Grande",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 294.69,
+        "area_m2_max": 333.43,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65812320000191",
+      "nome_fantasia": "EVOPULSE STUDIO WELLNESS, SAUDE E PERFORMANCE LTDA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24230063",
+      "endereco": "RUA ATOR PAULO GUSTAVO, 222, SALA  301",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "endereco_cep_numero",
+      "match_confianca": "alta",
+      "area_m2_obra": 112.62,
+      "capacidade_matriculas_estimada": {
+        "matriculas_conservador": 112,
+        "matriculas_realista": 157,
+        "matriculas_agressivo": 202
+      },
+      "projecao_receita_estimada": {
+        "status": "ok",
+        "tipo": "projecao_estimativa",
+        "fonte_premissas": "financial_tools — mesmo benchmark do A4",
+        "area_m2": 112.62,
+        "faixa_ticket": "mid",
+        "faixa_label": "Mid Market",
+        "ticket_nominal": 149.9,
+        "taxa_inadimplencia": 0.04,
+        "ticket_realizado": 143.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 112,
+            "matr_por_m2": 1.0,
+            "densidade_maxima_m2": 1.0
+          },
+          "realista": {
+            "valor": 157,
+            "matr_por_m2": 1.4,
+            "densidade_maxima_m2": 1.4
+          },
+          "agressivo": {
+            "valor": 202,
+            "matr_por_m2": 1.8,
+            "densidade_maxima_m2": 1.8
+          }
+        },
+        "receita_mensal_estimada": {
+          "conservador": 16116.8,
+          "realista": 22592.3,
+          "agressivo": 29067.8
+        },
+        "receita_base_calibracao": "realista",
+        "nota": "Projeção para prospecção/parâmetros. Não é faturamento declarado nem garantia de ocupação na abertura."
+      },
+      "obra": {
+        "cno": "900060151571",
+        "cnpj_responsavel": "0070",
+        "cep": "24230063",
+        "nome_obra": "MOREIRA 222 ADMINISTRADORA DE BENS LTDA",
+        "area_m2": 112.62,
+        "situacao_obra": "encerrada",
+        "situacao_codigo": "15",
+        "logradouro": "ATOR PAULO GUSTAVO",
+        "numero": "222",
+        "bairro": "ICARAI",
+        "bairro_chave": "icarai",
+        "data_inicio": "2021-03-01",
+        "classificacao_fitness": false
+      }
+    },
+    {
+      "cnpj": "65819554000160",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24220215",
+      "endereco": "RUA DOUTOR TAVARES DE MACEDO, 95, SALA  707",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 223.0,
+        "area_m2_max": 2698.0,
+        "obras_no_cep": 4,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65701368000122",
+      "nome_fantasia": "FABRICA PREMIUM REGIAO OCEANICA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-16",
+      "cep": "24340000",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 1004",
+      "bairro": "Itaipu",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 75.0,
+        "area_m2_max": 21160.64,
+        "obras_no_cep": 30,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65649037000190",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-12",
+      "cep": "24060037",
+      "endereco": "RUA INDIGENA, 174, APT   103                 BLOCO A",
+      "bairro": "Sao Lourenco",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65638436000156",
+      "nome_fantasia": "THAIS VIANNA FISIOTERAPIA E PILATES",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-03-11",
+      "cep": "24230190",
+      "endereco": "RUA OTAVIO CARNEIRO, 143, SALA  1203",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65532914000149",
+      "nome_fantasia": "HEPICO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-06",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65536279000178",
+      "nome_fantasia": "IGOR BASTOS OSTEOPATIA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-06",
+      "cep": "24230190",
+      "endereco": "RUA OTAVIO CARNEIRO, 143, SALA  1001",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65537176000122",
+      "nome_fantasia": "BIA ESPORTES",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-05",
+      "cep": "24220300",
+      "endereco": "RUA MINISTRO OTAVIO KELLY, 221, APT   1503",
+      "bairro": "Icarai",
+      "cnae_principal": "8591100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 126.0,
+        "area_m2_max": 2823.14,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65573368000194",
+      "nome_fantasia": "LA SANTE - SANTA ROSA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-03",
+      "cep": "24240225",
+      "endereco": "RUA SANTA ROSA, 28, SLJ",
+      "bairro": "Santa Rosa",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 165.0,
+        "area_m2_max": 1800.0,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    }
+  ],
+  "cruzamentos_com_obra_municipio": [
+    {
+      "cnpj": "66662911000192",
+      "nome_fantasia": "SARA NEVES FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-05-07",
+      "cep": "24030215",
+      "endereco": "RUA MARQUES DE PARANA, 349, BLOCO 1                   APT   1308",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 65.0,
+        "area_m2_max": 10000.0,
+        "obras_no_cep": 6,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66382012000136",
+      "nome_fantasia": "WELLN3X",
+      "razao_social": null,
+      "segmento_operacao": "lutas",
+      "data_abertura": "2026-04-22",
+      "cep": "24350020",
+      "endereco": "RUA ARI GOMES DA SILVA, 02, SALA  202",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 429.9,
+        "area_m2_max": 429.9,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66391043000153",
+      "nome_fantasia": "FABIO LOPES - PERFORMANCE E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-22",
+      "cep": "24230240",
+      "endereco": "RUA PROFESSOR MIGUEL COUTO, 434, APT   1302",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 533.71,
+        "area_m2_max": 11645.57,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66275463000174",
+      "nome_fantasia": "GAMA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-14",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66247839000137",
+      "nome_fantasia": "CMP FISIO",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-14",
+      "cep": "24220320",
+      "endereco": "RUA NOBREGA, 243, APT   1201",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 101.3,
+        "area_m2_max": 488.44,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66221606000165",
+      "nome_fantasia": "STUDIO ELO CARDOSO FISIOTERAPIA E PILATES",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-09",
+      "cep": "24020070",
+      "endereco": "AVENIDA ERNANI DO AMARAL PEIXOTO, 71, SALA  1010",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 157.55,
+        "area_m2_max": 580.9,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65989575000124",
+      "nome_fantasia": "JAYME SAUDE INTEGRADA NUTRICAO E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-27",
+      "cep": "24350310",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 5982, SALA  204",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 146.0,
+        "area_m2_max": 4246.0,
+        "obras_no_cep": 8,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65891807000107",
+      "nome_fantasia": "PEREIRA DE LIMA FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-03-25",
+      "cep": "24020006",
+      "endereco": "AVENIDA VISCONDE DO RIO BRANCO, 767, COND  EDIFICIO S. TAMARINEAPT   0902",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 17223.67,
+        "area_m2_max": 17223.67,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65884731000192",
+      "nome_fantasia": "WS TRAINING STUDIO",
+      "razao_social": null,
+      "segmento_operacao": "studio_funcional",
+      "data_abertura": "2026-03-24",
+      "cep": "24342702",
+      "endereco": "AVENIDA CENTRAL EWERTON XAVIER, 4255, LOJA  101",
+      "bairro": "Serra Grande",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 294.69,
+        "area_m2_max": 333.43,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65812320000191",
+      "nome_fantasia": "EVOPULSE STUDIO WELLNESS, SAUDE E PERFORMANCE LTDA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24230063",
+      "endereco": "RUA ATOR PAULO GUSTAVO, 222, SALA  301",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "endereco_cep_numero",
+      "match_confianca": "alta",
+      "area_m2_obra": 112.62,
+      "capacidade_matriculas_estimada": {
+        "matriculas_conservador": 112,
+        "matriculas_realista": 157,
+        "matriculas_agressivo": 202
+      },
+      "projecao_receita_estimada": {
+        "status": "ok",
+        "tipo": "projecao_estimativa",
+        "fonte_premissas": "financial_tools — mesmo benchmark do A4",
+        "area_m2": 112.62,
+        "faixa_ticket": "mid",
+        "faixa_label": "Mid Market",
+        "ticket_nominal": 149.9,
+        "taxa_inadimplencia": 0.04,
+        "ticket_realizado": 143.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 112,
+            "matr_por_m2": 1.0,
+            "densidade_maxima_m2": 1.0
+          },
+          "realista": {
+            "valor": 157,
+            "matr_por_m2": 1.4,
+            "densidade_maxima_m2": 1.4
+          },
+          "agressivo": {
+            "valor": 202,
+            "matr_por_m2": 1.8,
+            "densidade_maxima_m2": 1.8
+          }
+        },
+        "receita_mensal_estimada": {
+          "conservador": 16116.8,
+          "realista": 22592.3,
+          "agressivo": 29067.8
+        },
+        "receita_base_calibracao": "realista",
+        "nota": "Projeção para prospecção/parâmetros. Não é faturamento declarado nem garantia de ocupação na abertura."
+      },
+      "obra": {
+        "cno": "900060151571",
+        "cnpj_responsavel": "0070",
+        "cep": "24230063",
+        "nome_obra": "MOREIRA 222 ADMINISTRADORA DE BENS LTDA",
+        "area_m2": 112.62,
+        "situacao_obra": "encerrada",
+        "situacao_codigo": "15",
+        "logradouro": "ATOR PAULO GUSTAVO",
+        "numero": "222",
+        "bairro": "ICARAI",
+        "bairro_chave": "icarai",
+        "data_inicio": "2021-03-01",
+        "classificacao_fitness": false
+      }
+    },
+    {
+      "cnpj": "65819554000160",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24220215",
+      "endereco": "RUA DOUTOR TAVARES DE MACEDO, 95, SALA  707",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 223.0,
+        "area_m2_max": 2698.0,
+        "obras_no_cep": 4,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65701368000122",
+      "nome_fantasia": "FABRICA PREMIUM REGIAO OCEANICA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-16",
+      "cep": "24340000",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 1004",
+      "bairro": "Itaipu",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 75.0,
+        "area_m2_max": 21160.64,
+        "obras_no_cep": 30,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65532914000149",
+      "nome_fantasia": "HEPICO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-06",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65537176000122",
+      "nome_fantasia": "BIA ESPORTES",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-05",
+      "cep": "24220300",
+      "endereco": "RUA MINISTRO OTAVIO KELLY, 221, APT   1503",
+      "bairro": "Icarai",
+      "cnae_principal": "8591100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 126.0,
+        "area_m2_max": 2823.14,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65573368000194",
+      "nome_fantasia": "LA SANTE - SANTA ROSA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-03",
+      "cep": "24240225",
+      "endereco": "RUA SANTA ROSA, 28, SLJ",
+      "bairro": "Santa Rosa",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 165.0,
+        "area_m2_max": 1800.0,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    }
+  ],
+  "por_bairro": {
+    "Itaipu": {
+      "total_entrantes": 1,
+      "com_match_cno": 1,
+      "sem_match_cno": 0,
+      "cruzamentos": [
+        {
+          "cnpj": "65701368000122",
+          "nome_fantasia": "FABRICA PREMIUM REGIAO OCEANICA",
+          "razao_social": null,
+          "segmento_operacao": "academia",
+          "data_abertura": "2026-03-16",
+          "cep": "24340000",
+          "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 1004",
+          "bairro": "Itaipu",
+          "cnae_principal": "9313100",
+          "match_cno": "cep8_multiplas_obras",
+          "match_confianca": "baixa",
+          "area_m2_obra": null,
+          "capacidade_matriculas_estimada": null,
+          "projecao_receita_estimada": null,
+          "obra": {
+            "area_m2_min": 75.0,
+            "area_m2_max": 21160.64,
+            "obras_no_cep": 30,
+            "nota": "várias obras no CEP; sem match por nome/endereço"
+          }
+        }
+      ],
+      "cruzamentos_com_obra": [
+        {
+          "cnpj": "65701368000122",
+          "nome_fantasia": "FABRICA PREMIUM REGIAO OCEANICA",
+          "razao_social": null,
+          "segmento_operacao": "academia",
+          "data_abertura": "2026-03-16",
+          "cep": "24340000",
+          "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 1004",
+          "bairro": "Itaipu",
+          "cnae_principal": "9313100",
+          "match_cno": "cep8_multiplas_obras",
+          "match_confianca": "baixa",
+          "area_m2_obra": null,
+          "capacidade_matriculas_estimada": null,
+          "projecao_receita_estimada": null,
+          "obra": {
+            "area_m2_min": 75.0,
+            "area_m2_max": 21160.64,
+            "obras_no_cep": 30,
+            "nota": "várias obras no CEP; sem match por nome/endereço"
+          }
+        }
+      ]
+    },
+    "Piratininga": {
+      "total_entrantes": 2,
+      "com_match_cno": 2,
+      "sem_match_cno": 0,
+      "cruzamentos": [
+        {
+          "cnpj": "66382012000136",
+          "nome_fantasia": "WELLN3X",
+          "razao_social": null,
+          "segmento_operacao": "lutas",
+          "data_abertura": "2026-04-22",
+          "cep": "24350020",
+          "endereco": "RUA ARI GOMES DA SILVA, 02, SALA  202",
+          "bairro": "Piratininga",
+          "cnae_principal": "9313100",
+          "match_cno": "cep8_multiplas_obras",
+          "match_confianca": "baixa",
+          "area_m2_obra": null,
+          "capacidade_matriculas_estimada": null,
+          "projecao_receita_estimada": null,
+          "obra": {
+            "area_m2_min": 429.9,
+            "area_m2_max": 429.9,
+            "obras_no_cep": 1,
+            "nota": "várias obras no CEP; sem match por nome/endereço"
+          }
+        },
+        {
+          "cnpj": "65989575000124",
+          "nome_fantasia": "JAYME SAUDE INTEGRADA NUTRICAO E TREINAMENTO",
+          "razao_social": null,
+          "segmento_operacao": "academia",
+          "data_abertura": "2026-03-27",
+          "cep": "24350310",
+          "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 5982, SALA  204",
+          "bairro": "Piratininga",
+          "cnae_principal": "9313100",
+          "match_cno": "cep8_multiplas_obras",
+          "match_confianca": "baixa",
+          "area_m2_obra": null,
+          "capacidade_matriculas_estimada": null,
+          "projecao_receita_estimada": null,
+          "obra": {
+            "area_m2_min": 146.0,
+            "area_m2_max": 4246.0,
+            "obras_no_cep": 8,
+            "nota": "várias obras no CEP; sem match por nome/endereço"
+          }
+        }
+      ],
+      "cruzamentos_com_obra": [
+        {
+          "cnpj": "66382012000136",
+          "nome_fantasia": "WELLN3X",
+          "razao_social": null,
+          "segmento_operacao": "lutas",
+          "data_abertura": "2026-04-22",
+          "cep": "24350020",
+          "endereco": "RUA ARI GOMES DA SILVA, 02, SALA  202",
+          "bairro": "Piratininga",
+          "cnae_principal": "9313100",
+          "match_cno": "cep8_multiplas_obras",
+          "match_confianca": "baixa",
+          "area_m2_obra": null,
+          "capacidade_matriculas_estimada": null,
+          "projecao_receita_estimada": null,
+          "obra": {
+            "area_m2_min": 429.9,
+            "area_m2_max": 429.9,
+            "obras_no_cep": 1,
+            "nota": "várias obras no CEP; sem match por nome/endereço"
+          }
+        },
+        {
+          "cnpj": "65989575000124",
+          "nome_fantasia": "JAYME SAUDE INTEGRADA NUTRICAO E TREINAMENTO",
+          "razao_social": null,
+          "segmento_operacao": "academia",
+          "data_abertura": "2026-03-27",
+          "cep": "24350310",
+          "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 5982, SALA  204",
+          "bairro": "Piratininga",
+          "cnae_principal": "9313100",
+          "match_cno": "cep8_multiplas_obras",
+          "match_confianca": "baixa",
+          "area_m2_obra": null,
+          "capacidade_matriculas_estimada": null,
+          "projecao_receita_estimada": null,
+          "obra": {
+            "area_m2_min": 146.0,
+            "area_m2_max": 4246.0,
+            "obras_no_cep": 8,
+            "nota": "várias obras no CEP; sem match por nome/endereço"
+          }
+        }
+      ]
+    },
+    "Camboinhas": {
+      "total_entrantes": 0,
+      "com_match_cno": 0,
+      "sem_match_cno": 0,
+      "cruzamentos": [],
+      "cruzamentos_com_obra": []
+    }
+  },
+  "cruzamentos": [
+    {
+      "cnpj": "66662911000192",
+      "nome_fantasia": "SARA NEVES FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-05-07",
+      "cep": "24030215",
+      "endereco": "RUA MARQUES DE PARANA, 349, BLOCO 1                   APT   1308",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 65.0,
+        "area_m2_max": 10000.0,
+        "obras_no_cep": 6,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "41919315000203",
+      "nome_fantasia": "QUALITY FISIO",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-05-07",
+      "cep": "24020290",
+      "endereco": "RUA ACADEMICO WALTER GONCALVES, 1, COB 10",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66459596000109",
+      "nome_fantasia": "T.M.F. SPORTS",
+      "razao_social": null,
+      "segmento_operacao": "lutas",
+      "data_abertura": "2026-04-27",
+      "cep": "24030340",
+      "endereco": "RUA PADRE AUGUSTO LAMEGO, 73, CASA  19",
+      "bairro": "Sao Lourenco",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66382012000136",
+      "nome_fantasia": "WELLN3X",
+      "razao_social": null,
+      "segmento_operacao": "lutas",
+      "data_abertura": "2026-04-22",
+      "cep": "24350020",
+      "endereco": "RUA ARI GOMES DA SILVA, 02, SALA  202",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 429.9,
+        "area_m2_max": 429.9,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66391043000153",
+      "nome_fantasia": "FABIO LOPES - PERFORMANCE E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-22",
+      "cep": "24230240",
+      "endereco": "RUA PROFESSOR MIGUEL COUTO, 434, APT   1302",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 533.71,
+        "area_m2_max": 11645.57,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66300572000102",
+      "nome_fantasia": "DRA. GABRIELA LAGOS - FISIOTERAPEUTA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-16",
+      "cep": "24111120",
+      "endereco": "RUA DR. LIBORIO SEABRA, 68",
+      "bairro": "Barreto",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66332033000147",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-15",
+      "cep": "24020320",
+      "endereco": "RUA DOUTOR BORMAN, 43, SALA  1401",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66275463000174",
+      "nome_fantasia": "GAMA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-14",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66247839000137",
+      "nome_fantasia": "CMP FISIO",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-14",
+      "cep": "24220320",
+      "endereco": "RUA NOBREGA, 243, APT   1201",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 101.3,
+        "area_m2_max": 488.44,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66177448000193",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-09",
+      "cep": "24370025",
+      "endereco": "RUA MARECHAL RAUL DE ALBUQUERQUE, 2, SALA  603",
+      "bairro": "Charitas",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "66221606000165",
+      "nome_fantasia": "STUDIO ELO CARDOSO FISIOTERAPIA E PILATES",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-09",
+      "cep": "24020070",
+      "endereco": "AVENIDA ERNANI DO AMARAL PEIXOTO, 71, SALA  1010",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 157.55,
+        "area_m2_max": 580.9,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65989575000124",
+      "nome_fantasia": "JAYME SAUDE INTEGRADA NUTRICAO E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-27",
+      "cep": "24350310",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 5982, SALA  204",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 146.0,
+        "area_m2_max": 4246.0,
+        "obras_no_cep": 8,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65953925000100",
+      "nome_fantasia": "ESTUDIO HC",
+      "razao_social": null,
+      "segmento_operacao": "studio_bem_estar",
+      "data_abertura": "2026-03-26",
+      "cep": "24320505",
+      "endereco": "ESTRADA CAETANO MONTEIRO, 906, CASA  PONTO DE REFERENCIA",
+      "bairro": "Mata Paca",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65891807000107",
+      "nome_fantasia": "PEREIRA DE LIMA FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-03-25",
+      "cep": "24020006",
+      "endereco": "AVENIDA VISCONDE DO RIO BRANCO, 767, COND  EDIFICIO S. TAMARINEAPT   0902",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 17223.67,
+        "area_m2_max": 17223.67,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65986185000109",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-25",
+      "cep": "24130315",
+      "endereco": "RUA SANTO ONOFRE, 87",
+      "bairro": "Fonseca",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65884731000192",
+      "nome_fantasia": "WS TRAINING STUDIO",
+      "razao_social": null,
+      "segmento_operacao": "studio_funcional",
+      "data_abertura": "2026-03-24",
+      "cep": "24342702",
+      "endereco": "AVENIDA CENTRAL EWERTON XAVIER, 4255, LOJA  101",
+      "bairro": "Serra Grande",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 294.69,
+        "area_m2_max": 333.43,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65812320000191",
+      "nome_fantasia": "EVOPULSE STUDIO WELLNESS, SAUDE E PERFORMANCE LTDA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24230063",
+      "endereco": "RUA ATOR PAULO GUSTAVO, 222, SALA  301",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "endereco_cep_numero",
+      "match_confianca": "alta",
+      "area_m2_obra": 112.62,
+      "capacidade_matriculas_estimada": {
+        "matriculas_conservador": 112,
+        "matriculas_realista": 157,
+        "matriculas_agressivo": 202
+      },
+      "projecao_receita_estimada": {
+        "status": "ok",
+        "tipo": "projecao_estimativa",
+        "fonte_premissas": "financial_tools — mesmo benchmark do A4",
+        "area_m2": 112.62,
+        "faixa_ticket": "mid",
+        "faixa_label": "Mid Market",
+        "ticket_nominal": 149.9,
+        "taxa_inadimplencia": 0.04,
+        "ticket_realizado": 143.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 112,
+            "matr_por_m2": 1.0,
+            "densidade_maxima_m2": 1.0
+          },
+          "realista": {
+            "valor": 157,
+            "matr_por_m2": 1.4,
+            "densidade_maxima_m2": 1.4
+          },
+          "agressivo": {
+            "valor": 202,
+            "matr_por_m2": 1.8,
+            "densidade_maxima_m2": 1.8
+          }
+        },
+        "receita_mensal_estimada": {
+          "conservador": 16116.8,
+          "realista": 22592.3,
+          "agressivo": 29067.8
+        },
+        "receita_base_calibracao": "realista",
+        "nota": "Projeção para prospecção/parâmetros. Não é faturamento declarado nem garantia de ocupação na abertura."
+      },
+      "obra": {
+        "cno": "900060151571",
+        "cnpj_responsavel": "0070",
+        "cep": "24230063",
+        "nome_obra": "MOREIRA 222 ADMINISTRADORA DE BENS LTDA",
+        "area_m2": 112.62,
+        "situacao_obra": "encerrada",
+        "situacao_codigo": "15",
+        "logradouro": "ATOR PAULO GUSTAVO",
+        "numero": "222",
+        "bairro": "ICARAI",
+        "bairro_chave": "icarai",
+        "data_inicio": "2021-03-01",
+        "classificacao_fitness": false
+      }
+    },
+    {
+      "cnpj": "65819554000160",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24220215",
+      "endereco": "RUA DOUTOR TAVARES DE MACEDO, 95, SALA  707",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 223.0,
+        "area_m2_max": 2698.0,
+        "obras_no_cep": 4,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65701368000122",
+      "nome_fantasia": "FABRICA PREMIUM REGIAO OCEANICA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-16",
+      "cep": "24340000",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 1004",
+      "bairro": "Itaipu",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 75.0,
+        "area_m2_max": 21160.64,
+        "obras_no_cep": 30,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65649037000190",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-12",
+      "cep": "24060037",
+      "endereco": "RUA INDIGENA, 174, APT   103                 BLOCO A",
+      "bairro": "Sao Lourenco",
+      "cnae_principal": "9313100",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65638436000156",
+      "nome_fantasia": "THAIS VIANNA FISIOTERAPIA E PILATES",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-03-11",
+      "cep": "24230190",
+      "endereco": "RUA OTAVIO CARNEIRO, 143, SALA  1203",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65532914000149",
+      "nome_fantasia": "HEPICO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-06",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65536279000178",
+      "nome_fantasia": "IGOR BASTOS OSTEOPATIA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-06",
+      "cep": "24230190",
+      "endereco": "RUA OTAVIO CARNEIRO, 143, SALA  1001",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": null,
+      "match_confianca": null,
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": null
+    },
+    {
+      "cnpj": "65537176000122",
+      "nome_fantasia": "BIA ESPORTES",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-05",
+      "cep": "24220300",
+      "endereco": "RUA MINISTRO OTAVIO KELLY, 221, APT   1503",
+      "bairro": "Icarai",
+      "cnae_principal": "8591100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 126.0,
+        "area_m2_max": 2823.14,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65573368000194",
+      "nome_fantasia": "LA SANTE - SANTA ROSA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-03",
+      "cep": "24240225",
+      "endereco": "RUA SANTA ROSA, 28, SLJ",
+      "bairro": "Santa Rosa",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 165.0,
+        "area_m2_max": 1800.0,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    }
+  ],
+  "cruzamentos_com_obra": [
+    {
+      "cnpj": "66662911000192",
+      "nome_fantasia": "SARA NEVES FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-05-07",
+      "cep": "24030215",
+      "endereco": "RUA MARQUES DE PARANA, 349, BLOCO 1                   APT   1308",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 65.0,
+        "area_m2_max": 10000.0,
+        "obras_no_cep": 6,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66382012000136",
+      "nome_fantasia": "WELLN3X",
+      "razao_social": null,
+      "segmento_operacao": "lutas",
+      "data_abertura": "2026-04-22",
+      "cep": "24350020",
+      "endereco": "RUA ARI GOMES DA SILVA, 02, SALA  202",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 429.9,
+        "area_m2_max": 429.9,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66391043000153",
+      "nome_fantasia": "FABIO LOPES - PERFORMANCE E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-22",
+      "cep": "24230240",
+      "endereco": "RUA PROFESSOR MIGUEL COUTO, 434, APT   1302",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 533.71,
+        "area_m2_max": 11645.57,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66275463000174",
+      "nome_fantasia": "GAMA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-04-14",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66247839000137",
+      "nome_fantasia": "CMP FISIO",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-14",
+      "cep": "24220320",
+      "endereco": "RUA NOBREGA, 243, APT   1201",
+      "bairro": "Icarai",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 101.3,
+        "area_m2_max": 488.44,
+        "obras_no_cep": 3,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "66221606000165",
+      "nome_fantasia": "STUDIO ELO CARDOSO FISIOTERAPIA E PILATES",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-04-09",
+      "cep": "24020070",
+      "endereco": "AVENIDA ERNANI DO AMARAL PEIXOTO, 71, SALA  1010",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 157.55,
+        "area_m2_max": 580.9,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65989575000124",
+      "nome_fantasia": "JAYME SAUDE INTEGRADA NUTRICAO E TREINAMENTO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-27",
+      "cep": "24350310",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 5982, SALA  204",
+      "bairro": "Piratininga",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 146.0,
+        "area_m2_max": 4246.0,
+        "obras_no_cep": 8,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65891807000107",
+      "nome_fantasia": "PEREIRA DE LIMA FISIOTERAPIA",
+      "razao_social": null,
+      "segmento_operacao": "saude_clinica",
+      "data_abertura": "2026-03-25",
+      "cep": "24020006",
+      "endereco": "AVENIDA VISCONDE DO RIO BRANCO, 767, COND  EDIFICIO S. TAMARINEAPT   0902",
+      "bairro": "Centro",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 17223.67,
+        "area_m2_max": 17223.67,
+        "obras_no_cep": 1,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65884731000192",
+      "nome_fantasia": "WS TRAINING STUDIO",
+      "razao_social": null,
+      "segmento_operacao": "studio_funcional",
+      "data_abertura": "2026-03-24",
+      "cep": "24342702",
+      "endereco": "AVENIDA CENTRAL EWERTON XAVIER, 4255, LOJA  101",
+      "bairro": "Serra Grande",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 294.69,
+        "area_m2_max": 333.43,
+        "obras_no_cep": 2,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65812320000191",
+      "nome_fantasia": "EVOPULSE STUDIO WELLNESS, SAUDE E PERFORMANCE LTDA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24230063",
+      "endereco": "RUA ATOR PAULO GUSTAVO, 222, SALA  301",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "endereco_cep_numero",
+      "match_confianca": "alta",
+      "area_m2_obra": 112.62,
+      "capacidade_matriculas_estimada": {
+        "matriculas_conservador": 112,
+        "matriculas_realista": 157,
+        "matriculas_agressivo": 202
+      },
+      "projecao_receita_estimada": {
+        "status": "ok",
+        "tipo": "projecao_estimativa",
+        "fonte_premissas": "financial_tools — mesmo benchmark do A4",
+        "area_m2": 112.62,
+        "faixa_ticket": "mid",
+        "faixa_label": "Mid Market",
+        "ticket_nominal": 149.9,
+        "taxa_inadimplencia": 0.04,
+        "ticket_realizado": 143.9,
+        "matriculas": {
+          "conservador": {
+            "valor": 112,
+            "matr_por_m2": 1.0,
+            "densidade_maxima_m2": 1.0
+          },
+          "realista": {
+            "valor": 157,
+            "matr_por_m2": 1.4,
+            "densidade_maxima_m2": 1.4
+          },
+          "agressivo": {
+            "valor": 202,
+            "matr_por_m2": 1.8,
+            "densidade_maxima_m2": 1.8
+          }
+        },
+        "receita_mensal_estimada": {
+          "conservador": 16116.8,
+          "realista": 22592.3,
+          "agressivo": 29067.8
+        },
+        "receita_base_calibracao": "realista",
+        "nota": "Projeção para prospecção/parâmetros. Não é faturamento declarado nem garantia de ocupação na abertura."
+      },
+      "obra": {
+        "cno": "900060151571",
+        "cnpj_responsavel": "0070",
+        "cep": "24230063",
+        "nome_obra": "MOREIRA 222 ADMINISTRADORA DE BENS LTDA",
+        "area_m2": 112.62,
+        "situacao_obra": "encerrada",
+        "situacao_codigo": "15",
+        "logradouro": "ATOR PAULO GUSTAVO",
+        "numero": "222",
+        "bairro": "ICARAI",
+        "bairro_chave": "icarai",
+        "data_inicio": "2021-03-01",
+        "classificacao_fitness": false
+      }
+    },
+    {
+      "cnpj": "65819554000160",
+      "nome_fantasia": null,
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-20",
+      "cep": "24220215",
+      "endereco": "RUA DOUTOR TAVARES DE MACEDO, 95, SALA  707",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 223.0,
+        "area_m2_max": 2698.0,
+        "obras_no_cep": 4,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65701368000122",
+      "nome_fantasia": "FABRICA PREMIUM REGIAO OCEANICA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-16",
+      "cep": "24340000",
+      "endereco": "ESTRADA FRANCISCO DA CRUZ NUNES, 1004",
+      "bairro": "Itaipu",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 75.0,
+        "area_m2_max": 21160.64,
+        "obras_no_cep": 30,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65532914000149",
+      "nome_fantasia": "HEPICO",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-06",
+      "cep": "24220120",
+      "endereco": "RUA MARIZ E BARROS, 496, LOJA  PONTO DE REFERENCIA",
+      "bairro": "Icarai",
+      "cnae_principal": "9313100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 58.8,
+        "area_m2_max": 4897.21,
+        "obras_no_cep": 7,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65537176000122",
+      "nome_fantasia": "BIA ESPORTES",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-05",
+      "cep": "24220300",
+      "endereco": "RUA MINISTRO OTAVIO KELLY, 221, APT   1503",
+      "bairro": "Icarai",
+      "cnae_principal": "8591100",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 126.0,
+        "area_m2_max": 2823.14,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    },
+    {
+      "cnpj": "65573368000194",
+      "nome_fantasia": "LA SANTE - SANTA ROSA",
+      "razao_social": null,
+      "segmento_operacao": "academia",
+      "data_abertura": "2026-03-03",
+      "cep": "24240225",
+      "endereco": "RUA SANTA ROSA, 28, SLJ",
+      "bairro": "Santa Rosa",
+      "cnae_principal": "8650004",
+      "match_cno": "cep8_multiplas_obras",
+      "match_confianca": "baixa",
+      "area_m2_obra": null,
+      "capacidade_matriculas_estimada": null,
+      "projecao_receita_estimada": null,
+      "obra": {
+        "area_m2_min": 165.0,
+        "area_m2_max": 1800.0,
+        "obras_no_cep": 5,
+        "nota": "várias obras no CEP; sem match por nome/endereço"
+      }
+    }
+  ],
+  "total_entrantes": 25
+}

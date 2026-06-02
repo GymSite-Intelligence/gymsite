@@ -7,26 +7,56 @@
 | Campo | Uso GymSite |
 |-------|-------------|
 | Área total (m²) | Porte físico da obra |
-| Nome da obra | Match com nome fantasia |
+| Nome da obra | Match com nome fantasia + **filtro primário fitness** |
 | CEP / logradouro | Cruzamento com CNPJ |
 | NI responsável | CNPJ (geralmente **construtora**, raro ser a academia) |
+| CNAE da obra (`cno_cnaes.csv`) | **Construção** (4120400) — enriquecimento, **não** filtro fitness |
+
+## Regra composta — filtragem de obras fitness
+
+O CNO registra CNAE de **construção** na obra, não CNAE de academia (9313100). Filtrar só por CNAE da obra ou só por keyword gera falsos positivos (ex.: UECE, Academy Educação em Fortaleza).
+
+**Incluir obra fitness se:**
+
+1. **Primário:** nome contém keyword fitness **e** área ∈ [80, 8000] m² **e** nome **não** bate exclusões (universidade, prefeitura, creche, etc.)
+2. **Alta confiança (OR):** CNPJ responsável com CNAE principal **9313100** no parque CNPJ fitness (via `listar_entrantes_cnpj_fitness`, **não** via `cno_cnaes.csv`)
+
+Implementação: `_eh_obra_fitness()` em `tools/cno_fitness_tools.py`. Cada obra retorna `metodo_classificacao`: `keyword` | `cnpj_cnae` | `cnpj_cnae_area_atipica`.
+
+**Não usar:** CNAE 9313100 ou 4120400 sozinhos como filtro CNO — 9313100 não aparece em `cno_cnaes.csv`; 4120400 é genérico de edificação.
 
 ## O que o CNO **não** traz
 
 - Faturamento (não existe — o benchmark A4 usa **matrículas/m²**, não receita CNPJ)
 - Garantia de que a obra = unidade que abriu CNPJ no mesmo dia
 
-## Cruzamento (amostragem 50 entrantes — Fortaleza)
+## Cruzamento (CNPJ → CNO)
 
-Script: `python tools/cno_fitness_tools.py` via `dados_parque_cnpj_para_a0` com `CNO_DATA_DIR`.
+**Fluxo obrigatório:** (1) município inteiro — entrantes CNPJ + varredura CNO municipal; (2) recorte por bairro sobre esse resultado. Nunca filtrar o CNO só pelo bairro do relatório.
+
+Tool: `consultar_municipio_cnpj_cno()` — usada em `dados_parque_cnpj_para_a0` e nos scripts CLI.
+
+Script Niterói: `python scripts/query_cnpj_cno.py --cidade Niterói --uf RJ`
+
+Com recorte por bairro(s):
+
+```bash
+python scripts/query_cnpj_cno.py --cidade Niterói --uf RJ --bairro Piratininga
+python scripts/query_cnpj_cno.py --cidade Fortaleza --uf CE --bairros Aldeota,Parangaba
+```
+
+`CNO_DATA_DIR` ou `--cno-dir` para o extract local. Scripts legados `query_cno_bairros.py` e `cruzar_cnpj_cno_niteroi.py` delegam para este.
 
 | Método | Confiança |
 |--------|-----------|
-| `cnpj_responsavel` | Alta (raro) |
-| `nome_obra_cep8` | Média (ex.: "SMART FIT" no nome da obra) |
-| `cep8_multiplas_obras` | Baixa — só faixa min/max m², várias obras no CEP |
+| `cnpj_responsavel` | Alta (raro — NI responsável = academia) |
+| `endereco_cep_numero` / `endereco_cep_logradouro` | Alta |
+| `nome_obra_cep8` | Média (tokens fantasia/razão no nome da obra + CEP) |
+| `cep8_multiplas_obras` | Baixa — só faixa min/max m² |
 
-**Não usar** match só por prefixo CEP-5 sem filtro de nome — infla área (obras civis grandes na mesma região).
+**Não usar** match só por prefixo CEP-5 sem filtro de nome/endereço — infla área (obras civis grandes na mesma região).
+
+Listagem por keyword (`listar_obras_fitness_em_curso`) complementa o cruzamento; em municípios sem obras nomeadas no CNO, o sinal vem dos **CNPJs abertos**.
 
 ## Capacidade operacional
 

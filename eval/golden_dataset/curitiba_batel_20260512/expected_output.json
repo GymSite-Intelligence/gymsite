@@ -1,0 +1,41 @@
+{
+  "case_id": "curitiba_batel_20260512",
+  "uuid": "55938a88-1a27-4f30-b375-cab8a29a4e2d",
+  "adk_run_id": "rpt_1778585537",
+  "created_at": "2026-05-12T11:29:22.458064+00:00",
+  "data_execucao": "2026-05-12T08:32:17+00:00",
+  "pipeline_version": "1.5",
+  "status": "done",
+  "input_canonico": {
+    "cidade": "Curitiba",
+    "bairro": "Batel",
+    "uf": "PR",
+    "area_m2_min": 800,
+    "area_m2_max": 1200,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "expected_veredito": "APROVADO COM RESSALVAS",
+  "expected_score_top1": 6.0,
+  "expected_modelo_recomendado": "Nenhum",
+  "expected_nivel_saturacao": "BAIXO",
+  "expected_score_bairro": 6.0,
+  "candidatos_count": 0,
+  "competidores_count": 0,
+  "critical_fields": [
+    "veredito",
+    "score_top1_candidato",
+    "modelo_recomendado",
+    "nivel_saturacao"
+  ],
+  "tolerance_fields": {
+    "score_top1_candidato": 0.5,
+    "aluguel_mensal": 0.1
+  },
+  "curator_notes": "",
+  "approved": false
+}

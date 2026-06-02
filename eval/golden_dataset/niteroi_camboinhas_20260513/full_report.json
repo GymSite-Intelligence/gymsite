@@ -1,0 +1,286 @@
+{
+  "id": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+  "header": {
+    "id": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1778633462",
+    "tempo_execucao_segundos": 900,
+    "tokens_total": 954662,
+    "custo_brl": 4.32,
+    "data_execucao": "2026-05-12T21:51:02+00:00",
+    "created_at": "2026-05-13T00:36:02.591005+00:00",
+    "updated_at": "2026-05-13T00:51:03.817529+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Niterói/RJ — Camboinhas\n**Data:** 12/05/2026\n**Total de candidatos avaliados:** 8\n\n---\n\n## 🔬 Contexto de Mercado (Deep Research)\n\n| Indicador | Valor |\n|-----------|-------|\n| Ticket médio local | R$69,99 a R$439,99/mês |\n| Aluguel médio comercial | R$64 a R$224/m² |\n| Renda média do bairro | dados_nao_disponiveis |\n| Faixa etária predominante | 37,7 anos (média em 2015) |\n| Tendência do mercado | crescimento |\n\n### Principais Concorrentes Identificados (via Deep Research)\n['Smart Fit', 'SM Fitness', 'Pulse Gym', 'XFusion', 'Body Intensity']\n\n### Insights Estratégicos\n* Focar em diferenciação e especialização para atender ao público de classe média alta, já que Camboinhas não possui grandes redes.\n* Considerar a alta demanda por tecnologia e bem-estar, incorporando equipamentos conectados e programas de saúde abrangentes.\n* Planejar o espaço para modalidades diversas e treinamento de força focado em longevidade, devido à faixa etária média do bairro e tendências gerais.\n\n### Regulamentação\nAlvará da VISA Niterói exige processo eletrônico; CREF exige RT de nível superior bacharel em Educação Física.\n\n> Fonte: Deep Research Gemini | Data: 2026-05-12 | Cache: True\n\n---\n\n## 🎯 Resumo Executivo\nA análise para Camboinhas revela um mercado de extremo potencial demográfico (score 10/10), com público de alta renda e idade ideal. Contudo, a viabilidade financeira é nula (score 0/10) devido ao altíssimo custo de aluguel (mediana de R$ 75/m²), que inviabiliza a operação de qualquer modelo de academia (Low, Mid ou Premium) no local. A recomendação é **descartar o bairro de Camboinhas** e focar a prospecção no bairro alternativo **São Francisco**, que apresenta zero concorrentes mapeados e alto potencial.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 10.0 | EXCELENTE |\n| Competitivo | 1.9 | MEDIO |\n| Viabilidade financeira | 0.0 | INVIAVEL |\n\n**Score Bairro:** 4.0 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** 5.0 — 🔍 INVESTIGAR MAIS — base do veredito (4 dim, inclui geoscout do #1)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 🏆 Top 3 Candidatos\n\n### #1 — Armazém Camboinhas — Score Geral 5.0 — 🔍 INVESTIGAR MAIS\n- **Endereço:** Av. Prof. Florestan Fernandes, 355 - Camboinhas, Niterói - RJ, 24358-580, Brasil\n- **Tipo:** supermarket\n- **Área estimada:** ~1200m²\n- **Score GeoScout:** 8.0 (sinal indireto-heurístico) | **Motivo:** Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos\n- **Score Ancoragem:** 4.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Atacadão Saara 879m\n  - Estação BHLS Oceânica 1.3km\n  - Ligeirinho Doces Estacionamento 1.5km\n- **Próximo passo:** Abordar proprietário para validar disponibilidade e custo real do aluguel.\n\n### #2 — Level Car Veículos — Score Geral 4.7 — 🔍 INVESTIGAR MAIS\n- **Endereço:** Av. Dr. Raul de Oliveira Rodrigues, 233 - Piratininga, Niterói - RJ, 24350-000, Brasil\n- **Tipo:** car_dealer\n- **Área estimada:** ~1000m²\n- **Score GeoScout:** 7.0 (sinal indireto-heurístico) | **Motivo:** Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos\n- **Score Ancoragem:** 7.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Atacadão Saara 385m\n  - Estação BHLS Oceânica 508m\n  - Ligeirinho Doces Estacionamento 596m\n- **Próximo passo:** Investigar se o ponto ou vizinhos estão disponíveis.\n\n### #3 — Royale Veículos | Compra Venda e Consignação — Score Geral 4.5 — 🔍 INVESTIGAR MAIS\n- **Endereço:** Av. Conselheiro Paulo de Melo Kalle, 44 - Piratininga, Niterói - RJ, 24350-030, Brasil\n- **Tipo:** car_dealer\n- **Área estimada:** ~1000m²\n- **Score GeoScout:** 6.0 (sinal indireto-heurístico) | **Motivo:** Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos\n- **Score Ancoragem:** 3.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Ligeirinho Doces Estacionamento 1.1km\n  - Estação BHLS Oceânica 1.3km\n  - Atacadão Saara 1.6km\n- **Próximo passo:** Investigar se o ponto ou vizinhos estão disponíveis.\n\n---\n\n## 🏗️ Checklist de Diligência do Imóvel\n\nAntes de fechar negociação com qualquer dos candidatos acima, validar **OS 6 ITENS** abaixo:\n\n1. Confirmar zoneamento para atividade de condicionamento físico\n2. Verificar entrada trifásica de energia\n3. Checar projeto de incêndio aprovado\n4. Medir pé-direito (mínimo 4m)\n5. Confirmar vão livre sem colunas centrais\n6. Negociar 90-120 dias de carência\n\n> Lista padrão para academias 1.000-1.500m². Os 6 itens vêm do output do A1 (`checklist_diligencia` na raiz). NÃO renderizar por candidato — checklist é universal para todos os imóveis avaliados.\n\n---\n\n## 🔍 Cobertura do Deep Research (A0) — validação cruzada\n\n**Redes solicitadas pelo Deep Research:** ['Smart Fit', 'SM Fitness', 'Pulse Gym', 'XFusion', 'Body Intensity']\n\n**Redes confirmadas no raio do bairro alvo:** ['Body Intensity', 'Smart Fit']\n\n**Redes não validadas localmente** (citadas pelo DR mas sem unidade no raio):\n- **SM Fitness** — sem unidade no raio de 5 km do bairro alvo. *Provável generalização do DR* — citada como rede regional mas não tem presença em Camboinhas. Não considerar no posicionamento competitivo.\n- **Pulse Gym** — sem unidade no raio de 5 km do bairro alvo. *Provável generalização do DR* — citada como rede regional mas não tem presença em Camboinhas. Não considerar no posicionamento competitivo.\n- **XFusion** — sem unidade no raio de 5 km do bairro alvo. *Provável generalização do DR* — citada como rede regional mas não tem presença em Camboinhas. Não considerar no posicionamento competitivo.\n\n---\n\n## 🥊 Inteligência Competitiva — Concorrente por Concorrente\n\n### 📍 Camboinhas (1 academias)\n#### Tio Sam Camboinhas — Rating 4.6 ⭐ (562 avaliações) \n- **Endereço:** Av. Prof. Florestan Fernandes, 1625 - Camboinhas, Niterói - RJ, 24358-000, Brasil\n- **Bairro:** Camboinhas\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Segunda 09h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Itaipu (4 academias)\n#### Body Intensity Academia - Itaipu — Rating 4.6 ⭐ (221 avaliações) \n- **Endereço:** Estr. Francisco da Cruz Nunes, 9285 - Itaipu, Niterói - RJ, 24340-000, Brasil\n- **Bairro:** Itaipu\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Top!!!\" — Fábio Cardoso, 5⭐ (7 months ago) → categoria: outra\n  - \"Adoro a academia! No entanto, alguns aparelhos poderiam ser atualizados. As cadeiras extensoras, por exemplo, duas delas são grandes demais e zero confortáveis e a menor, que é a m\" — John John, 3⭐ (7 months ago) → categoria: equipamento_problema\n  - \"A academia é excelente, porém, precisa de novos transports e mais um simulador de escada. É essencial!!! Fiz esse comentário há bem pouco tempo. Vou editar para uma melhor compreen\" — RENATA P LACERDA, 4⭐ (6 months ago) → categoria: equipamento_problema\n  - \"Adoro a academia, mas a área de cardio do 3º andar é extremamente quente em relação às outras áreas durante o dia. Seria ótimo se mudassem a climatização da área.\" — Júlia Soares, 4⭐ (4 months ago) → categoria: climatizacao\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Segunda 19h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### Academia Smart Fit - Niterói - Itaipu — Rating 4.5 ⭐ (61 avaliações) \n- **Endereço:** Estr. Francisco da Cruz Nunes, 2380 - Itaipu, Niterói - RJ, 24350-310, Brasil\n- **Bairro:** Itaipu\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Edit: vim aumentar 1 estrelinha porque instalaram um bicicletário nos fundos. Não sei se foi a academia ou o shopping, mas vai la. Tenho o plano Black da smart fit há muitos anos,\" — Rolf Bateman, 4⭐ (2 months ago) → categoria: outra\n  - \"Aparelhos novos, muito espaçosa e bem refrigerada. Tem bastante bebedouros e dezenas de armários para guardar nossos pertences. Os banheiros são muito bons, contam com chuveiros e\" — Leonardo Carvalho de Oliveira, 5⭐ (2 months ago) → categoria: outra\n  - \"Uma pena ,academia lotada ,um professor ,te dão a série em um aplicativo que não está atualizado com os aparelhos e vc que se vire por lá , não adianta ter boa estrutura, o básico\" — Demerval Freitas, 3⭐ (2 months ago) → categoria: lotacao\n  - \"Academia boa ... Smart fit deveria avaliar a possibilidade de mais unidades na região oceânica em Niterói, pois só tem essa e fica bem cheia !! A próxima poderia ser em Piratinin\" — Lannes Sousa, 5⭐ (2 months ago) → categoria: lotacao\n  - \"Ótima academia com uma grande diversidade de aparelhos. Bem iluminada, diferentemente de outras Smartfit. Fica bem cheia, mas não senti que fiquei sem oportunidade de usar os apare\" — Bernardo Tarré, 5⭐ (4 months ago) → categoria: lotacao\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Segunda 19h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### Academia Halternativa Itaipu — Rating 4.0 ⭐ (405 avaliações) \n- **Endereço:** Estr. Francisco da Cruz Nunes, 2997 - Itaipu, Niterói - RJ, 24350-310, Brasil\n- **Bairro:** Itaipu\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Se você está procurando uma academia que realmente tem de tudo – desde equipamentos que fazem você se sentir como um hamster em alta velocidade (correndo no lugar, alguém?) até máquinas que poderiam facilmente\" — Ulf R, 5⭐ (a year ago) [original em inglês]  → categoria: outra\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Terca 19h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### CTP Fitness — Rating 4.9 ⭐ (156 avaliações) \n- **Endereço:** Estr. Francisco da Cruz Nunes, 7352 - Itaipu, Niterói - RJ, 24350-310, Brasil\n- **Bairro:** Itaipu\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"A melhor academia/Studio da região! Equipe maravilhosa!!! Professores extremamente bem preparados, engajados e simpáticos! Amo treinar lá. Super indico!!!\" — magda zereman, 5⭐ (6 months ago) → categoria: outra\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Terca 18h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Piratininga (3 academias)\n#### Proquality — Rating 4.2 ⭐ (376 avaliações) \n- **Endereço:** R. José Chianeli, 224 - Piratininga, Niterói - RJ, 24350-000, Brasil\n- **Bairro:** Piratininga\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Pensei em fazer natação lá, mas pelas avaliações e relatos, não quero nem passar perto, que local é esse que os próprios responsáveis e gerentes destratam os clientes e não tentam\" — Luiza Ferreira, 1⭐ (2 months ago) → categoria: atendimento_ruim\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Quinta 19h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### Academia AMA FITNESS - Mariângela — Rating 4.8 ⭐ (109 avaliações) \n- **Endereço:** R. Raul Travassos, 46 - Piratininga, Niterói - RJ, 24350-480, Brasil\n- **Bairro:** Piratininga\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Academia simples, o preço é 20 por dia. Precisa de reforma, mas é uma boa solução se você não for ficar muito tempo no local...\" — Hula Hoop, 3⭐ (a year ago) [original em inglês]  → categoria: estrutura_envelhecida\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Segunda 18h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### Dançarte - Centro De Dança e Bem Estar — Rating 4.9 ⭐ (71 avaliações) \n- **Endereço:** Estr. Francisco da Cruz Nunes, 4830 - Piratininga, Niterói - RJ, 24350-310, Brasil\n- **Bairro:** Piratininga\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n- **Pontos fortes mencionados:** \n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 quadra 07 - Maravista (1 academias)\n#### Box Spartacus - Itaipu 🇧🇷 — Rating 4.9 ⭐ (100 avaliações) \n- **Endereço:** R. Odrazil Lizardo Camilo, 50 - quadra 07 - Maravista, Niterói - RJ, 24340-010, Brasil\n- **Bairro:** quadra 07 - Maravista\n- **Serviços oferecidos:** \n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"O melhor box de Niterói!\" — Izabella Azevedo, 5⭐ (4 years ago) [original em inglês]  → categoria: outra\n  - \"Apaixonada por esse box e feliz em estar de volta. Box mais acolhedor da região oceânica 🤍\" — Vanessa Ferrari, 5⭐ (3 months ago) → categoria: outra\n- **Pontos fortes mencionados:** \n- **Pico semanal:** Quinta 19h\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### Padrões cross-concorrência (gap analysis agregada)\n\n**O que TODOS oferecem (commodities):**\n- \n\n**Gaps de mercado (NINGUÉM oferece):**\n- ['yoga', 'dança', 'avaliação física', 'plano mensal', 'pilates']\n\n**Dores dominantes (cross-concorrência) — com nominação:**\n\n| Dor | Menções | Mencionado por | Oportunidade Estratégica |\n|---|---|---|---|\n\n### 💡 Posicionamento Recomendado\nO posicionamento mais estratégico para uma nova academia em Camboinhas seria como um centro de bem-estar integral, de alto padrão e com foco na experiência do cliente. Ao oferecer equipamentos modernos e bem-mantidos, climatização eficiente e um atendimento diferenciado, a academia pode capitalizar as lacunas identificadas na concorrência, que incluem problemas de equipamentos antigos, climatização inadequada, lotação e mau atendimento. Adicionalmente, a inclusão de modalidades como yoga e dança, e a oferta de serviços como avaliação física e nutricionista, que são pouco explorados pelos concorrentes, fortaleceria a proposta de valor, atraindo o público de classe média alta do bairro interessado em longevidade e saúde.\n\n---\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 675 | 450 | 180 |\n| **Matrículas realista (base)** | **990** | **630** | **270** |\n| Matrículas agressivo | 1350 | 810 | 405 |\n| Capacidade física simultânea | 247 | 180 | 112 |\n| Pico calculado (real × freq × 0,25) | 88 | 45 | 17 |\n| Folga capacidade | 64.4% | 75.0% | 84.8% |\n| Freq. semanal aluno | 2.5x | 2.0x | 1.8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 90,00 | R$ 150,00 | R$ 250,00 |\n| Ticket realizado (após inadimpl.) | R$ 84,60 | R$ 142,50 | R$ 240,00 |\n| Inadimplência | 6.0% | 5.0% | 4.0% |\n| **Receita mensal** | **R$ 83.754,00** | **R$ 89.775,00** | **R$ 64.800,00** |\n| Aluguel | R$ 33.750,00 | R$ 33.750,00 | R$ 33.750,00 |\n| Condomínio | R$ 5.062,50 | R$ 5.062,50 | R$ 5.062,50 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 5.400,00 | R$ 5.400,00 | R$ 8.100,00 |\n| Água | R$ 900,00 | R$ 900,00 | R$ 900,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 2.868,81 | R$ 4.327,64 | R$ 11.487,07 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 1.147,52 | R$ 1.731,06 | R$ 4.594,83 |\n| Outros (2% receita) | R$ 1.675,08 | R$ 1.795,50 | R$ 1.296,00 |\n| **Custos fixos total** | **R$ 73.703,91** | **R$ 89.866,70** | **R$ 125.090,40** |\n| Marketing (% receita) | R$ 5.025,24 (6.0%) | R$ 7.182,00 (8.0%) | R$ 7.776,00 (12.0%) |\n| **Custos totais** | **R$ 78.729,15** | **R$ 97.048,70** | **R$ 132.866,40** |\n| **Lucro mensal** | **R$ 5.024,85** | **-R$ 7.273,70** | **-R$ 68.066,40** |\n| **Margem %** | **6.0%** | **-8.1%** | **-105.0%** |\n| Break-even (alunos) | 931 | 682 | 554 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 402.288,00 | R$ 600.030,00 | R$ 1.788.648,00 |\n| Obra de adaptação | R$ 90.000,00 | R$ 157.500,00 | R$ 270.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 52.160,14 | R$ 78.684,34 | R$ 208.855,79 |\n| **CAPEX total** | **R$ 573.761,56** | **R$ 865.527,76** | **R$ 2.297.413,71** |\n| Capital de giro (3 meses) | R$ 236.187,45 | R$ 291.146,10 | R$ 398.599,20 |\n| **Investimento total** | **R$ 809.949,01** | **R$ 1.156.673,86** | **R$ 2.696.012,91** |\n| **Payback** | **161m** | **999m** | **999m** |\n| TIR anual | 0.0% | % | % |\n| VPL 5 anos (@12% a.a.) | -R$ 592.587,49 | -R$ 1.156.673,86 | -R$ 2.696.012,91 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | INVIAVEL · lucro -R$ 50,07 · payback 999m | INVIAVEL · lucro -R$ 13.154,30 · payback 999m | INVIAVEL · lucro -R$ 74.816,40 · payback 999m |\n| Matrículas -30% | INVIAVEL · lucro -R$ 17.421,22 · payback 999m | INVIAVEL · lucro -R$ 31.443,02 · payback 999m | INVIAVEL · lucro -R$ 85.173,60 · payback 999m |\n| Ticket -15% | INVIAVEL · lucro -R$ 5.360,65 · payback 999m | INVIAVEL · lucro -R$ 18.923,66 · payback 999m | INVIAVEL · lucro -R$ 76.620,00 · payback 999m |\n\n**Modelo recomendado para este perfil de bairro:** Nenhum\n**Justificativa:** A análise financeira indica que nenhum dos três modelos (Low Cost, Mid Market, Premium) é viável para uma academia de 450m² em Camboinhas. O principal fator é o custo de aluguel (mediana de R$75/m²), que compromete a rentabilidade em todos os cenários. Mesmo no cenário Low Cost, o payback de 161 meses e a margem de 6% estão muito fora dos benchmarks de mercado, enquanto os modelos Mid e Premium resultam em prejuízo mensal.\n\n⚠️ Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 📍 Distribuição Geográfica dos Concorrentes\n\n| Bairro | Nº academias | Quais |\n|---|---|---|\n| Itaipu | 4 | Body Intensity Academia - Itaipu, Academia Smart Fit - Niterói - Itaipu, Academia Halternativa Itaipu, CTP Fitness |\n| Piratininga | 3 | Proquality, Academia AMA FITNESS - Mariângela, Dançarte - Centro De Dança e Bem Estar |\n| **Camboinhas** | **1** | **Tio Sam Camboinhas** |\n| quadra 07 - Maravista | 1 | Box Spartacus - Itaipu 🇧🇷 |\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\n\n| Bairro | Motivo | Status competitivo | Ticket | Prioridade |\n|---|---|---|---|---|\n| São Francisco | Classe média-alta, residencial vertical | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n| Icaraí / Santa Rosa | Alto poder aquisitivo, demanda premium | 🔴 muito saturado (17 academias: Academia BORA! - Icaraí, Academia HammerNit, Bodytech, K FITNESS ACADEMIA, Ultra Academia Icaraí, Academia Smart Fit - Moreira César, XFUSION Academia, Academia Smart Fit - Mariz e Barros, Academia Niterói Swim, Academia Smart Fit - João Pessoa, ... (+5)) | mid | BAIXA |\n\n**Bairro recomendado para investigação prioritária:** São Francisco (0 concorrentes mapeados)\nDevido à inviabilidade financeira em Camboinhas, a prospecção deve ser redirecionada para São Francisco. Este bairro combina um perfil de classe média-alta com zero concorrência de grandes redes mapeada no raio de busca, representando uma oportunidade significativamente mais segura e com maior potencial de rentabilidade.\n\n---\n\n## 📞 Script de Abordagem — Top 1\n\n**Canal recomendado:** WHATSAPP\n**Melhor horário:** Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde\n\n```\n📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Armazém Camboinhas — Av. Prof. Florestan Fernandes, 355 - Camboinhas, Niterói - RJ, 24358-580, Brasil\n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em Av. Prof. Florestan Fernandes, 355 - Camboinhas, Niterói - RJ, 24358-580, Brasil, Niterói, como um ponto com potencial excelente\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.\n```\n\n**Próximos passos:**\n1. Confirmar disponibilidade do imóvel 'Armazém Camboinhas' para locação ou venda\n2. Pesquisar imobiliária ou administradora que gerencia o imóvel\n3. Identificar CNPJ do estabelecimento atual via consulta na Receita Federal\n4. Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica\n\n---\n\n## ⚠️ Alertas Globais\n- **INVIABILIDADE FINANCEIRA CRÍTICA:** Nenhum dos três modelos de negócio (Low, Mid, Premium) demonstrou viabilidade financeira, principalmente devido ao alto custo de aluguel em Camboinhas. Todos os cenários resultam em prejuízo ou payback excessivamente longo (>13 anos).\n- **SINAL INDIRETO-HEURÍSTICO:** Os candidatos a imóveis são âncoras comerciais (supermercados, concessionárias) e não imóveis garantidamente vagos. Uma pesquisa de campo é necessária para encontrar locações disponíveis nas proximidades.\n- **COUNTER-PROGRAMMING INDISPONÍVEL:** Não foi possível gerar uma estratégia de contraprogramação de horários por falta de padrões consistentes de picos e vales entre os concorrentes.\n\n---\n\n## 📌 Decisão Recomendada\n**REPROVADO.** A recomendação é descartar completamente o bairro de Camboinhas para este investimento. Apesar do excelente perfil demográfico, a estrutura de custos, dominada pelo aluguel, torna o negócio inviável. A próxima ação concreta deve ser iniciar uma nova análise de viabilidade focada no bairro alternativo recomendado: **São Francisco**.\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Niterói",
+    "bairro": "Camboinhas",
+    "uf": "RJ",
+    "area_m2_min": 300,
+    "area_m2_max": 600,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+    "veredito": "INVESTIGAR MAIS",
+    "score_bairro": 3.98,
+    "score_top1_candidato": 4.99,
+    "score_demografico": 10.0,
+    "score_concorrencia": 1.94,
+    "score_viabilidade": 0.0,
+    "nivel_saturacao": "MEDIO",
+    "rating_medio_concorrentes": 4.6,
+    "total_concorrentes_analisados": 9,
+    "modelo_recomendado": "Nenhum",
+    "aluguel_mensal": 33750.0,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "O posicionamento mais estratégico para uma nova academia em Camboinhas seria como um centro de bem-estar integral, de alto padrão e com foco na experiência do cliente. Ao oferecer equipamentos modernos e bem-mantidos, climatização eficiente e um atendimento diferenciado, a academia pode capitalizar as lacunas identificadas na concorrência, que incluem problemas de equipamentos antigos, climatização inadequada, lotação e mau atendimento. Adicionalmente, a inclusão de modalidades como yoga e dança, e a oferta de serviços como avaliação física e nutricionista, que são pouco explorados pelos concorrentes, fortaleceria a proposta de valor, atraindo o público de classe média alta do bairro interessado em longevidade e saúde.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "(21) 99985-4945",
+      "tipo_ponto": "SUPERMERCADO_VAGO",
+      "whatsapp_link": "https://wa.me/5521999854945?text=Ol%C3%A1%21%20Identificamos%20seu%20im%C3%B3vel%20como%20ponto%20estrat%C3%A9gico.",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Armazém Camboinhas' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Contato direto rede (RH/expansão)",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Armazém Camboinhas — Av. Prof. Florestan Fernandes, 355 - Camboinhas, Niterói - RJ, 24358-580, Brasil\n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em Av. Prof. Florestan Fernandes, 355 - Camboinhas, Niterói - RJ, 24358-580, Brasil, Niterói, como um ponto com potencial excelente\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "ALTO",
+      "top_candidato_referencia": {
+        "nome": "Armazém Camboinhas",
+        "endereco": "Av. Prof. Florestan Fernandes, 355 - Camboinhas, Niterói - RJ, 24358-580, Brasil",
+        "tipo_ponto": "SUPERMERCADO_VAGO",
+        "score_geoscout": 8
+      }
+    },
+    "market_context": {
+      "fonte": "Deep Research Gemini",
+      "bairro": "Camboinhas",
+      "cached": true,
+      "cidade": "Niterói",
+      "data_coleta": "2026-05-12",
+      "genero_alvo": "misto",
+      "tipo_negocio": "academia",
+      "tamanho_preset": "m",
+      "aluguel_medio_m2": "R$64 a R$224/m²",
+      "tendencia_mercado": "crescimento",
+      "renda_media_bairro": "dados_nao_disponiveis",
+      "ticket_medio_mercado": "R$69,99 a R$439,99/mês",
+      "insights_estrategicos": [
+        "Focar em diferenciação e especialização para atender ao público de classe média alta, já que Camboinhas não possui grandes redes.",
+        "Considerar a alta demanda por tecnologia e bem-estar, incorporando equipamentos conectados e programas de saúde abrangentes.",
+        "Planejar o espaço para modalidades diversas e treinamento de força focado em longevidade, devido à faixa etária média do bairro e tendências gerais."
+      ],
+      "regulamentacao_resumo": "Alvará da VISA Niterói exige processo eletrônico; CREF exige RT de nível superior bacharel em Educação Física.",
+      "faixa_etaria_predominante": "37,7 anos (média em 2015)",
+      "principais_redes_concorrentes": [
+        "Smart Fit",
+        "SM Fitness",
+        "Pulse Gym",
+        "XFusion",
+        "Body Intensity"
+      ]
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [
+        "Body Intensity",
+        "Smart Fit"
+      ],
+      "redes_solicitadas": [
+        "Smart Fit",
+        "SM Fitness",
+        "Pulse Gym",
+        "XFusion",
+        "Body Intensity"
+      ],
+      "tem_redes_fantasma": true,
+      "redes_nao_encontradas": [
+        "SM Fitness",
+        "Pulse Gym",
+        "XFusion"
+      ],
+      "concorrentes_excluidos": [
+        {
+          "nome": "CEFAP Centro de Fisioterapia de Alta Perfomance e Pilates",
+          "motivo": "nome contém 'fisio'"
+        }
+      ]
+    },
+    "alertas": [
+      "⚠️ Inviável — modelo não fecha conta: Todos os cenários projetados resultam em um payback superior a 60 meses, com o cenário mais otimista (Low Cost) atingindo 161 meses.",
+      "⚠️ Aluguel compromete viabilidade: O custo de aluguel estimado (R$75/m²) representa mais de 40% do faturamento no cenário Low Cost, muito acima do máximo de 15% considerado sustentável pela ACAD.",
+      "⚠️ Margem apertada, sem espaço pra imprevistos: A margem líquida de 6% no cenário Low Cost é insuficiente para cobrir riscos operacionais, enquanto os demais cenários operam com prejuízo.",
+      "⚠️ Modelo só funciona com execução no benchmark Smart Fit; abaixo disso, prejuízo: O teste de sensibilidade para uma queda de 30% nas matrículas torna todos os cenários inviáveis, indicando alta dependência de uma performance de matrículas excepcional."
+    ],
+    "embedding": null,
+    "entrantes_cnpj_90d": {},
+    "obras_cno_em_curso": {},
+    "scores_regionais": {
+      "demografico": 10.0,
+      "concorrencia": 1.94,
+      "viabilidade": 0.0
+    },
+    "alertas_financeiros": [
+      "⚠️ Inviável — modelo não fecha conta: Todos os cenários projetados resultam em um payback superior a 60 meses, com o cenário mais otimista (Low Cost) atingindo 161 meses.",
+      "⚠️ Aluguel compromete viabilidade: O custo de aluguel estimado (R$75/m²) representa mais de 40% do faturamento no cenário Low Cost, muito acima do máximo de 15% considerado sustentável pela ACAD.",
+      "⚠️ Margem apertada, sem espaço pra imprevistos: A margem líquida de 6% no cenário Low Cost é insuficiente para cobrir riscos operacionais, enquanto os demais cenários operam com prejuízo.",
+      "⚠️ Modelo só funciona com execução no benchmark Smart Fit; abaixo disso, prejuízo: O teste de sensibilidade para uma queda de 30% nas matrículas torna todos os cenários inviáveis, indicando alta dependência de uma performance de matrículas excepcional."
+    ]
+  },
+  "candidatos": [
+    {
+      "id": "774db343-b7bc-4ff7-b27f-5df24631c4e2",
+      "relatorio_id": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+      "posicao": 1,
+      "nome": "Armazém Camboinhas",
+      "endereco": "Av. Prof. Florestan Fernandes, 355 - Camboinhas, Niterói - RJ, 24358-580, Brasil",
+      "place_id": "ChIJ-amPpFiGmQARfWBkaYrb7kc",
+      "tipo": "market",
+      "area_estimada_m2": 1200,
+      "lat": -22.951871,
+      "lng": -43.057972,
+      "score_geoscout": 8.0,
+      "score_ancoragem": 4.0,
+      "score_geral": null,
+      "motivo": "Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos",
+      "estimativa_visibilidade": "alta",
+      "avenida_principal": true,
+      "qualidade_sinal": "indireto-heuristico",
+      "polos_geradores": [
+        "Atacadão Saara 879m",
+        "Estação BHLS Oceânica 1.3km",
+        "Ligeirinho Doces Estacionamento 1.5km"
+      ],
+      "tipos_google": [
+        "market",
+        "supermarket",
+        "grocery_store",
+        "food_store",
+        "food",
+        "store",
+        "point_of_interest",
+        "establishment"
+      ],
+      "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.9518713,-43.0579724&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+      "status_business": "OPERATIONAL",
+      "telefone": "(21) 99985-4945",
+      "website": null,
+      "tem_24h": false,
+      "proximo_passo": null,
+      "created_at": "2026-05-13T00:51:02.987998+00:00",
+      "listing_url": null,
+      "listing_id": null,
+      "price_raw": null,
+      "listing_source": null
+    },
+    {
+      "id": "be015067-d0d1-4554-817e-86e6c4332cd7",
+      "relatorio_id": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+      "posicao": 2,
+      "nome": "Level Car Veículos",
+      "endereco": "Av. Dr. Raul de Oliveira Rodrigues, 233 - Piratininga, Niterói - RJ, 24350-000, Brasil",
+      "place_id": "ChIJ9Xnw_laHmQARtYZJtDtBaCQ",
+      "tipo": "car_dealer",
+      "area_estimada_m2": 1000,
+      "lat": -22.943647,
+      "lng": -43.061861,
+      "score_geoscout": 7.0,
+      "score_ancoragem": 7.0,
+      "score_geral": null,
+      "motivo": "Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos",
+      "estimativa_visibilidade": "alta",
+      "avenida_principal": true,
+      "qualidade_sinal": "indireto-heuristico",
+      "polos_geradores": [
+        "Atacadão Saara 385m",
+        "Estação BHLS Oceânica 508m",
+        "Ligeirinho Doces Estacionamento 596m"
+      ],
+      "tipos_google": [
+        "car_dealer",
+        "service",
+        "store",
+        "point_of_interest",
+        "establishment"
+      ],
+      "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.943646599999997,-43.061861&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+      "status_business": "OPERATIONAL",
+      "telefone": "(21) 99462-8177",
+      "website": "http://levelcar.com.br/",
+      "tem_24h": false,
+      "proximo_passo": null,
+      "created_at": "2026-05-13T00:51:02.987998+00:00",
+      "listing_url": null,
+      "listing_id": null,
+      "price_raw": null,
+      "listing_source": null
+    },
+    {
+      "id": "89792fb1-3e6a-4751-9593-a7973233ec94",
+      "relatorio_id": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+      "posicao": 3,
+      "nome": "Royale Veículos | Compra Venda e Consignação",
+      "endereco": "Av. Conselheiro Paulo de Melo Kalle, 44 - Piratininga, Niterói - RJ, 24350-030, Brasil",
+      "place_id": "ChIJ7wGpovKHmQARd3pUTwI9Two",
+      "tipo": "car_dealer",
+      "area_estimada_m2": 1000,
+      "lat": -22.9326,
+      "lng": -43.068239,
+      "score_geoscout": 6.0,
+      "score_ancoragem": 3.0,
+      "score_geral": null,
+      "motivo": "Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos",
+      "estimativa_visibilidade": "alta",
+      "avenida_principal": true,
+      "qualidade_sinal": "indireto-heuristico",
+      "polos_geradores": [
+        "Ligeirinho Doces Estacionamento 1.1km",
+        "Estação BHLS Oceânica 1.3km",
+        "Atacadão Saara 1.6km"
+      ],
+      "tipos_google": [
+        "car_dealer",
+        "service",
+        "store",
+        "point_of_interest",
+        "establishment"
+      ],
+      "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.932599699999997,-43.068238699999995&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+      "status_business": "OPERATIONAL",
+      "telefone": "(21) 99564-3080",
+      "website": "http://www.royalemotors.com.br/Veiculos",
+      "tem_24h": false,
+      "proximo_passo": null,
+      "created_at": "2026-05-13T00:51:02.987998+00:00",
+      "listing_url": null,
+      "listing_id": null,
+      "price_raw": null,
+      "listing_source": null
+    }
+  ],
+  "competidores_count": 9
+}

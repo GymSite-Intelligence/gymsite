@@ -28,6 +28,7 @@ from tools.cnpj_segment_places import refinar_classificacao
 _ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(_ROOT / ".env")
 load_dotenv(_ROOT / "frontend" / ".env", override=False)
+load_dotenv(_ROOT / "gymsite_intelligence" / ".env", override=False)
 
 
 def nome_exibicao_cnpj(
@@ -47,12 +48,11 @@ def nome_exibicao_cnpj(
     if razao:
         return razao, None, "razao_social"
     return None, None, None
-load_dotenv(_ROOT / "gymsite_intelligence" / ".env", override=False)
 
 
 def _supabase_client():
     import os
-    from supabase import create_client
+    from supabase import create_client  # type: ignore[reportAttributeAccessIssue]
 
     url = (os.getenv("SUPABASE_URL") or "").strip()
     key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
@@ -138,6 +138,8 @@ def _row_to_entrante(
         "data_abertura": row.get("data_inicio_atividade"),
         "endereco": _format_endereco(row) or None,
         "cep": (row.get("cep") or "").strip() or None,
+        "logradouro": (row.get("logradouro") or "").strip() or None,
+        "numero": (row.get("numero") or "").strip() or None,
         "cnae_principal": row.get("cnae_fiscal_principal"),
         "ref_month": row.get("ref_month"),
         "contato_validado": False,
@@ -606,15 +608,15 @@ def dados_parque_cnpj_para_a0(
             cno_path = cno_path_host
     if cno_path and Path(cno_path).is_dir():
         try:
-            from tools.cno_fitness_tools import cruzar_entrantes_obras_cno
+            from tools.cno_fitness_tools import consultar_municipio_cnpj_cno
 
-            cno_block = cruzar_entrantes_obras_cno(
+            cno_block = consultar_municipio_cnpj_cno(
                 cno_dir=cno_path,
                 cidade=cidade,
                 uf=uf,
-                bairro=bairro,
+                bairro=bairro.strip() or None,
                 dias=dias,
-                limit=50,
+                limit=200,
             )
         except Exception as exc:
             cno_block = {"status": "erro", "motivo": str(exc)}

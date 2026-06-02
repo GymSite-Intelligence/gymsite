@@ -1,0 +1,115 @@
+{
+  "id": "55938a88-1a27-4f30-b375-cab8a29a4e2d",
+  "header": {
+    "id": "55938a88-1a27-4f30-b375-cab8a29a4e2d",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1778585537",
+    "tempo_execucao_segundos": 178,
+    "tokens_total": null,
+    "custo_brl": null,
+    "data_execucao": "2026-05-12T08:32:17+00:00",
+    "created_at": "2026-05-12T11:29:22.458064+00:00",
+    "updated_at": "2026-05-12T11:32:21.74625+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Curitiba/PR — Batel\n**Data:** 12/05/2026\n**Total de candidatos avaliados:** 0\n\n---\n\n## 🔬 Contexto de Mercado (Deep Research)\n\n| Indicador | Valor |\n|-----------|-------|\n| Ticket médio local | R$ 79,90 a R$ 250/mês |\n| Aluguel médio comercial | R$ 100/m² a R$ 200/m² (estimado com base em exemplos de aluguéis e tamanhos) |\n| Renda média do bairro | dados_nao_disponiveis |\n| Faixa etária predominante | idosos (60+), com menor proporção de jovens (até 14 anos) |\n| Tendência do mercado | crescimento |\n\n### Principais Concorrentes Identificados (via Deep Research)\nSmart Fit, Bluefit, WePlay Academia, Pantheon Academia, Tonus Gym\n\n### Insights Estratégicos\n*   Focar em um público com maior poder aquisitivo e faixa etária mais elevada pode ser estratégico, devido à demografia do Batel.\n*   Considerar modalidades que atendam à demanda por diversidade e novas experiências, como treinamento funcional, HIIT, aulas coletivas dinâmicas e modalidades de consciência corporal.\n*   Explorar a possibilidade de diferenciação através de tecnologia integrada, acompanhamento em tempo real e um ambiente que fuja do modelo de academias lotadas, dada a alta liquidez e valorização imobiliária do bairro.\n\n### Regulamentação\nAlvará de Funcionamento da Prefeitura é obrigatório, junto com Alvarás de Bombeiros e Vigilância Sanitária. CREF9/PR exige registro para PJ e PF, e documentação em dia.\n\n> Fonte: Deep Research Gemini | Data: 2026-05-11 | Cache: true\n\n---\n\n## 🎯 Resumo Executivo\nA análise para o bairro Batel em Curitiba revela um cenário de alto potencial demográfico (score 10/10), mas financeiramente inviável devido ao custo proibitivo de aluguel (mediana de R$ 108/m²). Todos os modelos de negócio (Low, Mid, Premium) resultam em prejuízo ou payback irrealista. A busca automática por imóveis e concorrentes falhou devido a erros de API, mas a análise financeira por si só é suficiente para contraindicar o investimento no bairro. A recomendação é descartar Batel e focar a prospecção nos bairros alternativos sugeridos, que apresentam menor saturação competitiva.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 10.0 | EXCELENTE |\n| Competitivo | 7.0 | BAIXO |\n| Viabilidade financeira | 1.0 | INVIAVEL |\n\n**Score Bairro:** 6.0 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** N/A — ❌ REPROVADO — base do veredito (nenhum candidato encontrado)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 🏆 Top 3 Candidatos\nNenhum candidato foi identificado pela análise automática devido a uma falha na ferramenta de geolocalização. A recomendação é proceder com pesquisa de campo nos bairros alternativos indicados.\n\n---\n\n## 🏗️ Checklist de Diligência do Imóvel\n\nAntes de fechar negociação com qualquer dos candidatos acima, validar **OS 6 ITENS** abaixo (lista padrão do A1, NÃO editar):\n\n1. Verificar a viabilidade de estacionamento no local, dado que é um requisito obrigatório.\n2. Realizar pesquisa de campo para identificar imóveis vagos com as características de área desejadas (800 m² - 1200 m²).\n3. Analisar o fluxo de pessoas e o perfil do público na região de cada endereço-âncora para confirmar compatibilidade com o público-alvo (25-40 anos).\n4. Investigar a concorrência direta e indireta nas proximidades dos endereços-âncora.\n5. Consultar a Prefeitura de Curitiba e o CREF9/PR para confirmar todos os requisitos de alvará e licenças específicas para academias na área.\n6. Avaliar a acessibilidade dos endereços-âncora por transporte público e vias principais.\n\n---\n\n## 🥊 Inteligência Competitiva — Concorrente por Concorrente\nA busca automática por concorrentes falhou devido a um erro de configuração de API. Os dados abaixo são baseados em informações genéricas e fallback heurístico. Recomenda-se pesquisa de campo para uma análise competitiva precisa.\n\n### Padrões cross-concorrência (gap analysis agregada)\n\n**O que TODOS oferecem (commodities):**\n- N/A\n\n**Gaps de mercado (NINGUÉM oferece):**\n- N/A\n\n**Dores dominantes (cross-concorrência) — com nominação:**\n\n| Dor | Menções | Mencionado por | Oportunidade Estratégica |\n|---|---|---|---|\n| N/A | 0 | — | N/A |\n\n### 💡 Posicionamento Recomendado\nDevido à indisponibilidade de dados detalhados sobre concorrentes na análise automática, sugere-se um posicionamento inicial focado na identificação de nichos de mercado e diferenciais competitivos através de pesquisa de campo aprofundada. O bairro Batel, com sua população de alta renda e tendência de valorização imobiliária, indica potencial para uma academia premium com serviços personalizados e modalidades inovadoras que atendam a um público que busca experiências de fitness exclusivas e de alta qualidade. A baixa saturação aparente (devido à falta de dados) pode representar uma oportunidade para uma entrada forte no mercado.\n\n---\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\nMatrículas em 3 calibrações (cons/real/agres) baseadas em ACAD/Smart Fit/Bodytech.\nPico simultâneo é capacidade física no horário cheio — DIFERENTE de matrículas.\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 1500 | 1000 | 400 |\n| **Matrículas realista (base)** | **2200** | **1400** | **600** |\n| Matrículas agressivo | 3000 | 1800 | 900 |\n| Capacidade física simultânea | 550 | 400 | 250 |\n| Pico calculado (real × freq × 0,25) | 196 | 100 | 38 |\n| Folga capacidade | 64,4% | 75,0% | 84,8% |\n| Freq. semanal aluno | 2,5x | 2,0x | 1,8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 89,90 | R$ 149,90 | R$ 299,90 |\n| Ticket realizado (após inadimpl.) | R$ 84,51 | R$ 143,90 | R$ 292,40 |\n| Inadimplência | 6,0% | 4,0% | 2,5% |\n| **Receita mensal** | **R$ 185.913,20** | **R$ 201.465,60** | **R$ 175.441,50** |\n| Aluguel | R$ 108.440,00 | R$ 108.440,00 | R$ 108.440,00 |\n| Condomínio | R$ 16.266,00 | R$ 16.266,00 | R$ 16.266,00 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 12.000,00 | R$ 12.000,00 | R$ 18.000,00 |\n| Água | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 3.470,60 | R$ 5.383,18 | R$ 13.298,54 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 1.388,24 | R$ 2.153,27 | R$ 5.319,42 |\n| Outros (2% receita) | R$ 3.718,26 | R$ 4.029,31 | R$ 3.508,83 |\n| **Custos fixos total** | **R$ 170.183,10** | **R$ 187.171,76** | **R$ 226.732,79** |\n| Marketing (% receita) | R$ 11.154,79 (6,0%) | R$ 16.117,25 (8,0%) | R$ 21.052,98 (12,0%) |\n| **Custos totais** | **R$ 181.337,89** | **R$ 203.289,01** | **R$ 247.785,77** |\n| **Lucro mensal** | **R$ 4.575,31** | **-R$ 1.823,41** | **-R$ 72.344,27** |\n| **Margem %** | **2,5%** | **-0,9%** | **-41,2%** |\n| Break-even (alunos) | 2146 | 1413 | 848 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 402.288,00 | R$ 600.030,00 | R$ 1.788.648,00 |\n| Obra de adaptação | R$ 200.000,00 | R$ 350.000,00 | R$ 600.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 63.101,77 | R$ 97.875,97 | R$ 241.791,63 |\n| **CAPEX total** | **R$ 694.119,49** | **R$ 1.076.635,69** | **R$ 2.659.707,91** |\n| Capital de giro (3 meses) | R$ 544.013,67 | R$ 609.867,03 | R$ 743.357,31 |\n| **Investimento total** | **R$ 1.238.133,16** | **R$ 1.686.502,72** | **R$ 3.403.065,22** |\n| **Payback** | **270m** | **999m** | **999m** |\n| TIR anual | 0,0% | - | - |\n| VPL 5 anos (@12% a.a.) | -R$ 1.040.217,54 | -R$ 1.686.502,72 | -R$ 3.403.065,22 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | INVIAVEL · lucro -R$ 13.394,43 · payback 999m | INVIAVEL · lucro -R$ 23.511,41 · payback 999m | INVIAVEL · lucro -R$ 96.407,48 · payback 999m |\n| Matrículas -30% | INVIAVEL · lucro -R$ 45.249,43 · payback 999m | INVIAVEL · lucro -R$ 57.560,31 · payback 999m | INVIAVEL · lucro -R$ 120.323,47 · payback 999m |\n| Ticket -15% | INVIAVEL · lucro -R$ 18.477,93 · payback 999m | INVIAVEL · lucro -R$ 29.625,66 · payback 999m | INVIAVEL · lucro -R$ 97.521,47 · payback 999m |\n\n**Modelo recomendado para este perfil de bairro:** Nenhum\n**Justificativa:** A análise financeira indica que o projeto é inviável no bairro Batel. O custo de aluguel (mediana de R$108/m²) é proibitivo e compromete a rentabilidade em todos os cenários. Mesmo com a alta renda local, os modelos Mid e Premium resultam em prejuízo. O modelo Low Cost, apesar de um lucro marginal no cenário base, tem um payback irrealista de 270 meses (22,5 anos) e se torna inviável em qualquer cenário de estresse.\n\n⚠️ Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 📍 Distribuição Geográfica dos Concorrentes\nNenhum concorrente foi analisado devido a uma falha na busca automática via API.\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\nA análise financeira em Batel se mostrou inviável. Recomenda-se explorar os seguintes bairros alternativos, que apresentam menor saturação competitiva e custos potencialmente mais baixos.\n\n| Bairro | Motivo | Status competitivo | Ticket sugerido | Prioridade |\n|---|---|---|---|---|\n| Centro Expandido | Alta densidade comercial e fluxo garantido | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n| Bairros em expansão imobiliária recente | Novos empreendimentos = público novo, sem concorrência consolidada | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n\n**Bairro recomendado para investigação prioritária:** Centro Expandido\nA recomendação prioritária é o Centro Expandido devido ao seu status \"verde\" (sem concorrentes de grande porte mapeados na busca automática), combinado com alto fluxo de pessoas e densidade comercial, o que pode sustentar um modelo Mid Market com maior chance de sucesso financeiro.\n\n---\n\n## 📞 Script de Abordagem — Top 1\n\n**Canal recomendado:** WHATSAPP\n**Melhor horário:** Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde\n\n```\n📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , região alvo, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.\n```\n\n**Próximos passos:**\n1. Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda\n2. Pesquisar imobiliária ou administradora que gerencia o imóvel\n3. Identificar CNPJ do estabelecimento atual via consulta na Receita Federal\n4. Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica\n\n---\n\n## ⚠️ Alertas Globais\n*   **Inviabilidade Financeira Total:** Todos os três cenários (Low, Mid, Premium) são financeiramente inviáveis, principalmente devido ao alto custo do aluguel no bairro Batel.\n*   **Falha na Busca de Candidatos (GeoScout):** A busca por pontos comerciais (âncoras) falhou devido a um erro de API (Geocoding: REQUEST_DENIED). Nenhum candidato pôde ser sugerido automaticamente.\n*   **Falha na Análise Competitiva (Google Maps):** A busca por concorrentes via Google Maps não pôde ser executada (erro de API Key). A análise de saturação é uma estimativa de fallback e não reflete dados reais.\n*   **Counter-programming indisponível:** Não há dados de 'popular times' de concorrentes para construir uma estratégia de horários.\n*   **Sinal Indireto GeoScout:** O processo de identificação de candidatos usa âncoras comerciais como sinal indireto e heurístico; não são garantia de imóveis vagos. Validação em campo é obrigatória.\n\n---\n\n## 📌 Decisão Recomendada\n**❌ REPROVADO.** A análise é conclusiva: o projeto é financeiramente inviável no bairro Batel. O custo de aluguel é o principal impeditivo, tornando impossível alcançar rentabilidade em qualquer um dos modelos de negócio testados. Recomenda-se descartar completamente o bairro Batel e iniciar imediatamente a prospecção nos bairros alternativos sugeridos, com foco no \"Centro Expandido\".\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Curitiba",
+    "bairro": "Batel",
+    "uf": "PR",
+    "area_m2_min": 800,
+    "area_m2_max": 1200,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "55938a88-1a27-4f30-b375-cab8a29a4e2d",
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 6.0,
+    "score_top1_candidato": 6.0,
+    "score_demografico": 10.0,
+    "score_concorrencia": 7.0,
+    "score_viabilidade": 1.0,
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 0.0,
+    "total_concorrentes_analisados": 0,
+    "modelo_recomendado": "Nenhum",
+    "aluguel_mensal": 108440.0,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "Devido à indisponibilidade de dados detalhados sobre concorrentes na análise automática, sugere-se um posicionamento inicial focado na identificação de nichos de mercado e diferenciais competitivos através de pesquisa de campo aprofundada. O bairro Batel, com sua população de alta renda e tendência de valorização imobiliária, indica potencial para uma academia premium com serviços personalizados e modalidades inovadoras que atendam a um público que busca experiências de fitness exclusivas e de alta qualidade. A baixa saturação aparente (devido à falta de dados) pode representar uma oportunidade para uma entrada forte no mercado.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "whatsapp_link": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , região alvo, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "BAIXO",
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6
+      }
+    },
+    "market_context": {
+      "schema_version": "1.5",
+      "fonte_market_context": "",
+      "redes_a0_solicitadas": [],
+      "cached_market_context": null,
+      "data_coleta_market_context": ""
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [],
+      "redes_solicitadas": [],
+      "tem_redes_fantasma": false,
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": []
+    },
+    "alertas": [
+      "⚠️ Inviável — modelo não fecha conta: Todos os cenários resultam em prejuízo ou payback superior a 22 anos.",
+      "⚠️ Aluguel compromete viabilidade: O custo do aluguel representa 58% do faturamento no cenário Low Cost, muito acima do benchmark sustentável de 15% da ACAD.",
+      "⚠️ Margem apertada, sem espaço pra imprevistos: No único cenário com lucro (Low Cost), a margem é de apenas 2.5%, insuficiente para cobrir riscos operacionais."
+    ],
+    "embedding": null,
+    "entrantes_cnpj_90d": {},
+    "obras_cno_em_curso": {},
+    "scores_regionais": {
+      "demografico": 10.0,
+      "concorrencia": 7.0,
+      "viabilidade": 1.0
+    },
+    "alertas_financeiros": [
+      "⚠️ Inviável — modelo não fecha conta: Todos os cenários resultam em prejuízo ou payback superior a 22 anos.",
+      "⚠️ Aluguel compromete viabilidade: O custo do aluguel representa 58% do faturamento no cenário Low Cost, muito acima do benchmark sustentável de 15% da ACAD.",
+      "⚠️ Margem apertada, sem espaço pra imprevistos: No único cenário com lucro (Low Cost), a margem é de apenas 2.5%, insuficiente para cobrir riscos operacionais."
+    ]
+  },
+  "candidatos": [],
+  "competidores_count": 0
+}

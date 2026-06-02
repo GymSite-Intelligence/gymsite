@@ -7,6 +7,7 @@ Sem match: não estimar área (sem inventar).
 from __future__ import annotations
 
 import csv
+import logging
 import re
 import statistics
 from datetime import date, datetime, timedelta
@@ -26,15 +27,52 @@ from tools.financial_tools import (
     projecao_demanda_receita_obra,
 )
 
+_ROOT = Path(__file__).resolve().parent.parent
+logger = logging.getLogger("gymsite.cno")
+_encoding_replacement_hits = 0
+
+_METODOS_CLASSIFICACAO = frozenset({"keyword", "cnpj_cnae", "cnpj_cnae_area_atipica"})
+
+
+def _note_encoding_field(cno_id: str, field: str, value: str) -> None:
+    """Log debug quando leitura CSV pode ter perdido caracteres (errors=replace)."""
+    global _encoding_replacement_hits
+    if not value:
+        return
+    suspicious = "\ufffd" in value or (
+        "?" in value and value != "?" and value.count("?") >= 2
+    )
+    if not suspicious:
+        return
+    _encoding_replacement_hits += 1
+    logger.debug(
+        "CNO %s campo %s: possível problema de encoding: %s",
+        cno_id,
+        field,
+        value[:120],
+    )
+
+
+def _flush_encoding_replacement_log(context: str) -> None:
+    global _encoding_replacement_hits
+    if _encoding_replacement_hits >= 10:
+        logger.warning(
+            "CNO %s: %d campos com possível replacement de encoding no CSV",
+            context,
+            _encoding_replacement_hits,
+        )
+    _encoding_replacement_hits = 0
+
 # Faixa plausível para unidade fitness comercial (obra)
 _AREA_MIN_M2 = 80.0
 _AREA_MAX_M2 = 8_000.0
 
-# Duração obra (encerradas): filtros de plausibilidade
-_DURACAO_MIN_DIAS = 60
-_DURACAO_MAX_DIAS = 1_200
-_DIAS_POR_M2_MIN = 0.04
-_DIAS_POR_M2_MAX = 4.0
+# CNAE do negócio (CNPJ) — NÃO confundir com CNAE da obra (4120400 = construção)
+_CNAE_ACADEMIA = "9313100"
+
+# ── Regra composta CNO fitness ─────────────────────────────────────────────
+# Filtro primário: keywords no nome + área + exclusões.
+# Alta confiança: CNPJ responsável com CNAE principal 9313100.
 
 _KEYWORDS_OBRA_FITNESS = (
     "academ",
@@ -50,7 +88,142 @@ _KEYWORDS_OBRA_FITNESS = (
     "bluefit",
     "bodytech",
     "ayo fit",
+    "max forma",
+    "panobianco",
+    "top up",
+    "greenlife",
+    "bio ritmo",
+    "velocity",
+    "curves",
+    "contorno",
 )
+
+_KEYWORDS_EXCLUSAO_OBRA = (
+    "centros academicos",
+    "uece",
+    "universidade",
+    "educacao e tecnologia",
+    "reitoria",
+    "escola",
+    "cas da ",
+    "manut dos centros",
+    "centro educativo",
+    "fundacao educacional",
+    "instituto federal",
+    "senac",
+    "sesi",
+    "prefeitura",
+    "secretaria de educacao",
+    "creche",
+    "bercario",
+    "muro de contorno",
+    "contorno do campus",
+)
+
+# Duração obra (encerradas): filtros de plausibilidade
+_DURACAO_MIN_DIAS = 60
+_DURACAO_MAX_DIAS = 1_200
+_DIAS_POR_M2_MIN = 0.04
+_DIAS_POR_M2_MAX = 4.0
+
+
+def _normalize_cnae(cnae: str | None) -> str:
+    return re.sub(r"\D", "", cnae or "")
+
+
+def _match_keywords_fitness(nome: str) -> bool:
+    n = (nome or "").lower()
+    return any(kw in n for kw in _KEYWORDS_OBRA_FITNESS)
+
+
+def _match_exclusao(nome: str) -> bool:
+    n = (nome or "").lower()
+    return any(ex in n for ex in _KEYWORDS_EXCLUSAO_OBRA)
+
+
+def _eh_obra_fitness(
+    nome_obra: str,
+    area_m2: float,
+    cnpj_responsavel_cnae_principal: str | None = None,
+) -> tuple[bool, str]:
+    """
+    Classifica obra fitness no CNO.
+
+    Retorna (eh_fitness, metodo) com metodo em
+    keyword | cnpj_cnae | cnpj_cnae_area_atipica | "" (não fitness).
+    """
+    cnae_norm = _normalize_cnae(cnpj_responsavel_cnae_principal)
+    if cnae_norm == _CNAE_ACADEMIA or cnae_norm.startswith("931310"):
+        if _AREA_MIN_M2 <= area_m2 <= _AREA_MAX_M2:
+            return True, "cnpj_cnae"
+        return True, "cnpj_cnae_area_atipica"
+
+    if not (_AREA_MIN_M2 <= area_m2 <= _AREA_MAX_M2):
+        return False, ""
+    if _match_exclusao(nome_obra):
+        return False, ""
+    if _match_keywords_fitness(nome_obra):
+        return True, "keyword"
+    return False, ""
+
+
+def _load_cno_cnaes_index(cno_dir: Path) -> dict[str, list[dict]]:
+    """Índice CNO → CNAEs da obra (enriquecimento; não filtro primário)."""
+    path = cno_dir / "cno_cnaes.csv"
+    by_cno: dict[str, list[dict]] = {}
+    if not path.is_file():
+        return by_cno
+    with open(path, encoding="latin-1", errors="replace") as f:
+        for row in csv.DictReader(f):
+            cno_id = (row.get("CNO") or "").strip()
+            if not cno_id:
+                continue
+            by_cno.setdefault(cno_id, []).append(
+                {"cnae": (row.get("CNAE") or "").strip()}
+            )
+    return by_cno
+
+
+def _fitness_cnpj_cnae_index(cidade: str, uf: str) -> dict[str, str]:
+    """CNPJ responsável → CNAE principal (entrantes fitness do município)."""
+    out: dict[str, str] = {}
+    try:
+        resp = listar_entrantes_cnpj_fitness(cidade, uf, dias=3650, limit=10_000)
+        for row in resp.get("entrantes") or []:
+            if not isinstance(row, dict):
+                continue
+            cnpj = _digits(str(row.get("cnpj") or ""))
+            if len(cnpj) != 14:
+                continue
+            cnae = _normalize_cnae(row.get("cnae_principal") or row.get("cnae_fiscal_principal"))
+            out[cnpj] = cnae or _CNAE_ACADEMIA
+    except Exception:
+        pass
+    return out
+
+
+def _load_obras_fitness_municipio(
+    cno_dir: Path,
+    municipio: str,
+    cidade: str,
+    uf: str,
+    *,
+    cnpj_cnae_por_cnpj: dict[str, str] | None = None,
+    **kwargs: Any,
+) -> list[dict]:
+    idx = cnpj_cnae_por_cnpj if cnpj_cnae_por_cnpj is not None else _fitness_cnpj_cnae_index(cidade, uf)
+    return _load_fortaleza_cno(cno_dir, municipio, cnpj_cnae_por_cnpj=idx, **kwargs)
+
+
+def _cnpj_cnae_from_entrantes(entrantes_resp: dict[str, Any]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for e in entrantes_resp.get("entrantes") or []:
+        cnpj = _digits(str(e.get("cnpj") or ""))
+        if len(cnpj) != 14:
+            continue
+        cnae = _normalize_cnae(e.get("cnae_principal") or e.get("cnae_fiscal_principal"))
+        out[cnpj] = cnae or _CNAE_ACADEMIA
+    return out
 
 
 def _resolve_municipio_codigo_cno(cidade: str, uf: str = "CE") -> str:
@@ -119,13 +292,154 @@ def _float(s: str) -> float:
         return 0.0
 
 
-def _nome_score(obra_nome: str, fantasia: str) -> int:
+def _nome_score(obra_nome: str, fantasia: str, razao: str = "") -> int:
     o = (obra_nome or "").lower()
-    f = (fantasia or "").lower()
-    if not f or not o:
+    texto = f"{fantasia or ''} {razao or ''}".lower()
+    if not texto.strip() or not o:
         return 0
-    tokens = [t for t in re.split(r"\W+", f) if len(t) >= 4]
-    return sum(1 for t in tokens if t in o)
+    score = 0
+    marcas = (
+        "fabrica", "monstro", "smart fit", "selfit", "bluefit", "bodytech",
+        "academ", "fitness", "crossfit", "pilates", "muscul", "condicionamento",
+    )
+    score += sum(2 for m in marcas if m in texto and m in o)
+    tokens = [t for t in re.split(r"\W+", texto) if len(t) >= 4]
+    score += sum(1 for t in tokens if t in o)
+    return score
+
+
+def _normalizar_logradouro(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+def _load_cno_obras_municipio(
+    cno_dir: Path,
+    municipio: str,
+    *,
+    somente_em_curso: bool | None = None,
+    situacao_filtro: Literal["em_curso", "encerrada", "todas"] | None = None,
+    area_min: float = 0.0,
+    area_max: float = 999_999.0,
+) -> list[dict]:
+    """Todas as obras do município no CNO (sem filtro fitness — base do cruzamento CNPJ→CNO)."""
+    main = cno_dir / "cno.csv"
+    if not main.is_file():
+        return []
+
+    obras: list[dict] = []
+    with open(main, encoding="latin-1", errors="replace") as f:
+        reader = csv.DictReader(f)
+        hdr = _map_headers(reader.fieldnames or [])  # pyright: ignore[reportArgumentType]
+        for row in reader:
+            if _val(row, hdr, "municipio") != municipio:
+                continue
+            area = _float(_val(row, hdr, "area"))
+            if area < area_min or area > area_max:
+                continue
+            situacao_cod = _val(row, hdr, "situacao").zfill(2) if _val(row, hdr, "situacao") else ""
+            situacao = _situacao_label(situacao_cod)
+            if situacao_filtro == "em_curso" and situacao != "em_curso":
+                continue
+            if situacao_filtro == "encerrada" and situacao != "encerrada":
+                continue
+            if somente_em_curso is True and situacao != "em_curso":
+                continue
+            if somente_em_curso is False and situacao == "em_curso":
+                continue
+
+            cno_id = _val(row, hdr, "cno")
+            nome = _val(row, hdr, "nome")
+            _note_encoding_field(cno_id, "nome", nome)
+            obras.append(
+                {
+                    "cno": cno_id,
+                    "cnpj_responsavel": _digits(_val(row, hdr, "cnpj")),
+                    "cep": _digits(_val(row, hdr, "cep")),
+                    "nome_obra": nome,
+                    "area_m2": area,
+                    "situacao_obra": situacao,
+                    "situacao_codigo": situacao_cod or None,
+                    "logradouro": _val(row, hdr, "logradouro"),
+                    "numero": _val(row, hdr, "numero"),
+                    "bairro": _val(row, hdr, "bairro"),
+                    "bairro_chave": normalizar_bairro(_val(row, hdr, "bairro")),
+                    "data_inicio": _val(row, hdr, "data_inicio") or None,
+                    "classificacao_fitness": _eh_obra_fitness(nome, area)[0],
+                }
+            )
+    _flush_encoding_replacement_log(f"obras_municipio:{municipio}")
+    return obras
+
+
+def _match_obra_cno_entrante(
+    entrante: dict[str, Any],
+    obras_municipio: list[dict],
+) -> tuple[dict | None, str | None, str | None]:
+    """
+    Busca obra CNO para um CNPJ fitness (fluxo CNPJ → CNO).
+
+    Retorna (obra|resumo_parcial, metodo, confianca).
+    """
+    cnpj = _digits(entrante.get("cnpj") or "")
+    cep8 = _digits(entrante.get("cep") or "")[:8]
+    fantasia = entrante.get("nome_fantasia") or ""
+    razao = entrante.get("razao_social") or ""
+    num_e = _digits(str(entrante.get("numero") or ""))
+    log_e = _normalizar_logradouro(entrante.get("logradouro") or "")
+
+    if len(cnpj) == 14:
+        for o in obras_municipio:
+            if o.get("cnpj_responsavel") == cnpj:
+                return o, "cnpj_responsavel", "alta"
+
+    candidatos_cep = [
+        o for o in obras_municipio
+        if cep8 and len(cep8) == 8 and (o.get("cep") or "").startswith(cep8)
+    ]
+    candidatos_cep.sort(
+        key=lambda o: (
+            0 if o.get("situacao_obra") == "em_curso" else 1,
+            -float(o.get("area_m2") or 0),
+        )
+    )
+
+    for o in candidatos_cep:
+        num_o = _digits(str(o.get("numero") or ""))
+        if num_e and num_o and num_e == num_o:
+            return o, "endereco_cep_numero", "alta"
+
+    # Logradouro parcial só sem número no CNPJ — evita confundir nºs da mesma via
+    if not num_e:
+        for o in candidatos_cep:
+            log_o = _normalizar_logradouro(o.get("logradouro") or "")
+            if log_e and log_o and (log_e in log_o or log_o in log_e):
+                return o, "endereco_cep_logradouro", "alta"
+
+    scored = sorted(
+        (
+            (o, _nome_score(o["nome_obra"], fantasia, razao))
+            for o in candidatos_cep
+        ),
+        key=lambda x: (-x[1], -float(x[0].get("area_m2") or 0)),
+    )
+    if scored and scored[0][1] >= 1:
+        return scored[0][0], "nome_obra_cep8", "media"
+
+    if candidatos_cep:
+        areas = [float(o["area_m2"]) for o in candidatos_cep if o.get("area_m2")]
+        if areas:
+            return (
+                {
+                    "area_m2_min": min(areas),
+                    "area_m2_max": max(areas),
+                    "obras_no_cep": len(candidatos_cep),
+                    "nota": "várias obras no CEP; sem match por nome/endereço",
+                },
+                "cep8_multiplas_obras",
+                "baixa",
+            )
+
+    return None, None, None
 
 
 def _capacidade_por_m2(area: float, perfil: str = "mid") -> dict[str, int]:
@@ -205,25 +519,33 @@ def _load_fortaleza_cno(
     somente_em_curso: bool | None = None,
     situacao_filtro: Literal["em_curso", "encerrada", "todas"] | None = None,
     incluir_projecao: bool = True,
+    cnpj_cnae_por_cnpj: dict[str, str] | None = None,
 ) -> list[dict]:
     main = cno_dir / "cno.csv"
     if not main.is_file():
         return []
 
+    cnae_idx = _load_cno_cnaes_index(cno_dir)
+
     obras: list[dict] = []
     with open(main, encoding="latin-1", errors="replace") as f:
         reader = csv.DictReader(f)
-        hdr = _map_headers(reader.fieldnames or [])
+        hdr = _map_headers(reader.fieldnames or [])  # pyright: ignore[reportArgumentType]
         for row in reader:
             if _val(row, hdr, "municipio") != municipio:
                 continue
+
             area = _float(_val(row, hdr, "area"))
-            if area < _AREA_MIN_M2 or area > _AREA_MAX_M2:
-                continue
+            cno_id = _val(row, hdr, "cno")
             nome = _val(row, hdr, "nome")
-            nome_u = nome.upper()
-            if not any(k.upper() in nome_u for k in _KEYWORDS_OBRA_FITNESS):
+            _note_encoding_field(cno_id, "nome", nome)
+            cnpj_resp = _digits(_val(row, hdr, "cnpj"))
+
+            cnae_responsavel = (cnpj_cnae_por_cnpj or {}).get(cnpj_resp) if cnpj_resp else None
+            eh_fitness, metodo = _eh_obra_fitness(nome, area, cnae_responsavel)
+            if not eh_fitness:
                 continue
+
             situacao_cod = _val(row, hdr, "situacao").zfill(2) if _val(row, hdr, "situacao") else ""
             situacao = _situacao_label(situacao_cod)
             if situacao_filtro == "em_curso" and situacao != "em_curso":
@@ -249,8 +571,8 @@ def _load_fortaleza_cno(
             )
             obras.append(
                 {
-                    "cno": _val(row, hdr, "cno"),
-                    "cnpj_responsavel": _digits(_val(row, hdr, "cnpj")),
+                    "cno": cno_id,
+                    "cnpj_responsavel": cnpj_resp,
                     "cep": _digits(_val(row, hdr, "cep")),
                     "nome_obra": nome,
                     "area_m2": area,
@@ -266,10 +588,13 @@ def _load_fortaleza_cno(
                     "data_inicio": data_inicio_s or None,
                     "data_situacao": data_situacao_s or None,
                     "data_fim_cadastral": data_fim_cadastral,
+                    "metodo_classificacao": metodo,
+                    "cnaes_obra": cnae_idx.get(cno_id, []),
                     "capacidade_matriculas_estimada": _capacidade_por_m2(area, faixa),
                     "projecao_receita": proj if proj and proj.get("status") == "ok" else None,
                 }
             )
+    _flush_encoding_replacement_log(f"fitness_municipio:{municipio}")
     return obras
 
 
@@ -291,9 +616,11 @@ def calcular_benchmark_tempo_obra_cno(
     Normaliza por m²: dias_por_m2 = (fim − início) / area_m2
     """
     cno_path = Path(cno_dir)
-    encerradas = _load_fortaleza_cno(
+    encerradas = _load_obras_fitness_municipio(
         cno_path,
         municipio,
+        cidade,
+        uf,
         situacao_filtro="encerrada",
         incluir_projecao=False,
     )
@@ -418,7 +745,7 @@ def _filtrar_obras_por_bairro(
     }
     if not meta["bairro_filtro"]:
         return obras, meta
-    filtradas = [o for o in obras if bairro_em_alvo(o.get("bairro") or "", bairro_filtro)]
+    filtradas = [o for o in obras if bairro_em_alvo(o.get("bairro") or "", bairro_filtro)]  # pyright: ignore[reportArgumentType]
     meta["total_antes_filtro"] = len(obras)
     meta["total_apos_filtro_bairro"] = len(filtradas)
     return filtradas, meta
@@ -511,7 +838,9 @@ def listar_obras_fitness_em_curso(
     if obras_precarregadas is not None:
         obras = [o for o in obras_precarregadas if o.get("situacao_obra") == "em_curso"]
     else:
-        obras = _load_fortaleza_cno(cno_path, municipio, somente_em_curso=True)
+        obras = _load_obras_fitness_municipio(
+            cno_path, municipio, cidade, uf, somente_em_curso=True
+        )
     bench = benchmark_tempo
     if bench is None:
         bench = calcular_benchmark_tempo_obra_cno(
@@ -575,74 +904,52 @@ def cruzar_entrantes_obras_cno(
     limit: int = 50,
 ) -> dict[str, Any]:
     """
-  Cruzamento por amostragem (máx. `limit` entrantes).
+    Cruzamento CNPJ fitness (entrantes 90d) -> CNO no município inteiro.
 
-    Níveis de match:
-    - `cnpj_responsavel`: CNPJ da obra = CNPJ do estabelecimento (raro)
-    - `nome_obra`: tokens do nome fantasia na descrição da obra + mesmo CEP-8
-    - `cep8_proximo`: mesmo CEP-8 + área plausível (confiança baixa)
-
-    Retorna apenas fatos; sem narrativa interpretativa.
+    Sempre percorre todos os entrantes do município e todo o CNO municipal
+    (`_load_cno_obras_municipio`). O parâmetro `bairro` só recorta o resultado
+    (não restringe a busca no CNO). Preferir `consultar_municipio_cnpj_cno`.
     """
     cno_path = Path(cno_dir)
-    entrantes = listar_entrantes_cnpj_fitness(cidade, uf, dias, limit=limit)
+    entrantes = listar_entrantes_cnpj_fitness(
+        cidade, uf, dias, limit=limit, validar_places=False, enriquecer=False
+    )
     if entrantes.get("status") != "ok":
         return entrantes
 
     municipio = _resolve_municipio_codigo_cno(cidade, uf)
-    obras_ftz = _load_fortaleza_cno(cno_path, municipio)
-    by_cnpj = {o["cnpj_responsavel"]: o for o in obras_ftz if len(o["cnpj_responsavel"]) == 14}
+    cnpj_idx = _cnpj_cnae_from_entrantes(entrantes)
+    obras_municipio = _load_cno_obras_municipio(cno_path, municipio, area_min=50.0)
+    obras_ftz = _load_fortaleza_cno(cno_path, municipio, cnpj_cnae_por_cnpj=cnpj_idx)
 
     cruzamentos: list[dict] = []
-    stats = {"cnpj": 0, "nome_obra": 0, "cep8_baixa": 0, "sem_obra": 0, "com_area": 0}
+    stats: dict[str, int] = {
+        "cnpj": 0,
+        "endereco": 0,
+        "nome_obra": 0,
+        "cep8_baixa": 0,
+        "sem_obra": 0,
+        "com_area": 0,
+    }
 
     for e in entrantes.get("entrantes") or []:
-        cnpj = _digits(e.get("cnpj", ""))
-        cep8 = _digits(e.get("cep", ""))[:8]
-        fantasia = e.get("nome_fantasia") or ""
+        match, metodo, confianca = _match_obra_cno_entrante(e, obras_municipio)
 
-        match: dict | None = None
-        metodo = None
-        confianca = None
-
-        if cnpj and cnpj in by_cnpj:
-            match = by_cnpj[cnpj]
-            metodo = "cnpj_responsavel"
-            confianca = "alta"
+        if metodo == "cnpj_responsavel":
             stats["cnpj"] += 1
-        else:
-            candidatos = [
-                o
-                for o in obras_ftz
-                if cep8 and o.get("cep", "").startswith(cep8[:8])
-            ]
-            scored = sorted(
-                ((o, _nome_score(o["nome_obra"], fantasia)) for o in candidatos),
-                key=lambda x: (-x[1], x[0]["area_m2"]),
-            )
-            if scored and scored[0][1] >= 1:
-                match = scored[0][0]
-                metodo = "nome_obra_cep8"
-                confianca = "media"
-                stats["nome_obra"] += 1
-            elif candidatos:
-                # mesmo CEP mas sem nome — só reportar faixa, confiança baixa
-                areas = [o["area_m2"] for o in candidatos]
-                match = {
-                    "area_m2_min": min(areas),
-                    "area_m2_max": max(areas),
-                    "obras_no_cep": len(candidatos),
-                    "nota": "várias obras no CEP; sem match por nome",
-                }
-                metodo = "cep8_multiplas_obras"
-                confianca = "baixa"
-                stats["cep8_baixa"] += 1
-            else:
-                stats["sem_obra"] += 1
+        elif metodo in ("endereco_cep_numero", "endereco_cep_logradouro"):
+            stats["endereco"] += 1
+        elif metodo == "nome_obra_cep8":
+            stats["nome_obra"] += 1
+        elif metodo == "cep8_multiplas_obras":
+            stats["cep8_baixa"] += 1
+        elif metodo is None:
+            stats["sem_obra"] += 1
 
         area_m2 = None
         capacidade = None
         projecao = None
+        fantasia = e.get("nome_fantasia") or ""
         if match and "area_m2" in match:
             area_m2 = match["area_m2"]
             faixa = match.get("faixa_ticket_inferida") or _inferir_faixa_ticket(
@@ -656,9 +963,13 @@ def cruzar_entrantes_obras_cno(
             {
                 "cnpj": e.get("cnpj"),
                 "nome_fantasia": fantasia or None,
+                "razao_social": e.get("razao_social"),
                 "segmento_operacao": e.get("segmento_operacao"),
                 "data_abertura": e.get("data_abertura"),
                 "cep": e.get("cep"),
+                "endereco": e.get("endereco"),
+                "bairro": e.get("bairro"),
+                "cnae_principal": e.get("cnae_principal"),
                 "match_cno": metodo,
                 "match_confianca": confianca,
                 "area_m2_obra": area_m2,
@@ -671,37 +982,225 @@ def cruzar_entrantes_obras_cno(
     bench_tempo = calcular_benchmark_tempo_obra_cno(
         cno_dir=cno_path, cidade=cidade, uf=uf
     )
-    em_curso = listar_obras_fitness_em_curso(
+    obras_fitness_ec_municipio = [
+        o for o in obras_ftz if o.get("situacao_obra") == "em_curso"
+    ]
+    em_curso_municipio = listar_obras_fitness_em_curso(
         cno_dir=cno_path,
         cidade=cidade,
         uf=uf,
-        limit=20,
-        obras_precarregadas=obras_ftz,
+        limit=30,
+        obras_precarregadas=obras_fitness_ec_municipio,
         benchmark_tempo=bench_tempo,
-        bairro_filtro=bairro or None,
+        bairro_filtro=None,
     )
 
-    # Obras fitness no município (referência — não implica vínculo com cada entrant)
+    recorte_bairro: dict[str, Any] | None = None
+    bairro_alvo = (bairro or "").strip()
+    if bairro_alvo:
+        cruz_bairro = [c for c in cruzamentos if bairro_em_alvo(c.get("bairro") or "", bairro_alvo)]
+        obras_bairro, filtro_meta = _filtrar_obras_por_bairro(
+            obras_fitness_ec_municipio, bairro_alvo
+        )
+        em_curso_bairro = listar_obras_fitness_em_curso(
+            cno_dir=cno_path,
+            cidade=cidade,
+            uf=uf,
+            limit=30,
+            obras_precarregadas=obras_fitness_ec_municipio,
+            benchmark_tempo=bench_tempo,
+            bairro_filtro=bairro_alvo,
+        )
+        recorte_bairro = {
+            "bairro": bairro_alvo,
+            "filtro": filtro_meta,
+            "total_entrantes": len(cruz_bairro),
+            "cruzamentos": cruz_bairro,
+            "cruzamentos_com_obra": [c for c in cruz_bairro if c.get("match_cno")],
+            "obras_fitness_keyword_em_curso": em_curso_bairro,
+            "obras_fitness_keyword_em_curso_lista": obras_bairro,
+        }
+
     ref_obras = sorted(obras_ftz, key=lambda o: -o["area_m2"])[:12]
+    com_match = [c for c in cruzamentos if c.get("match_cno")]
 
     return {
         "status": "ok",
         "cidade": cidade,
         "uf": uf,
+        "dias": dias,
+        "municipio_rfb": municipio,
+        "fonte_entrantes": "cnpj_fitness_estabelecimentos (Supabase)",
         "fonte_obras": "CNO — Cadastro Nacional de Obras (RFB)",
+        "total_entrantes_consultados": len(entrantes.get("entrantes") or []),
+        "total_entrantes_cruzados": len(cruzamentos),
+        "total_entrantes": len(cruzamentos),
+        "obras_cno_municipio": len(obras_municipio),
         "obras_fitness_filtradas_municipio": len(obras_ftz),
-        "obras_fitness_em_curso": em_curso,
+        "obras_fitness_em_curso_municipio": em_curso_municipio,
+        "obras_fitness_em_curso": em_curso_municipio,
+        "obras_fitness_em_curso_lista_municipio": obras_fitness_ec_municipio,
+        "recorte_bairro": recorte_bairro,
         "benchmark_tempo_obra_cno": bench_tempo,
         "obras_fitness_referencia": ref_obras,
-        "total_entrantes": len(cruzamentos),
         "resumo_match": stats,
         "cruzamentos": cruzamentos,
+        "cruzamentos_com_obra": com_match,
         "nota_metodologica": (
-            "Área m² só quando match CNO confiável. Matrículas e receita mensal "
-            "são projeções (A4): m² × matr/m² × ticket × (1 − inadimplência). "
-            "CNPJ/CNO não trazem faturamento declarado."
+            "Fluxo CNPJ->CNO: entrantes fitness 90d primeiro; busca em todo o CNO "
+            "municipal (obra pode ter nome de SPE/construtora). Área m² só com match "
+            "confiável. Matrículas/receita = projeção A4, não faturamento CNPJ."
         ),
     }
+
+
+def resolve_cno_data_dir(explicit: str | Path | None = None) -> Path:
+    """Resolve pasta do extract CNO (env → fallbacks)."""
+    import os
+
+    candidates: list[Path] = []
+    if explicit:
+        candidates.append(Path(explicit))
+    for key in ("CNO_DATA_DIR", "CNO_DATA_DIR_HOST"):
+        val = (os.getenv(key) or "").strip()
+        if val:
+            candidates.append(Path(val))
+    candidates.extend(
+        [
+            Path(r"C:\Users\marce\Downloads\cno_extract"),
+            _ROOT / "data" / "cno",
+        ]
+    )
+    seen: set[str] = set()
+    for p in candidates:
+        key = str(p.resolve()) if p.exists() else str(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        if (p / "cno.csv").is_file():
+            return p
+    tried = ", ".join(str(p) for p in candidates)
+    raise FileNotFoundError(f"cno.csv não encontrado. Tentado: {tried}")
+
+
+def consultar_municipio_cnpj_cno(
+    *,
+    cidade: str,
+    uf: str,
+    cno_dir: str | Path,
+    dias: int = 90,
+    limit: int = 200,
+    bairro: str | None = None,
+    bairros: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Pesquisa municipal CNPJ fitness (entrantes) -> CNO.
+
+    Ordem obrigatória:
+    1. Município: todos entrantes Supabase + match em todo CNO municipal
+    2. Bairro(s): recorte dos cruzamentos e das obras fitness keyword (CNO)
+
+    Nunca restringe a varredura CNO ao bairro — evita perder obras fora do polo.
+    """
+    cruz = cruzar_entrantes_obras_cno(
+        cno_dir=cno_dir,
+        cidade=cidade,
+        uf=uf,
+        bairro="",
+        dias=dias,
+        limit=limit,
+    )
+    if cruz.get("status") != "ok":
+        return cruz
+
+    todos: list[dict] = list(cruz.get("cruzamentos") or [])
+    alvos: list[str] = []
+    if bairros:
+        alvos = [b.strip() for b in bairros if b and b.strip()]
+    elif bairro and bairro.strip():
+        alvos = [bairro.strip()]
+
+    def _slice_bairro(items: list[dict], alvo: str) -> list[dict]:
+        return [x for x in items if bairro_em_alvo(x.get("bairro") or "", alvo)]
+
+    com_obra = [c for c in todos if c.get("match_cno")]
+    obras_ec_mun: list[dict] = list(cruz.get("obras_fitness_em_curso_lista_municipio") or [])
+    cno_kw_mun = cruz.get("obras_fitness_em_curso_municipio") or cruz.get("obras_fitness_em_curso")
+
+    out: dict[str, Any] = {
+        k: v
+        for k, v in cruz.items()
+        if k
+        not in (
+            "cruzamentos",
+            "cruzamentos_com_obra",
+            "total_entrantes",
+            "obras_fitness_em_curso",
+            "obras_fitness_em_curso_municipio",
+            "obras_fitness_em_curso_lista_municipio",
+            "recorte_bairro",
+        )
+    }
+    out.update(
+        {
+            "fluxo": "municipio_cnpj_cno -> recorte_bairro_opcional",
+            "escopo_primario": "municipio",
+            "escopo": "municipio",
+            "bairro_filtro": alvos[0] if len(alvos) == 1 else None,
+            "bairros_filtro": alvos or None,
+            "entrantes_municipio": {
+                "total": len(todos),
+                "com_match_cno": len(com_obra),
+                "sem_match_cno": len(todos) - len(com_obra),
+            },
+            "cruzamentos_municipio": todos,
+            "cruzamentos_com_obra_municipio": com_obra,
+            "cno_fitness_keyword_municipio": {
+                "total_em_curso": (cno_kw_mun or {}).get("total_obras_em_curso_municipio"),
+                "total_em_curso_listadas": (cno_kw_mun or {}).get("total_obras_em_curso"),
+                "obras": (cno_kw_mun or {}).get("obras") or [],
+                "nota": "Filtro keyword CNO no município; complementa cruzamento CNPJ->CNO",
+            },
+        }
+    )
+
+    def _bloco_bairro(alvo: str, filtrados: list[dict]) -> dict[str, Any]:
+        com = [c for c in filtrados if c.get("match_cno")]
+        obras_bairro, filtro_meta = _filtrar_obras_por_bairro(obras_ec_mun, alvo)
+        return {
+            "total_entrantes": len(filtrados),
+            "com_match_cno": len(com),
+            "sem_match_cno": len(filtrados) - len(com),
+            "cruzamentos": filtrados,
+            "cruzamentos_com_obra": com,
+            "filtro_bairro": filtro_meta,
+            "cno_fitness_keyword_em_curso": {
+                "total_em_curso_bairro": len(obras_bairro),
+                "obras": obras_bairro[:30],
+                "nota": "Recorte municipal; obras fora do bairro permanecem em cno_fitness_keyword_municipio",
+            },
+        }
+
+    if alvos:
+        out["escopo"] = "bairros" if len(alvos) > 1 else "bairro"
+        out["escopo_secundario"] = out["escopo"]
+        por_bairro: dict[str, Any] = {}
+        for alvo in alvos:
+            filtrados = _slice_bairro(todos, alvo)
+            por_bairro[alvo] = _bloco_bairro(alvo, filtrados)
+        out["por_bairro"] = por_bairro
+        if len(alvos) == 1:
+            out["cruzamentos"] = por_bairro[alvos[0]]["cruzamentos"]
+            out["cruzamentos_com_obra"] = por_bairro[alvos[0]]["cruzamentos_com_obra"]
+        else:
+            out["cruzamentos"] = todos
+            out["cruzamentos_com_obra"] = com_obra
+    else:
+        out["cruzamentos"] = todos
+        out["cruzamentos_com_obra"] = com_obra
+
+    out["total_entrantes"] = len(out["cruzamentos"])
+    return out
 
 
 # ── Agregação CNO por bairro (bairros alternativos / polo) ─────────────────
@@ -738,8 +1237,7 @@ def _classificar_tipo_edificacao_cno(nome: str, areas: list[dict]) -> str:
     Retorna: fitness | comercial | residencial | misto | outros
     """
     nome_l = (nome or "").lower()
-    nome_u = (nome or "").upper()
-    if any(k.upper() in nome_u for k in _KEYWORDS_OBRA_FITNESS):
+    if _match_keywords_fitness(nome) and not _match_exclusao(nome):
         return "fitness"
 
     destinos = " ".join(
@@ -782,7 +1280,7 @@ def carregar_contagem_obras_em_curso_por_bairro(
 
     with open(main, encoding="latin-1", errors="replace") as f:
         reader = csv.DictReader(f)
-        hdr = _map_headers(reader.fieldnames or [])
+        hdr = _map_headers(reader.fieldnames or [])  # pyright: ignore[reportArgumentType]
         for row in reader:
             if _val(row, hdr, "municipio") != mun:
                 continue
@@ -810,7 +1308,7 @@ def carregar_contagem_obras_em_curso_por_bairro(
                     "fitness": 0,
                     "misto": 0,
                     "outros": 0,
-                    "bairro_label": formatar_bairro_exibicao(bairro_raw),
+                    "bairro_label": formatar_bairro_exibicao(bairro_raw),  # pyright: ignore[reportArgumentType]
                 },
             )
             bucket["total"] += 1

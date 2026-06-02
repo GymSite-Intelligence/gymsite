@@ -1,0 +1,13 @@
+{
+  "cidade": "Fortaleza",
+  "bairro": "Aldeota",
+  "uf": "CE",
+  "area_m2_min": 800,
+  "area_m2_max": 1500,
+  "publico_alvo": "25-40",
+  "genero_alvo": "misto",
+  "tipo_negocio": "academia",
+  "tamanho_preset": "m",
+  "estacionamento_obrigatorio": true,
+  "bairros_indicados": []
+}
