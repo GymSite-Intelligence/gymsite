@@ -73,11 +73,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Smoke test container
+      - name: Smoke tests in image (deterministic)
+        run: |
+          docker run --rm gymsite-api:test python scripts/smoke_a9_langcache_e2e.py --ci-mode
+          docker run --rm gymsite-api:test python scripts/test_a9_integration.py
+
+      - name: Smoke test container (API up + health)
         run: |
           docker run -d --name gymsite-smoke -p 8000:8000 --env-file .env.production.example gymsite-api:test
           for i in $(seq 1 12); do
             if curl -sf http://localhost:8000/health; then
+              curl -sf "http://localhost:8000/health?probe=0" | head -c 500
               docker stop gymsite-smoke
               exit 0
             fi
@@ -88,11 +94,32 @@ jobs:
           exit 1
 
   # ═══════════════════════════════════════════════════════════════════════════
+  # Eval — Golden dataset (determinístico, sem CNO raw / Supabase)
+  # ═══════════════════════════════════════════════════════════════════════════
+  eval-golden-dataset:
+    name: Golden Dataset Eval
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run golden dataset eval (CNO consistency)
+        run: python eval/run_eval.py
+
+  # ═══════════════════════════════════════════════════════════════════════════
   # CD — Push to GHCR + Deploy
   # ═══════════════════════════════════════════════════════════════════════════
   cd:
     name: Push & Deploy
-    needs: ci
+    needs: [ci, eval-golden-dataset]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     permissions:
