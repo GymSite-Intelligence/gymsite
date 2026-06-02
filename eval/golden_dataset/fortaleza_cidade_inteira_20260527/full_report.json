@@ -1,0 +1,117 @@
+{
+  "id": "6fda525a-1dc4-4ce7-aa22-21e1a6fe1356",
+  "header": {
+    "id": "6fda525a-1dc4-4ce7-aa22-21e1a6fe1356",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1779840928",
+    "tempo_execucao_segundos": 131,
+    "tokens_total": 122306,
+    "custo_brl": 0.98,
+    "data_execucao": "2026-05-26T21:15:28+00:00",
+    "created_at": "2026-05-27T00:13:19.180457+00:00",
+    "updated_at": "2026-05-27T00:15:31.187782+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Fortaleza/CE — Meireles\n**Data:** 26/05/2026\n**Total de candidatos avaliados:** 0\n\n---\n\n## 🎯 Resumo Executivo\nA análise de viabilidade em Fortaleza, focada no bairro Meireles, foi severamente comprometida por falhas na geocodificação, impedindo a identificação de imóveis candidatos e a análise de concorrentes. Embora o potencial demográfico da cidade seja excelente (score 8.0), a análise financeira para um imóvel genérico de 325m² no Meireles se mostrou inviável em todos os cenários (Low Cost, Mid Market e Premium), com margens de lucro baixas ou negativas e payback superior a 70 meses. A ausência de dados competitivos e de um imóvel real impede uma recomendação favorável. Aconselha-se reavaliar a estratégia, começando pela exploração de bairros alternativos com menor saturação e custos de aluguel mais competitivos.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 8.0 | EXCELENTE |\n| Competitivo | 7.0 | BAIXO |\n| Viabilidade financeira | 1.0 | INVIAVEL |\n\n**Score Bairro:** 5.3 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** N/A — 🔍 INVESTIGAR MAIS — base do veredito (4 dim, inclui geoscout do #1)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\nMatrículas em 3 calibrações (cons/real/agres) baseadas em ACAD/Smart Fit/Bodytech.\nPico simultâneo é capacidade física no horário cheio — DIFERENTE de matrículas.\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 487 | 325 | 130 |\n| **Matrículas realista (base)** | **715** | **454** | **195** |\n| Matrículas agressivo | 975 | 585 | 292 |\n| Capacidade física simultânea | 178 | 130 | 81 |\n| Pico calculado (real × freq × 0,25) | 63 | 32 | 12 |\n| Folga capacidade | 64.6% | 75.4% | 85.2% |\n| Freq. semanal aluno | 2.5x | 2.0x | 1.8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 100,00 | R$ 200,00 | R$ 500,00 |\n| Ticket realizado (após inadimpl.) | R$ 95,00 | R$ 192,00 | R$ 487,50 |\n| Inadimplência | 5.0% | 4.0% | 2.5% |\n| **Receita mensal** | **R$ 67.925,00** | **R$ 87.168,00** | **R$ 95.062,50** |\n| Aluguel | R$ 22.031,75 | R$ 22.031,75 | R$ 22.031,75 |\n| Condomínio | R$ 3.304,76 | R$ 3.304,76 | R$ 3.304,76 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 3.900,00 | R$ 3.900,00 | R$ 5.850,00 |\n| Água | R$ 650,00 | R$ 650,00 | R$ 650,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 1.743,21 | R$ 2.011,34 | R$ 3.625,33 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 697,28 | R$ 804,53 | R$ 1.450,13 |\n| Outros (2% receita) | R$ 1.358,50 | R$ 1.743,36 | R$ 1.901,25 |\n| **Custos fixos total** | **R$ 56.585,50** | **R$ 71.345,74** | **R$ 98.713,22** |\n| Marketing (% receita) | R$ 4.075,50 (6.0%) | R$ 6.973,44 (8.0%) | R$ 11.407,50 (12.0%) |\n| **Custos totais** | **R$ 60.661,00** | **R$ 78.319,18** | **R$ 110.120,72** |\n| **Lucro mensal** | **R$ 7.264,00** | **R$ 8.848,82** | **-R$ 15.058,22** |\n| **Margem %** | **10.7%** | **10.2%** | **-15.8%** |\n| Break-even (alunos) | 639 | 408 | 226 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 194.608,00 | R$ 194.608,00 | R$ 402.288,00 |\n| Obra de adaptação | R$ 65.000,00 | R$ 113.750,00 | R$ 195.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 31.694,74 | R$ 36.569,74 | R$ 65.915,14 |\n| **CAPEX total** | **R$ 348.642,10** | **R$ 402.267,10** | **R$ 725.066,50** |\n| Capital de giro (3 meses) | R$ 181.983,00 | R$ 234.957,54 | R$ 330.362,16 |\n| **Investimento total** | **R$ 530.625,10** | **R$ 637.224,64** | **R$ 1.055.428,66** |\n| **Payback** | **73m** | **72m** | **999m** |\n| TIR anual | 0.0% | 0.0% | - |\n| VPL 5 anos (@12% a.a.) | -R$ 216.403,97 | -R$ 254.448,45 | -R$ 1.055.428,66 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | INVIAVEL · lucro R$ 3.529,75 · payback 150m | INVIAVEL · lucro R$ 4.442,47 · payback 143m | INVIAVEL · lucro -R$ 20.751,57 · payback 999m |\n| Matrículas -30% | INVIAVEL · lucro -R$ 11.465,50 · payback 999m | INVIAVEL · lucro -R$ 15.350,86 · payback 999m | INVIAVEL · lucro -R$ 41.266,82 · payback 999m |\n| Ticket -15% | INVIAVEL · lucro -R$ 1.742,14 · payback 999m | INVIAVEL · lucro -R$ 3.180,36 · payback 999m | INVIAVEL · lucro -R$ 28.700,42 · payback 999m |\n\n**Modelo recomendado para este perfil de bairro:** Nenhum\n**Justificativa:** A análise para o bairro Meireles, com uma área de 325m², revela inviabilidade financeira em todos os modelos. O tamanho reduzido limita drasticamente o número de matrículas, tornando a receita insuficiente para cobrir o CAPEX e os custos fixos elevados de um bairro nobre. Os cenários Low e Mid-Market apresentam margens abaixo de 11% e payback superior a 70 meses, e quebram em todos os testes de sensibilidade. O modelo Premium é inviável desde o caso base.\n\n⚠️ Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\n\n| Bairro | Motivo | Status competitivo | Ticket sugerido | Prioridade |\n|---|---|---|---|---|\n| Centro Expandido | Alta densidade comercial e fluxo garantido | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n| Bairros em expansão imobiliária recente | Novos empreendimentos = público novo, sem concorrência consolidada | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n\n**Bairro recomendado para investigação prioritária:** Centro Expandido (0 concorrentes mapeados)\nA recomendação prioritária é investigar o Centro Expandido, que apresenta alta densidade e fluxo de pessoas sem concorrência de grandes redes mapeada na análise preliminar. Bairros em recente expansão imobiliária também são uma excelente segunda opção, oferecendo um público novo com demanda reprimida por serviços.\n\n---\n\n## 📞 Script de Abordagem — Top 1\n\n**Canal recomendado:** WHATSAPP\n**Melhor horário:** Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde\n\n```\n📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , região alvo, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.\n```\n\n**Próximos passos:**\n1. Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda\n2. Pesquisar imobiliária ou administradora que gerencia o imóvel\n3. Identificar CNPJ do estabelecimento atual via consulta na Receita Federal\n4. Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica\n\n---\n\n## ⚠️ Alertas Globais\n- **Falha Crítica na Coleta de Dados:** Ocorreu um erro de `Geocoding: REQUEST_DENIED` que impediu a busca por imóveis candidatos (A1 GeoScout) e a análise de concorrentes (A3 CompetitorSearch). As seções \"Top 3 Candidatos\" e \"Inteligência Competitiva\" não puderam ser geradas.\n- **Análise Financeira Teórica:** A análise financeira foi executada com base em uma área padrão (325 m²) e custos de aluguel estimados para o bairro Meireles, mas não está vinculada a um imóvel real e validado.\n- **Inviabilidade Financeira Generalizada:** Todos os 3 cenários financeiros (Low Cost, Mid Market, Premium) se mostraram inviáveis para as premissas adotadas, indicando um desequilíbrio entre o custo do aluguel, a capacidade de geração de receita do imóvel e o investimento necessário.\n- **Classificação de Dores em Fallback:** A análise de dores dos concorrentes não pôde ser realizada devido à falha na coleta de dados, resultando em um status de fallback.\n- **Sinal Indireto GeoScout:** Nenhuma âncora ou imóvel foi identificado. A análise de localização está completamente comprometida.\n\n---\n\n## 📌 Decisão Recomendada\n**Descartar.** A análise atual é inconclusiva e desfavorável. A falha em obter dados geográficos críticos de imóveis e concorrentes, somada à inviabilidade financeira do modelo teórico, impede qualquer recomendação de avanço. A próxima ação concreta deve ser rodar uma nova análise focada nos bairros alternativos recomendados, como o \"Centro Expandido\", para validar se existe uma oportunidade mais clara em outra região de Fortaleza.\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Fortaleza",
+    "bairro": "(cidade inteira)",
+    "uf": "CE",
+    "area_m2_min": 250,
+    "area_m2_max": 400,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "pp",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "6fda525a-1dc4-4ce7-aa22-21e1a6fe1356",
+    "veredito": "INVESTIGAR MAIS",
+    "score_bairro": 5.33,
+    "score_top1_candidato": 5.33,
+    "score_demografico": 8.0,
+    "score_concorrencia": 7.0,
+    "score_viabilidade": 1.0,
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 0.0,
+    "total_concorrentes_analisados": 0,
+    "modelo_recomendado": "Nenhum",
+    "aluguel_mensal": 22031.75,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "Não foi possível gerar um posicionamento recomendado devido à ausência de dados de concorrentes para análise. A falha na geocodificação impediu a identificação de estabelecimentos no bairro Meireles.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "whatsapp_link": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , região alvo, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "BAIXO",
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6
+      }
+    },
+    "market_context": {
+      "schema_version": "1.5",
+      "fonte_market_context": "",
+      "redes_a0_solicitadas": [],
+      "cached_market_context": null,
+      "data_coleta_market_context": ""
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [],
+      "redes_solicitadas": [],
+      "tem_redes_fantasma": false,
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": []
+    },
+    "alertas": [
+      "⚠️ Inviável — modelo não fecha conta (Payback de 72 meses no cenário Mid Market e 73 no Low Cost, acima do limite de 60 meses).",
+      "⚠️ Aluguel compromete viabilidade (Consome 32% da receita no cenário Low e 25% no Mid, acima do benchmark de 15%).",
+      "⚠️ Modelo só funciona com execução no benchmark; abaixo disso, prejuízo (Teste de sensibilidade com -30% de matrículas torna todos os cenários inviáveis).",
+      "Modelo PP (ultra-compacto) requer altíssima densidade demográfica para compensar a baixa capacidade. A viabilidade em 325m² neste local é questionável."
+    ],
+    "embedding": null,
+    "entrantes_cnpj_90d": {},
+    "obras_cno_em_curso": {},
+    "scores_regionais": {
+      "demografico": 8.0,
+      "concorrencia": 7.0,
+      "viabilidade": 1.0
+    },
+    "alertas_financeiros": [
+      "⚠️ Inviável — modelo não fecha conta (Payback de 72 meses no cenário Mid Market e 73 no Low Cost, acima do limite de 60 meses).",
+      "⚠️ Aluguel compromete viabilidade (Consome 32% da receita no cenário Low e 25% no Mid, acima do benchmark de 15%).",
+      "⚠️ Modelo só funciona com execução no benchmark; abaixo disso, prejuízo (Teste de sensibilidade com -30% de matrículas torna todos os cenários inviáveis).",
+      "Modelo PP (ultra-compacto) requer altíssima densidade demográfica para compensar a baixa capacidade. A viabilidade em 325m² neste local é questionável."
+    ]
+  },
+  "candidatos": [],
+  "competidores_count": 0
+}

@@ -1,0 +1,449 @@
+{
+  "id": "02e42bad-2157-47f1-bdab-26d70c850f92",
+  "header": {
+    "id": "02e42bad-2157-47f1-bdab-26d70c850f92",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1780081675",
+    "tempo_execucao_segundos": 782,
+    "tokens_total": 2080074,
+    "custo_brl": 7.72,
+    "data_execucao": "2026-05-29T16:07:55+00:00",
+    "created_at": "2026-05-29T18:54:57.846629+00:00",
+    "updated_at": "2026-05-29T19:08:00.322246+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Eusébio/CE — Eusébio\n**Data:** 29/05/2026\n**Total de candidatos avaliados:** 14\n\n---\n\n## 🔬 Contexto de Mercado (Deep Research)\n\n| Indicador | Valor |\n|-----------|-------|\n| Ticket médio local | R$ 130,00/mês |\n| Aluguel médio comercial | R$ 55,92/m² |\n| Renda média do bairro | R$ 2.513,00 |\n| Faixa etária predominante | 40-44 anos |\n| Tendência do mercado | crescimento |\n\n### Principais Concorrentes Identificados (via Deep Research)\nDeep research identificou Greenlife, Smart Fit e MaxForma como principais redes, além de academias independentes consolidadas.\n\n### Insights Estratégicos\n*   Eusébio registrou um crescimento populacional de 61,12% em 12 anos, atraindo famílias de alto poder aquisitivo com renda média domiciliar per capita de R$ 2.513,00 (Deep Research).\n*   O mercado fitness em Eusébio transita de academias de bairro para grandes redes, com expansão atrelada a novos malls e um ticket médio geral estimado em R$ 130,00/mês (Deep Research).\n*   O parque ativo total de estabelecimentos fitness em Eusébio é de 69 unidades, com 64 sendo comerciais, e 1 novo CNPJ fitness registrado nos últimos 90 dias (CNPJ).\n*   A faixa etária predominante dos formadores de renda em Eusébio concentra-se entre 40 e 44 anos, impulsionando a demanda por modelos 'Family Club' (Deep Research).\n*   O aluguel comercial por m² em Eusébio tem um viés de alta, com preço médio de R$ 55,92/m², e grandes redes optam por contratos Built to Suit ou lojas âncora em shoppings (Deep Research).\n\n### Regulamentação\nA prefeitura de Eusébio tem implementado programas contínuos de desburocratização, com licenciamento comercial centralizado e digital via SEFIN. É necessário Alvará Sanitário (ou dispensa), aprovação do Corpo de Bombeiros e registro no CREF5, além de submissão do Termo de Responsabilidade Técnica por um profissional de Educação Física.\n\n> Fonte: Deep Research + CNPJ/CNO (tools) | Data: 29/05/2026 | Cache: false\n\n---\n\n## 🎯 Resumo Executivo\nO mercado de Eusébio é altamente viável, impulsionado por uma população de alta renda e crescimento acelerado. A estratégia recomendada é um modelo **Mid Market**, que equilibra um ticket médio competitivo (R$ 200,00) com uma oferta de serviços robusta, gerando o maior lucro projetado (R$ 194.267,59/mês) e um payback rápido (7 meses). A análise competitiva revela baixa saturação e dores de mercado claras, como atendimento ruim e superlotação.\n\nNo entanto, a busca por imóveis vagos (listings) não encontrou opções dentro de Eusébio, retornando os melhores candidatos em municípios vizinhos como Maracanaú e Fortaleza. O candidato #1 é um galpão de 1275m² em Maracanaú, com excelente estrutura física para uma academia. Recomenda-se avançar na prospecção deste imóvel, mas com a ressalva estratégica de que ele está fora da praça-alvo original, o que exigirá uma reavaliação do público-alvo e da concorrência local de Maracanaú.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 7.0 | BOM |\n| Competitivo | 3.5 | BAIXO |\n| Viabilidade financeira | 10.0 | ALTO |\n\n**Transparência:** Academias no raio 3km (Aggregate): 38 (Nearby retornou: 20, limitado por maxResultCount) | amostra analisada (reviews): 8\n\n**Score Bairro:** 6.8 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** 7.2 — ⚠️ APROVADO COM RESSALVAS — base do veredito (4 dim, inclui geoscout do #1)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 🏆 Top 3 Candidatos\n\n### #1 — Imóvel anunciado · 1275m² · IMOVELWEB — Score Geral 7.2 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Avenida Dos Marinheiros 520, Cidade Nova, Maracanaú\n- **Tipo:** Galpão\n- **Área estimada:** ~1275m²\n- **Score GeoScout:** 8.5 (sinal indireto-heurístico) | **Motivo:** Imóvel anunciado para aluguel em IMOVELWEB — R$ 8.500. Acessar listing_url pra contato direto com a imobiliária.\n- **Score Ancoragem:** 0.0 — visibilidade: a_confirmar_no_field\n- **Polos geradores próximos:**\n  - — sem polos geradores no raio de 2km\n- **Próximo passo:** Contatar anunciante para validar disponibilidade e agendar visita técnica.\n- **Investigação site**: status `incerto` — operador `—` | tipo imóvel ONR `31` (`Galpão`) | confiança `baixa` | A ausência de informações claras e a falha no acesso ao anúncio de aluguel indicam alto risco. Uma visita ao local é essencial para validar a ocupação atual e a compatibilidade do espaço com uma academia de 800-1500m². (https://www.imovelweb.com.br/propriedades/galpao-para-alugar-600-m-por-r$-8.691-00-mes-3006465795.html)\n\n### #2 — Imóvel anunciado · 1000m² · IMOVELWEB — Score Geral 7.2 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Rua 5A 201, Novo Maracanaú, Maracanaú\n- **Tipo:** Galpão\n- **Área estimada:** ~1000m²\n- **Score GeoScout:** 8.5 (sinal indireto-heurístico) | **Motivo:** Imóvel anunciado para aluguel em IMOVELWEB — R$ 15.000. Acessar listing_url pra contato direto com a imobiliária.\n- **Score Ancoragem:** 0.0 — visibilidade: a_confirmar_no_field\n- **Polos geradores próximos:**\n  - — sem polos geradores no raio de 2km\n- **Próximo passo:** Contatar anunciante para validar disponibilidade e agendar visita técnica.\n- **Investigação site**: status `vago` — operador `—` | tipo imóvel ONR `31` (`Galpão`) | confiança `alta` | O ponto está vago, com características físicas (1000 m², pé-direito 6m, piso industrial) altamente favoráveis para a instalação de uma academia, alinhado à faixa de busca do investidor. (https://www.imovelweb.com.br/propriedades/galpao-para-alugar-1000-m-por-r$-15.000-00-mes-3036083669.html)\n\n### #3 — Imóvel anunciado · 1400m² · IMOVELWEB — Score Geral 7.2 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Avenida Pinto Bandeira, 499, Engenheiro Luciano Cavalcante, Fortaleza\n- **Tipo:** Terreno/Fração\n- **Área estimada:** ~1400m²\n- **Score GeoScout:** 8.5 (sinal indireto-heurístico) | **Motivo:** Imóvel anunciado para aluguel em IMOVELWEB — R$ 13.900. Acessar listing_url pra contato direto com a imobiliária.\n- **Score Ancoragem:** 0.0 — visibilidade: a_confirmar_no_field\n- **Polos geradores próximos:**\n  - — sem polos geradores no raio de 2km\n- **Próximo passo:** Contatar anunciante para validar disponibilidade e agendar visita técnica.\n- **Investigação site**: status `incerto` — operador `—` | tipo imóvel ONR `71` (`Terreno/Fração`) | confiança `baixa` | Recomenda-se uma visita física ao local para verificar o status operacional, o tipo de edificação e sua compatibilidade com uma academia, dado que as fontes online não fornecem informações claras para este endereço específico. (https://www.imovelweb.com.br/propriedades/casa-engenheiro-luciano-cavalcante-fortaleza-ce-3022154896.html)\n\n---\n\n## 🏗️ Checklist de Diligência do Imóvel\n\nAntes de fechar negociação com qualquer dos candidatos acima, validar **OS 6 ITENS** abaixo:\n\n1. Confirmar zoneamento para atividade de condicionamento físico\n2. Verificar entrada trifásica de energia\n3. Checar projeto de incêndio aprovado\n4. Medir pé-direito (mínimo 4m)\n5. Confirmar vão livre sem colunas centrais\n6. Negociar 90-120 dias de carência\n\n> Lista padrão para academias 1.000-1.500m².\n\n---\n\n## 🥊 Inteligência Competitiva — Concorrente por Concorrente\n\nOs concorrentes vêm de uma busca em raio de 3 km do município alvo, incluindo academias de diferentes bairros.\n\n### 📍 Centro (2 academias)\n#### L2 Academia Eusébio — Rating 4.7 ⭐ (173 avaliações) \n- **Endereço:** Av. Cel. Cícero de Sá, 820 - Centro, Eusébio - CE, 61760-000, Brasil\n- **Bairro:** Centro\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos**:\n  - \"Ok\" — Adriano Lima, 5⭐ (4 years ago) \n  - \"Top\" — Neném Old pirate, 5⭐ (5 years ago) \n  - \"Show\" — Edna Silva, 5⭐ (5 years ago) \n  - \"Academia top\" — betinho Santos Silva, 5⭐ (3 years ago) \n  - \"Top\" — Jonh Herbert, 5⭐ (5 years ago) \n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### Academia MoveFit — Rating 4.7 ⭐ (153 avaliações) \n- **Endereço:** Av. Cel. Cícero de Sá, 150 - Centro, Eusébio - CE, 61760-000, Brasil\n- **Bairro:** Centro\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos**:\n  - \"Top!!.💪😆\" — William ramos, 5⭐ (4 years ago) \n  - \"Showwwww\" — Adriana Paula Lindoso da Silva, 5⭐ (4 years ago) \n  - \"Top\" — Meiriane Silva, 5⭐ (5 years ago) \n  - \"Seria bom um investimento em relação a limpeza, muito desconfortável usar o banheiro que na maioria das vezes estão sujos. Deveria ter regras pois já vi homens treinando sem blusa,\" — Thais Sousa, 3⭐ (3 years ago) → categoria: limpeza_higiene\n  - \"Muito bom! Preço baixo, e os responsáveis são muito prestativos. Olhando de fora parece ser pequena, mas existe um espaço interno mais pra dentro. Bem prático e funcional. Vale a p\" — André Silva Loiola, 5⭐ (5 years ago) \n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Coité (1 academias)\n#### Max Forma Academias | Eusébio — Rating 4.2 ⭐ (294 avaliações) \n- **Endereço:** Av. Eusébio de Queiroz, 2880 - Coité, Eusébio - CE, 61760-000, Brasil\n- **Bairro:** Coité\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Modalidades: musculacao, funcional, danca, avaliacao_fisica, estetica | Diferenciais: ar_condicionado, horario_24h, estacionamento, app, diaria\n- **Reclamações dos alunos**:\n  - \"Top\" — marcelo Rabelo, 5⭐ (2 years ago) \n  - \"A academia tem uma estrutura excelente, mas a experiência é prejudicada pelo excesso de alunos e pela falta de organização no uso dos aparelhos. É comum encontrar grupos treinando\" — João, 1⭐ (4 months ago) → categoria: lotacao\n  - \"A academia é maravilhosa, so tem uma personal conhecida como Manu que é péssima proficional, educação passou foi longe dela. Nao sei como uma academia desse padrão tem uma proficio\" — Lana Oliver, 3⭐ (4 months ago) → categoria: atendimento_ruim\n  - \"Academia fica em cima do shopping, no primeiro andar, é bem lotada, pelo menos foi assim nos horários que fui (6h da manhã e 19h). Não tem muitos professores mas são bem prestativo\" — Felipe Lima, 3⭐ (a year ago) → categoria: lotacao\n  - \"Malho na academia. Tem alguns personais bom, porem tem dois horrorosos, extremamente mau educados. Um tal de Victor Maia e Manu. Grosseiros, o nível de personais precisa da uma mel\" — Bruno Mark, 1⭐ (6 months ago) → categoria: atendimento_ruim\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Timbu (1 academias)\n#### Academia Muscle Gym — Rating 4.8 ⭐ (120 avaliações) \n- **Endereço:** R. Manduca, 408 - Timbu, Eusébio - CE, 61777-300, Brasil\n- **Bairro:** Timbu\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Não especificado\n- **Reclamações dos alunos**:\n  - \"Show\" — Deilivane Silva, 5⭐ (7 years ago) \n  - \"Academia ótima! Gosto demais,super recomendo,bons profissionais,bom espaço e bons maquinários.\" — Ana Cristina Souza, 5⭐ (7 months ago) \n  - \"Ótima,bom atendimento ótimo profissionais bem equipada ótimos professores\" — Marco Aurélio, 5⭐ (6 months ago) \n  - \"Faço jiu-jitsu adoro o professor e tem ótimos ensinos!\" — Maisa França Correa, 5⭐ (6 months ago) \n  - \"Espaço maravilhoso,treinos excelentes e profissionais qualificados!\" — Gaby Souza, 5⭐ (6 months ago) \n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Guaribas (1 academias)\n#### Imperator Cross e Lutas — Rating 5.0 ⭐ (89 avaliações) \n- **Endereço:** R. Nossa Sra. de Nazaré, 01 - Guaribas, Eusébio - CE, 61760-000, Brasil\n- **Bairro:** Guaribas\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Não especificado\n- **Reclamações dos alunos**:\n  - \"Academia com profissionais competentes, dedicados e verdadeiros amigos. Meu segundo lar.\" — Rodrigo Arruda, 5⭐ (4 years ago) [original em inglês]\n  - \"Top\" — airton pascoal, 5⭐ (3 years ago) \n  - \"Um academia de Jeito Jitsu de alto desempenho, que vai desde o Kids até a preparação para competiçao, da branca a preta. Tudo com muita didática e conhecimento. É um lugar altament\" — Marco C, 5⭐ (4 months ago) \n  - \"Melhor lugar do Eusébio para treinar Cross 💪🏽 Professores excelentes, comprometimento, profissionalismo e dedicação. Lugar com várias modalidades de lutas e o jiu-jítsu se destaca\" — CAROLINE GOMES, 5⭐ (a year ago) \n  - \"Pra mim a melhor academia do Eusébio. Minha esposa e eu treinamos lá. Ela na modalidade Crossfit e eu jiu-jitsu.\" — Jarbas Sales, 5⭐ (3 years ago) \n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Mangabeira (1 academias)\n#### LAFIT ACADEMIA — Rating 4.8 ⭐ (84 avaliações) \n- **Endereço:** R. São Cristóvão, 51 - Mangabeira, Eusébio - CE, 61760-000, Brasil\n- **Bairro:** Mangabeira\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Não especificado\n- **Reclamações dos alunos**:\n  - \"Top\" — Edson Britto, 4⭐ (3 years ago) \n  - \"Show\" — Arthur Pinheiro, 5⭐ (5 years ago) \n  - \"Show\" — Italo Correa, 5⭐ (5 years ago) \n  - \"Oferece uma estrutura completa para quem busca saúde e bem-estar. Com ambiente ventilado, proporciona conforto e praticidade aos alunos. A equipe de profissionais é dedicada e pron\" — Alison Alencar, 5⭐ (a year ago) \n  - \"Ambiente bem ventilado. Aparelhos em quantidade suficiente. Instrutor domina didática e instrução. Mensalidade dentro do orçamento.\" — Uelder Alves, 5⭐ (2 years ago) \n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Amador (1 academias)\n#### GO 2FIT* — Rating 4.8 ⭐ (70 avaliações) \n- **Endereço:** R. Jose Bento, 75 - Amador, Eusébio - CE, 61769-180, Brasil\n- **Bairro:** Amador\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos**:\n  - \"Gosto dessa academia. Frequento com o TotalPass. N é muito lotado e os instrutores sempre me ajudam com os exercícios e plano de treino. Eu recomendo.\" — Alan Almeida, 5⭐ (4 months ago) \n  - \"academia simples e boa ! profissionais bastante atenciosos, um diferencial da academia! Daria uma sugestão apenas para uma atualização nos aparelhos.\" — Fábio Gomes, 5⭐ (8 months ago) \n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Urucunema (1 academias)\n#### GOOD GYM Academia — Rating 4.6 ⭐ (61 avaliações) \n- **Endereço:** Av. Cel. Cícero de Sá, 1497 - Urucunema, Eusébio - CE, 61760-000, Brasil\n- **Bairro:** Urucunema\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos**:\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### Padrões cross-concorrência (gap analysis agregada)\n\n**O que TODOS oferecem (commodities):**\n- musculação\n\n**Gaps de mercado (NINGUÉM oferece):**\n- natação\n- area kids\n- jiu-jitsu\n- plano mensal\n- muay thai\n\n**Dores dominantes (cross-concorrência) — com nominação:**\n\n| Dor | Menções | Mencionado por | Oportunidade Estratégica |\n|---|---|---|---|\n| atendimento_ruim | 2 | Max Forma Academias | Eusébio (2x) | Investir em treinamento de equipe focado em atendimento ao cliente e cordialidade. |\n| lotacao | 1 | Max Forma Academias | Eusébio (1x) | Oferecer um espaço mais amplo e com melhor distribuição de equipamentos para evitar superlotação nos horários de pico. |\n\n### 💡 Posicionamento Recomendado\nRecomenda-se posicionar a academia como um 'Family Club Premium' em Eusébio, com foco em atendimento personalizado e infraestrutura de alta qualidade. Explorar a oferta de Beach Tennis, natação e áreas kids para atender à demanda da faixa etária 40-44 anos com alto poder aquisitivo, que busca conveniência e atividades para toda a família. Destacar a limpeza, organização e acompanhamento profissional para resolver as principais dores dos concorrentes.\n\n---\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 1725 | 1150 | 460 |\n| **Matrículas realista (base)** | **2530** | **1610** | **690** |\n| Matrículas agressivo | 3450 | 2070 | 1035 |\n| Capacidade física simultânea | 632 | 460 | 287 |\n| Pico calculado (real × freq × 0,25) | 225 | 115 | 44 |\n| Folga capacidade | 64,4% | 75,0% | 84,7% |\n| Freq. semanal aluno | 2,5x | 2,0x | 1,8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 100,00 | R$ 200,00 | R$ 500,00 |\n| Ticket realizado (após inadimpl.) | R$ 95,00 | R$ 192,00 | R$ 487,50 |\n| Inadimplência | 5,0% | 4,0% | 2,5% |\n| **Receita mensal** | **R$ 240.350,00** | **R$ 309.120,00** | **R$ 336.375,00** |\n| Aluguel | R$ 19.759,30 | R$ 19.759,30 | R$ 19.759,30 |\n| Condomínio | R$ 2.963,89 | R$ 2.963,89 | R$ 2.963,89 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 13.800,00 | R$ 13.800,00 | R$ 20.700,00 |\n| Água | R$ 2.300,00 | R$ 2.300,00 | R$ 2.300,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 3.833,11 | R$ 5.869,44 | R$ 14.010,66 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 1.533,24 | R$ 2.347,78 | R$ 5.604,26 |\n| Outros (2% receita) | R$ 4.807,00 | R$ 6.182,40 | R$ 6.727,50 |\n| **Custos fixos total** | **R$ 71.896,54** | **R$ 90.122,81** | **R$ 131.965,61** |\n| Marketing (% receita) | R$ 14.421,00 (6,0%) | R$ 24.729,60 (8,0%) | R$ 40.365,00 (12,0%) |\n| **Custos totais** | **R$ 86.317,54** | **R$ 114.852,41** | **R$ 172.330,61** |\n| **Lucro mensal** | **R$ 154.032,46** | **R$ 194.267,59** | **R$ 164.044,39** |\n| **Margem %** | **64,1%** | **62,8%** | **48,8%** |\n| Break-even (alunos) | 909 | 599 | 354 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 402.288,00 | R$ 600.030,00 | R$ 1.788.648,00 |\n| Obra de adaptação | R$ 230.000,00 | R$ 402.500,00 | R$ 690.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 69.692,89 | R$ 106.717,09 | R$ 254.739,26 |\n| **CAPEX total** | **R$ 766.621,78** | **R$ 1.173.887,98** | **R$ 2.802.131,90** |\n| Capital de giro (3 meses) | R$ 258.952,62 | R$ 344.557,23 | R$ 516.991,83 |\n| **Investimento total** | **R$ 1.025.574,40** | **R$ 1.518.445,21** | **R$ 3.319.123,73** |\n| **Payback** | **6m** | **7m** | **20m** |\n| TIR anual | 179,2% | 152,0% | 52,0% |\n| VPL 5 anos (@12% a.a.) | R$ 5.637.456,15 | R$ 6.885.049,01 | R$ 3.776.996,03 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | ALTO · lucro R$ 152.458,80 · payback 6m | ALTO · lucro R$ 190.315,73 · payback 7m | ALTO · lucro R$ 155.538,53 · payback 21m |\n| Matrículas -30% | ALTO · lucro R$ 87.918,50 · payback 11m | ALTO · lucro R$ 108.950,47 · payback 13m | MEDIO · lucro R$ 71.631,19 · payback 46m |\n| Ticket -15% | ALTO · lucro R$ 122.164,58 · payback 8m | ALTO · lucro R$ 151.609,03 · payback 10m | ALTO · lucro R$ 115.771,99 · payback 28m |\n\n**Modelo recomendado para este perfil de bairro:** Mid Market\n**Justificativa:** O município de Eusébio possui a maior renda média domiciliar per capita do Ceará (R$ 2.513) e um forte crescimento populacional, atraindo famílias de alto poder aquisitivo. Esse perfil demográfico é ideal para modelos de maior valor agregado, justificando a recomendação do Mid Market, que apresenta o maior lucro projetado e um payback extremamente rápido. O modelo apresenta veredito base ALTO e mantém-se robusto em todos os cenários de stress.\n\n⚠️ Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 📍 Distribuição Geográfica dos Concorrentes\n\n| Bairro | Nº academias | Quais |\n|---|---|---|\n| Centro | 2 | L2 Academia Eusébio, Academia MoveFit |\n| Coité | 1 | Max Forma Academias / Eusébio |\n| Timbu | 1 | Academia Muscle Gym |\n| Guaribas | 1 | Imperator Cross e Lutas |\n| Mangabeira | 1 | LAFIT ACADEMIA |\n| Amador | 1 | GO 2FIT* |\n| Urucunema | 1 | GOOD GYM Academia |\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\n\n| Bairro | Motivo | Status competitivo | Ticket sugerido | Prioridade |\n|---|---|---|---|---|\n| Centro Eusébio | Núcleo urbano consolidado, fluxo comercial alto | 🟡 1 concorrente mapeado (1 academia: My Fitness Club) | mid | MEDIA |\n| Coaçu | Terrazo Shopping, residencial classe média-alta | 🟡 1 concorrente mapeado (1 academia: Box forma crosstraining) | mid | MEDIA |\n| Aquiraz (cidade vizinha) | RMF, baixa concorrência fitness, Porto das Dunas | 🟡 1 concorrente mapeado (1 academia: Barragem do Aquiraz) | mid | MEDIA |\n| Tamatanduba | Polo comercial Shopping Eusébio, alta demanda | 🔴 saturado (3 academias: Galatians Box Eusébio, CF Tríade Eusébio, Academia Smart Fit - Shopping Eusébio) | mid | BAIXA |\n| Coité | Expansão imobiliária, condomínios fechados Cidade Alpha | 🔴 saturado (3 academias: AGC REPRESENTAÇÃO DE ACADEMIAS, Max Forma Academias / Eusébio, Academia Alphaville Ceará 2) | mid | BAIXA |\n| Pajuçara | Residencial em consolidação, ticket médio viável | 🔴 saturado (4 academias: Ds, Top Fitness & Wellness, Crossfit Pajuçara, Prime CT - Academia e Jiu-Jitsu) | mid | BAIXA |\n\n**Bairro recomendado para investigação prioritária:** Centro Eusébio\nNenhum bairro alternativo apresentou prioridade ALTA, pois todos já possuem concorrentes mapeados. Recomenda-se iniciar a investigação pelo Centro de Eusébio, que, apesar de ter um concorrente, ainda representa o núcleo urbano consolidado com alto fluxo. Uma investigação mais aprofundada para levantar outras opções regionais é aconselhada.\n\n---\n\n## 📞 Script de Abordagem — Top 1\n\n**Canal recomendado:** WHATSAPP\n**Melhor horário:** Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde\n\n```\n📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Eusébio, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.\n```\n\n**Próximos passos:**\n1. Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda\n2. Pesquisar imobiliária ou administradora que gerencia o imóvel\n3. Identificar CNPJ do estabelecimento atual via consulta na Receita Federal\n4. Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica\n\n---\n\n## ⚠️ Alertas Globais\n- **Ambiguidade Geográfica:** 'Eusébio' é um município da Região Metropolitana de Fortaleza, não um bairro. Esta análise considerou Eusébio como o alvo principal. Para uma análise focada em um bairro específico dentro do município (ex: Centro), uma nova consulta seria necessária.\n- **Localização dos Candidatos:** A busca por imóveis vagos (listings) não encontrou opções compatíveis dentro de Eusébio. Os 3 melhores candidatos identificados estão localizados em municípios vizinhos (Maracanaú e Fortaleza). Isso requer uma reavaliação estratégica da área de atuação.\n- **Sinal Indireto do GeoScout:** Os scores dos candidatos são baseados em âncoras comerciais e listings, não em imóveis com vacância confirmada. A prospecção ativa e a visita presencial são obrigatórias para confirmar a disponibilidade.\n- **Counter-Programming Indisponível:** Não foi possível gerar uma estratégia de contra-programação de horários, pois os dados de picos de movimento (Google Popular Times) não estavam disponíveis para os concorrentes analisados.\n\n---\n\n## 📌 Decisão Recomendada\n**APROVADO COM RESSALVAS.** O mercado de Eusébio é extremamente atrativo do ponto de vista demográfico e financeiro. Contudo, a ausência de imóveis listados no município é um obstáculo. Recomenda-se avançar com a prospecção do candidato #1 (\"Imóvel anunciado · 1275m²\" em Maracanaú) devido à sua excelente adequação física, mas realizar uma análise competitiva e demográfica específica para Maracanaú antes de qualquer compromisso.\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Fortaleza",
+    "bairro": "Eusébio",
+    "uf": "CE",
+    "area_m2_min": 800,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "02e42bad-2157-47f1-bdab-26d70c850f92",
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 6.83,
+    "score_top1_candidato": 6.83,
+    "score_demografico": 7.0,
+    "score_concorrencia": 3.48,
+    "score_viabilidade": 10.0,
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 4.7,
+    "total_concorrentes_analisados": 8,
+    "modelo_recomendado": "Mid Market",
+    "aluguel_mensal": 19759.3,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "Recomenda-se posicionar a academia como um 'Family Club Premium' em Eusébio, com foco em atendimento personalizado e infraestrutura de alta qualidade. Explorar a oferta de Beach Tennis, natação e áreas kids para atender à demanda da faixa etária 40-44 anos com alto poder aquisitivo, que busca conveniência e atividades para toda a família. Destacar a limpeza, organização e acompanhamento profissional para resolver as principais dores dos concorrentes.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "whatsapp_link": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Eusébio, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "BAIXO",
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6
+      }
+    },
+    "market_context": {
+      "uf": "CE",
+      "fonte": "Deep Research + CNPJ/CNO (tools)",
+      "bairro": "Eusébio",
+      "cached": false,
+      "cidade": "Eusébio",
+      "data_coleta": "2026-05-29",
+      "genero_alvo": "misto",
+      "tipo_negocio": "academia",
+      "tamanho_preset": "m",
+      "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "aluguel_medio_m2": "R$ 55,92/m²",
+      "composicao_parque": {
+        "lutas": {
+          "pct": 10.9,
+          "count": 7,
+          "label": "Lutas / artes marciais"
+        },
+        "academia": {
+          "pct": 82.8,
+          "count": 53,
+          "label": "Academia tradicional"
+        },
+        "studio_pilates": {
+          "pct": 4.7,
+          "count": 3,
+          "label": "Estúdio Pilates"
+        },
+        "studio_bem_estar": {
+          "pct": 1.6,
+          "count": 1,
+          "label": "Estúdio bem-estar (yoga, dança)"
+        }
+      },
+      "fatos_parque_cnpj": {
+        "fonte": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+        "lacunas": [
+          "CNPJ não traz área m² nem faturamento — área só via CNO com match.",
+          "Matrículas e receita mensal = projeção A4 (m² × matr/m² × ticket), não dado fiscal.",
+          "Obras em curso no CNO = parâmetro de prospecção; match com entrant é amostral.",
+          "Sem match CNO: não inferir porte da unidade."
+        ],
+        "metricas": {
+          "data_coleta": "2026-05-29",
+          "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+          "composicao_parque": {
+            "lutas": {
+              "pct": 10.9,
+              "count": 7,
+              "label": "Lutas / artes marciais"
+            },
+            "academia": {
+              "pct": 82.8,
+              "count": 53,
+              "label": "Academia tradicional"
+            },
+            "studio_pilates": {
+              "pct": 4.7,
+              "count": 3,
+              "label": "Estúdio Pilates"
+            },
+            "studio_bem_estar": {
+              "pct": 1.6,
+              "count": 1,
+              "label": "Estúdio bem-estar (yoga, dança)"
+            }
+          },
+          "parque_ativo_total": 69,
+          "pendentes_validacao": 10,
+          "serie_aberturas_anual": {
+            "2026": 1
+          },
+          "novos_cnpj_fitness_90d": 1,
+          "parque_comercial_total": 64,
+          "excluidos_saude_clinica": 5,
+          "novas_unidades_90d_por_segmento": {
+            "lutas": 0,
+            "academia": 1,
+            "aqua_fitness": 0,
+            "crossfit_box": 0,
+            "studio_pilates": 0,
+            "personal_studio": 0,
+            "studio_bem_estar": 0,
+            "studio_funcional": 0
+          }
+        },
+        "cruzamento_cno": {
+          "uf": "CE",
+          "cidade": "Eusébio",
+          "status": "ok",
+          "cruzamentos": [
+            {
+              "cep": "61764010",
+              "cnpj": "65458699000183",
+              "obra": null,
+              "match_cno": null,
+              "area_m2_obra": null,
+              "data_abertura": "2026-03-03",
+              "nome_fantasia": null,
+              "match_confianca": null,
+              "segmento_operacao": "academia",
+              "projecao_receita_estimada": null,
+              "capacidade_matriculas_estimada": null
+            }
+          ],
+          "fonte_obras": "CNO — Cadastro Nacional de Obras (RFB)",
+          "resumo_match": {
+            "cnpj": 0,
+            "com_area": 0,
+            "sem_obra": 1,
+            "nome_obra": 0,
+            "cep8_baixa": 0
+          },
+          "total_entrantes": 1,
+          "nota_metodologica": "Área m² só quando match CNO confiável. Matrículas e receita mensal são projeções (A4): m² × matr/m² × ticket × (1 − inadimplência). CNPJ/CNO não trazem faturamento declarado.",
+          "obras_fitness_em_curso": {
+            "uf": "CE",
+            "fonte": "CNO — Cadastro Nacional de Obras (RFB)",
+            "obras": [],
+            "cidade": "Eusébio",
+            "filtro": "situacao em_curso (códigos 01–04)",
+            "status": "ok",
+            "filtro_bairro": {
+              "bairro_filtro": "Eusébio",
+              "total_antes_filtro": 0,
+              "bairro_filtro_chave": "eusebio",
+              "total_apos_filtro_bairro": 0
+            },
+            "totais_amostra": {
+              "area_m2_soma": 0,
+              "obras_listadas": 0,
+              "receita_mensal_realista_soma_estimada": 0
+            },
+            "nota_metodologica": "Receita = matrículas (m² × matr/m²) × ticket nominal × (1 − inadimplência). Previsão de encerramento = início + (dias/m² mediano de obras encerradas no CNO). Parâmetros de prospecção — não são dados fiscais.",
+            "benchmark_tempo_obra": {
+              "uf": "CE",
+              "fonte": "CNO — obras fitness encerradas (município)",
+              "cidade": "Eusébio",
+              "status": "amostra_insuficiente",
+              "metricas": {
+                "n": 0
+              },
+              "rejeitadas": {
+                "datas_invalidas": 0,
+                "duracao_fora_faixa": 0,
+                "dias_por_m2_fora_faixa": 0
+              },
+              "por_porte_m2": {
+                "media": {
+                  "n": 0
+                },
+                "grande": {
+                  "n": 0
+                },
+                "pequena": {
+                  "n": 0
+                }
+              },
+              "amostra_valida": 0,
+              "obras_referencia": [],
+              "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento.",
+              "total_encerradas_filtradas": 0
+            },
+            "total_obras_em_curso": 0,
+            "total_obras_em_curso_municipio": 0
+          },
+          "benchmark_tempo_obra_cno": {
+            "uf": "CE",
+            "fonte": "CNO — obras fitness encerradas (município)",
+            "cidade": "Eusébio",
+            "status": "amostra_insuficiente",
+            "metricas": {
+              "n": 0
+            },
+            "rejeitadas": {
+              "datas_invalidas": 0,
+              "duracao_fora_faixa": 0,
+              "dias_por_m2_fora_faixa": 0
+            },
+            "por_porte_m2": {
+              "media": {
+                "n": 0
+              },
+              "grande": {
+                "n": 0
+              },
+              "pequena": {
+                "n": 0
+              }
+            },
+            "amostra_valida": 0,
+            "obras_referencia": [],
+            "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento.",
+            "total_encerradas_filtradas": 0
+          },
+          "obras_fitness_referencia": [],
+          "obras_fitness_filtradas_municipio": 0
+        },
+        "indicadores_derivados": {
+          "segmento_dominante_parque": "academia",
+          "entrantes_places_validados": false,
+          "segmentos_pendentes_validacao": 10,
+          "taxa_renovacao_parque_90d_pct": 1.56,
+          "divergencia_parque_vs_aberturas": false,
+          "segmento_dominante_entradas_90d": "academia",
+          "unidades_entrantes_segmento_lider": 1
+        }
+      },
+      "tendencia_mercado": "crescimento",
+      "parque_ativo_total": 69,
+      "renda_media_bairro": "R$ 2.513,00",
+      "pendentes_validacao": 10,
+      "ticket_medio_mercado": "R$ 130,00/mês",
+      "insights_estrategicos": [
+        "Eusébio registrou um crescimento populacional de 61,12% em 12 anos, atraindo famílias de alto poder aquisitivo com renda média domiciliar per capita de R$ 2.513,00 (Deep Research).",
+        "O mercado fitness em Eusébio transita de academias de bairro para grandes redes, com expansão atrelada a novos malls e um ticket médio geral estimado em R$ 130,00/mês (Deep Research).",
+        "O parque ativo total de estabelecimentos fitness em Eusébio é de 69 unidades, com 64 sendo comerciais, e 1 novo CNPJ fitness registrado nos últimos 90 dias (CNPJ).",
+        "A faixa etária predominante dos formadores de renda em Eusébio concentra-se entre 40 e 44 anos, impulsionando a demanda por modelos 'Family Club' (Deep Research).",
+        "O aluguel comercial por m² em Eusébio tem um viés de alta, com preço médio de R$ 55,92/m², e grandes redes optam por contratos Built to Suit ou lojas âncora em shoppings (Deep Research)."
+      ],
+      "regulamentacao_resumo": "A prefeitura de Eusébio tem implementado programas contínuos de desburocratização, com licenciamento comercial centralizado e digital via SEFIN. É necessário Alvará Sanitário (ou dispensa), aprovação do Corpo de Bombeiros e registro no CREF5, além de submissão do Termo de Responsabilidade Técnica por um profissional de Educação Física.",
+      "serie_aberturas_anual": {
+        "2026": 1
+      },
+      "novos_cnpj_fitness_90d": 1,
+      "parque_comercial_total": 64,
+      "excluidos_saude_clinica": 5,
+      "faixa_etaria_predominante": "40-44 anos",
+      "academias_ativas_cidade_cnpj": 53,
+      "principais_redes_concorrentes": [],
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 0,
+        "academia": 1,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 0,
+        "personal_studio": 0,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [],
+      "redes_solicitadas": [],
+      "fonte_redes_locais": "busca_georreferenciada",
+      "tem_redes_fantasma": false,
+      "redes_detectadas_osm": [],
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": [
+        {
+          "nome": "Posturart - Centroclinica",
+          "motivo": "type forte: doctor"
+        },
+        {
+          "nome": "NORDESTE COMBAT MUAY THAI",
+          "motivo": "modalidade única: 'muay thai'"
+        }
+      ],
+      "redes_locais_validadas": []
+    },
+    "alertas": [],
+    "embedding": null,
+    "entrantes_cnpj_90d": {
+      "uf": "CE",
+      "dias": 90,
+      "nota": "Abertura = data_inicio_atividade no CNPJ. Segmento por nome/CNAE (sem bucket 'outro'). Confiança baixa pode ser refinada com CNPJ_SEGMENT_PLACES_VALIDATE=1 + Google Places.",
+      "fonte": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "total": 1,
+      "cidade": "Eusébio",
+      "cutoff": "2026-02-28",
+      "status": "ok",
+      "entrantes": [
+        {
+          "cep": "61764010",
+          "qsa": [
+            {
+              "nome": "PAULO VICTOR SILVA RODRIGUES",
+              "qualificacao": "49-Sócio-Administrador"
+            }
+          ],
+          "cnpj": "65458699000183",
+          "bairro": "Autodromo",
+          "endereco": "RUA EDMILSON PINHEIRO, 211",
+          "ref_month": "2026-05-01",
+          "linkedin_url": null,
+          "razao_social": "PAULO VICTOR SILVA RODRIGUES LTDA",
+          "data_abertura": "2026-03-03",
+          "email_empresa": "PVPENAMEC@GMAIL.COM",
+          "nome_exibicao": "PAULO VICTOR SILVA RODRIGUES LTDA",
+          "nome_fantasia": null,
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.458.699/0001-83",
+          "segmento_label": "Academia tradicional",
+          "dados_completos": true,
+          "lacunas_contato": [
+            "email_socio_administrador",
+            "telefone_socio_administrador"
+          ],
+          "segmento_metodo": "default_mercado",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "8585279204",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "baixa",
+          "contato_validado_em": null,
+          "socio_administrador": {
+            "nome": "PAULO VICTOR SILVA RODRIGUES",
+            "email": null,
+            "telefone": null,
+            "qualificacao": "49-Sócio-Administrador",
+            "contato_individual_disponivel": false
+          },
+          "contato_validado_por": null,
+          "email_socio_administrador": null,
+          "nome_fantasia_inferido_de": "razao_social",
+          "razao_social_indisponivel": false,
+          "segmento_requer_validacao": true,
+          "telefone_socio_administrador": null
+        }
+      ],
+      "data_coleta": "2026-05-29",
+      "enriquecimento_meta": {
+        "cache_hits": 1,
+        "enriquecimento": "ok",
+        "limite_receita": 20,
+        "receita_chamadas": 0
+      },
+      "entrantes_incompletos": 0,
+      "validacao_places_ativa": false,
+      "segmentos_pendentes_validacao": 1,
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 0,
+        "academia": 1,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 0,
+        "personal_studio": 0,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "obras_cno_em_curso": {
+      "uf": "CE",
+      "fonte": "CNO — Cadastro Nacional de Obras (RFB)",
+      "obras": [],
+      "cidade": "Eusébio",
+      "filtro": "situacao em_curso (códigos 01–04)",
+      "status": "ok",
+      "filtro_bairro": {
+        "bairro_filtro": null,
+        "bairro_filtro_chave": null
+      },
+      "bairro_relatorio": "Eusébio",
+      "nota_metodologica": "Receita = matrículas (m² × matr/m²) × ticket nominal × (1 − inadimplência). Previsão de encerramento = início + (dias/m² mediano de obras encerradas no CNO). Parâmetros de prospecção — não são dados fiscais.",
+      "benchmark_tempo_obra": null,
+      "total_obras_em_curso": 0
+    },
+    "scores_regionais": {
+      "demografico": 7.0,
+      "concorrencia": 3.48,
+      "viabilidade": 10.0
+    },
+    "alertas_financeiros": []
+  },
+  "candidatos": [],
+  "competidores_count": 8
+}

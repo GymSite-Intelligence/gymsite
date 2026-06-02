@@ -1,0 +1,41 @@
+# PositioningQualityEval — nightly / manual (não gate de PR)
+
+name: Eval Positioning Quality
+
+on:
+  schedule:
+    # 04:30 UTC diário (~01:30 BRT)
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  positioning-eval:
+    name: PositioningQualityEval (LLM)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run positioning eval
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          POSITIONING_EVAL_MODEL: gemini-2.0-flash
+          POSITIONING_EVAL_RETRIES: "3"
+        run: python eval/run_eval.py --with-positioning

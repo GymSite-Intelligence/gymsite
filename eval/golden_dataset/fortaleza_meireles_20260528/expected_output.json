@@ -1,0 +1,50 @@
+{
+  "case_id": "fortaleza_meireles_20260528",
+  "uuid": "cccb77b5-58e4-405a-9c07-b81deaafb315",
+  "adk_run_id": "rpt_1779994017",
+  "created_at": "2026-05-28T18:34:12.961156+00:00",
+  "data_execucao": "2026-05-28T15:46:57+00:00",
+  "pipeline_version": "1.5",
+  "status": "done",
+  "input_canonico": {
+    "cidade": "Fortaleza",
+    "bairro": "Meireles",
+    "uf": "CE",
+    "area_m2_min": 800,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "expected_veredito": "APROVADO",
+  "expected_score_top1": 8.17,
+  "expected_modelo_recomendado": "Mid Market",
+  "expected_nivel_saturacao": "BAIXO",
+  "expected_score_bairro": 8.17,
+  "candidatos_count": 0,
+  "competidores_count": 0,
+  "critical_fields": [
+    "veredito",
+    "score_top1_candidato",
+    "modelo_recomendado",
+    "nivel_saturacao"
+  ],
+  "tolerance_fields": {
+    "score_top1_candidato": 0.5,
+    "aluguel_mensal": 0.1
+  },
+  "curator_notes": "",
+  "approved": false,
+  "cno_validation": {
+    "required": true,
+    "expected_status": "nao_configurado",
+    "bairro_chave": "meireles",
+    "total_obras_em_curso_municipio": 0,
+    "total_obras_em_curso_bairro": 0,
+    "obras_count_tolerance": 2,
+    "benchmark_dias_por_m2_tolerance": 0.05
+  }
+}

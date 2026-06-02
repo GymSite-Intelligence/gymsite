@@ -1,0 +1,57 @@
+{
+  "case_id": "fortaleza_eusebio_20260529",
+  "uuid": "02e42bad-2157-47f1-bdab-26d70c850f92",
+  "adk_run_id": "rpt_1780081675",
+  "created_at": "2026-05-29T18:54:57.846629+00:00",
+  "data_execucao": "2026-05-29T16:07:55+00:00",
+  "pipeline_version": "1.5",
+  "status": "done",
+  "input_canonico": {
+    "cidade": "Fortaleza",
+    "bairro": "Eusébio",
+    "uf": "CE",
+    "area_m2_min": 800,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "expected_veredito": "APROVADO COM RESSALVAS",
+  "expected_score_top1": 6.83,
+  "expected_modelo_recomendado": "Mid Market",
+  "expected_nivel_saturacao": "BAIXO",
+  "expected_score_bairro": 6.83,
+  "candidatos_count": 0,
+  "competidores_count": 8,
+  "critical_fields": [
+    "veredito",
+    "score_top1_candidato",
+    "modelo_recomendado",
+    "nivel_saturacao"
+  ],
+  "tolerance_fields": {
+    "score_top1_candidato": 0.5,
+    "aluguel_mensal": 0.1
+  },
+  "curator_notes": "",
+  "approved": false,
+  "cno_validation": {
+    "required": true,
+    "expected_status": "ok",
+    "bairro_chave": "eusébio",
+    "total_obras_em_curso_municipio": 0,
+    "total_obras_em_curso_bairro": 0,
+    "obras_count_tolerance": 2,
+    "benchmark_dias_por_m2_tolerance": 0.05,
+    "cruzamento_resumo_match": {
+      "cnpj": 0,
+      "com_area": 0,
+      "sem_obra": 1,
+      "nome_obra": 0,
+      "cep8_baixa": 0
+    }
+  }
+}

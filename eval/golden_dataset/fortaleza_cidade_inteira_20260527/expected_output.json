@@ -1,0 +1,41 @@
+{
+  "case_id": "fortaleza_cidade_inteira_20260527",
+  "uuid": "6fda525a-1dc4-4ce7-aa22-21e1a6fe1356",
+  "adk_run_id": "rpt_1779840928",
+  "created_at": "2026-05-27T00:13:19.180457+00:00",
+  "data_execucao": "2026-05-26T21:15:28+00:00",
+  "pipeline_version": "1.5",
+  "status": "done",
+  "input_canonico": {
+    "cidade": "Fortaleza",
+    "bairro": "(cidade inteira)",
+    "uf": "CE",
+    "area_m2_min": 250,
+    "area_m2_max": 400,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "pp",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "expected_veredito": "INVESTIGAR MAIS",
+  "expected_score_top1": 5.33,
+  "expected_modelo_recomendado": "Nenhum",
+  "expected_nivel_saturacao": "BAIXO",
+  "expected_score_bairro": 5.33,
+  "candidatos_count": 0,
+  "competidores_count": 0,
+  "critical_fields": [
+    "veredito",
+    "score_top1_candidato",
+    "modelo_recomendado",
+    "nivel_saturacao"
+  ],
+  "tolerance_fields": {
+    "score_top1_candidato": 0.5,
+    "aluguel_mensal": 0.1
+  },
+  "curator_notes": "",
+  "approved": false
+}

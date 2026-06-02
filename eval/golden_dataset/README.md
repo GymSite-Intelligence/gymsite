@@ -10,15 +10,22 @@ python scripts/query_cnpj_cno.py --cidade Niterói --uf RJ --bairros Itaipu,Pira
 
 Cada pasta contém `input.json`, `expected_output.json`, `full_report.json` e `notes.md` (curadoria manual).
 
-## Status (5 casos iniciais)
+## Status (10 casos)
 
-| # | Case ID | Veredito | Score | Benchmark | Aprovado |
-|---|---------|----------|-------|-----------|----------|
-| 1 | `anapolis_anapolis_city_20260529` | APROVADO COM RESSALVAS | 6.65 | ✅ 5/5 | ✅ |
-| 2 | `fortaleza_parangaba_20260528` | APROVADO COM RESSALVAS | 6.99 | ✅ 5/5 | ✅ |
-| 3 | `fortaleza_aldeota_20260601` | APROVADO | 9.0 | ⏳ 3/5 | ⏳ parcial |
-| 4 | `niteroi_camboinhas_20260513` | INVESTIGAR MAIS | 4.99 | ⏳ 1/5 | ⏳ curado |
-| 5 | `curitiba_batel_20260512` | APROVADO COM RESSALVAS | 6.0 | ⏳ 2/5 | ⏳ curado |
+| # | Case ID | Veredito | Score | CNO eval | Notas |
+|---|---------|----------|-------|----------|-------|
+| 1 | `anapolis_anapolis_city_20260529` | APROVADO COM RESSALVAS | 6.65 | SKIP | Low Cost ref. |
+| 2 | `fortaleza_parangaba_20260528` | APROVADO COM RESSALVAS | 6.99 | PASS | Selfit encerrada |
+| 3 | `fortaleza_aldeota_20260601` | APROVADO | 9.0 | PASS | Premium |
+| 4 | `niteroi_camboinhas_20260513` | INVESTIGAR MAIS | 4.99 | PASS | supplement CNPJ×CNO |
+| 5 | `curitiba_batel_20260512` | APROVADO COM RESSALVAS | 6.0 | SKIP | borda score |
+| 6 | `fortaleza_meireles_20260528` | APROVADO | 8.17 | PASS | Mid Market litoral |
+| 7 | `fortaleza_cidade_inteira_20260527` | INVESTIGAR MAIS | 5.33 | SKIP | proxy veredito negativo* |
+| 8 | `brasilia_ade_aguas_claras_..._20260512` | APROVADO | 8.83 | SKIP | Low Cost interior |
+| 9 | `fortaleza_eusebio_20260529` | APROVADO COM RESSALVAS | 6.83 | PASS | expansão metropolitana |
+| 10 | `altamira_altamira_20260529` | APROVADO COM RESSALVAS | 6.11 | PASS | interior PA |
+
+\* Não há `REPROVADO` no Supabase hoje; `INVESTIGAR MAIS` cobre veredito negativo até surgir caso real.
 
 ## Regras de eval (derivadas da curadoria)
 
@@ -37,9 +44,12 @@ Cada pasta contém `input.json`, `expected_output.json`, `full_report.json` e `n
 ## Próximo passo
 
 ```powershell
-python eval/run_eval.py                    # CNO + futuros evaluators
+python eval/run_eval.py                    # CNO (gate PR)
+python eval/run_eval.py --with-positioning   # CNO + LLM A9 (nightly)
 python eval/run_eval.py --case fortaleza_parangaba_20260528
 ```
+
+Ver `docs/EVAL_GUIDE.md` para CLI completa.
 
 ### Validação CNO (`cno_validation` em `expected_output.json`)
 

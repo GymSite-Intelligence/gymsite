@@ -1,0 +1,454 @@
+{
+  "id": "8aa99904-4681-4cbc-a7db-a2bf1d2298a9",
+  "header": {
+    "id": "8aa99904-4681-4cbc-a7db-a2bf1d2298a9",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1780032397",
+    "tempo_execucao_segundos": 1467,
+    "tokens_total": 1361694,
+    "custo_brl": 5.48,
+    "data_execucao": "2026-05-29T05:26:37+00:00",
+    "created_at": "2026-05-29T05:02:11.863606+00:00",
+    "updated_at": "2026-05-29T05:26:39.975634+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Altamira/PA — Altamira\n**Data:** 29/05/2026\n**Total de candidatos avaliados:** 10\n\n---\n\n## 🔬 Contexto de Mercado (Deep Research)\n\n| Indicador | Valor |\n|-----------|-------|\n| Ticket médio local | dados_nao_disponiveis |\n| Aluguel médio comercial | dados_nao_disponiveis |\n| Renda média do bairro | dados_nao_disponiveis |\n| Faixa etária predominante | dados_nao_disponiveis |\n| Tendência do mercado | dados_nao_disponiveis |\n\n### Principais Concorrentes Identificados (via Deep Research)\nNenhuma rede de grande porte foi identificada na análise inicial.\n\n### Insights Estratégicos\n*   O parque ativo total de estabelecimentos fitness em Altamira é de 68 unidades, com 65 unidades de caráter comercial. (CNPJ)\n*   Nos últimos 90 dias, houve 1 nova abertura de CNPJ na cidade de Altamira, especificamente no segmento de academia. (CNPJ)\n*   A composição do parque fitness em Altamira é predominantemente de academias tradicionais, representando 76.9% das unidades (50 unidades). (CNPJ)\n*   Existe uma unidade entrante recente ('CF XINGU') com abertura em 09/03/2026, operando como academia. (CNPJ)\n*   O Deep Research está indisponível, utilizando briefing padrão com benchmarks setoriais e dados públicos do IBGE. (Deep Research)\n*   Para a cidade de Altamira, a ferramenta de competição local detectou 5 unidades OSM no raio de 5000 metros, sem redes específicas identificadas. (Overpass OSM)\n\n### Regulamentação\nAlvará de funcionamento municipal; Registro CREF (Conselho Regional de Educação Física); Norma técnica ABNT NBR 16604 (academias de ginástica) (Deep Research)\n\n> Fonte: Deep Research + CNPJ/CNO (tools) | Data: 2026-05-29 | Cache: false\n\n---\n\n## 🎯 Resumo Executivo\nO mercado de Altamira é promissor, com um potencial demográfico forte (Score 7.0), mas limitado por uma renda média baixa (R$ 950,00, baseada na média estadual), indicando que a estratégia mais viável é a **Low Cost**. A análise financeira corrobora essa visão, apontando um payback de apenas 6 meses para este modelo. A concorrência é moderada, composta por academias independentes, sem a presença de grandes redes. O candidato #1, **Primavera Supermercados II**, é uma âncora comercial, não um imóvel vago, e a estratégia deve ser investigar a disponibilidade de locação de espaços adjacentes.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 7.0 | BOM |\n| Competitivo | 1.8 | MEDIO |\n| Viabilidade financeira | 9.5 | ALTO |\n\n**Transparência (OBRIGATÓRIO):**\n- `Academias no raio 3km (Aggregate): 49 | amostra analisada (reviews): 10`\n(Nearby retornou: 20, limitado por maxResultCount).\n\n**Score Bairro:** 6.1 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** 6.6 — ⚠️ APROVADO COM RESSALVAS — base do veredito (4 dim, inclui geoscout do #1)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 🏆 Top 3 Candidatos\n\n### #1 — Primavera Supermercados II — Score Geral 6.6 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Av. João Rodrigues, 455 - Esplanada do Xingu, Altamira - PA, 68372-833, Brasil\n- **Tipo:** supermarket\n- **Área estimada:** ~1200 m²\n- **Score GeoScout:** 8.0 (sinal indireto-heurístico) | **Motivo:** Supermercado em avenida principal — investigar disponibilidade ou imóveis vizinhos\n- **Score Ancoragem:** 10.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Primavera Supermercados II 0m\n  - Águia Branca Turismo 66m\n  - DROGARIA ATACADAO BAHIA 273m\n- **Próximo passo:** Investigar imóveis vagos adjacentes ao supermercado.\n- **Investigação site**: status `em_funcionamento` — operador `Primavera Supermercados` | tipo imóvel ONR `None` (`Estabelecimento / âncora`) | confiança `alta` | O ponto é atualmente um supermercado em funcionamento; uma avaliação de compatibilidade estrutural é necessária para fins de academia. (2 URLs de `evidencias`)\n\n### #2 — Honda Xingu Motos Altamira — Score Geral 6.3 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Av. Alacid Nunes - Premem, Altamira - PA, 68373-500, Brasil\n- **Tipo:** car_dealer\n- **Área estimada:** ~1000 m²\n- **Score GeoScout:** 7.0 (sinal indireto-heurístico) | **Motivo:** Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos\n- **Score Ancoragem:** 10.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Águia Norte tur 380m\n  - Hotel Rodoviario 388m\n  - ASSISTÊNCIA TÉCNICA EM CELULARES ALTAMIRA-PA -ATACADÃO PACHECO 390m\n- **Próximo passo:** Contactar proprietário para sondar interesse em realocação.\n- **Investigação site**: status `em_funcionamento` — operador `Honda Xingu Motos Altamira` | tipo imóvel ONR `None` (`Estabelecimento / âncora`) | confiança `alta` | O local é uma concessionária de motocicletas em funcionamento, exigindo negociação de desocupação e adaptações estruturais para uma academia. (1 URL de `evidencias`)\n\n### #3 — Chevrolet Rio Norte Altamira — Score Geral 6.3 — ⚠️ APROVADO COM RESSALVAS\n- **Endereço:** Av. Alacid Nunes, 3273 - Jardim Uirapuru, Altamira - PA, 68372-095, Brasil\n- **Tipo:** car_dealer\n- **Área estimada:** ~1000 m²\n- **Score GeoScout:** 7.0 (sinal indireto-heurístico) | **Motivo:** Concessionária — alto pé-direito + área compatível, investigar realocação ou vizinhos\n- **Score Ancoragem:** 10.0 — visibilidade: alta\n- **Polos geradores próximos:**\n  - Hotel Rodoviario 647m\n  - Águia Norte tur 655m\n  - Terminal Rodoviário Interestadual de Altamira 731m\n- **Próximo passo:** Contactar proprietário para sondar interesse em realocação.\n- **Investigação site**: status `em_funcionamento` — operador `Chevrolet Rio Norte` | tipo imóvel ONR `None` (`Estabelecimento / âncora`) | confiança `alta` | O ponto está atualmente ocupado por uma concessionária de veículos em operação; considerar o alto custo e a complexidade de adaptação da estrutura para uma academia. (5 URLs de `evidencias`)\n\n---\n\n## 🏗️ Checklist de Diligência do Imóvel\n\nAntes de fechar negociação com qualquer dos candidatos acima, validar **OS 6 ITENS** abaixo (lista padrão do A1, NÃO editar):\n\n1. Confirmar zoneamento para atividade de condicionamento físico\n2. Verificar entrada trifásica de energia\n3. Checar projeto de incêndio aprovado\n4. Medir pé-direito (mínimo 4m)\n5. Confirmar vão livre sem colunas centrais\n6. Negociar 90-120 dias de carência\n\n> Lista padrão para academias 1.000-1.500m². Os 6 itens vêm do output do A1 (`checklist_diligencia` na raiz). NÃO renderizar por candidato — checklist é universal para todos os imóveis avaliados.\n\n---\n\n## 🥊 Inteligência Competitiva — Concorrente por Concorrente\n\nOs concorrentes vêm de uma busca em raio de 3 km do bairro alvo, então incluem academias de bairros adjacentes.\n\n### 📍 Esplanada Do Xingu (2 academias)\n#### Top Academia — Rating 4.6 ⭐ (228 avaliações) \n- **Endereço:** Ac. Dois - Esplanada do Xingu, Altamira - PA, 68372-210, Brasil\n- **Bairro:** Esplanada Do Xingu\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Top\" — Eduardo Almeida, 5⭐ (4 months ago) \n  - \"Top\" — Eduardo Dos santos rio, 5⭐ (11 months ago) \n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n#### InterFit Altamira — Rating 4.9 ⭐ (161 avaliações) \n- **Endereço:** R. Dom Euríco, 200 - Esplanada do Xingu, Altamira - PA, 68372-853, Brasil\n- **Bairro:** Esplanada Do Xingu\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Modalidades: funcional, estetica | Diferenciais: app\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Academia top de linha, muitos equipamentos diferentes e todos muito novos. Excelentes instalações e equipe muito solícita, desde a recepção até os personais.\" — Augusto Chagas, 5⭐ (2 months ago) \n  - \"Quero parabenizar toda a equipe pela excelente estrutura da academia. O ambiente é realmente top e muito aconchegante, proporcionando conforto, motivação e bem-estar em cada treino.\" — Alana Serra, 5⭐ (6 months ago) \n  - \"A academia apresenta uma boa estrutura e conta com instrutores atenciosos. Entretanto, o valor cobrado é alto em comparação com academias de padrão semelhante em outras regiões do\" — Tatiane Dias, 2⭐ (3 months ago) → categoria: preco_alto\n  - \"Minha experiência na academia tem sido ótima! Desde que comecei, percebo uma diferença enorme na minha disposição e no meu humor. No início, foi desafiador manter a rotina, mas ago\" — Dennise Hurtado, 5⭐ (6 months ago) \n  - \"Está sendo ótima, cada vez sinto mais certeza de que estou no lugar certo. Bora crescer!\" — Jarina Carneiro, 5⭐ (6 months ago) \n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Premem (1 academias)\n#### Corpus Academia Altamira — Rating 4.5 ⭐ (194 avaliações) \n- **Endereço:** Av. João Rodrigues, 1108 - Premem, Altamira - PA, 68372-191, Brasil\n- **Bairro:** Premem\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Não especificado\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - —\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Sudam (1 academias)\n#### Ct Team Xingu — Rating 4.7 ⭐ (116 avaliações) \n- **Endereço:** Tv. Agrário Cavalcante, 1106 - Sudam, Altamira - PA, 68371-025, Brasil\n- **Bairro:** Sudam\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - —\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Brasília (1 academias)\n#### RATTOFITNESS ACADEMIA ALTAMIRA — Rating 4.7 ⭐ (70 avaliações) \n- **Endereço:** Avenida joão coelho nr 1496 - Brasília, Altamira - PA, 68375-049, Brasil\n- **Bairro:** Brasília\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - —\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Recreio (1 academias)\n#### Academia Ativa — Rating 4.4 ⭐ (62 avaliações) \n- **Endereço:** 805 - Tv. Dez de Novembro, 679 - Recreio, Altamira - PA, 68371-157, Brasil\n- **Bairro:** Recreio\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Local bem agradável os profissionais são bastante qualificados além de fazerem um atendimento muito bom, além de os seus planos serem bastante acessíveis estabelecimento está de p\" — Andrei Marques, 4⭐ (3 months ago) \n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Jardim Uirapuru (1 academias)\n#### Arena Galegão — Rating 4.4 ⭐ (62 avaliações) [24h]\n- **Endereço:** R. Profa. Beliza de Castro, 1078 - Jardim Uirapuru, Altamira - PA, 68373-067, Brasil\n- **Bairro:** Jardim Uirapuru\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - —\n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Mutirão (1 academias)\n#### CenterFit Academia - ATM — Rating 4.7 ⭐ (47 avaliações) \n- **Endereço:** Av. Bom Jesus, 3045 - Mutirão, Altamira - PA, 68377-078, Brasil\n- **Bairro:** Mutirão\n- **Mensalidades e Planos:** Não mapeado nos sites/redes sociais\n- **Serviços oferecidos:** —\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Ótima...\" — Dayane Ribeiro, 5⭐ (9 months ago) \n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Independente Ii (1 academias)\n#### RevLife Academia — Rating 4.7 ⭐ (44 avaliações) \n- **Endereço:** Av. Tancredo Neves, 3500 - Independente II, Altamira - PA, 68372-573, Brasil\n- **Bairro:** Independente Ii\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Modalidades: estetica\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Sem dor, sem ganho!\" — abne kaz, 5⭐ (in the last week) [original em inglês] \n  - \"Ótima academia! Espaço amplo, com ótimos equipamentos e uma equipe maravilhosa. Recomendo para quem estar procurando um novo conceito de academia.\" — Hortencia Alves de Souza, 5⭐ (9 months ago) \n  - \"Ambiente agradável e com uma equipe muito boa!\" — Gabriel, 5⭐ (5 months ago) \n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### 📍 Jardim Independente Ii (1 academias)\n#### Rc Academia — Rating 4.9 ⭐ (41 avaliações) \n- **Endereço:** Av. Tancredo Neves, 4118 - Jardim Independente II, Altamira - PA, 68372-222, Brasil\n- **Bairro:** Jardim Independente Ii\n- **Mensalidades e Planos:** Não disponível nos sites/redes sociais\n- **Serviços oferecidos:** Não especificado\n- **Reclamações dos alunos** (traduzidas para PT-BR quando original em outro idioma):\n  - \"Top👍\" — Karoliny Melo, 5⭐ (10 months ago) \n  - \"O melhor [original em inglês]\" — Felipe Felizardo, 5⭐ (a month ago) \n- **Pontos fortes mencionados:** —\n- **Pico semanal:** —\n- **Vale semanal:** —\n- **Atividade marketing:** —\n\n### Padrões cross-concorrência (gap analysis agregada)\n\n**O que TODOS oferecem (commodities):**\n- Musculação (inferido)\n\n**Gaps de mercado (NINGUÉM oferece):**\n- natacao\n- 24 horas\n- vestiario\n- app\n- ar condicionado\n\n**Dores dominantes (cross-concorrência) — com nominação:**\n\n| Dor | Menções | Mencionado por | Oportunidade Estratégica |\n|---|---|---|---|\n| preco_alto | 1 | InterFit Altamira (1x) | Oferecer um plano Low Cost competitivo para capturar o público sensível a preço. |\n\n### 💡 Posicionamento Recomendado\nRecomenda-se um posicionamento de valor, focado em alta qualidade e atendimento diferenciado para justificar preços potencialmente mais altos, sem ignorar a sensibilidade a custos. A falta de serviços como natação, horários 24h e vestiários de alto padrão representa oportunidades claras para diferenciação em Altamira. Destacar a climatização do ambiente também pode ser um diferencial.\n\n---\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\nMatrículas em 3 calibrações (cons/real/agres) baseadas em ACAD/Smart Fit/Bodytech.\nPico simultâneo é capacidade física no horário cheio — DIFERENTE de matrículas.\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 1725 | 1150 | 460 |\n| **Matrículas realista (base)** | **2530** | **1610** | **690** |\n| Matrículas agressivo | 3450 | 2070 | 1035 |\n| Capacidade física simultânea | 632 | 460 | 287 |\n| Pico calculado (real × freq × 0,25) | 225 | 115 | 44 |\n| Folga capacidade | 64.4% | 75.0% | 84.7% |\n| Freq. semanal aluno | 2.5x | 2.0x | 1.8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 107,00 | R$ 170,00 | R$ 400,00 |\n| Ticket realizado (após inadimpl.) | R$ 101,65 | R$ 163,20 | R$ 390,00 |\n| Inadimplência | 5.0% | 4.0% | 2.5% |\n| **Receita mensal** | **R$ 257.174,50** | **R$ 262.752,00** | **R$ 269.100,00** |\n| Aluguel | R$ 22.986,20 | R$ 22.986,20 | R$ 22.986,20 |\n| Condomínio | R$ 3.447,93 | R$ 3.447,93 | R$ 3.447,93 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 13.800,00 | R$ 13.800,00 | R$ 20.700,00 |\n| Água | R$ 2.300,00 | R$ 2.300,00 | R$ 2.300,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 3.812,14 | R$ 5.848,47 | R$ 13.987,61 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 1.524,86 | R$ 2.339,39 | R$ 5.595,04 |\n| Outros (2% receita) | R$ 5.143,49 | R$ 5.255,04 | R$ 5.382,00 |\n| **Custos fixos total** | **R$ 75.914,62** | **R$ 92.877,03** | **R$ 134.298,78** |\n| Marketing (% receita) | R$ 15.430,47 (6.0%) | R$ 21.020,16 (8.0%) | R$ 32.292,00 (12.0%) |\n| **Custos totais** | **R$ 91.345,09** | **R$ 113.897,19** | **R$ 166.590,78** |\n| **Lucro mensal** | **R$ 165.829,41** | **R$ 148.854,81** | **R$ 102.509,22** |\n| **Margem %** | **64.5%** | **56.7%** | **38.1%** |\n| Break-even (alunos) | 899 | 698 | 428 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 402.288,00 | R$ 600.030,00 | R$ 1.788.648,00 |\n| Obra de adaptação | R$ 230.000,00 | R$ 402.500,00 | R$ 690.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 69.311,69 | R$ 106.335,89 | R$ 254.320,22 |\n| **CAPEX total** | **R$ 762.428,62** | **R$ 1.169.694,82** | **R$ 2.797.522,46** |\n| Capital de giro (3 meses) | R$ 274.035,27 | R$ 341.691,57 | R$ 499.772,34 |\n| **Investimento total** | **R$ 1.036.463,89** | **R$ 1.511.386,39** | **R$ 3.297.294,80** |\n| **Payback** | **6m** | **10m** | **32m** |\n| TIR anual | 191.1% | 115.7% | 25.2% |\n| VPL 5 anos (@12% a.a.) | R$ 6.136.871,04 | R$ 4.927.672,93 | R$ 1.136.978,76 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | ALTO · lucro R$ 163.776,84 · payback 6m | ALTO · lucro R$ 144.257,57 · payback 10m | ALTO · lucro R$ 94.268,78 · payback 34m |\n| Matrículas -30% | ALTO · lucro R$ 95.087,47 · payback 10m | ALTO · lucro R$ 76.335,26 · payback 19m | INVIAVEL · lucro R$ 28.578,66 · payback 115m |\n| Ticket -15% | ALTO · lucro R$ 131.730,78 · payback 7m | ALTO · lucro R$ 112.595,03 · payback 13m | MEDIO · lucro R$ 63.891,30 · payback 51m |\n\n**Modelo recomendado para este perfil de bairro:** Low Cost\n**Justificativa:** O modelo Low Cost apresenta a melhor combinação de rentabilidade e resiliência, com margem de 64,5% e payback de apenas 6 meses no cenário base. Ele se mantém altamente viável mesmo nos testes de estresse, incluindo uma queda de 30% nas matrículas, o que o torna a aposta mais segura para um mercado com renda média mais baixa.\n\n> ⚠️ Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 📍 Distribuição Geográfica dos Concorrentes\n\n| Bairro | Nº academias | Quais |\n|---|---|---|\n| Esplanada Do Xingu | 2 | Top Academia, InterFit Altamira |\n| Premem | 1 | Corpus Academia Altamira |\n| Sudam | 1 | Ct Team Xingu |\n| Brasília | 1 | RATTOFITNESS ACADEMIA ALTAMIRA |\n| Recreio | 1 | Academia Ativa |\n| Jardim Uirapuru | 1 | Arena Galegão |\n| Mutirão | 1 | CenterFit Academia - ATM |\n| Independente Ii | 1 | RevLife Academia |\n| Jardim Independente Ii | 1 | Rc Academia |\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\n\n| Bairro | Motivo | Status competitivo | Ticket sugerido | Prioridade |\n|---|---|---|---|---|\n| Centro Expandido | Alta densidade comercial e fluxo garantido | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n| Bairros em expansão imobiliária recente | Novos empreendimentos = público novo, sem concorrência consolidada | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n\n**Bairro recomendado para investigação prioritária:** Centro Expandido (0 concorrentes mapeados)\nA recomendação prioritária é o **Centro Expandido**, devido à alta densidade comercial e ausência de concorrentes mapeados na busca ativa. Essa combinação sugere um potencial de mercado inexplorado e uma oportunidade de estabelecer uma forte presença antes de outros players. Bairros em expansão imobiliária também são uma excelente segunda opção.\n\n---\n\n## 📞 Script de Abordagem — Top 1\n\n**Canal recomendado:** WHATSAPP\n**Melhor horário:** Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde\n\n```\n📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Altamira, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.\n```\n\n**Próximos passos:**\n1. Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda\n2. Pesquisar imobiliária ou administradora que gerencia o imóvel\n3. Identificar CNPJ do estabelecimento atual via consulta na Receita Federal\n4. Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica\n\n---\n\n## ⚠️ Alertas Globais\n*   **Sinal Indireto GeoScout:** Todos os 10 candidatos identificados são \"âncoras comerciais\" (supermercados, concessionárias), não imóveis vagos. A estratégia deve ser focada em prospecção de imóveis adjacentes ou em negociar a realocação dos operadores atuais.\n*   **Fallback de Dados:** A API Deep Research estava indisponível. O relatório utilizou benchmarks setoriais e dados públicos, o que pode mascarar particularidades do mercado local.\n*   **Renda Demográfica:** A renda média de R$ 950,00 é baseada na média do estado do Pará, não em dados específicos do município de Altamira, podendo haver distorções.\n*   **Counter-Programming Indisponível:** Não foi possível gerar a estratégia de horários de pico e vale, pois os dados de \"popular times\" dos concorrentes não foram retornados pelo Google.\n\n---\n\n## 📌 Decisão Recomendada\n**APROVADO COM RESSALVAS.** A análise indica forte viabilidade, especialmente para um modelo Low Cost. Recomenda-se avançar com a prospecção em Altamira, com foco no candidato **#1 - Primavera Supermercados II**. A próxima ação concreta é realizar uma visita de campo (field research) para identificar imóveis comerciais disponíveis para locação no entorno imediato do supermercado, validando as premissas de fluxo e visibilidade.\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Altamira",
+    "bairro": "Altamira",
+    "uf": "PA",
+    "area_m2_min": 800,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "8aa99904-4681-4cbc-a7db-a2bf1d2298a9",
+    "veredito": "APROVADO COM RESSALVAS",
+    "score_bairro": 6.11,
+    "score_top1_candidato": 6.11,
+    "score_demografico": 7.0,
+    "score_concorrencia": 1.84,
+    "score_viabilidade": 9.5,
+    "nivel_saturacao": "MEDIO",
+    "rating_medio_concorrentes": 4.65,
+    "total_concorrentes_analisados": 10,
+    "modelo_recomendado": "Low Cost",
+    "aluguel_mensal": 22986.2,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "Recomenda-se um posicionamento de valor, focado em alta qualidade e atendimento diferenciado para justificar preços potencialmente mais altos, sem ignorar a sensibilidade a custos. A falta de serviços como natação, horários 24h e vestiários de alto padrão representa oportunidades claras para diferenciação em Altamira. Destacar a climatização do ambiente também pode ser um diferencial.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "whatsapp_link": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Altamira, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "BAIXO",
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6
+      }
+    },
+    "market_context": {
+      "uf": "PA",
+      "fonte": "Deep Research + CNPJ/CNO (tools)",
+      "bairro": "Altamira",
+      "cached": false,
+      "cidade": "Altamira",
+      "data_coleta": "2026-05-29",
+      "genero_alvo": "misto",
+      "tipo_negocio": "academia",
+      "tamanho_preset": "m",
+      "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "aluguel_medio_m2": "dados_nao_disponiveis",
+      "composicao_parque": {
+        "lutas": {
+          "pct": 4.6,
+          "count": 3,
+          "label": "Lutas / artes marciais"
+        },
+        "academia": {
+          "pct": 76.9,
+          "count": 50,
+          "label": "Academia tradicional"
+        },
+        "crossfit_box": {
+          "pct": 1.5,
+          "count": 1,
+          "label": "CrossFit / Box"
+        },
+        "studio_pilates": {
+          "pct": 3.1,
+          "count": 2,
+          "label": "Estúdio Pilates"
+        },
+        "personal_studio": {
+          "pct": 7.7,
+          "count": 5,
+          "label": "Personal / coaching"
+        },
+        "studio_bem_estar": {
+          "pct": 4.6,
+          "count": 3,
+          "label": "Estúdio bem-estar (yoga, dança)"
+        },
+        "studio_funcional": {
+          "pct": 1.5,
+          "count": 1,
+          "label": "Estúdio funcional"
+        }
+      },
+      "fatos_parque_cnpj": {
+        "fonte": "RFB CNPJ Aberto",
+        "lacunas": [
+          "CNPJ não traz área m² nem faturamento — área só via CNO com match.",
+          "Matrículas e receita mensal = projeção A4 (m² × matr/m² × ticket), não dado fiscal.",
+          "Obras em curso no CNO = parâmetro de prospecção; match com entrant é amostral.",
+          "Sem match CNO: não inferir porte da unidade."
+        ],
+        "metricas": {
+          "data_coleta": "2026-05-29",
+          "fonte_entrantes": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+          "composicao_parque": {
+            "lutas": {
+              "pct": 4.6,
+              "count": 3,
+              "label": "Lutas / artes marciais"
+            },
+            "academia": {
+              "pct": 76.9,
+              "count": 50,
+              "label": "Academia tradicional"
+            },
+            "crossfit_box": {
+              "pct": 1.5,
+              "count": 1,
+              "label": "CrossFit / Box"
+            },
+            "studio_pilates": {
+              "pct": 3.1,
+              "count": 2,
+              "label": "Estúdio Pilates"
+            },
+            "personal_studio": {
+              "pct": 7.7,
+              "count": 5,
+              "label": "Personal / coaching"
+            },
+            "studio_bem_estar": {
+              "pct": 4.6,
+              "count": 3,
+              "label": "Estúdio bem-estar (yoga, dança)"
+            },
+            "studio_funcional": {
+              "pct": 1.5,
+              "count": 1,
+              "label": "Estúdio funcional"
+            }
+          },
+          "parque_ativo_total": 68,
+          "pendentes_validacao": 0,
+          "serie_aberturas_anual": {
+            "2026": 1
+          },
+          "novos_cnpj_fitness_90d": 1,
+          "parque_comercial_total": 65,
+          "excluidos_saude_clinica": 3,
+          "novas_unidades_90d_por_segmento": {
+            "lutas": 0,
+            "academia": 1,
+            "aqua_fitness": 0,
+            "crossfit_box": 0,
+            "studio_pilates": 0,
+            "personal_studio": 0,
+            "studio_bem_estar": 0,
+            "studio_funcional": 0
+          }
+        },
+        "cruzamento_cno": {
+          "cruzamentos": [
+            {
+              "cep": "68371425",
+              "cnpj": "65566551000162",
+              "obra": null,
+              "match_cno": null,
+              "area_m2_obra": null,
+              "data_abertura": "2026-03-09",
+              "nome_fantasia": "CF XINGU",
+              "match_confianca": null,
+              "segmento_operacao": "academia",
+              "projecao_receita_estimada": null,
+              "capacidade_matriculas_estimada": null
+            }
+          ],
+          "resumo_match": {
+            "cnpj": 0,
+            "com_area": 0,
+            "sem_obra": 1,
+            "nome_obra": 0,
+            "cep8_baixa": 0
+          },
+          "total_entrantes": 1
+        },
+        "indicadores_derivados": {
+          "segmento_dominante_parque": "academia",
+          "entrantes_places_validados": true,
+          "segmentos_pendentes_validacao": 0,
+          "taxa_renovacao_parque_90d_pct": 1.54,
+          "divergencia_parque_vs_aberturas": false,
+          "segmento_dominante_entradas_90d": "academia",
+          "unidades_entrantes_segmento_lider": 1
+        }
+      },
+      "tendencia_mercado": "dados_nao_disponiveis",
+      "parque_ativo_total": 68,
+      "renda_media_bairro": "dados_nao_disponiveis",
+      "pendentes_validacao": 0,
+      "ticket_medio_mercado": "dados_nao_disponiveis",
+      "insights_estrategicos": [
+        "O parque ativo total de estabelecimentos fitness em Altamira é de 68 unidades, com 65 unidades de caráter comercial. (CNPJ)",
+        "Nos últimos 90 dias, houve 1 nova abertura de CNPJ na cidade de Altamira, especificamente no segmento de academia. (CNPJ)",
+        "A composição do parque fitness em Altamira é predominantemente de academias tradicionais, representando 76.9% das unidades (50 unidades). (CNPJ)",
+        "Existe uma unidade entrante recente ('CF XINGU') com abertura em 09/03/2026, operando como academia. (CNPJ)",
+        "O Deep Research está indisponível, utilizando briefing padrão com benchmarks setoriais e dados públicos do IBGE. (Deep Research)",
+        "Para a cidade de Altamira, a ferramenta de competição local detectou 5 unidades OSM no raio de 5000 metros, sem redes específicas identificadas. (Overpass OSM)"
+      ],
+      "regulamentacao_resumo": "Alvará de funcionamento municipal; Registro CREF (Conselho Regional de Educação Física); Norma técnica ABNT NBR 16604 (academias de ginástica) (Deep Research)",
+      "serie_aberturas_anual": {
+        "2026": 1
+      },
+      "novos_cnpj_fitness_90d": 1,
+      "parque_comercial_total": 65,
+      "excluidos_saude_clinica": 3,
+      "faixa_etaria_predominante": "dados_nao_disponiveis",
+      "academias_ativas_cidade_cnpj": 50,
+      "principais_redes_concorrentes": [],
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 0,
+        "academia": 1,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 0,
+        "personal_studio": 0,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [],
+      "redes_solicitadas": [],
+      "fonte_redes_locais": "busca_georreferenciada",
+      "tem_redes_fantasma": false,
+      "redes_detectadas_osm": [],
+      "redes_nao_encontradas": [],
+      "concorrentes_excluidos": [],
+      "redes_locais_validadas": []
+    },
+    "alertas": [
+      "⚠️ Modelo Premium só funciona com execução no benchmark; uma queda de 30% nas matrículas o torna inviável."
+    ],
+    "embedding": null,
+    "entrantes_cnpj_90d": {
+      "uf": "PA",
+      "dias": 90,
+      "nota": "Abertura = data_inicio_atividade no CNPJ. Segmento por nome/CNAE (sem bucket 'outro'). Confiança baixa pode ser refinada com CNPJ_SEGMENT_PLACES_VALIDATE=1 + Google Places.",
+      "fonte": "RFB CNPJ Aberto (snapshot mensal, via Supabase)",
+      "total": 1,
+      "cidade": "Altamira",
+      "cutoff": "2026-02-28",
+      "status": "ok",
+      "entrantes": [
+        {
+          "cep": "68371425",
+          "cnpj": "65566551000162",
+          "bairro": "Centro",
+          "endereco": "TRAVESSA DEZ DE NOVEMBRO, 769, TERREOA",
+          "ref_month": "2026-05-01",
+          "razao_social": null,
+          "data_abertura": "2026-03-09",
+          "email_empresa": "JUNIORST300@GMAIL.COM",
+          "nome_exibicao": "CF XINGU",
+          "nome_fantasia": "CF XINGU",
+          "cnae_principal": "9313100",
+          "cnpj_formatado": "65.566.551/0001-62",
+          "segmento_label": "Academia tradicional",
+          "segmento_metodo": "heuristica_nome",
+          "segmento_sinais": [
+            "sem keyword especifica; default CNAE 9313100"
+          ],
+          "contato_validado": false,
+          "telefone_empresa": "9981061005",
+          "incluir_no_parque": true,
+          "segmento_operacao": "academia",
+          "segmento_confianca": "media",
+          "contato_validado_em": null,
+          "contato_validado_por": null,
+          "nome_fantasia_inferido_de": null,
+          "razao_social_indisponivel": true,
+          "segmento_requer_validacao": false
+        }
+      ],
+      "data_coleta": "2026-05-29",
+      "enriquecimento_meta": {
+        "motivo": "cannot import name 'nome_exibicao_cnpj' from 'tools.cnpj_fitness_tools' (/app/tools/cnpj_fitness_tools.py)",
+        "enriquecimento": "erro"
+      },
+      "entrantes_incompletos": 1,
+      "validacao_places_ativa": false,
+      "segmentos_pendentes_validacao": 0,
+      "novas_unidades_90d_por_segmento": {
+        "lutas": 0,
+        "academia": 1,
+        "aqua_fitness": 0,
+        "crossfit_box": 0,
+        "studio_pilates": 0,
+        "personal_studio": 0,
+        "studio_bem_estar": 0,
+        "studio_funcional": 0
+      }
+    },
+    "obras_cno_em_curso": {
+      "uf": "PA",
+      "fonte": "CNO — Cadastro Nacional de Obras (RFB)",
+      "obras": [
+        {
+          "cno": "900230111178",
+          "bairro": "Aldeota",
+          "numero": "1001",
+          "area_m2": 4583.46,
+          "nome_obra": "MAX FORMA ACADEMIAS",
+          "logradouro": "SENADOR VIRGILIO TAVORA",
+          "data_inicio": "2025-03-10",
+          "bairro_chave": "aldeota",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 1363,
+          "previsao_encerramento_estimada": "2028-12-02"
+        },
+        {
+          "cno": "900142903270",
+          "bairro": "Coco",
+          "numero": "2977",
+          "area_m2": 1140.13,
+          "nome_obra": "CENTRAL PARK FITNESS LTDA",
+          "logradouro": "ENGENHEIRO SANTANA JUNIOR - DE 1446 AO FIM - LADO",
+          "data_inicio": "2023-03-13",
+          "bairro_chave": "coco",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 174,
+          "previsao_encerramento_estimada": "2023-09-03"
+        },
+        {
+          "cno": "900130241175",
+          "bairro": "Itaperi",
+          "numero": "1700",
+          "area_m2": 712.0,
+          "nome_obra": "OBRA MANUT DOS CENTROS ACADEMICOS (CAS) DA UECE",
+          "logradouro": "DOUTOR SILAS MUNGUBA",
+          "data_inicio": "2022-11-11",
+          "bairro_chave": "itaperi",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 109,
+          "previsao_encerramento_estimada": "2023-02-28"
+        },
+        {
+          "cno": "900168943873",
+          "bairro": "Engenheiro Luciano Cavalcante",
+          "numero": "88",
+          "area_m2": 215.92,
+          "nome_obra": "ACADEMY EDUCACAO E TECNOLOGIA LTDA",
+          "logradouro": "TEODORO DE PAIVA",
+          "data_inicio": "2023-06-15",
+          "bairro_chave": "engenheiro luciano cavalcante",
+          "situacao_obra": "em_curso",
+          "duracao_obra_dias_estimada": 60,
+          "previsao_encerramento_estimada": "2023-08-14"
+        }
+      ],
+      "cidade": "Altamira",
+      "filtro": "situacao em_curso (códigos 01–04)",
+      "status": "ok",
+      "filtro_bairro": {
+        "bairro_filtro": null,
+        "bairro_filtro_chave": null
+      },
+      "bairro_relatorio": "Altamira",
+      "nota_metodologica": "Receita = matrículas (m² × matr/m²) × ticket nominal × (1 − inadimplência). Previsão de encerramento = início + (dias/m² mediano de obras encerradas no CNO). Parâmetros de prospecção — não são dados fiscais.",
+      "benchmark_tempo_obra": {
+        "status": "ok",
+        "metricas": {
+          "n": 8,
+          "dias_por_m2_p25": 0.1023,
+          "dias_por_m2_p75": 0.2457,
+          "duracao_dias_p25": 111,
+          "duracao_dias_p75": 287,
+          "dias_por_m2_mediana": 0.1524,
+          "duracao_dias_mediana": 193
+        },
+        "por_porte_m2": {
+          "media": {
+            "n": 6,
+            "dias_por_m2_p25": 0.1119,
+            "dias_por_m2_p75": 0.2241,
+            "duracao_dias_p25": 127,
+            "duracao_dias_p75": 264,
+            "dias_por_m2_mediana": 0.1524,
+            "duracao_dias_mediana": 193
+          },
+          "grande": {
+            "n": 2,
+            "dias_por_m2_p25": 0.1727,
+            "dias_por_m2_p75": 0.4219,
+            "duracao_dias_p25": 281,
+            "duracao_dias_p75": 667,
+            "dias_por_m2_mediana": 0.2973,
+            "duracao_dias_mediana": 474
+          },
+          "pequena": {
+            "n": 0
+          }
+        },
+        "amostra_valida": 8,
+        "nota_metodologica": "Fim da obra = data da situação cadastral (encerrada), não previsão de término. dias_por_m2 cruza início e fim para estimar duração em obras em andamento."
+      },
+      "total_obras_em_curso": 4
+    },
+    "scores_regionais": {
+      "demografico": 7.0,
+      "concorrencia": 1.84,
+      "viabilidade": 9.5
+    },
+    "alertas_financeiros": [
+      "⚠️ Modelo Premium só funciona com execução no benchmark; uma queda de 30% nas matrículas o torna inviável."
+    ]
+  },
+  "candidatos": [],
+  "competidores_count": 10
+}

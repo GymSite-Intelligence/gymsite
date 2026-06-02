@@ -1,0 +1,41 @@
+{
+  "case_id": "brasilia_ade_aguas_claras_setor_habitacional_arniqueira_20260512",
+  "uuid": "21bd2ccb-4536-4c09-b2a7-a5e6cd831b99",
+  "adk_run_id": "rpt_1778544751",
+  "created_at": "2026-05-12T00:09:01.094461+00:00",
+  "data_execucao": "2026-05-11T21:12:31+00:00",
+  "pipeline_version": "1.5",
+  "status": "done",
+  "input_canonico": {
+    "cidade": "Brasília",
+    "bairro": "ADE Águas Claras - Setor Habitacional Arniqueira",
+    "uf": "",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "expected_veredito": "APROVADO",
+  "expected_score_top1": 8.83,
+  "expected_modelo_recomendado": "Low Cost",
+  "expected_nivel_saturacao": "BAIXO",
+  "expected_score_bairro": 8.83,
+  "candidatos_count": 0,
+  "competidores_count": 0,
+  "critical_fields": [
+    "veredito",
+    "score_top1_candidato",
+    "modelo_recomendado",
+    "nivel_saturacao"
+  ],
+  "tolerance_fields": {
+    "score_top1_candidato": 0.5,
+    "aluguel_mensal": 0.1
+  },
+  "curator_notes": "",
+  "approved": false
+}

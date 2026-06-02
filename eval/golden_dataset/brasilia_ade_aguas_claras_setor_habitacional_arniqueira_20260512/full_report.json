@@ -1,0 +1,145 @@
+{
+  "id": "21bd2ccb-4536-4c09-b2a7-a5e6cd831b99",
+  "header": {
+    "id": "21bd2ccb-4536-4c09-b2a7-a5e6cd831b99",
+    "org_id": "00000000-0000-0000-0000-000000000001",
+    "user_id": null,
+    "tipo_relatorio": "prospeccao_academia",
+    "status": "done",
+    "adk_run_id": "rpt_1778544751",
+    "tempo_execucao_segundos": 213,
+    "tokens_total": null,
+    "custo_brl": null,
+    "data_execucao": "2026-05-11T21:12:31+00:00",
+    "created_at": "2026-05-12T00:09:01.094461+00:00",
+    "updated_at": "2026-05-12T00:12:34.673674+00:00",
+    "schema_version": "1.5",
+    "markdown_completo": "# 🏋️ GymSite Intelligence — Relatório Executivo\n\n**Cidade/Bairro:** Brasília/DF — ADE Águas Claras - Setor Habitacional Arniqueira\n**Data:** 11/05/2026\n**Total de candidatos avaliados:** 0\n\n---\n\n## 🔬 Contexto de Mercado (Deep Research)\n\n| Indicador | Valor |\n|-----------|-------|\n| Ticket médio local | Dados não disponíveis |\n| Aluguel médio comercial | Dados não disponíveis |\n| Renda média do bairro | Dados não disponíveis |\n| Faixa etária predominante | Dados não disponíveis |\n| Tendência do mercado | Dados não disponíveis |\n\n### Principais Concorrentes Identificados (via Deep Research)\nSmart Fit, Selfit, BlueFit, Bodytech\n\n### Insights Estratégicos\n*   Pipeline operará com benchmarks ACAD/Sebrae como fallback\n\n### Regulamentação\nAlvará de funcionamento municipal, registro CREF, norma técnica ABNT NBR 16604 (academias de ginástica).\n\n> Fonte: Deep Research Gemini | Data: 2026-05-11 | Cache: false\n\n---\n\n## 🎯 Resumo Executivo\nA região de ADE Águas Claras apresenta um potencial demográfico excepcional (score 10.0) e uma saturação competitiva aparentemente baixa, tornando-a um alvo primário para expansão. A análise financeira confirma a atratividade, com os modelos Low Cost e Mid Market demonstrando alta viabilidade — o cenário Low Cost projeta um robusto payback de 17 meses. O principal e crítico gargalo é a ausência de imóveis comerciais identificados via busca automatizada. A recomendação é avançar com uma investigação de campo (field research) para localizar um ponto de 800-1500m² que atenda às exigências, pois este é o único fator que impede uma aprovação imediata.\n\n---\n\n## 📈 Scores Regionais\n\n| Dimensão | Score (0-10) | Classificação |\n|---|---|---|\n| Demográfico | 10.0 | EXCELENTE |\n| Competitivo | 7.0 | BAIXO |\n| Viabilidade financeira | 9.5 | ALTO |\n\n**Score Bairro:** 8.8 — indicador macro da região (3 dim regionais)\n**Score Top 1 Candidato:** N/A — 🔍 INVESTIGAR MAIS — base do veredito (nenhum candidato encontrado)\n\n> ⚠️ Os dois scores SEMPRE devem aparecer. NUNCA misturar as fórmulas:\n> Score Bairro = média de 3 dim regionais. Score Top 1 = média de 4 dim\n> (3 regionais + score_geoscout do candidato #1). Veredito (APROVADO etc)\n> usa o Score Top 1.\n\n---\n\n## 🏆 Top 3 Candidatos\n\nA busca automatizada não identificou candidatos a imóveis comerciais que atendam aos critérios de área (800-1500 m²) e tipo de negócio na região de ADE Águas Claras - Setor Habitacional Arniqueira.\n\n**Próximo passo:** Realizar uma pesquisa de campo (field research) para identificar galpões, lojas de rua de grande porte ou áreas em centros comerciais que possam ser adaptadas. A viabilidade do projeto depende da localização de um imóvel adequado.\n\n---\n\n## 🏗️ Checklist de Diligência do Imóvel\n\nAntes de fechar negociação com qualquer dos candidatos acima, validar **OS 6 ITENS** abaixo (lista padrão do A1, NÃO editar):\n\n1. Verificar o zoneamento local para confirmar permissão de uso comercial para academia.\n2. Avaliar a infraestrutura do imóvel (elétrica, hidráulica, climatização) para suportar equipamentos e fluxo de pessoas.\n3. Confirmar a disponibilidade e adequação de estacionamento para clientes, conforme a exigência do negócio.\n4. Analisar o fluxo de pedestres e veículos na região em diferentes horários para validar a visibilidade e acessibilidade.\n5. Pesquisar a concorrência existente num raio de 500m a 1km para identificar saturação ou nichos de mercado.\n6. Consultar a prefeitura sobre licenças e alvarás específicos para academias, incluindo Corpo de Bombeiros e vigilância sanitária.\n\n---\n\n## 🥊 Inteligência Competitiva — Concorrente por Concorrente\n\nA busca georreferenciada por concorrentes na área de ADE Águas Claras - Setor Habitacional Arniqueira não retornou resultados, possivelmente devido a uma falha na API de busca. A análise de baixa saturação é, portanto, uma heurística de fallback.\n\n### Padrões cross-concorrência (gap analysis agregada)\n\n**O que TODOS oferecem (commodities):**\n- Dados indisponíveis\n\n**Gaps de mercado (NINGUÉM oferece):**\n- Dados indisponíveis\n\n**Dores dominantes (cross-concorrência) — com nominação:**\n\n| Dor | Menções | Mencionado por | Oportunidade Estratégica |\n|---|---|---|---|\n| - | - | - | - |\n\n### 💡 Posicionamento Recomendado\nDevido à indisponibilidade de dados detalhados sobre concorrentes na área, um posicionamento estratégico específico não pode ser formulado neste momento. Recomenda-se uma pesquisa de campo aprofundada para identificar academias existentes e suas propostas de valor, permitindo a identificação de lacunas e a diferenciação eficaz. Sem dados, qualquer recomendação seria especulativa.\n\n---\n\n## 💰 Viabilidade Financeira — 3 Cenários (schema v2)\n\n### 📊 a) Demanda — Matrículas vs. Capacidade Física\nMatrículas em 3 calibrações (cons/real/agres) baseadas em ACAD/Smart Fit/Bodytech.\nPico simultâneo é capacidade física no horário cheio — DIFERENTE de matrículas.\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Matrículas conservador | 1.725 | 1.150 | 460 |\n| **Matrículas realista (base)** | **2.530** | **1.610** | **690** |\n| Matrículas agressivo | 3.450 | 2.070 | 1.035 |\n| Capacidade física simultânea | 632 | 460 | 287 |\n| Pico calculado (real × freq × 0,25) | 225 | 115 | 44 |\n| Folga capacidade | 64,4% | 75,0% | 84,7% |\n| Freq. semanal aluno | 2,5x | 2,0x | 1,8x |\n\n### 💵 b) Receita & Custos Mensais (com matrículas REAL)\n\n| Linha | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Ticket nominal | R$ 89,90 | R$ 149,90 | R$ 299,90 |\n| Ticket realizado (após inadimpl.) | R$ 84,51 | R$ 143,90 | R$ 292,40 |\n| Inadimplência | 6,0% | 4,0% | 2,5% |\n| **Receita mensal** | **R$ 213.800,18** | **R$ 231.685,44** | **R$ 201.757,72** |\n| Aluguel | R$ 74.750,00 | R$ 74.750,00 | R$ 74.750,00 |\n| Condomínio | R$ 11.212,50 | R$ 11.212,50 | R$ 11.212,50 |\n| IPTU | R$ 2.000,00 | R$ 2.000,00 | R$ 2.000,00 |\n| Energia | R$ 13.800,00 | R$ 13.800,00 | R$ 20.700,00 |\n| Água | R$ 2.300,00 | R$ 2.300,00 | R$ 2.300,00 |\n| Internet | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Folha de pagamento | R$ 18.000,00 | R$ 32.000,00 | R$ 55.000,00 |\n| Manutenção | R$ 3.679,99 | R$ 5.716,32 | R$ 13.842,34 |\n| Contabilidade | R$ 1.300,00 | R$ 1.300,00 | R$ 1.300,00 |\n| Sistema de gestão | R$ 800,00 | R$ 800,00 | R$ 800,00 |\n| Seguro | R$ 1.472,00 | R$ 2.286,53 | R$ 5.536,93 |\n| Outros (2% receita) | R$ 4.276,00 | R$ 4.633,71 | R$ 4.035,15 |\n| **Custos fixos total** | **R$ 134.390,49** | **R$ 151.599,06** | **R$ 192.276,92** |\n| Marketing (% receita) | R$ 12.828,01 (6,0%) | R$ 18.534,84 (8,0%) | R$ 24.210,93 (12,0%) |\n| **Custos totais** | **R$ 147.218,50** | **R$ 170.133,90** | **R$ 216.487,85** |\n| **Lucro mensal** | **R$ 66.581,68** | **R$ 61.551,54** | **-R$ 14.730,13** |\n| **Margem %** | **31,1%** | **26,6%** | **-7,3%** |\n| Break-even (alunos) | 1.743 | 1.183 | 741 |\n\n### 🏗️ c) Investimento & Retorno\n\n| Métrica | Low Cost | Mid Market | Premium |\n|---|---:|---:|---:|\n| Equipamentos | R$ 402.288,00 | R$ 600.030,00 | R$ 1.788.648,00 |\n| Obra de adaptação | R$ 230.000,00 | R$ 402.500,00 | R$ 690.000,00 |\n| Projeto arquitetônico | R$ 15.000,00 | R$ 15.000,00 | R$ 15.000,00 |\n| Alvará e taxas | R$ 8.000,00 | R$ 8.000,00 | R$ 8.000,00 |\n| Contingência (10%) | R$ 66.908,84 | R$ 103.933,04 | R$ 251.678,82 |\n| **CAPEX total** | **R$ 735.997,24** | **R$ 1.143.263,44** | **R$ 2.768.467,02** |\n| Capital de giro (3 meses) | R$ 441.655,47 | R$ 510.401,70 | R$ 649.463,55 |\n| **Investimento total** | **R$ 1.177.652,71** | **R$ 1.653.665,14** | **R$ 3.417.930,57** |\n| **Payback** | **17m** | **26m** | **999m** |\n| TIR anual | 61,7% | 34,5% | N/A% |\n| VPL 5 anos (@12% a.a.) | R$ 1.702.492,39 | R$ 1.008.889,18 | -R$ 3.417.930,57 |\n\n### ⚠️ d) Sensibilidade (3 stress tests)\n\n| Stress test | Low Cost | Mid Market | Premium |\n|---|---|---|---|\n| Aluguel +20% | ALTO · lucro R$ 55.907,69 · payback 21m | ALTO · lucro R$ 46.601,54 · payback 35m | INVIAVEL · lucro -R$ 32.411,61 · payback 999m |\n| Matrículas -30% | INVIAVEL · lucro R$ 9.283,24 · payback 126m | INVIAVEL · lucro -R$ 2.393,64 · payback 999m | INVIAVEL · lucro -R$ 70.159,56 · payback 999m |\n| Ticket -15% | ALTO · lucro R$ 40.070,47 · payback 29m | MEDIO · lucro R$ 29.578,95 · payback 55m | INVIAVEL · lucro -R$ 43.683,91 · payback 999m |\n\n**Modelo recomendado para este perfil de bairro:** Low Cost\n**Justificativa:** O modelo Low Cost apresenta a melhor combinação de rentabilidade e retorno, com uma margem líquida de 31,1% e payback de 17 meses. Embora o modelo Mid Market também seja viável no caso base, seu retorno é inferior. Ambos os modelos se tornam inviáveis no stress test de queda de matrículas (-30%), indicando alta dependência do volume de alunos. O modelo Premium tem veredito base INVIAVEL.\n\n> ⚠️ Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae\n\n---\n\n## 📍 Distribuição Geográfica dos Concorrentes\n\nNenhum concorrente foi analisado no raio de busca.\n\n---\n\n## 🗺️ Bairros Alternativos Recomendados\n\n| Bairro | Motivo | Status competitivo | Ticket | Prioridade |\n|---|---|---|---|---|\n| Águas Claras | Maior densidade demográfica do DF, classe média alta | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n| Taguatinga | Alta circulação, mercado low-cost consolidado | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n| Sudoeste | Plano Piloto, alto poder aquisitivo | 🟢 sem concorrentes mapeados (0) | mid | ALTA |\n\n**Bairro recomendado para investigação prioritária:** Águas Claras (0 concorrentes mapeados)\nDado o excelente potencial demográfico e a aparente baixa saturação em bairros de alto padrão e densidade como Águas Claras e Sudoeste, recomenda-se fortemente expandir a busca por imóveis para estas áreas. A ausência de concorrentes mapeados na busca automática representa uma oportunidade significativa que precisa ser validada em campo.\n\n---\n\n## 📞 Script de Abordagem — Top 1\n\n**Canal recomendado:** WHATSAPP\n**Melhor horário:** Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde\n\n```\n📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Brasília, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.\n```\n\n**Próximos passos:**\n1. Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda\n2. Pesquisar imobiliária ou administradora que gerencia o imóvel\n3. Identificar CNPJ do estabelecimento atual via consulta na Receita Federal\n4. Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica\n\n---\n\n## ⚠️ Alertas Globais\n*   **Falha na Busca de Imóveis (A1):** O Geocoding falhou, impedindo a identificação automática de pontos comerciais. A prospecção ativa em campo é mandatória.\n*   **Falha na Busca de Concorrentes (A3):** A API do Google Maps não foi configurada, o que impossibilitou a análise competitiva real. O score de concorrência é um fallback heurístico.\n*   **Counter-Programming Indisponível:** Sem dados de concorrentes, a análise de horários de pico e vales não pôde ser realizada.\n*   **Viabilidade Financeira Condicional (A4):** O modelo Premium é inviável no cenário base. Os modelos Low Cost e Mid Market, embora lucrativos, quebram no cenário de estresse com queda de 30% nas matrículas, indicando alta sensibilidade ao volume.\n*   **Sinal Indireto GeoScout:** Os candidatos a imóveis, quando encontrados, são âncoras comerciais (sinais de locais com bom fluxo) e não necessariamente imóveis vagos. Validação presencial é sempre obrigatória.\n\n---\n\n## 📌 Decisão Recomendada\n**🔍 INVESTIGAR MAIS.** O bairro ADE Águas Claras - Setor Habitacional Arniqueira apresenta uma rara combinação de potencial demográfico máximo e baixa concorrência aparente. Apesar das falhas nas buscas automáticas, os indicadores financeiros e demográficos são fortes demais para serem ignorados. A ação imediata é iniciar uma prospecção de campo para encontrar um imóvel compatível. Caso a busca local se mostre infrutífera, a análise deve ser pivotada para os bairros alternativos de alta prioridade, começando por Águas Claras.\n\n---\n\n*Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.\nScores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*",
+    "erro_mensagem": null,
+    "notas_usuario": null
+  },
+  "input_canonico": {
+    "cidade": "Brasília",
+    "bairro": "ADE Águas Claras - Setor Habitacional Arniqueira",
+    "uf": "",
+    "area_m2_min": 1000,
+    "area_m2_max": 1500,
+    "publico_alvo": "25-40",
+    "genero_alvo": "misto",
+    "tipo_negocio": "academia",
+    "tamanho_preset": "m",
+    "estacionamento_obrigatorio": true,
+    "bairros_indicados": []
+  },
+  "output_consolidado": {
+    "relatorio_id": "21bd2ccb-4536-4c09-b2a7-a5e6cd831b99",
+    "veredito": "APROVADO",
+    "score_bairro": 8.83,
+    "score_top1_candidato": 8.83,
+    "score_demografico": 10.0,
+    "score_concorrencia": 7.0,
+    "score_viabilidade": 9.5,
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 0.0,
+    "total_concorrentes_analisados": 0,
+    "modelo_recomendado": "Low Cost",
+    "aluguel_mensal": 74750.0,
+    "fonte_aluguel": null,
+    "aluguel_min_m2": null,
+    "aluguel_max_m2": null,
+    "aluguel_mediana_m2": null,
+    "queries_aluguel_com_dados": 0,
+    "posicionamento_recomendado": "Devido à indisponibilidade de dados detalhados sobre concorrentes na área, um posicionamento estratégico específico não pode ser formulado neste momento. Recomenda-se uma pesquisa de campo aprofundada para identificar academias existentes e suas propostas de valor, permitindo a identificação de lacunas e a diferenciação eficaz. Sem dados, qualquer recomendação seria especulativa.",
+    "resumo_executivo": null,
+    "justificativa_financeira": null,
+    "contato_decisor": {
+      "email": "N/A",
+      "empresa": "N/A",
+      "telefone": "N/A",
+      "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+      "whatsapp_link": "N/A",
+      "melhor_horario": "Terça a quinta (melhor taxa de resposta); Segunda pela manhã (decisores receptivos); evitar sexta à tarde",
+      "proximos_passos": [
+        "Confirmar disponibilidade do imóvel 'Ponto comercial identificado na região de busca' para locação ou venda",
+        "Pesquisar imobiliária ou administradora que gerencia o imóvel",
+        "Identificar CNPJ do estabelecimento atual via consulta na Receita Federal",
+        "Agendar visita técnica para medir pé-direito, vão livre e infraestrutura elétrica"
+      ],
+      "observacao_canal": "Pesquisar CNPJ pelo endereço no Google Maps",
+      "script_abordagem": "📍 *GymSite Intelligence — Script de Abordagem*\nCanal: WhatsApp / Ligação\nPara: proprietário(a) | Imóvel: Ponto comercial identificado na região de busca — \n\n━━━━━━━━━━━━━━━━━━━━\nABERTURA\n━━━━━━━━━━━━━━━━━━━━\n\"Olá, proprietário(a)! Tudo bem? Me chamo [SEU NOME], sou consultor de expansão de academias.\n\nIdentificamos o imóvel em , Brasília, como um ponto com potencial muito bom\npara abertura de uma academia premium — analisamos fluxo, área, estacionamento\ne perfil demográfico da região.\"\n\n━━━━━━━━━━━━━━━━━━━━\nQUALIFICAÇÃO\n━━━━━━━━━━━━━━━━━━━━\n- O imóvel ainda está disponível para locação?\n- Qual seria o valor atual de aluguel?\n- Há flexibilidade para carência de obras (3-4 meses)?\n- Aceita benfeitoria como pagamento parcial do aluguel inicial?\n- Quem é o responsável pela decisão final sobre o imóvel?\n\n━━━━━━━━━━━━━━━━━━━━\nPROPOSTA DE VALOR\n━━━━━━━━━━━━━━━━━━━━\n- Academias são inquilinos de longo prazo — contratos de 5 a 10 anos\n- Geramos fluxo constante de pessoas e valorizamos o entorno comercial\n- Investimento médio em obras e equipamentos: R$1,5M a R$2M no imóvel\n- Podemos agendar visita técnica esta semana para avaliação formal?\n\n━━━━━━━━━━━━━━━━━━━━\nFECHAMENTO\n━━━━━━━━━━━━━━━━━━━━\n- Posso enviar nossa proposta formal por e-mail?\n- Qual o melhor horário para conversarmos com mais calma?\n- Temos interesse em avançar rápido — podemos protocolar uma proposta em até 48h.",
+      "canal_recomendado": "WHATSAPP",
+      "decisor_identificado": "proprietário(a)",
+      "nivel_confianca_contato": "BAIXO",
+      "top_candidato_referencia": {
+        "nome": "Ponto comercial identificado na região de busca",
+        "endereco": "",
+        "tipo_ponto": "ESTABELECIMENTO_GENERICO",
+        "score_geoscout": 6
+      }
+    },
+    "market_context": {
+      "fonte": "Deep Research Gemini",
+      "bairro": "ADE Águas Claras - Setor Habitacional Arniqueira",
+      "cached": false,
+      "cidade": "Brasília",
+      "data_coleta": "2026-05-11",
+      "genero_alvo": "misto",
+      "tipo_negocio": "academia",
+      "tamanho_preset": "m",
+      "aluguel_medio_m2": "dados_nao_disponiveis",
+      "tendencia_mercado": "dados_nao_disponiveis",
+      "renda_media_bairro": "dados_nao_disponiveis",
+      "ticket_medio_mercado": "dados_nao_disponiveis",
+      "insights_estrategicos": [
+        "Pipeline operará com benchmarks ACAD/Sebrae como fallback"
+      ],
+      "regulamentacao_resumo": "Alvará de funcionamento municipal, registro CREF, norma técnica ABNT NBR 16604 (academias de ginástica).",
+      "faixa_etaria_predominante": "dados_nao_disponiveis",
+      "principais_redes_concorrentes": [
+        "Smart Fit",
+        "Selfit",
+        "BlueFit",
+        "Bodytech"
+      ]
+    },
+    "cobertura_redes_a0": {
+      "redes_cobertas": [],
+      "redes_solicitadas": [
+        "Smart Fit",
+        "Selfit",
+        "BlueFit",
+        "Bodytech"
+      ],
+      "tem_redes_fantasma": true,
+      "redes_nao_encontradas": [
+        "Smart Fit",
+        "Selfit",
+        "BlueFit",
+        "Bodytech"
+      ],
+      "concorrentes_excluidos": []
+    },
+    "alertas": [
+      "⚠️ Aluguel compromete viabilidade: O custo do aluguel estimado (R$65/m²) consome mais de 30% do faturamento projetado em TODOS os cenários, muito acima do benchmark de sustentabilidade de 15% da ACAD. A negociação de um valor de aluguel substancialmente menor é crítica para o sucesso do negócio.",
+      "⚠️ Modelo só funciona com execução no benchmark; uma queda de 30% nas matrículas no cenário Low Cost o torna inviável (payback > 100 meses), com margem de apenas 6.1%.",
+      "⚠️ Inviável — modelo Premium não fecha a conta, resultando em prejuízo mensal.",
+      "⚠️ A busca automática por pontos comerciais falhou. É imprescindível realizar uma pesquisa de campo (field research) para validar a disponibilidade e o custo real de imóveis na região que atendam à necessidade de 1150 m² e estacionamento."
+    ],
+    "embedding": null,
+    "entrantes_cnpj_90d": {},
+    "obras_cno_em_curso": {},
+    "scores_regionais": {
+      "demografico": 10.0,
+      "concorrencia": 7.0,
+      "viabilidade": 9.5
+    },
+    "alertas_financeiros": [
+      "⚠️ Aluguel compromete viabilidade: O custo do aluguel estimado (R$65/m²) consome mais de 30% do faturamento projetado em TODOS os cenários, muito acima do benchmark de sustentabilidade de 15% da ACAD. A negociação de um valor de aluguel substancialmente menor é crítica para o sucesso do negócio.",
+      "⚠️ Modelo só funciona com execução no benchmark; uma queda de 30% nas matrículas no cenário Low Cost o torna inviável (payback > 100 meses), com margem de apenas 6.1%.",
+      "⚠️ Inviável — modelo Premium não fecha a conta, resultando em prejuízo mensal.",
+      "⚠️ A busca automática por pontos comerciais falhou. É imprescindível realizar uma pesquisa de campo (field research) para validar a disponibilidade e o custo real de imóveis na região que atendam à necessidade de 1150 m² e estacionamento."
+    ]
+  },
+  "candidatos": [],
+  "competidores_count": 0
+}
