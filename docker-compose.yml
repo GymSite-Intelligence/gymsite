@@ -27,6 +27,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       # Performance pipeline (P0)
+      PIPELINE_MAX_WALL_SEC: "1800"
       DEEP_RESEARCH_AGENT: deep-research-preview-04-2026
       DEEP_RESEARCH_TIMEOUT_SEC: "420"
       CNPJ_ENRIQUECER_MAX: "3"

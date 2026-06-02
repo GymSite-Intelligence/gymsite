@@ -14,6 +14,7 @@ import {
   untrackPipeline,
   type TrackedPipeline,
 } from '@/lib/pipeline-tracker'
+import { pipelineEtaBackgroundLine } from '@/lib/pipeline-eta'
 
 type PipelineStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
 
@@ -91,7 +92,7 @@ export function PipelineMonitor() {
         <Loader2 size={14} className="animate-spin text-primary shrink-0" />
         <span>
           {active.length === 1
-            ? 'Gerando relatório em background (~5 min)'
+            ? pipelineEtaBackgroundLine()
             : `${active.length} relatórios gerando em background`}
           {first.label ? ` · ${first.label}` : ''}
         </span>

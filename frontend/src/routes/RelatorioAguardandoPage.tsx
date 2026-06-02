@@ -24,6 +24,7 @@ import { useDeleteRelatorio } from '@/hooks/useDeleteRelatorio'
 import { useRerunPipeline } from '@/hooks/useRerunPipeline'
 import { notify } from '@/lib/notify'
 import { trackPipeline, untrackPipeline } from '@/lib/pipeline-tracker'
+import { pipelineEtaWaitingLine } from '@/lib/pipeline-eta'
 
 interface StatusResponse {
   id: string
@@ -175,7 +176,7 @@ export function RelatorioAguardandoPage() {
             <p className="text-sm font-medium">{STATUS_LABEL[status]}</p>
             <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
               <Clock size={12} />
-              Pipeline completo leva ~5 min
+              {pipelineEtaWaitingLine()}
             </p>
           </div>
           <ol className="space-y-1.5 text-xs font-mono">

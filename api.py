@@ -109,6 +109,30 @@ _STALE_MSG = (
     "Use «Gerar novamente» para reprocessar."
 )
 
+# Teto de wall-clock por execução (fila + retries 429 + ADK). Default 30 min.
+# Não substitui resume parcial do ADK — apenas evita runs de 50+ min.
+_PIPELINE_MAX_WALL_SEC = int(os.getenv("PIPELINE_MAX_WALL_SEC", "1800"))
+
+
+class PipelineWallTimeoutError(TimeoutError):
+    """Pipeline excedeu PIPELINE_MAX_WALL_SEC (inclui backoff de 429)."""
+
+    def __init__(self) -> None:
+        max_min = max(1, _PIPELINE_MAX_WALL_SEC // 60)
+        super().__init__(
+            f"Pipeline excedeu o tempo máximo ({max_min} min). "
+            "Use «Gerar novamente»; fora do horário de pico costuma ser mais rápido."
+        )
+
+
+def _pipeline_wall_remaining_sec(t0: float) -> float:
+    return max(0.0, float(_PIPELINE_MAX_WALL_SEC) - (time.time() - t0))
+
+
+def _ensure_pipeline_wall_clock(t0: float) -> None:
+    if _pipeline_wall_remaining_sec(t0) <= 0:
+        raise PipelineWallTimeoutError()
+
 
 def _recover_stale_running_reports(sb, *, relatorio_id: str | None = None) -> int:
     """Marca como failed relatórios running/queued órfãos (sem output)."""
@@ -419,16 +443,24 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
         sb.table("relatorios").update({"status": "running"}).eq("id", relatorio_id).execute()
 
         for tentativa, backoff in enumerate([0] + _RETRY_BACKOFFS_429):
+            _ensure_pipeline_wall_clock(t0)
             if backoff > 0:
                 logger.warning(
                     f"pipeline {relatorio_id} hit 429 — retry {tentativa}/{len(_RETRY_BACKOFFS_429)} "
                     f"em {backoff}s"
                 )
-                await asyncio.sleep(backoff)
+                await asyncio.sleep(min(backoff, _pipeline_wall_remaining_sec(t0)))
+                _ensure_pipeline_wall_clock(t0)
             try:
-                custos = await _executar_pipeline_uma_vez(relatorio_id, payload)
+                remaining = _pipeline_wall_remaining_sec(t0)
+                custos = await asyncio.wait_for(
+                    _executar_pipeline_uma_vez(relatorio_id, payload),
+                    timeout=remaining,
+                )
                 last_exc = None
                 break  # sucesso
+            except asyncio.TimeoutError:
+                raise PipelineWallTimeoutError() from None
             except BaseException as e:
                 if _is_429_error(e):
                     last_exc = e
@@ -457,15 +489,20 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
 
     except BaseException as e:
         logger.error(f"pipeline {relatorio_id} falhou: {e}\n{traceback.format_exc()}")
-        erro_amigavel = (
-            "Pico de uso da Vertex AI — tente de novo em alguns minutos"
-            if _is_429_error(e)
-            else f"{type(e).__name__}: {e}"
-        )
+        elapsed = int(time.time() - t0)
+        if isinstance(e, PipelineWallTimeoutError):
+            erro_amigavel = str(e)
+        elif _is_429_error(e):
+            erro_amigavel = (
+                "Pico de uso da Vertex AI — tente de novo em alguns minutos"
+            )
+        else:
+            erro_amigavel = f"{type(e).__name__}: {e}"
         try:
             sb.table("relatorios").update({
                 "status": "failed",
                 "erro_mensagem": erro_amigavel[:500],
+                "tempo_execucao_segundos": elapsed,
             }).eq("id", relatorio_id).execute()
         except Exception:
             pass

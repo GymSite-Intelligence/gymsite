@@ -23,6 +23,10 @@ import { z } from 'zod'
 import { ArrowRight, Clock, Loader2, RefreshCw } from 'lucide-react'
 import { trackPipeline } from '@/lib/pipeline-tracker'
 import {
+  pipelineEtaConcurrentWarning,
+  pipelineEtaTypicalLabel,
+} from '@/lib/pipeline-eta'
+import {
   pipelineLabelFromPayload,
   submitPipelineReport,
 } from '@/lib/submit-pipeline'
@@ -425,7 +429,7 @@ export function NovoRelatorioPage() {
 
       {veioDeRetry && !retryEraCidadeInteira ? (
         <div className="mb-6 rounded-lg border border-status-warning/40 bg-status-warning/5 p-3.5 flex items-start gap-3 text-xs">
-          <RefreshCw size={14} className="text-status-warning flex-shrink-0 mt-0.5" />
+          <RefreshCw size={14} className="text-status-warning shrink-0 mt-0.5" />
           <div className="space-y-0.5 leading-relaxed">
             <p className="text-foreground font-medium">
               {veioDeEdicao
@@ -441,10 +445,10 @@ export function NovoRelatorioPage() {
         </div>
       ) : !veioDeRetry ? (
         <div className="mb-6 rounded-lg border border-border bg-card/60 p-3.5 flex items-start gap-3 text-xs">
-          <Clock size={14} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+          <Clock size={14} className="text-muted-foreground shrink-0 mt-0.5" />
           <div className="space-y-0.5 leading-relaxed">
             <p className="text-foreground font-medium">
-              Pipelines simultâneos podem demorar mais que 5min
+              {pipelineEtaConcurrentWarning()}
             </p>
             <p className="text-muted-foreground">
               Se outras pessoas da sua organização também estiverem gerando relatórios
@@ -807,7 +811,9 @@ export function NovoRelatorioPage() {
             )}
           </Button>
           {isAdmin && (
-            <p className="text-xs text-muted-foreground">Pipeline ~5min</p>
+            <p className="text-xs text-muted-foreground">
+              Pipeline {pipelineEtaTypicalLabel()}
+            </p>
           )}
         </div>
       </form>
