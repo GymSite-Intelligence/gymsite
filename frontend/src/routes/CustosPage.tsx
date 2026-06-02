@@ -803,10 +803,8 @@ function AgenteBreakdown({ relatorioId }: { relatorioId: string }) {
           )}
           {apiRecords.some(([sku]) => sku === 'geocoding') && (
             <p className="text-[10px] text-muted-foreground font-mono leading-relaxed">
-              Geocoding: cada linha conta só requisições com resposta{' '}
-              <code className="text-[9px]">OK</code> do Google. Relatórios anteriores a
-              maio/2026 podem ter superestimado chamadas (tentativas com{' '}
-              <code className="text-[9px]">REQUEST_DENIED</code> ainda eram logadas).
+              Geocoding: cada requisição HTTP à Geocoding API é contabilizada (sucesso ou
+              erro faturável), alinhado ao faturamento Google.
             </p>
           )}
         </div>
