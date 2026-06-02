@@ -92,6 +92,7 @@ IBGE_TO_RFB_MUNICIPIO: dict[str, str] = {
     "2303709": "1373",  # Caucaia
     "2301109": "1319",  # Aquiraz
     "2307650": "1585",  # Maracanaú
+    "3303302": "5865",  # Niterói
 }
 
 DATA_DIR = _ROOT / "metrics" / "rfb_cnpj_cache"
