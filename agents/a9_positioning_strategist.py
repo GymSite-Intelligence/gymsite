@@ -375,5 +375,6 @@ GAP = serviço com penetração < 3 em TODOS os concorrentes.
     output_key="relatorio_posicionamento_md",
     before_model_callback=_a9_before_model_callback,
     after_model_callback=_a9_after_model_callback,
-    after_agent_callback=_a9_after_agent_callback,
 )
+
+positioning_strategist_agent.after_agent_callback = _a9_after_agent_callback

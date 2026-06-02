@@ -22,6 +22,7 @@ import {
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { cn } from '@/lib/utils'
 import { formatComposicaoParque } from '@/lib/segmento-parque'
+import { valorDisponivel } from '@/lib/dados-indisponiveis'
 import type { CoberturaRedesA0JSON, MarketContextJSON } from '@/hooks/useRelatorioDetail'
 
 export interface ContextoMercadoCardProps {
@@ -175,10 +176,10 @@ export function ContextoMercadoCard({
 
   // Calculado DEPOIS das labels pra ordem de declaração (TypeScript strict).
   const temMarketContextRico = !!(
-    mc.ticket_medio_mercado ||
-    mc.aluguel_medio_m2 ||
-    mc.renda_media_bairro ||
-    mc.faixa_etaria_predominante ||
+    valorDisponivel(mc.ticket_medio_mercado) ||
+    valorDisponivel(mc.aluguel_medio_m2) ||
+    valorDisponivel(mc.renda_media_bairro) ||
+    valorDisponivel(mc.faixa_etaria_predominante) ||
     generoLabel ||
     tipoLabel ||
     tamanhoLabel ||
@@ -218,28 +219,28 @@ export function ContextoMercadoCard({
           <div className="rounded-md border border-border overflow-hidden">
             <table className="w-full">
               <tbody>
-                {mc.ticket_medio_mercado && (
+                {valorDisponivel(mc.ticket_medio_mercado) && (
                   <IndicatorRow
                     label="Ticket médio local"
-                    value={mc.ticket_medio_mercado}
+                    value={String(valorDisponivel(mc.ticket_medio_mercado))}
                   />
                 )}
-                {mc.aluguel_medio_m2 && (
+                {valorDisponivel(mc.aluguel_medio_m2) && (
                   <IndicatorRow
                     label="Aluguel médio comercial"
-                    value={mc.aluguel_medio_m2}
+                    value={String(valorDisponivel(mc.aluguel_medio_m2))}
                   />
                 )}
-                {mc.renda_media_bairro && (
+                {valorDisponivel(mc.renda_media_bairro) && (
                   <IndicatorRow
                     label="Renda média do bairro"
-                    value={mc.renda_media_bairro}
+                    value={String(valorDisponivel(mc.renda_media_bairro))}
                   />
                 )}
-                {mc.faixa_etaria_predominante && (
+                {valorDisponivel(mc.faixa_etaria_predominante) && (
                   <IndicatorRow
                     label="Faixa etária predominante"
-                    value={mc.faixa_etaria_predominante}
+                    value={String(valorDisponivel(mc.faixa_etaria_predominante))}
                   />
                 )}
                 {generoLabel && (
@@ -415,14 +416,16 @@ export function ContextoMercadoCard({
         )}
 
         {/* Regulamentação */}
-        {mc.regulamentacao_resumo && (
+        {valorDisponivel(mc.regulamentacao_resumo) && (
           <div className="rounded-md bg-muted/30 p-3 flex items-start gap-2">
             <ScrollText size={14} className="text-muted-foreground mt-0.5 shrink-0" />
             <div>
               <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono font-semibold mb-1">
                 Regulamentação
               </h4>
-              <p className="text-xs leading-relaxed">{mc.regulamentacao_resumo}</p>
+              <p className="text-xs leading-relaxed">
+                {String(valorDisponivel(mc.regulamentacao_resumo))}
+              </p>
             </div>
           </div>
         )}

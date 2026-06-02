@@ -169,6 +169,15 @@ function RelatorioViewerContent({
   const semCandidatos = (out.top_3_candidatos?.length ?? 0) === 0
   const semConcorrentes = (out.competitors_set?.length ?? 0) === 0
   const modoCidadeInteira = inp.bairro === '(cidade inteira)'
+  const coleta = out.coleta_geografica
+  const avisoGeoScout = [coleta?.aviso, coleta?.erro].filter(Boolean).join(' ')
+  const geocodeDenied =
+    /REQUEST_DENIED/i.test(avisoGeoScout) ||
+    /geocod/i.test(avisoGeoScout) && /falhou|denied|ausente/i.test(avisoGeoScout)
+  const totalCandidatosPipeline =
+    typeof coleta?.total_candidatos === 'number'
+      ? coleta.total_candidatos
+      : null
 
   return (
     <div className="space-y-8">
@@ -193,15 +202,43 @@ function RelatorioViewerContent({
                     disso.
                   </li>
                 )}
-                <li>
-                  Geocoding Google retornou <code className="text-xs">REQUEST_DENIED</code>
-                  — habilite a <strong>Geocoding API</strong> no projeto da chave{' '}
-                  <code className="text-xs">GOOGLE_MAPS_API_KEY</code> e confira billing.
-                </li>
-                <li>
-                  Cenários financeiros abaixo usam premissas genéricas (sem imóvel
-                  validado). Gere novamente com bairro definido após corrigir a API.
-                </li>
+                {geocodeDenied && (
+                  <li>
+                    Geocoding Google retornou{' '}
+                    <code className="text-xs">REQUEST_DENIED</code> (ou falhou) — habilite
+                    a <strong>Geocoding API</strong> no projeto da chave{' '}
+                    <code className="text-xs">GOOGLE_MAPS_API_KEY</code> e confira billing.
+                    {avisoGeoScout && (
+                      <span className="block mt-1 text-muted-foreground font-normal">
+                        GeoScout: {avisoGeoScout}
+                      </span>
+                    )}
+                  </li>
+                )}
+                {!geocodeDenied && semCandidatos && totalCandidatosPipeline === 0 && (
+                  <li>
+                    GeoScout não retornou candidatos no raio (Places pode ter sido
+                    chamado — veja custos de <code className="text-xs">places_*</code>).
+                    {avisoGeoScout ? (
+                      <span className="block mt-1 text-muted-foreground font-normal">
+                        {avisoGeoScout}
+                      </span>
+                    ) : null}
+                  </li>
+                )}
+                {!geocodeDenied &&
+                  semConcorrentes &&
+                  (out.total_concorrentes_analisados ?? 0) === 0 && (
+                    <li>
+                      Busca de concorrentes no raio não encontrou academias (A3a/A3c).
+                    </li>
+                  )}
+                {semCandidatos && (
+                  <li>
+                    Cenários financeiros abaixo usam premissas genéricas (sem imóvel
+                    validado no GeoScout).
+                  </li>
+                )}
               </ul>
             </div>
           </div>

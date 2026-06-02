@@ -1574,6 +1574,15 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             ),
             "top_3_candidatos": top_3,
             "investigacoes_imoveis": investigacoes_resumo,
+            # Diagnóstico GeoScout (A1) — UI usa pra banner sem hardcode REQUEST_DENIED
+            "coleta_geografica": {
+                "total_candidatos": geo_raw.get("total_candidatos", len(candidatos)),  # pyright: ignore[reportArgumentType]
+                "listings_reais": geo_raw.get("listings_reais"),
+                "estrategia": geo_raw.get("estrategia"),
+                "qualidade_sinal": geo_raw.get("qualidade_sinal"),
+                "aviso": geo_raw.get("aviso"),
+                "erro": geo_raw.get("erro"),
+            },
             "competitors_set": [
                 {
                     **c,
@@ -1680,7 +1689,17 @@ def _slim_market_context(inner_mc: dict) -> dict:
         "data_coleta",
         "cached",
     ]
-    out = {k: inner_mc.get(k) for k in keys if inner_mc.get(k) is not None}
+    out = {}
+    for k in keys:
+        v = inner_mc.get(k)
+        if v is None:
+            continue
+        if isinstance(v, str) and v.strip().lower() in (
+            "dados_nao_disponiveis",
+            "dados não disponíveis",
+        ):
+            continue
+        out[k] = v
     if _INCLUIR_BRIEFING_COMPLETO and inner_mc.get("briefing_completo_md"):
         out["briefing_completo_md"] = inner_mc["briefing_completo_md"]
     return out
@@ -2595,8 +2614,8 @@ Scores GeoScout são sinais indiretos heurísticos; validação presencial obrig
 - Se uma seção condicional não se aplica, OMITA inteiramente (não escreva "N/A")
 """,
     tools=[obter_data_atual, bairros_alternativos_inteligentes],
-    before_agent_callback=_a6_precompute_callback,
     before_model_callback=_a6_before_model_callback,
-    after_agent_callback=_a6_after_agent_callback,
     output_key="relatorio_md",
 )
+report_consolidator_agent.before_agent_callback = _a6_precompute_callback
+report_consolidator_agent.after_agent_callback = _a6_after_agent_callback

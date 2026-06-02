@@ -801,6 +801,14 @@ function AgenteBreakdown({ relatorioId }: { relatorioId: string }) {
               </Table>
             </div>
           )}
+          {apiRecords.some(([sku]) => sku === 'geocoding') && (
+            <p className="text-[10px] text-muted-foreground font-mono leading-relaxed">
+              Geocoding: cada linha conta só requisições com resposta{' '}
+              <code className="text-[9px]">OK</code> do Google. Relatórios anteriores a
+              maio/2026 podem ter superestimado chamadas (tentativas com{' '}
+              <code className="text-[9px]">REQUEST_DENIED</code> ainda eram logadas).
+            </p>
+          )}
         </div>
       </div>
     </div>

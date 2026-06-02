@@ -23,11 +23,13 @@ def _geocode_google(endereco: str) -> dict:
         "language": "pt-BR",
         "region": "BR",
     }
-    from tools.api_cost_tracker import track_api_call
-    with track_api_call("geocode_google", "geocoding", 1):
-        with httpx.Client(timeout=10) as c:
-            data = c.get(GEOCODING_BASE, params=params).json()
+    with httpx.Client(timeout=10) as c:
+        data = c.get(GEOCODING_BASE, params=params).json()
     if data.get("status") == "OK" and data.get("results"):
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("geocode_google", "geocoding", 1):
+            pass
         r = data["results"][0]
         loc = r["geometry"]["location"]
         return {

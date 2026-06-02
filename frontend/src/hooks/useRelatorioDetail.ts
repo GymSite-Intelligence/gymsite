@@ -66,6 +66,15 @@ export interface OutputConsolidado {
   posicionamento_estrategico?: PosicionamentoEstrategicoJSON | null
   resumo_executivo?: string | null
   top_3_candidatos: CandidatoJSON[]
+  /** Diagnóstico A1 GeoScout (erro/aviso/total) para banner no viewer. */
+  coleta_geografica?: {
+    total_candidatos?: number
+    listings_reais?: number
+    estrategia?: string
+    qualidade_sinal?: string
+    aviso?: string
+    erro?: string
+  }
   competitors_set?: CompetidorJSON[]
   viabilidade_3_cenarios?: Record<'low' | 'mid' | 'premium', CenarioJSON>
   bairros_alternativos?: BairroAlternativoJSON[]
