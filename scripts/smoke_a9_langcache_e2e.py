@@ -6,6 +6,7 @@ Não chama Gemini; exercita _a9_before_model_callback e _a9_after_model_callback
 
 Uso:
   .venv\\Scripts\\python.exe scripts/smoke_a9_langcache_e2e.py
+  python scripts/smoke_a9_langcache_e2e.py --ci-mode   # build/CI: sem LangCache externo
 """
 from __future__ import annotations
 
@@ -16,9 +17,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from dotenv import load_dotenv
 
-load_dotenv(ROOT / ".env")
+def _load_env_if_needed() -> None:
+    if "--ci-mode" in sys.argv:
+        return
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(ROOT / ".env")
+    except ImportError:
+        pass
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -55,7 +64,48 @@ def _montese_state() -> dict:
     }
 
 
+def ci_main() -> int:
+    """Imports + lógica determinística (sem Redis LangCache / Gemini)."""
+    from agents.a9_positioning_strategist import (
+        _a9_after_model_callback,
+        _a9_before_model_callback,
+        _a9_cache_prompt,
+        _parse_json_from_text,
+    )
+    from gymsite_intelligence.agent import pipeline
+
+    state = _montese_state()
+    prompt_key = _a9_cache_prompt(state)
+    if not prompt_key or "montese" not in prompt_key.lower():
+        print(f"FAIL CI: prompt_key inesperado: {prompt_key!r}")
+        return 10
+
+    names = [a.name for a in pipeline.sub_agents]
+    if "PositioningStrategist" not in names:
+        print(f"FAIL CI: pipeline sem A9: {names}")
+        return 11
+
+    sample = (
+        '{"veredito_posicionamento": "OCEANO_AZUL", '
+        '"recomendacao_ticket": {"ticket_recomendado": 249}}'
+    )
+    parsed = _parse_json_from_text(sample)
+    if parsed.get("veredito_posicionamento") != "OCEANO_AZUL":
+        print("FAIL CI: _parse_json_from_text")
+        return 12
+
+    assert callable(_a9_before_model_callback)
+    assert callable(_a9_after_model_callback)
+
+    print("SMOKE A9 CI: PASS (imports, pipeline, prompt_key, parse)")
+    return 0
+
+
 def main() -> int:
+    _load_env_if_needed()
+    if "--ci-mode" in sys.argv:
+        return ci_main()
+
     from google.adk.models.llm_response import LlmResponse
     from google.genai import types
 

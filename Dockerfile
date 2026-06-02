@@ -85,10 +85,20 @@ COPY --from=builder /root/.local /home/appuser/.local
 # Copy application code
 COPY --chown=appuser:appuser . /app
 
+# WORKDIR /app fica root:root — appuser precisa do inode /app + pastas graváveis.
+# Não usar chown -R /app (milhares de arquivos): no Docker Desktop leva 10–30+ min.
+RUN mkdir -p /app/competitor_cache /app/metrics/relatorios /app/metrics/supabase_writes /app/metrics/cache \
+    && chown appuser:appuser /app \
+    && chown -R appuser:appuser /app/competitor_cache /app/metrics
+
 USER appuser
 
-# Certify Python packages on PATH
+# Pacotes pip estão em /home/appuser/.local (COPY do builder) — smokes precisam desse PATH
 ENV PATH=/home/appuser/.local/bin:$PATH
+
+# Pilar #3 — valida imagem antes de publicar (sem credenciais de runtime)
+RUN python scripts/smoke_a9_langcache_e2e.py --ci-mode \
+    && python scripts/test_a9_integration.py
 
 EXPOSE 8000
 

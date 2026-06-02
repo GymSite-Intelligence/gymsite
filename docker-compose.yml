@@ -18,6 +18,8 @@ services:
       - pip_cache:/home/appuser/.cache/pip:rw
       # Playwright cache (reutilizável entre restarts)
       - playwright_cache:/home/appuser/.local/share/ms-playwright:rw
+      # Popular times / outscraper cache (A3a)
+      - competitor_cache:/app/competitor_cache:rw
     env_file:
       - .env
     # OpenClaw Kimi (porta 8001 no host) — OPENCLAW_URL=http://host.docker.internal:8001
@@ -63,4 +65,6 @@ volumes:
   pip_cache:
     driver: local
   playwright_cache:
+    driver: local
+  competitor_cache:
     driver: local

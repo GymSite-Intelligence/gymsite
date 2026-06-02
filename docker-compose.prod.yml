@@ -15,6 +15,7 @@ services:
       - ${CNO_DATA_DIR_HOST:-./cno_data}:/data/cno:ro
       - pip_cache:/home/appuser/.cache/pip:rw
       - playwright_cache:/home/appuser/.local/share/ms-playwright:rw
+      - competitor_cache:/app/competitor_cache:rw
     env_file:
       - .env.production
     environment:
@@ -108,6 +109,8 @@ volumes:
   pip_cache:
     driver: local
   playwright_cache:
+    driver: local
+  competitor_cache:
     driver: local
   redis_data:
     driver: local

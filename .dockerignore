@@ -57,8 +57,17 @@ Thumbs.db
 # Logs
 *.log
 
-# CI/CD / Infra (não necessários no container)
-scripts/
+# CI/CD / devenv — smokes e testes Python entram na imagem
+scripts/deploy.sh
+scripts/setup-*
+scripts/bootstrap-*
+scripts/verify-*
+scripts/*.ps1
+scripts/*.sh
+scripts/__pycache__/
+scripts/*.log
+scripts/.env*
+
 nginx/
 .github/
 docker-compose*.yml
