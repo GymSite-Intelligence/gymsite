@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { RelatorioResumo } from '@/types/domain'
+import { getDashboardDataSourceLabel } from '@/lib/dashboard/data-source'
 
 function fmtData(iso: string | null): string {
   if (!iso) return '—'
@@ -71,7 +72,7 @@ export function DashboardRelatoriosTable({
         <div>
           <h2 className="text-base font-semibold">Relatórios recentes</h2>
           <p className="text-xs text-muted-foreground">
-            Dados de v_relatorios_resumo · Supabase
+            Dados de {getDashboardDataSourceLabel()}
           </p>
         </div>
         <div className="flex items-center gap-2">

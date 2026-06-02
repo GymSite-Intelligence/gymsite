@@ -18,9 +18,15 @@ import { BairroRankRow } from '@/components/dashboard/BairroRankRow'
 export function BairrosRanking({
   data,
   loading,
+  dataSourceLabel,
+  relatorioCount,
 }: {
   data: BairroRankItem[]
   loading: boolean
+  /** Ex.: v_relatorios_resumo · Supabase */
+  dataSourceLabel?: string
+  /** Total de relatórios que alimentam o ranking (após filtros). */
+  relatorioCount?: number
 }) {
   if (loading) {
     return <Skeleton className="h-96 rounded-xl" />
@@ -45,12 +51,23 @@ export function BairrosRanking({
     <Card className="@container/card">
       <CardHeader>
         <CardTitle>{BAIRROS_RANKING_COPY.title}</CardTitle>
-        <CardDescription>{BAIRROS_RANKING_COPY.description}</CardDescription>
+        <CardDescription>
+          {BAIRROS_RANKING_COPY.description}
+          {dataSourceLabel ? (
+            <>
+              <br />
+              <span className="text-muted-foreground/80">
+                Dados de {dataSourceLabel}
+                {relatorioCount != null ? ` · ${relatorioCount} relatório${relatorioCount === 1 ? '' : 's'} no filtro` : ''}
+              </span>
+            </>
+          ) : null}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {data.map((item, idx) => (
           <BairroRankRow
-            key={`${item.bairro}-${item.cidade}`}
+            key={`${item.bairro}-${item.cidade}-${item.uf ?? ''}`}
             item={item}
             rank={idx}
             isLeader={idx === 0}

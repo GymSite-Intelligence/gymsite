@@ -19,6 +19,7 @@ import { BairrosRanking } from '@/components/dashboard/BairrosRanking'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import type { DashboardFilters } from '@/hooks/useDashboardStats'
+import { getDashboardDataSourceLabel } from '@/lib/dashboard/data-source'
 
 export function DashboardPage() {
   const [filters, setFilters] = useState<DashboardFilters>({})
@@ -72,6 +73,8 @@ export function DashboardPage() {
         <BairrosRanking
           data={stats?.bairrosRanking ?? []}
           loading={isLoading}
+          dataSourceLabel={getDashboardDataSourceLabel()}
+          relatorioCount={stats?.total}
         />
         <DashboardRelatoriosTable
           rows={data ?? []}

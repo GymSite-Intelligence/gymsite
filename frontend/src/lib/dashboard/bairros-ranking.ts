@@ -28,13 +28,30 @@ export interface BairroRankItem {
   aprovacaoPct: number
 }
 
-function groupKey(r: RelatorioResumo): string {
-  return `${r.bairro}|${r.cidade}|${r.uf ?? ''}`
+function normText(s: string): string {
+  return s.trim().replace(/\s+/g, ' ')
 }
 
-function parseGroupKey(key: string): [bairro: string, cidade: string, uf: string] {
-  const [bairro, cidade, uf = ''] = key.split('|')
-  return [bairro, cidade, uf]
+/** Chave estável — evita duplicar o mesmo bairro por UF vazia vs "RJ" ou espaços. */
+function groupKey(r: RelatorioResumo): string {
+  const bairro = normText(r.bairro).toLowerCase()
+  const cidade = normText(r.cidade).toLowerCase()
+  const uf = (r.uf ?? '').trim().toUpperCase()
+  return `${bairro}|${cidade}|${uf}`
+}
+
+function displayFromGroup(rows: RelatorioResumo[]): {
+  bairro: string
+  cidade: string
+  uf: string | null
+} {
+  const ref = rows[0]
+  const uf = (ref.uf ?? '').trim().toUpperCase()
+  return {
+    bairro: normText(ref.bairro),
+    cidade: normText(ref.cidade),
+    uf: uf || null,
+  }
 }
 
 function mean(nums: number[]): number | null {
@@ -52,8 +69,8 @@ export function computeBairrosRanking(rows: RelatorioResumo[]): BairroRankItem[]
   }
 
   const result: BairroRankItem[] = []
-  for (const [key, arr] of map.entries()) {
-    const [bairro, cidade, ufRaw] = parseGroupKey(key)
+  for (const arr of map.values()) {
+    const { bairro, cidade, uf } = displayFromGroup(arr)
     const concluidos = arr.filter((r) => r.status === 'done')
     const scores = concluidos
       .map((r) => r.score_top1_candidato)
@@ -63,7 +80,7 @@ export function computeBairrosRanking(rows: RelatorioResumo[]): BairroRankItem[]
     result.push({
       bairro,
       cidade,
-      uf: ufRaw || null,
+      uf,
       count: arr.length,
       scoreMedio: mean(scores),
       aprovacaoPct:
