@@ -1,0 +1,11 @@
+id,wave,tier_qwen,cidade,uf,bairro,compare_to,golden_anchor,hypothesis,status
+fortaleza_parangaba_red_w1,red,capital_bairro,Fortaleza,CE,Parangaba,,fortaleza_parangaba_20260528,Saturação alta; ressalvas low-cost,planned
+fortaleza_meireles_red_w1,red,ultra_premium,Fortaleza,CE,Meireles,,fortaleza_meireles_20260528,Mercado maduro litoral; ticket alto,planned
+fortaleza_aldeota_red_w1,red,premium_capital,Fortaleza,CE,Aldeota,,fortaleza_aldeota_20260601,Premium saturado; redes fortes,planned
+curitiba_batel_red_w1,red,premium_capital,Curitiba,PR,Batel,,curitiba_batel_20260512,Borda score; guerra preço,planned
+niteroi_camboinhas_red_w1,red,investigar,Niterói,RJ,Camboinhas,,niteroi_camboinhas_20260513,Veredito negativo; tensão narrativa,planned
+fortaleza_cidade_red_w1,red,proxy_negativo,Fortaleza,CE,Fortaleza,,fortaleza_cidade_inteira_20260527,Proxy investigar mais,planned
+fortaleza_eusebio_trans_w1,transition,primeiro_movimento,Fortaleza,CE,Eusébio,fortaleza_parangaba_red_w1,fortaleza_eusebio_20260529,RM expansão; oceano azul relativo,planned
+brasilia_aguas_claras_blue_w1,blue,low_cost_interior,Brasília,DF,Águas Claras,,brasilia_ade_aguas_claras_setor_habitacional_arniqueira_20260512,Baixa saturação capital,planned
+anapolis_anapolis_city_blue_w1,blue,interior_capital,Anápolis,GO,Anápolis City,,anapolis_anapolis_city_20260529,Low cost interior; ressalvas,planned
+altamira_altamira_blue_w1,blue,polo_regional,Altamira,PA,Altamira,,altamira_altamira_20260529,Interior PA; potencial,planned

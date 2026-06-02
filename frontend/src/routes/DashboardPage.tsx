@@ -14,6 +14,8 @@ import { DashboardSectionCards } from '@/components/dashboard/DashboardSectionCa
 import { RelatorioQuickView } from '@/components/dashboard/RelatorioQuickView'
 import { DashboardFiltersPanel } from '@/components/dashboard/DashboardFilters'
 import { VereditoDistributionChart } from '@/components/dashboard/VereditoDistributionChart'
+import { DashboardOceanoCards } from '@/components/dashboard/DashboardOceanoCards'
+import { OceanoDistributionChart } from '@/components/dashboard/OceanoDistributionChart'
 import { DashboardInsights } from '@/components/dashboard/DashboardInsights'
 import { BairrosRanking } from '@/components/dashboard/BairrosRanking'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -59,11 +61,17 @@ export function DashboardPage() {
       {/* KPIs cards */}
       <DashboardSectionCards stats={stats} loading={isLoading} />
 
+      <DashboardOceanoCards stats={stats} loading={isLoading} />
+
       {/* Gráficos: atividade + distribuição de vereditos */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 px-4 lg:px-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 px-4 lg:px-6">
         <DashboardRelatoriosChart data={stats?.chartData ?? []} loading={isLoading} />
         <VereditoDistributionChart
           data={stats?.vereditoDistribution ?? []}
+          loading={isLoading}
+        />
+        <OceanoDistributionChart
+          data={stats?.oceanoDistribution ?? []}
           loading={isLoading}
         />
       </div>

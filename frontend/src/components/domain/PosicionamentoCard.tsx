@@ -1,33 +1,10 @@
 /**
  * PosicionamentoCard — output A9 (Framework ERRC / oceano azul).
  */
+import { OceanoBadge } from '@/components/domain/OceanoBadge'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { PosicionamentoEstrategicoJSON } from '@/hooks/useRelatorioDetail'
-
-const VEREDITO_CONFIG: Record<
-  string,
-  { label: string; emoji: string; bg: string; text: string }
-> = {
-  OCEANO_AZUL: {
-    label: 'Oceano Azul',
-    emoji: '🟢',
-    bg: 'bg-emerald-600',
-    text: 'text-white',
-  },
-  TRANSICAO: {
-    label: 'Transição',
-    emoji: '🟡',
-    bg: 'bg-amber-500',
-    text: 'text-black',
-  },
-  VERMELHO: {
-    label: 'Oceano Vermelho',
-    emoji: '🔴',
-    bg: 'bg-red-600',
-    text: 'text-white',
-  },
-}
 
 const ERRC_LABELS: { key: keyof NonNullable<PosicionamentoEstrategicoJSON['framework_errc']>; title: string; accent: string }[] = [
   { key: 'eliminar', title: 'Eliminar', accent: 'border-red-300 bg-red-50/50' },
@@ -51,20 +28,13 @@ export function PosicionamentoCard({ data, className }: PosicionamentoCardProps)
     )
   }
 
-  const vereditoKey = (data.veredito_posicionamento || '').toUpperCase()
-  const verCfg = VEREDITO_CONFIG[vereditoKey]
   const ticket = data.recomendacao_ticket
   const errc = data.framework_errc
 
   return (
     <div className={cn('space-y-6', className)}>
       <div className="flex flex-wrap items-center gap-3">
-        {verCfg && (
-          <Badge className={cn('gap-1.5 border-transparent font-semibold', verCfg.bg, verCfg.text)}>
-            <span aria-hidden>{verCfg.emoji}</span>
-            {verCfg.label}
-          </Badge>
-        )}
+        <OceanoBadge veredito={data.veredito_posicionamento} />
         {ticket?.ticket_recomendado != null && (
           <span className="text-sm text-muted-foreground">
             Ticket recomendado:{' '}

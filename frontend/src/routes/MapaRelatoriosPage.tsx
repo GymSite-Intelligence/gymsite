@@ -27,7 +27,9 @@ import {
 } from '@/hooks/useRelatoriosNoMapa'
 import { cn } from '@/lib/utils'
 import { PinVeredito } from '@/components/domain/PinVeredito'
+import { PinOceano } from '@/components/domain/PinOceano'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
+import { OceanoBadge } from '@/components/domain/OceanoBadge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -46,9 +48,12 @@ interface MapaSearch {
   veredito?: Veredito
 }
 
+type MapaLente = 'viabilidade' | 'mercado'
+
 export function MapaRelatoriosPage() {
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as MapaSearch
+  const [lente, setLente] = useState<MapaLente>('viabilidade')
   const { pins, isLoading, total, semCoordenadas } = useRelatoriosNoMapa({
     cidade: search.cidade,
     veredito: search.veredito,
@@ -141,6 +146,32 @@ export function MapaRelatoriosPage() {
 
       {/* Filtros */}
       <div className="flex items-center gap-2 flex-wrap p-3 rounded-lg border border-border bg-card">
+        <div className="flex rounded-md border border-border overflow-hidden shrink-0">
+          <button
+            type="button"
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium transition-colors',
+              lente === 'viabilidade'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-transparent text-muted-foreground hover:bg-muted',
+            )}
+            onClick={() => setLente('viabilidade')}
+          >
+            Viabilidade (A6)
+          </button>
+          <button
+            type="button"
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium transition-colors',
+              lente === 'mercado'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-transparent text-muted-foreground hover:bg-muted',
+            )}
+            onClick={() => setLente('mercado')}
+          >
+            Mercado (A9)
+          </button>
+        </div>
         <div className="relative flex-1 min-w-[200px]">
           <Search
             size={14}
@@ -220,12 +251,21 @@ export function MapaRelatoriosPage() {
                     anchor={[c.lat, c.lng]}
                     onClick={() => handleClickPin()}
                   >
-                    <PinVeredito
-                      veredito={c.veredito_representativo}
-                      ativo={clusterAtivoIdx === idx && !algumSelecionado}
-                      selecionado={algumSelecionado}
-                      count={c.pins.length}
-                    />
+                    {lente === 'mercado' ? (
+                      <PinOceano
+                        veredito={c.oceano_representativo}
+                        ativo={clusterAtivoIdx === idx && !algumSelecionado}
+                        selecionado={algumSelecionado}
+                        count={c.pins.length}
+                      />
+                    ) : (
+                      <PinVeredito
+                        veredito={c.veredito_representativo}
+                        ativo={clusterAtivoIdx === idx && !algumSelecionado}
+                        selecionado={algumSelecionado}
+                        count={c.pins.length}
+                      />
+                    )}
                   </Marker>
                 )
               })}
@@ -233,7 +273,8 @@ export function MapaRelatoriosPage() {
           )}
 
           {/* Legenda flutuante */}
-          {pins.length > 0 && <LegendaVereditos />}
+          {pins.length > 0 &&
+            (lente === 'mercado' ? <LegendaOceano /> : <LegendaVereditos />)}
         </div>
 
         {/* Painel lateral — pin selecionado ou cluster */}
@@ -358,6 +399,7 @@ function DetalhePinSelecionado({
       </div>
 
       <VeredictoBadge veredito={pin.veredito} />
+      <OceanoBadge veredito={pin.veredito_oceano} />
 
       {/* Street View Static do A1 GeoScout */}
       <StreetViewPreview
@@ -481,8 +523,11 @@ function ClusterLista({
                     : 'border-border hover:border-primary/40 hover:bg-muted/40',
                 )}
               >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <VeredictoBadge veredito={p.veredito} />
+                <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                  <div className="flex flex-wrap gap-1">
+                    <VeredictoBadge veredito={p.veredito} />
+                    <OceanoBadge veredito={p.veredito_oceano} compact />
+                  </div>
                   {modoComparar && (
                     <input
                       type="checkbox"
@@ -558,6 +603,34 @@ function StreetViewPreview({
       </a>
       <div className="px-2 py-1.5 text-[10px] font-mono text-muted-foreground bg-muted/40 border-t border-border">
         Google Street View Static · fov 90°
+      </div>
+    </div>
+  )
+}
+
+function LegendaOceano() {
+  const items = [
+    { color: 'hsl(142 70% 45%)', label: 'Oceano azul' },
+    { color: 'hsl(45 95% 55%)', label: 'Transição' },
+    { color: 'hsl(0 70% 50%)', label: 'Oceano vermelho' },
+    { color: 'hsl(220 10% 55%)', label: 'Sem A9' },
+  ]
+  return (
+    <div className="absolute bottom-3 left-3 rounded-md border border-border bg-card/95 backdrop-blur px-3 py-2 shadow-lg">
+      <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground mb-1.5">
+        Posicionamento (A9)
+      </p>
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {items.map((i) => (
+          <div key={i.label} className="flex items-center gap-1.5 text-[10px]">
+            <span
+              aria-hidden
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ background: i.color }}
+            />
+            {i.label}
+          </div>
+        ))}
       </div>
     </div>
   )

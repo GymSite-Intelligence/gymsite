@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { GitCompare, X } from 'lucide-react'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
+import { OceanoBadge } from '@/components/domain/OceanoBadge'
 import { StatusPipelineBadge } from '@/components/domain/StatusPipelineBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -113,7 +114,8 @@ export function DashboardRelatoriosTable({
                 {modoComparar && <TableHead className="w-10" />}
                 <TableHead>Data</TableHead>
                 <TableHead>Local</TableHead>
-                <TableHead>Veredito</TableHead>
+                <TableHead>Viabilidade</TableHead>
+                <TableHead>Mercado</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Score</TableHead>
                 <TableHead className="text-right">Custo</TableHead>
@@ -172,6 +174,9 @@ export function DashboardRelatoriosTable({
                       ) : (
                         <Badge variant="outline">—</Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <OceanoBadge veredito={r.veredito_posicionamento} compact />
                     </TableCell>
                     <TableCell>
                       <StatusPipelineBadge status={r.status} />

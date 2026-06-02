@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/relatorios': 'Relatórios',
   '/mapa': 'Mapa',
+  '/market-atlas': 'Market Atlas',
   '/comparar': 'Comparar',
   '/prospeccao': 'Prospecção',
   '/custos': 'Custos',

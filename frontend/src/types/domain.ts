@@ -20,6 +20,11 @@ export type Veredito =
   | 'INVESTIGAR MAIS'
   | 'REPROVADO'
 
+/** A9 — veredito de posicionamento estratégico (oceano azul / ERRC). */
+export type VereditoOceano = 'OCEANO_AZUL' | 'TRANSICAO' | 'VERMELHO'
+
+export type MarketWave = 'red' | 'transition' | 'blue'
+
 export type RelatorioStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled'
 
 export type NegocioTipo =
@@ -272,5 +277,10 @@ export interface RelatorioResumo {
   modelo_recomendado: string | null
   aluguel_mediana_m2: number | null
   nivel_saturacao: string | null
+  veredito_posicionamento?: VereditoOceano | null
+  ticket_recomendado?: number | null
+  gaps_count?: number | null
+  market_wave?: MarketWave | null
+  market_tier_qwen?: string | null
   created_at: string
 }

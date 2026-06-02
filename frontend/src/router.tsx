@@ -32,6 +32,7 @@ import { LoginPage } from '@/routes/LoginPage'
 import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
 import { PrivacidadePage } from '@/routes/PrivacidadePage'
 import { DashboardPage } from '@/routes/DashboardPage'
+import { MarketAtlasPage } from '@/routes/MarketAtlasPage'
 import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
 import type { Veredito } from '@/types/domain'
@@ -251,6 +252,12 @@ const dashboardRoute = createRoute({
   component: DashboardPage,
 })
 
+const marketAtlasRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/market-atlas',
+  component: MarketAtlasPage,
+})
+
 const pdfSmokeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/pdf-smoke',
@@ -275,6 +282,7 @@ const routeTree = rootRoute.addChildren([
   custosRoute,
   perfilRoute,
   dashboardRoute,
+  marketAtlasRoute,
   pdfSmokeRoute,
 ])
 

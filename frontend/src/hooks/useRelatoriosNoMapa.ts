@@ -14,7 +14,8 @@ import { useAuth } from '@/lib/auth'
 import { filterRelatorioUuids } from '@/lib/relatorio-id'
 import { supabase } from '@/lib/supabase'
 import { RAW_MOCKS, USE_MOCKS } from '@/mocks'
-import type { Veredito } from '@/types/domain'
+import type { Veredito, VereditoOceano } from '@/types/domain'
+import { normalizeVereditoOceano } from '@/lib/oceano'
 
 export interface PinRelatorio {
   id: string
@@ -23,6 +24,7 @@ export interface PinRelatorio {
   cidade: string
   bairro: string
   veredito: Veredito
+  veredito_oceano: VereditoOceano | null
   score_top1: number | null
   score_geoscout: number | null
   modelo_recomendado: string | null
@@ -100,6 +102,7 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
           cidade: resumo.cidade,
           bairro: resumo.bairro,
           veredito: resumo.veredito ?? 'INVESTIGAR MAIS',
+          veredito_oceano: normalizeVereditoOceano(resumo.veredito_posicionamento),
           score_top1: resumo.score_top1_candidato,
           score_geoscout: top?.score_geoscout ?? null,
           modelo_recomendado: resumo.modelo_recomendado,
@@ -141,6 +144,7 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
         cidade: resumo.cidade,
         bairro: resumo.bairro,
         veredito: resumo.veredito ?? 'INVESTIGAR MAIS',
+        veredito_oceano: normalizeVereditoOceano(resumo.veredito_posicionamento),
         score_top1: resumo.score_top1_candidato,
         score_geoscout: Number.isFinite(scoreGeo as number)
           ? (scoreGeo as number)
@@ -175,6 +179,7 @@ export interface PinCluster {
   pins: PinRelatorio[]
   /** Veredito "dominante" do cluster (do pin de maior score) pra cor do pin. */
   veredito_representativo: Veredito
+  oceano_representativo: VereditoOceano | null
 }
 
 /**
@@ -217,12 +222,14 @@ export function agruparPinsCoLocalizados(
         (a, b) => (b.score_top1 ?? 0) - (a.score_top1 ?? 0),
       )[0]
       existente.veredito_representativo = melhor.veredito
+      existente.oceano_representativo = melhor.veredito_oceano
     } else {
       clusters.push({
         lat: pin.lat,
         lng: pin.lng,
         pins: [pin],
         veredito_representativo: pin.veredito,
+        oceano_representativo: pin.veredito_oceano,
       })
     }
   }

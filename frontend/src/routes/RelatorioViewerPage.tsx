@@ -35,6 +35,8 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useRelatorioDetail } from '@/hooks/useRelatorioDetail'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
+import { DualVereditoStrip } from '@/components/domain/DualVereditoStrip'
+import { normalizeVereditoOceano } from '@/lib/oceano'
 import { ScoresDimensionais } from '@/components/domain/ScoresDimensionais'
 import { ContextoMercadoCard } from '@/components/domain/ContextoMercadoCard'
 import { CandidatoCard } from '@/components/domain/CandidatoCard'
@@ -285,6 +287,14 @@ function RelatorioViewerContent({
             {/* Veredito INLINE ao título (não flutuando isolado no canto) */}
             <VeredictoBadge veredito={out.veredito} />
           </h1>
+          <DualVereditoStrip
+            vereditoViabilidade={out.veredito}
+            vereditoOceano={
+              normalizeVereditoOceano(
+                out.posicionamento_estrategico?.veredito_posicionamento,
+              ) ?? undefined
+            }
+          />
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <MapPin size={12} className="shrink-0" />
             <span>

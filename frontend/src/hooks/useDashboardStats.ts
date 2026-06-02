@@ -13,7 +13,13 @@ import {
   isVereditoAprovado,
   VEREDITOS_REPROVADOS,
 } from '@/lib/dashboard/veredito-groups'
-import type { RelatorioResumo, Veredito, RelatorioStatus } from '@/types/domain'
+import { normalizeVereditoOceano } from '@/lib/oceano'
+import type {
+  RelatorioResumo,
+  Veredito,
+  VereditoOceano,
+  RelatorioStatus,
+} from '@/types/domain'
 
 export type { BairroRankItem } from '@/lib/dashboard/bairros-ranking'
 
@@ -25,6 +31,12 @@ export interface DashboardChartPoint {
 
 export interface VereditoDistribution {
   veredito: Veredito | 'SEM_VEREDITO'
+  count: number
+  pct: number
+}
+
+export interface OceanoDistribution {
+  veredito: VereditoOceano | 'SEM_A9'
   count: number
   pct: number
 }
@@ -46,6 +58,12 @@ export interface DashboardStats {
   scoreMedio: number | null
   chartData: DashboardChartPoint[]
   vereditoDistribution: VereditoDistribution[]
+  oceanoDistribution: OceanoDistribution[]
+  oceanoAzul: number
+  oceanoTransicao: number
+  oceanoVermelho: number
+  semA9: number
+  ticketMedioA9: number | null
   bairrosRanking: BairroRankItem[]
   insights: DashboardInsight[]
   scoreHistory: { date: string; scoreMedio: number | null; count: number }[]
@@ -71,6 +89,22 @@ function bucketByDay(rows: RelatorioResumo[]): DashboardChartPoint[] {
   return [...map.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, v]) => ({ date, ...v }))
+}
+
+function computeOceanoDistribution(rows: RelatorioResumo[]): OceanoDistribution[] {
+  const map = new Map<VereditoOceano | 'SEM_A9', number>()
+  for (const r of rows) {
+    const key = normalizeVereditoOceano(r.veredito_posicionamento) ?? 'SEM_A9'
+    map.set(key, (map.get(key) ?? 0) + 1)
+  }
+  const total = rows.length || 1
+  return [...map.entries()]
+    .map(([veredito, count]) => ({
+      veredito,
+      count,
+      pct: Math.round((count / total) * 100),
+    }))
+    .sort((a, b) => b.count - a.count)
 }
 
 function computeVereditoDistribution(
@@ -206,6 +240,27 @@ export function useDashboardStats(filters: DashboardFilters = {}) {
 
     const chartSource = concluidos.length ? concluidos : rows
     const vereditoDistribution = computeVereditoDistribution(rows)
+    const oceanoDistribution = computeOceanoDistribution(concluidos.length ? concluidos : rows)
+    const oceanoAzul = concluidos.filter(
+      (r) => normalizeVereditoOceano(r.veredito_posicionamento) === 'OCEANO_AZUL',
+    ).length
+    const oceanoTransicao = concluidos.filter(
+      (r) => normalizeVereditoOceano(r.veredito_posicionamento) === 'TRANSICAO',
+    ).length
+    const oceanoVermelho = concluidos.filter(
+      (r) => normalizeVereditoOceano(r.veredito_posicionamento) === 'VERMELHO',
+    ).length
+    const semA9 = concluidos.filter(
+      (r) => !normalizeVereditoOceano(r.veredito_posicionamento),
+    ).length
+    const tickets = concluidos
+      .map((r) => r.ticket_recomendado)
+      .filter((t): t is number => t != null && !Number.isNaN(t))
+    const ticketMedioA9 =
+      tickets.length > 0
+        ? tickets.reduce((a, b) => a + b, 0) / tickets.length
+        : null
+
     const bairrosRanking = computeBairrosRanking(rows)
     const scoreHistory = computeScoreHistory(rows)
 
@@ -220,6 +275,12 @@ export function useDashboardStats(filters: DashboardFilters = {}) {
       scoreMedio,
       chartData: bucketByDay(chartSource),
       vereditoDistribution,
+      oceanoDistribution,
+      oceanoAzul,
+      oceanoTransicao,
+      oceanoVermelho,
+      semA9,
+      ticketMedioA9,
       bairrosRanking,
       scoreHistory,
     }

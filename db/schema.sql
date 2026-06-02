@@ -616,12 +616,22 @@ select
   o.modelo_recomendado,
   o.aluguel_mediana_m2,
   o.nivel_saturacao,
-  r.created_at
+  r.created_at,
+  upper(trim(o.posicionamento_estrategico->>'veredito_posicionamento')) as veredito_posicionamento,
+  (o.posicionamento_estrategico->'recomendacao_ticket'->>'ticket_recomendado')::numeric as ticket_recomendado,
+  case
+    when o.posicionamento_estrategico->'gaps_identificados' is null then null
+    when jsonb_typeof(o.posicionamento_estrategico->'gaps_identificados') = 'array'
+      then jsonb_array_length(o.posicionamento_estrategico->'gaps_identificados')
+    else null
+  end as gaps_count,
+  r.market_wave,
+  r.market_tier_qwen
 from relatorios r
 left join relatorio_inputs i on i.relatorio_id = r.id
 left join relatorio_outputs o on o.relatorio_id = r.id;
 
-comment on view v_relatorios_resumo is 'View flat para listagem na tela "Meus relatórios".';
+comment on view v_relatorios_resumo is 'Listagem flat: A6 veredito + A9 oceano + wave Atlas.';
 
 
 -- Comparativo entre bairros da mesma cidade (analytics futuro)

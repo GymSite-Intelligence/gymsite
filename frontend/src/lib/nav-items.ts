@@ -3,6 +3,7 @@ import {
   BarChart3Icon,
   FileTextIcon,
   GitCompareIcon,
+  Globe2Icon,
   LayoutDashboardIcon,
   MapIcon,
   TargetIcon,
@@ -29,6 +30,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Mapa',
     to: '/mapa',
     icon: MapIcon,
+  },
+  {
+    title: 'Market Atlas',
+    to: '/market-atlas',
+    icon: Globe2Icon,
   },
   {
     title: 'Comparar',
