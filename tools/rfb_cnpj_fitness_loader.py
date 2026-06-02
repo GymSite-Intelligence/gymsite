@@ -93,6 +93,8 @@ IBGE_TO_RFB_MUNICIPIO: dict[str, str] = {
     "2301109": "1319",  # Aquiraz
     "2307650": "1585",  # Maracanaú
     "3303302": "5865",  # Niterói
+    "3519070": "2951",  # Hortolândia-SP (código RFB confirmado no cno.csv)
+    "3519071": "2951",  # Hortolândia-SP (IBGE com dígito verificador, via buscar_municipio)
 }
 
 DATA_DIR = _ROOT / "metrics" / "rfb_cnpj_cache"

@@ -39,7 +39,8 @@ python eval/run_eval.py --cno-only
 # só CNO (legado)
 
 # ETA UI: frontend/src/lib/pipeline-eta.ts (~10 min típico)
-# Wall-clock cap: PIPELINE_MAX_WALL_SEC (default 1800) em api.py
+# Wall-clock cap: PIPELINE_MAX_WALL_SEC (default 1800) em api.py — Layer 1 envelope global
+# Órfãos running: PIPELINE_ORPHAN_MINUTES (default 35) + scripts/cleanup_orphan_reports.py
 ```
 
 ---

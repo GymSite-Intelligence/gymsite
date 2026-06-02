@@ -111,3 +111,8 @@ Ver `docs/CNO_INTEGRACAO.md` e `eval/golden_dataset/README.md`.
 - Obra fitness CNO = CNAE construção (4120400) no responsável; academia = 9313100 no CNPJ.
 - Fluxo: CNPJ entrantes 90d → CNO município → recorte bairro.
 - Tolerância de score no golden: ±0,5 absoluto (`tolerance_fields.score_top1_candidato`).
+
+### Local CLI: ImportError `create_client` from `supabase`
+
+A pasta `supabase/` na raiz (Supabase CLI) sombreia o pacote Python `supabase` quando `sys.path` inclui o repo. Instale o SDK no venv: `pip install -r requirements.txt`. Scripts de rerun/cleanup usam PostgREST via `httpx` (`tools/postgrest_sb.py`); `api.py` usa `tools/supabase_client.load_create_client()`.
+

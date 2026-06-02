@@ -42,7 +42,8 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    from api import NovoRelatorioInput, _run_pipeline_async, create_relatorio_stub
+    from api import NovoRelatorioInput, _run_pipeline_async
+    from tools.postgrest_sb import create_relatorio_stub_postgrest
 
     payload = NovoRelatorioInput(
         cidade=args.cidade,
@@ -55,7 +56,7 @@ def main() -> int:
     )
 
     try:
-        relatorio_id, _created_at = create_relatorio_stub(payload)
+        relatorio_id, _created_at = create_relatorio_stub_postgrest(payload)
     except RuntimeError as e:
         print(f"Erro ao criar stub: {e}", file=sys.stderr)
         return 1

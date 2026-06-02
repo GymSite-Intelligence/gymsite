@@ -1511,6 +1511,33 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         elif score_decisao >= 4.0:
             veredito = "INVESTIGAR MAIS"
 
+    # ── Guard determinístico: 0 concorrentes (P1) ──
+    # Quando a busca competitiva não retorna nenhum concorrente, o
+    # score_concorrencia teórico tende a parecer "ideal" e inflar o veredito.
+    # Sem dado real de mercado, não se aprova com base só em ticket teórico:
+    # limita o veredito a INVESTIGAR MAIS e sinaliza saturação indeterminada.
+    concorrentes_detalhados = [
+        c for c in (inner_ic.get("concorrentes_detalhados") or [])
+        if isinstance(c, dict)
+    ]
+    total_concorrentes = (
+        ic_raw.get("total_concorrentes_analisados")
+        or inner_ic.get("total_concorrentes_analisados")
+        or len(concorrentes_detalhados)
+    )
+    alertas_financeiros = list(inner_fin.get("alertas", []) or [])
+    sem_concorrentes = (not concorrentes_detalhados) and _safe_float(total_concorrentes) == 0
+    if sem_concorrentes:
+        if veredito in ("APROVADO", "APROVADO COM RESSALVAS"):
+            veredito = "INVESTIGAR MAIS"
+        nivel_saturacao = "indeterminado (0 concorrentes)"
+        alerta_zero_conc = (
+            "0 concorrentes identificados - análise baseada apenas em benchmark "
+            "teórico; revisar geocode/raio do bairro antes de decidir."
+        )
+        if alerta_zero_conc not in alertas_financeiros:
+            alertas_financeiros.append(alerta_zero_conc)
+
     return {
         "id": f"rpt_{int(time.time())}",
         "tipo_relatorio": "prospeccao_academia",
@@ -1553,11 +1580,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 ic_raw.get("total_encontrados_raio")
                 or inner_ic.get("total_encontrados_raio")
             ),
-            "total_concorrentes_analisados": (
-                ic_raw.get("total_concorrentes_analisados")
-                or inner_ic.get("total_concorrentes_analisados")
-                or len(inner_ic.get("concorrentes_detalhados") or [])
-            ),
+            "total_concorrentes_analisados": total_concorrentes,
             "top_independentes": (
                 ic_raw.get("top_independentes")
                 or inner_ic.get("top_independentes")
@@ -1608,7 +1631,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "viabilidade_3_cenarios": inner_fin.get("cenarios", {}),
             "modelo_recomendado": inner_fin.get("recomendacao_modelo"),
             "aluguel_mensal": _safe_float(inner_fin.get("aluguel_mensal")),
-            "alertas_financeiros": inner_fin.get("alertas", []),
+            "alertas_financeiros": alertas_financeiros,
             "posicionamento_recomendado": (
                 ic_raw.get("posicionamento_recomendado")
                 or inner_ic.get("posicionamento_recomendado", "")

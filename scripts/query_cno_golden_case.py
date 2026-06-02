@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 load_dotenv(ROOT / ".env")
 
 from tools.cno_fitness_tools import (
+    MUNICIPIO_CNO_INDISPONIVEL,
     _map_headers,
     _resolve_municipio_codigo_cno,
     _val,
@@ -88,8 +89,8 @@ def _discover_municipio_from_csv(cno_csv: Path, cidade: str) -> str | None:
 
 
 def _resolve_municipio(cidade: str, uf: str, cno_dir: Path) -> str:
-    code = _resolve_municipio_codigo_cno(cidade, uf)
-    if code != "1389" or cidade.strip().upper() in ("FORTALEZA",):
+    code = _resolve_municipio_codigo_cno(cidade, uf, cno_dir=cno_dir)
+    if code != MUNICIPIO_CNO_INDISPONIVEL:
         return code
     csv_path = cno_dir / "cno.csv"
     if csv_path.is_file():

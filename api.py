@@ -33,7 +33,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from supabase import create_client  # type: ignore[reportAttributeAccessIssue]
+from tools.supabase_client import load_create_client
+
+create_client = load_create_client()  # type: ignore[assignment]
 
 from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
@@ -104,6 +106,9 @@ def _resolve_relatorio_uuid(sb, relatorio_id: str) -> str:
 
 
 _STALE_PIPELINE_HOURS = int(os.getenv("PIPELINE_STALE_HOURS", "6"))
+# Layer 3: órfãos running/queued sem output — default 35 min (< PIPELINE_STALE_HOURS).
+_PIPELINE_ORPHAN_MINUTES = int(os.getenv("PIPELINE_ORPHAN_MINUTES", "35"))
+_PIPELINE_WALL_BUFFER_MIN = int(os.getenv("PIPELINE_WALL_BUFFER_MIN", "5"))
 _STALE_MSG = (
     "Pipeline interrompido (restart do servidor ou timeout). "
     "Use «Gerar novamente» para reprocessar."
@@ -134,11 +139,39 @@ def _ensure_pipeline_wall_clock(t0: float) -> None:
         raise PipelineWallTimeoutError()
 
 
+def _pipeline_stale_cutoff() -> datetime:
+    """updated_at anterior a este instante => candidato a órfão (Layer 3)."""
+    from datetime import timedelta
+
+    wall_hours = _PIPELINE_MAX_WALL_SEC / 3600.0 + _PIPELINE_WALL_BUFFER_MIN / 60.0
+    hours_floor = max(float(_STALE_PIPELINE_HOURS), wall_hours)
+    age = min(
+        timedelta(hours=hours_floor),
+        timedelta(minutes=_PIPELINE_ORPHAN_MINUTES),
+    )
+    return datetime.now(timezone.utc) - age
+
+
+def _mark_pipeline_failed(
+    sb,
+    relatorio_id: str,
+    *,
+    elapsed: int,
+    erro_mensagem: str,
+) -> None:
+    try:
+        sb.table("relatorios").update({
+            "status": "failed",
+            "erro_mensagem": erro_mensagem[:500],
+            "tempo_execucao_segundos": elapsed,
+        }).eq("id", relatorio_id).execute()
+    except Exception:
+        pass
+
+
 def _recover_stale_running_reports(sb, *, relatorio_id: str | None = None) -> int:
     """Marca como failed relatórios running/queued órfãos (sem output)."""
-    from datetime import datetime, timedelta, timezone
-
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=_STALE_PIPELINE_HOURS)).isoformat()
+    cutoff = _pipeline_stale_cutoff().isoformat()
     try:
         q = (
             sb.table("relatorios")
@@ -412,6 +445,9 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
             prompt = _build_pipeline_prompt(payload)
             message = Content(role="user", parts=[Part(text=prompt)])
 
+            # ADK pode ignorar asyncio.CancelledError enquanto tools síncronas /
+            # thread pool rodam — o teto global em _run_pipeline_async cancela a
+            # task; Layer 3 (_recover_stale_running_reports) corrige status no DB.
             async for _event in runner.run_async(
                 user_id=user_id,
                 session_id=session_id,
@@ -429,6 +465,9 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
 async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) -> None:
     """Roda o pipeline GymSite em background com retry em 429.
 
+    Layer 1: envelope global de wall-clock (PIPELINE_MAX_WALL_SEC) com cancel da
+    task — evita runs de 40+ min com status preso em running.
+
     Quando Vertex AI retorna 429 RESOURCE_EXHAUSTED (quota minute-rate
     estourada — frequente em bairros densos como Itaipu/Niterói), tentamos
     de novo após 30s/60s/120s. Pipeline raramente falha por quota.
@@ -436,12 +475,43 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
     """
     sb = _supabase_client()
     t0 = time.time()
+    try:
+        sb.table("relatorios").update({"status": "running"}).eq("id", relatorio_id).execute()
+    except Exception:
+        pass
+
+    body = asyncio.create_task(_run_pipeline_async_body(relatorio_id, payload, sb, t0))
+    try:
+        await asyncio.wait_for(body, timeout=float(_PIPELINE_MAX_WALL_SEC))
+    except asyncio.TimeoutError:
+        if not body.done():
+            body.cancel()
+            try:
+                await body
+            except (asyncio.CancelledError, Exception):
+                pass
+        elapsed = int(time.time() - t0)
+        err = PipelineWallTimeoutError()
+        logger.error(
+            "pipeline %s excedeu wall-clock global (%ss): %s",
+            relatorio_id,
+            elapsed,
+            err,
+        )
+        _mark_pipeline_failed(sb, relatorio_id, elapsed=elapsed, erro_mensagem=str(err))
+
+
+async def _run_pipeline_async_body(
+    relatorio_id: str,
+    payload: NovoRelatorioInput,
+    sb,
+    t0: float,
+) -> None:
+    """Corpo do pipeline (retries 429 + ADK). Cancelável pelo envelope Layer 1."""
     custos: dict = {}
     last_exc: BaseException | None = None
 
     try:
-        sb.table("relatorios").update({"status": "running"}).eq("id", relatorio_id).execute()
-
         for tentativa, backoff in enumerate([0] + _RETRY_BACKOFFS_429):
             _ensure_pipeline_wall_clock(t0)
             if backoff > 0:
@@ -468,7 +538,6 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
                 raise  # outros erros não fazem retry
 
         if last_exc is not None:
-            # Esgotou todas as tentativas, continua sendo 429
             raise last_exc
 
         elapsed = int(time.time() - t0)
@@ -487,6 +556,8 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
         except Exception as e:
             logger.warning(f"Falha ao notificar relatório pronto: {e}")
 
+    except asyncio.CancelledError:
+        raise
     except BaseException as e:
         logger.error(f"pipeline {relatorio_id} falhou: {e}\n{traceback.format_exc()}")
         elapsed = int(time.time() - t0)
@@ -498,14 +569,7 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
             )
         else:
             erro_amigavel = f"{type(e).__name__}: {e}"
-        try:
-            sb.table("relatorios").update({
-                "status": "failed",
-                "erro_mensagem": erro_amigavel[:500],
-                "tempo_execucao_segundos": elapsed,
-            }).eq("id", relatorio_id).execute()
-        except Exception:
-            pass
+        _mark_pipeline_failed(sb, relatorio_id, elapsed=elapsed, erro_mensagem=erro_amigavel)
 
 
 def _agregar_e_persistir_custos(sb, relatorio_id: str, run_id: str | None) -> dict:

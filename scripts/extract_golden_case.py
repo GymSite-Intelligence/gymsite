@@ -194,7 +194,34 @@ def _extract_cno_validation(payload: dict, input_canonico: dict) -> dict | None:
     return out
 
 
-def extract_golden_case(uuid: str, output_dir: Path) -> dict:
+def _merge_preserved_golden_fields(new_case: dict, existing_path: Path) -> None:
+    """Preserva curadoria ao re-extrair (cno_validation, approved, etc.)."""
+    if not existing_path.is_file():
+        return
+    try:
+        old = json.loads(existing_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return
+    for key in (
+        "approved",
+        "cno_validation",
+        "curator_notes",
+        "structural_validation",
+        "financial_validation",
+        "positioning_validation",
+    ):
+        if key in old:
+            new_case[key] = old[key]
+    if old.get("case_id"):
+        new_case["case_id"] = old["case_id"]
+
+
+def extract_golden_case(
+    uuid: str,
+    output_dir: Path,
+    *,
+    target_case_dir: Path | None = None,
+) -> dict:
     payload = _fetch_report_payload(uuid)
     rel = payload["header"]
     input_canonico = payload["input_canonico"]
@@ -248,8 +275,20 @@ def extract_golden_case(uuid: str, output_dir: Path) -> dict:
     if cno_val:
         golden_case["cno_validation"] = cno_val
 
-    case_dir = output_dir / case_id
-    case_dir.mkdir(parents=True, exist_ok=True)
+    if target_case_dir is not None:
+        case_dir = target_case_dir.resolve()
+        case_dir.mkdir(parents=True, exist_ok=True)
+        existing_expected = case_dir / "expected_output.json"
+        _merge_preserved_golden_fields(golden_case, existing_expected)
+        if existing_expected.is_file():
+            try:
+                prev = json.loads(existing_expected.read_text(encoding="utf-8"))
+                golden_case["case_id"] = prev.get("case_id") or golden_case["case_id"]
+            except json.JSONDecodeError:
+                pass
+    else:
+        case_dir = output_dir / case_id
+        case_dir.mkdir(parents=True, exist_ok=True)
 
     (case_dir / "input.json").write_text(
         json.dumps(input_canonico, ensure_ascii=False, indent=2),
@@ -324,13 +363,18 @@ def main() -> int:
         default="eval/golden_dataset",
         help="Diretório de saída (default: eval/golden_dataset)",
     )
+    parser.add_argument(
+        "--target-dir",
+        help="Pasta do caso existente (preserva case_id e curadoria)",
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    target = Path(args.target_dir) if args.target_dir else None
 
     print(f"Extraindo golden case: {args.uuid}")
-    case = extract_golden_case(args.uuid, output_dir)
+    case = extract_golden_case(args.uuid, output_dir, target_case_dir=target)
 
     print(f"OK Caso extraído: {case['case_id']}")
     print(f"   Veredito: {case['expected_veredito']}")

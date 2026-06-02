@@ -226,8 +226,61 @@ def _cnpj_cnae_from_entrantes(entrantes_resp: dict[str, Any]) -> dict[str, str]:
     return out
 
 
-def _resolve_municipio_codigo_cno(cidade: str, uf: str = "CE") -> str:
-    """Código município na tabela RFB/CNO (ex.: Fortaleza = 1389)."""
+MUNICIPIO_CNO_INDISPONIVEL = "indisponivel"
+_municipio_cno_cache: dict[tuple[str, str], str] = {}
+
+
+def _ascii_fold(s: str) -> str:
+    """Fold para ASCII A-Z0-9 (tolera acentos e mojibake utf-8 lido como latin-1)."""
+    import unicodedata
+
+    base = unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^A-Z0-9]", "", base.upper())
+
+
+def _discover_municipio_codigo_csv(cno_dir: Path, cidade: str) -> str | None:
+    """Resolve o código RFB do município lendo o nome no próprio cno.csv."""
+    alvo = _ascii_fold(cidade)
+    main = cno_dir / "cno.csv"
+    if not alvo or not main.is_file():
+        return None
+    with open(main, encoding="latin-1", errors="replace") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames or []
+        hdr = _map_headers(fieldnames)  # pyright: ignore[reportArgumentType]
+        nome_col = next(
+            (
+                h
+                for h in fieldnames
+                if "nome" in h.lower() and "munic" in h.lower() and "digo" not in h.lower()
+            ),
+            None,
+        )
+        if not nome_col or not hdr.get("municipio"):
+            return None
+        for row in reader:
+            nome = _ascii_fold(row.get(nome_col) or "")
+            if nome and (alvo == nome or alvo in nome or nome in alvo):
+                code = _val(row, hdr, "municipio")
+                if code:
+                    return code
+    return None
+
+
+def _resolve_municipio_codigo_cno(
+    cidade: str, uf: str = "CE", *, cno_dir: str | Path | None = None
+) -> str:
+    """
+    Código do município na tabela RFB/CNO (ex.: Fortaleza = 1389).
+
+    Ordem: mapa estático IBGE→RFB → descoberta dinâmica no cno.csv pelo nome.
+    Sem mapeamento retorna ``MUNICIPIO_CNO_INDISPONIVEL`` — nunca assume Fortaleza.
+    """
+    cache_key = ((cidade or "").strip().upper(), (uf or "").strip().upper())
+    cached = _municipio_cno_cache.get(cache_key)
+    if cached:
+        return cached
+
     try:
         from tools.ibge_tools import buscar_municipio
         from tools.rfb_cnpj_fitness_loader import IBGE_TO_RFB_MUNICIPIO
@@ -236,10 +289,21 @@ def _resolve_municipio_codigo_cno(cidade: str, uf: str = "CE") -> str:
         if mun and mun.get("codigo"):
             mapped = IBGE_TO_RFB_MUNICIPIO.get(str(mun["codigo"]))
             if mapped:
+                _municipio_cno_cache[cache_key] = mapped
                 return mapped
     except Exception:
         pass
-    return "1389"
+
+    if cno_dir is not None:
+        try:
+            found = _discover_municipio_codigo_csv(Path(cno_dir), cidade)
+            if found:
+                _municipio_cno_cache[cache_key] = found
+                return found
+        except Exception:
+            pass
+
+    return MUNICIPIO_CNO_INDISPONIVEL
 
 
 def _map_headers(fieldnames: list[str]) -> dict[str, str]:
@@ -605,8 +669,6 @@ def calcular_benchmark_tempo_obra_cno(
     cidade: str = "Fortaleza",
     uf: str = "CE",
 ) -> dict[str, Any]:
-    if municipio is None:
-        municipio = _resolve_municipio_codigo_cno(cidade, uf)
     """
     Benchmark de tempo de obra a partir de registros **encerrados** no CNO.
 
@@ -616,6 +678,17 @@ def calcular_benchmark_tempo_obra_cno(
     Normaliza por m²: dias_por_m2 = (fim − início) / area_m2
     """
     cno_path = Path(cno_dir)
+    if municipio is None:
+        municipio = _resolve_municipio_codigo_cno(cidade, uf, cno_dir=cno_path)
+    if municipio == MUNICIPIO_CNO_INDISPONIVEL:
+        return {
+            "status": "indisponivel",
+            "motivo": "municipio_sem_mapeamento_rfb",
+            "cidade": cidade,
+            "uf": uf,
+            "metricas": {"n": 0},
+            "por_porte_m2": {},
+        }
     encerradas = _load_obras_fitness_municipio(
         cno_path,
         municipio,
@@ -826,8 +899,6 @@ def listar_obras_fitness_em_curso(
     benchmark_tempo: dict[str, Any] | None = None,
     bairro_filtro: str | None = None,
 ) -> dict[str, Any]:
-    if municipio is None:
-        municipio = _resolve_municipio_codigo_cno(cidade, uf)
     """
     Obras fitness no município com situação em curso (ativa / execução / paralisada).
 
@@ -835,6 +906,18 @@ def listar_obras_fitness_em_curso(
     Com `bairro_filtro`, restringe às obras cujo bairro CNO coincide (chave normalizada).
     """
     cno_path = Path(cno_dir)
+    if municipio is None:
+        municipio = _resolve_municipio_codigo_cno(cidade, uf, cno_dir=cno_path)
+    if municipio == MUNICIPIO_CNO_INDISPONIVEL and obras_precarregadas is None:
+        return {
+            "status": "indisponivel",
+            "motivo": "municipio_sem_mapeamento_rfb",
+            "cidade": cidade,
+            "uf": uf,
+            "total_obras_em_curso_municipio": 0,
+            "total_obras_em_curso": 0,
+            "obras": [],
+        }
     if obras_precarregadas is not None:
         obras = [o for o in obras_precarregadas if o.get("situacao_obra") == "em_curso"]
     else:
@@ -917,10 +1000,15 @@ def cruzar_entrantes_obras_cno(
     if entrantes.get("status") != "ok":
         return entrantes
 
-    municipio = _resolve_municipio_codigo_cno(cidade, uf)
+    municipio = _resolve_municipio_codigo_cno(cidade, uf, cno_dir=cno_path)
+    cno_indisponivel = municipio == MUNICIPIO_CNO_INDISPONIVEL
     cnpj_idx = _cnpj_cnae_from_entrantes(entrantes)
-    obras_municipio = _load_cno_obras_municipio(cno_path, municipio, area_min=50.0)
-    obras_ftz = _load_fortaleza_cno(cno_path, municipio, cnpj_cnae_por_cnpj=cnpj_idx)
+    if cno_indisponivel:
+        obras_municipio = []
+        obras_ftz = []
+    else:
+        obras_municipio = _load_cno_obras_municipio(cno_path, municipio, area_min=50.0)
+        obras_ftz = _load_fortaleza_cno(cno_path, municipio, cnpj_cnae_por_cnpj=cnpj_idx)
 
     cruzamentos: list[dict] = []
     stats: dict[str, int] = {
@@ -1030,6 +1118,7 @@ def cruzar_entrantes_obras_cno(
         "uf": uf,
         "dias": dias,
         "municipio_rfb": municipio,
+        "obras_cno_status": "indisponivel" if cno_indisponivel else "ok",
         "fonte_entrantes": "cnpj_fitness_estabelecimentos (Supabase)",
         "fonte_obras": "CNO — Cadastro Nacional de Obras (RFB)",
         "total_entrantes_consultados": len(entrantes.get("entrantes") or []),
@@ -1274,7 +1363,15 @@ def carregar_contagem_obras_em_curso_por_bairro(
     if not main.is_file():
         return {"status": "nao_configurado", "motivo": "cno.csv ausente", "por_bairro": {}}
 
-    mun = municipio or _resolve_municipio_codigo_cno(cidade, uf)
+    mun = municipio or _resolve_municipio_codigo_cno(cidade, uf, cno_dir=cno_path)
+    if mun == MUNICIPIO_CNO_INDISPONIVEL:
+        return {
+            "status": "sem_mapeamento",
+            "motivo": "municipio_sem_mapeamento_rfb",
+            "cidade": cidade,
+            "uf": uf,
+            "por_bairro": {},
+        }
     areas_idx = _load_cno_areas_index(cno_path)
     por_bairro: dict[str, dict[str, int]] = {}
 
