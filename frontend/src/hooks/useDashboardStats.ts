@@ -4,7 +4,18 @@
  */
 import { useMemo } from 'react'
 import { useRelatorios } from '@/hooks/useRelatorios'
+import {
+  buildBairroMaisAnalisadoInsight,
+  computeBairrosRanking,
+  type BairroRankItem,
+} from '@/lib/dashboard/bairros-ranking'
+import {
+  isVereditoAprovado,
+  VEREDITOS_REPROVADOS,
+} from '@/lib/dashboard/veredito-groups'
 import type { RelatorioResumo, Veredito, RelatorioStatus } from '@/types/domain'
+
+export type { BairroRankItem } from '@/lib/dashboard/bairros-ranking'
 
 export interface DashboardChartPoint {
   date: string
@@ -16,15 +27,6 @@ export interface VereditoDistribution {
   veredito: Veredito | 'SEM_VEREDITO'
   count: number
   pct: number
-}
-
-export interface BairroRankItem {
-  bairro: string
-  cidade: string
-  uf: string | null
-  count: number
-  scoreMedio: number | null
-  aprovacaoPct: number
 }
 
 export interface DashboardInsight {
@@ -56,9 +58,6 @@ export interface DashboardFilters {
   since?: string // ISO date
 }
 
-const APROVADOS: Veredito[] = ['APROVADO', 'APROVADO COM RESSALVAS']
-const REPROVADOS: Veredito[] = ['REPROVADO']
-
 function bucketByDay(rows: RelatorioResumo[]): DashboardChartPoint[] {
   const map = new Map<string, { relatorios: number; custo_brl: number }>()
   for (const r of rows) {
@@ -86,44 +85,6 @@ function computeVereditoDistribution(
   return ([...map.entries()]
     .map(([veredito, count]) => ({ veredito, count, pct: Math.round((count / total) * 100) }))
     .sort((a, b) => b.count - a.count) as VereditoDistribution[])
-}
-
-function computeBairrosRanking(rows: RelatorioResumo[]): BairroRankItem[] {
-  const map = new Map<string, RelatorioResumo[]>()
-  for (const r of rows) {
-    const key = `${r.bairro}|${r.cidade}|${r.uf ?? ''}`
-    const arr = map.get(key) ?? []
-    arr.push(r)
-    map.set(key, arr)
-  }
-
-  const result: BairroRankItem[] = []
-  for (const [key, arr] of map.entries()) {
-    const [bairro, cidade, uf] = key.split('|')
-    const concluidos = arr.filter((r) => r.status === 'done')
-    const scores = concluidos
-      .map((r) => r.score_top1_candidato)
-      .filter((s): s is number => s != null)
-    const aprovados = concluidos.filter(
-      (r) => r.veredito && APROVADOS.includes(r.veredito),
-    )
-    result.push({
-      bairro,
-      cidade,
-      uf: uf || null,
-      count: arr.length,
-      scoreMedio:
-        scores.length > 0
-          ? scores.reduce((a, b) => a + b, 0) / scores.length
-          : null,
-      aprovacaoPct:
-        concluidos.length > 0
-          ? Math.round((aprovados.length / concluidos.length) * 100)
-          : 0,
-    })
-  }
-
-  return result.sort((a, b) => (b.scoreMedio ?? 0) - (a.scoreMedio ?? 0)).slice(0, 10)
 }
 
 function computeInsights(
@@ -188,16 +149,9 @@ function computeInsights(
     })
   }
 
-  // 5. Bairro com mais análises
-  if (stats.bairrosRanking.length > 0) {
-    const top = stats.bairrosRanking[0]
-    if (top.count >= 3) {
-      insights.push({
-        tipo: 'info',
-        titulo: `${top.bairro} é o bairro mais analisado`,
-        descricao: `${top.count} relatórios · score médio ${top.scoreMedio?.toFixed(1) ?? '—'}`,
-      })
-    }
+  const bairroInsight = buildBairroMaisAnalisadoInsight(stats.bairrosRanking)
+  if (bairroInsight) {
+    insights.push({ tipo: 'info', ...bairroInsight })
   }
 
   return insights.slice(0, 4)
@@ -234,11 +188,9 @@ export function useDashboardStats(filters: DashboardFilters = {}) {
     const emAndamento = rows.filter(
       (r) => r.status === 'queued' || r.status === 'running',
     )
-    const aprovados = concluidos.filter(
-      (r) => r.veredito && APROVADOS.includes(r.veredito),
-    )
+    const aprovados = concluidos.filter((r) => isVereditoAprovado(r.veredito))
     const reprovados = concluidos.filter(
-      (r) => r.veredito && REPROVADOS.includes(r.veredito),
+      (r) => r.veredito && VEREDITOS_REPROVADOS.includes(r.veredito),
     )
     const investigar = concluidos.filter(
       (r) => r.veredito === 'INVESTIGAR MAIS',
