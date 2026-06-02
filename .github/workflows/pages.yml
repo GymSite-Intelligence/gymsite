@@ -1,11 +1,14 @@
 # =============================================================================
 # GymSite Intelligence — Frontend → Cloudflare Pages (GYM-03)
-# Projeto: gymsite-3p0 | Domínio: gymsite.vectracargo.com.br
+# Produção: https://gymsite.vectracargo.com.br | Preview: gymsite-3p0.pages.dev
 # =============================================================================
 name: Deploy Frontend (Cloudflare Pages)
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PAGES_PROJECT: gymsite-3p0
+  PRODUCTION_URL: https://gymsite.vectracargo.com.br
+  PREVIEW_URL: https://gymsite-3p0.pages.dev
 
 on:
   push:
@@ -13,23 +16,46 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/pages.yml'
+      - '.github/workflows/frontend-ci.yml'
   workflow_dispatch:
 
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages-deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       deployments: write
+      statuses: write
+
+    environment:
+      name: production
+      url: ${{ env.PRODUCTION_URL }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Validate deploy secrets
+        run: |
+          missing=0
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret ausente no repositório: $name"
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -52,27 +78,97 @@ jobs:
           VITE_DEV_AS_ADMIN: 'false'
         run: npm run build
 
-      - name: Publish to Cloudflare Pages
+      - name: Create Pages project if missing
         uses: cloudflare/wrangler-action@v3
+        continue-on-error: true
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend/dist --project-name=gymsite-3p0 --branch=main
+          command: pages project create ${{ env.PAGES_PROJECT }} --production-branch=main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Health check (pages.dev)
+      - name: Publish to Cloudflare Pages
+        id: cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy frontend/dist --project-name=${{ env.PAGES_PROJECT }} --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Health check (preview + produção)
+        id: health
         run: |
-          echo "=== Verificando deploy em https://gymsite-3p0.pages.dev ==="
-          for i in 1 2 3; do
-            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://gymsite-3p0.pages.dev/ || echo "000")
-            echo "Tentativa $i: HTTP $status"
-            if [ "$status" = "200" ] || [ "$status" = "304" ]; then
-              echo "✅ Deploy OK"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "⚠️ Deploy não respondeu 200. Verifique o dashboard do Cloudflare Pages."
-          exit 1
+          set -e
+          check_url() {
+            local url="$1"
+            local label="$2"
+            for i in 1 2 3 4 5; do
+              status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$url" || echo "000")
+              echo "$label tentativa $i: HTTP $status ($url)"
+              if [ "$status" = "200" ] || [ "$status" = "304" ]; then
+                return 0
+              fi
+              sleep 8
+            done
+            echo "::error::$label não respondeu 200/304 após deploy"
+            return 1
+          }
+          check_url "${{ env.PREVIEW_URL }}/" "Pages preview"
+          check_url "${{ env.PRODUCTION_URL }}/" "Domínio produção"
+
+      - name: Commit status (success)
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.sha
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha,
+              state: 'success',
+              target_url: process.env.PRODUCTION_URL,
+              description: 'Cloudflare Pages — produção OK',
+              context: 'cloudflare-pages/production',
+            })
+
+      - name: Commit status (failure)
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: 'failure',
+              target_url: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${context.runId}`,
+              description: 'Deploy Cloudflare Pages falhou',
+              context: 'cloudflare-pages/production',
+            })
+
+      - name: Notify Slack on failure
+        if: failure()
+        continue-on-error: true
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "🚨 *GymSite Frontend deploy failed*\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}\nAuthor: ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Ver run>"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Resumo do deploy
+        if: always()
+        run: |
+          echo "### Deploy Frontend" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Projeto: \`${{ env.PAGES_PROJECT }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Produção: ${{ env.PRODUCTION_URL }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Preview: ${{ env.PREVIEW_URL }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Wrangler: ${{ steps.cloudflare.outputs.command-output || 'n/a' }}" >> "$GITHUB_STEP_SUMMARY"
