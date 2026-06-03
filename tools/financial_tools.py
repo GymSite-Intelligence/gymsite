@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 # tools/financial_tools.py
 """
 Modelagem financeira pra viabilidade de academia (schema v2).
@@ -230,6 +230,13 @@ STRESS_TESTS = [
     {"id": "ticket_menos_15pct",     "label": "Ticket -15%",      "delta_ticket": -0.15},
 ]
 
+# Ticket mensal sustentável ≈ % da renda domiciliar (ACAD / A2).
+TICKET_RENDA_PCT: dict[str, float] = {
+    "low": 0.08,
+    "mid": 0.12,
+    "premium": 0.15,
+}
+
 # Custo de capital pra cálculo de VPL/TIR (12% a.a. ≈ Selic + premium fitness)
 CUSTO_CAPITAL_ANUAL = 0.12
 
@@ -319,7 +326,10 @@ def calcular_viabilidade_3_cenarios(
     destino_lat: float | None = None,
     destino_lng: float | None = None,
     fornecedor_principal: str = "default",
+    capex_indices: dict | None = None,
+    renda_media_bairro: float | None = None,
 ) -> dict:
+    _capex_ctx = _resolve_capex_indices(uf, capex_indices)
     # Benchmarks setoriais atualizados (Panorama Fitness Brasil mais recente).
     # Sobrescreve constantes ACAD 2024 hardcoded quando Search Grounding
     # consegue extrair dados. Fallback é o próprio default — pipeline nunca
@@ -346,6 +356,7 @@ def calcular_viabilidade_3_cenarios(
     stress test "matriculas_menos_30pct" implícito.
     """
     cenarios = {}
+    alertas_ticket: list[str] = []
 
     # CAPEX e custos comuns que não dependem do modelo
     iptu_mensal = CUSTOS_DETALHADOS_BASE["iptu_mensal_base"]
@@ -363,8 +374,11 @@ def calcular_viabilidade_3_cenarios(
         equipamentos_por_cenario = {"low": None, "mid": None, "premium": None}
 
     for faixa_key, faixa in TICKET_FAIXAS.items():
-        # Ticket: prefere valor atualizado do benchmark setorial, fallback no hardcode
-        ticket = _ticket_dinamico.get(faixa_key) or faixa["ticket_medio"]
+        raw_ticket = float(_ticket_dinamico.get(faixa_key) or faixa["ticket_medio"])
+        ticket, ticket_notes = _resolver_ticket_faixa(
+            faixa_key, raw_ticket, renda_media_bairro
+        )
+        alertas_ticket.extend(ticket_notes)
 
         # ── DEMANDA: 3 calibrações de matrículas + pico simultâneo ──
         calibracoes = MATRICULADOS_POR_M2[faixa_key]
@@ -413,6 +427,7 @@ def calcular_viabilidade_3_cenarios(
             destino_lat=destino_lat,
             destino_lng=destino_lng,
             fornecedor_principal=fornecedor_principal,
+            capex_indices=_capex_ctx,
         )["total"]
         folha = CUSTOS_DETALHADOS_BASE["folha_por_modelo"][faixa_key]
         custos = {
@@ -468,6 +483,7 @@ def calcular_viabilidade_3_cenarios(
             destino_lat=destino_lat,
             destino_lng=destino_lng,
             fornecedor_principal=fornecedor_principal,
+            capex_indices=_capex_ctx,
         )
         capital_giro = round(
             custos_totais * CAPEX_DETALHADO_BASE["capital_giro_meses"], 2
@@ -555,25 +571,148 @@ def calcular_viabilidade_3_cenarios(
             "capex_estimado": capex_detalhado["total"],
         }
 
-    melhor = max(cenarios.values(), key=lambda x: x["lucro_mensal_estimado"])
+    melhor = _escolher_cenario_recomendado(cenarios, renda_media_bairro)
+    alertas_benchmark = _alertas_vs_sector_listed(cenarios)
+    alertas_ticket.extend(_bench.get("ticket_sanity_avisos") or [])
 
     return {
         "bairro": bairro,
         "cidade": cidade,
         "area_m2": area_m2,
         "aluguel_mensal": aluguel_mensal,
+        "renda_media_bairro": renda_media_bairro,
         "aviso": "Schema v2 — matrículas reais (não pico). Benchmarks: ACAD/Sebrae + Smart Fit/Bluefit/Bodytech.",
         "cenarios": cenarios,
         "recomendacao": melhor["modelo"],
         "melhor_lucro_mensal": melhor["lucro_mensal_estimado"],
         "melhor_payback_meses": melhor["payback_meses"],
         "schema_cenarios": "v2",
+        "alertas_benchmark": alertas_benchmark,
+        "alertas_ticket": alertas_ticket,
     }
 
 
 # ─────────────────────────────────────────────────────────────────────────
 # Helpers do schema v2
 # ─────────────────────────────────────────────────────────────────────────
+
+def _resolver_ticket_faixa(
+    faixa_key: str,
+    raw_ticket: float,
+    renda_media_bairro: float | None,
+) -> tuple[float, list[str]]:
+    """Sanitiza ticket do benchmark + aplica teto por renda domiciliar local."""
+    from tools.benchmarks_tool import sanitizar_ticket_por_modelo
+
+    limpos, avisos = sanitizar_ticket_por_modelo({faixa_key: raw_ticket})
+    ticket = limpos.get(faixa_key, raw_ticket)
+
+    if renda_media_bairro and renda_media_bairro > 0:
+        pct = TICKET_RENDA_PCT.get(faixa_key, 0.12)
+        cap = round(renda_media_bairro * pct, 2)
+        if ticket > cap:
+            avisos.append(
+                f"ticket {faixa_key} capado em R${cap:.0f} "
+                f"({int(pct * 100)}% da renda bairro R${renda_media_bairro:.0f})"
+            )
+            ticket = cap
+    return round(ticket, 2), avisos
+
+
+def _renda_media_bairro(cidade: str, bairro: str, uf: str) -> float | None:
+    if not (bairro or "").strip():
+        return None
+    try:
+        from tools.bairro_renda_loader import enrich_demografia_bairro
+
+        demo = enrich_demografia_bairro({"bairro": {}}, cidade, bairro, uf or "")
+        val = (demo.get("bairro") or {}).get("renda_media")
+        return float(val) if val is not None else None
+    except Exception:
+        return None
+
+
+def _tier_mercado_por_renda(renda_media_bairro: float | None) -> str:
+    if not renda_media_bairro or renda_media_bairro <= 0:
+        return "mid"
+    if renda_media_bairro < 2500:
+        return "low"
+    if renda_media_bairro < 4500:
+        return "mid"
+    return "premium"
+
+
+def _faixa_key_de_modelo(modelo: str) -> str:
+    m = (modelo or "").lower()
+    if "premium" in m:
+        return "premium"
+    if "mid" in m:
+        return "mid"
+    return "low"
+
+
+def _escolher_cenario_recomendado(
+    cenarios: dict[str, Any],
+    renda_media_bairro: float | None,
+) -> dict[str, Any]:
+    """
+    Escolhe cenário alinhado ao tier de renda local — não só max(lucro) com ticket irreal.
+    """
+    preferido = _tier_mercado_por_renda(renda_media_bairro)
+    ordem = {"low": 0, "mid": 1, "premium": 2}
+    viaveis = [
+        c for c in cenarios.values()
+        if c.get("viabilidade") not in ("INVIAVEL", None)
+    ]
+    pool = viaveis or list(cenarios.values())
+
+    def _rank(c: dict[str, Any]) -> tuple[float, float, float]:
+        faixa = _faixa_key_de_modelo(c.get("modelo", ""))
+        tier_gap = abs(ordem.get(faixa, 1) - ordem.get(preferido, 1))
+        lucro = float(c.get("lucro_mensal_estimado") or 0)
+        payback = float(c.get("payback_meses") or 999)
+        # Prioriza tier de mercado, depois lucro, depois payback menor.
+        return (-tier_gap, lucro, -payback)
+
+    return max(pool, key=_rank)
+
+
+def _alertas_vs_sector_listed(cenarios: dict[str, Any]) -> list[str]:
+    """Compara cenário realista (mid) com KPIs SMFT3 do snapshot CVM."""
+    try:
+        from tools.cvm_listed_metrics import kpis_smart_fit
+
+        kpis = kpis_smart_fit()
+    except Exception:
+        return []
+    margem_ref = kpis.get("margem_ebitda_pct")
+    alav_ref = kpis.get("divida_liquida_ebitda")
+    if margem_ref is None and alav_ref is None:
+        return []
+
+    alertas: list[str] = []
+    base = cenarios.get("mid") or cenarios.get("low")
+    if not base:
+        return alertas
+
+    margem = float(base.get("margem_percentual") or 0)
+    payback = int(base.get("payback_meses") or 999)
+
+    if margem_ref is not None and margem < float(margem_ref) * 0.7:
+        alertas.append(
+            f"⚠️ Margem operacional {margem:.1f}% abaixo de 70% da margem EBITDA "
+            f"Smart Fit (SMFT3, CVM ~{margem_ref}%)"
+        )
+    if payback > 48:
+        alertas.append(
+            "⚠️ Payback > 48 meses — acima do horizonte típico de rede listada (validar premissas)"
+        )
+    if alav_ref is not None and payback > 60:
+        alertas.append(
+            f"⚠️ Payback estendido com alavancagem setorial SMFT3 ~{alav_ref}x DL/EBITDA (referência CVM)"
+        )
+    return alertas
+
 
 def _premissa_calibracao(modelo: str, calibracao: str) -> str:
     """Texto-fonte da calibração — pra UI mostrar 'de onde veio o número'."""
@@ -591,6 +730,50 @@ def _premissa_calibracao(modelo: str, calibracao: str) -> str:
     return fontes.get((modelo, calibracao), "benchmark setorial")
 
 
+_RATIO_LOW_MID = 200.0 / 350.0
+_RATIO_PREMIUM_MID = 600.0 / 350.0
+
+
+def _resolve_capex_indices(
+    uf: str,
+    capex_indices: dict | None = None,
+) -> dict | None:
+    if capex_indices:
+        return capex_indices
+    if not (uf or "").strip():
+        return None
+    try:
+        from tools.sinapi_indices import capex_indices_for_uf
+
+        block = capex_indices_for_uf(uf)
+        if (block.get("fonte_obra") or "").startswith("benchmark_fixo"):
+            return None
+        return block
+    except Exception:
+        return None
+
+
+def _obra_por_m2_modelo(
+    modelo: str,
+    *,
+    capex_indices: dict | None = None,
+) -> float:
+    """R$/m² obra adaptação: bundle SINAPI > fallback CAPEX_DETALHADO_BASE."""
+    modelo = (modelo or "mid").lower()
+    if capex_indices:
+        por_mod = capex_indices.get("obra_adaptacao_por_m2_por_modelo")
+        if isinstance(por_mod, dict) and por_mod.get(modelo) is not None:
+            return float(por_mod[modelo])
+        mid = capex_indices.get("obra_adaptacao_por_m2")
+        if mid is not None and modelo == "mid":
+            return float(mid)
+        if mid is not None:
+            ratios = {"low": _RATIO_LOW_MID, "premium": _RATIO_PREMIUM_MID}
+            if modelo in ratios:
+                return round(float(mid) * ratios[modelo], 2)
+    return float(CAPEX_DETALHADO_BASE["obra_adaptacao_por_m2"][modelo])
+
+
 def _calcular_capex_detalhado(
     area_m2: float,
     modelo: str,
@@ -599,6 +782,7 @@ def _calcular_capex_detalhado(
     destino_lat: float | None = None,
     destino_lng: float | None = None,
     fornecedor_principal: str = "default",
+    capex_indices: dict | None = None,
 ) -> dict:
     """Breakdown CAPEX com contingência + frete ANTT.
 
@@ -610,7 +794,7 @@ def _calcular_capex_detalhado(
         equip = equipamentos_override
     else:
         equip = area_m2 * CAPEX_DETALHADO_BASE["equipamentos_por_m2"][modelo]
-    obra = area_m2 * CAPEX_DETALHADO_BASE["obra_adaptacao_por_m2"][modelo]
+    obra = area_m2 * _obra_por_m2_modelo(modelo, capex_indices=capex_indices)
     projeto = CAPEX_DETALHADO_BASE["projeto_arquitetonico"]
     alvara = CAPEX_DETALHADO_BASE["alvara_e_taxas"]
 
@@ -778,14 +962,52 @@ async def analise_financeira_a4_completo(
         Dict mesclando viabilidade financeira + detalhes da pesquisa de aluguel,
         pronto pra A4 emitir como JSON via output_key="analise_financeira".
     """
+    from tools.aluguel_municipio_portais import (
+        MIN_SAMPLES_ALTA,
+        pesquisar_aluguel_municipio,
+    )
+    from tools.enrichment_cache import cached_aluguel_portais, cached_bcb_imobiliario
     from tools.gemini_search_grounding import pesquisar_aluguel_mediana
 
-    # 1. Pesquisa aluguel via 3 queries paralelas
-    aluguel = await pesquisar_aluguel_mediana(bairro, cidade, uf, area_m2_min, area_m2_max)
-    mediana = aluguel.get("mediana_r_m2", 0.0)
-    min_r = aluguel.get("min_r_m2", 0.0)
-    max_r = aluguel.get("max_r_m2", 0.0)
-    queries_ok = aluguel.get("queries_com_dados", 0)
+    municipio_cached = cached_aluguel_portais()
+    if municipio_cached is not None:
+        municipio = municipio_cached
+    else:
+        municipio = await pesquisar_aluguel_municipio(
+            cidade, uf, area_m2_min, area_m2_max
+        )
+    ref_municipio = municipio.get("aluguel_municipio_referencia") or {}
+    n_validos_t1 = int(municipio.get("n_validos") or 0)
+    tier1_vazio = n_validos_t1 == 0
+    tier1_suficiente = bool(municipio.get("tier1_suficiente"))
+    motivo_tier1: str | None = None
+    tier_usado = 1
+
+    if tier1_suficiente:
+        mediana = municipio.get("mediana_r_m2", 0.0)
+        min_r = municipio.get("min_r_m2", 0.0)
+        max_r = municipio.get("max_r_m2", 0.0)
+        queries_ok = n_validos_t1
+        aluguel = municipio
+    else:
+        if tier1_vazio:
+            motivo_tier1 = (
+                f"Portais municipais (ZAP/Viva/OLX): nenhum anúncio válido em "
+                f"{cidade}{f'/{uf}' if uf else ''} na faixa {area_m2_min}–{area_m2_max} m²."
+            )
+        else:
+            motivo_tier1 = (
+                f"Portais municipais: amostra insuficiente (N={n_validos_t1}, "
+                f"mínimo recomendado {MIN_SAMPLES_ALTA})."
+            )
+        aluguel = await pesquisar_aluguel_mediana(
+            bairro, cidade, uf, area_m2_min, area_m2_max
+        )
+        mediana = aluguel.get("mediana_r_m2", 0.0)
+        min_r = aluguel.get("min_r_m2", 0.0)
+        max_r = aluguel.get("max_r_m2", 0.0)
+        queries_ok = aluguel.get("queries_com_dados", 0)
+        tier_usado = 2 if mediana and mediana > 0 else 3
 
     # 2. Calcula viabilidade 3 cenários (síncrono — só matemática)
     # Schema v1.5: propaga tipo_negocio + tamanho_preset pra cascata
@@ -806,17 +1028,124 @@ async def analise_financeira_a4_completo(
         fornecedor_principal=fornecedor_principal,
     )
 
-    # Anexa transparência do tier 1 pra debug/auditoria
+    fin.setdefault("alertas", [])
+    for av in fin.pop("alertas_ticket", []) or []:
+        if av not in fin["alertas"]:
+            fin["alertas"].append(av)
+    for av in fin.pop("alertas_benchmark", []) or []:
+        if av not in fin["alertas"]:
+            fin["alertas"].append(av)
+
+    if tier_usado == 1:
+        fin["fonte_aluguel"] = (
+            f"Portais municipais (ZAP/Viva/OLX) | N={queries_ok}"
+        )
+        fin["aviso_metodologia_aluguel"] = municipio.get("norte") or municipio.get("aviso", "")
+    elif tier_usado == 2 and mediana and mediana > 0:
+        fin["fonte_aluguel"] = (
+            f"Search Grounding (mediana de {queries_ok} queries)"
+            if queries_ok
+            else "Search Grounding (Tier 2 — portais sem amostra)"
+        )
+        fin["aviso_metodologia_aluguel"] = (
+            f"⚠️ {motivo_tier1} "
+            f"Fonte ativa: Search Grounding — mediana R$ {float(mediana):.0f}/m² "
+            f"({queries_ok} consulta(s) com dados). "
+            "Panorama web municipal; não substitui cotação de locador."
+        )
+        alerta_t2 = (
+            "Aluguel no modelo: portais municipais "
+            + ("sem amostra (N=0)" if tier1_vazio else f"com amostra baixa (N={n_validos_t1})")
+            + "; Search Grounding é a referência ativa — validar com imobiliária local."
+        )
+        if alerta_t2 not in fin["alertas"]:
+            fin["alertas"].append(alerta_t2)
+    elif tier_usado >= 3:
+        fin["fonte_aluguel"] = fin.get("fonte_aluguel") or "Benchmark ACAD / FipeZap"
+        fin["aviso_metodologia_aluguel"] = (
+            f"⚠️ {motivo_tier1} Search Grounding sem valores parseáveis. "
+            "Aluguel no modelo usa benchmark setorial — validar cotação local."
+        )
+        alerta_t3 = (
+            "Aluguel: portais e Search Grounding sem mediana utilizável; "
+            "modelo financeiro em benchmark ACAD/FipeZap."
+        )
+        if alerta_t3 not in fin["alertas"]:
+            fin["alertas"].append(alerta_t3)
+        if n_validos_t1 < MIN_SAMPLES_ALTA:
+            legado = (
+                "Aluguel: amostra municipal nos portais insuficiente; "
+                "usando benchmark ACAD/Sebrae — validar cotação local."
+            )
+            if legado not in fin["alertas"]:
+                fin["alertas"].append(legado)
+
+    referencia_macro_bcb = None
+    if tier1_vazio:
+        bcb_cached = cached_bcb_imobiliario()
+        if bcb_cached is not None:
+            referencia_macro_bcb = bcb_cached
+        else:
+            try:
+                from tools.bcb_imobiliario_olinda import extrair_resumo_imobiliario
+
+                ctx = f"{cidade}/{uf}" if uf else cidade
+                referencia_macro_bcb = extrair_resumo_imobiliario(cidade_contexto=ctx)
+            except Exception as exc:
+                referencia_macro_bcb = {
+                    "ok": False,
+                    "erro": str(exc)[:200],
+                    "cidade_contexto": cidade,
+                    "norte": (
+                        "Panorama macro BCB indisponível nesta execução; "
+                        "não é referência de aluguel local (R$/m²)."
+                    ),
+                }
+
+    fin["aluguel_municipio_referencia"] = ref_municipio
+    fin["referencia_macro_bcb"] = referencia_macro_bcb
     fin["aluguel_pesquisa_detalhes"] = {
+        "tier": tier_usado,
+        "tier1_vazio": tier1_vazio,
+        "tier1_suficiente": tier1_suficiente,
+        "n_validos_tier1": n_validos_t1,
+        "motivo_tier1": motivo_tier1,
         "mediana_r_m2": mediana,
         "min_r_m2": min_r,
         "max_r_m2": max_r,
         "queries_com_dados": queries_ok,
         "valores_coletados": aluguel.get("valores_coletados", []),
+        "faixa_rs_m2": (
+            ref_municipio.get("faixa_rs_m2")
+            or municipio.get("faixa_rs_m2")
+            or (
+                {"p25": min_r, "mediana": mediana, "p75": max_r}
+                if tier_usado == 2 and mediana
+                else None
+            )
+        ),
+        "confianca_municipio": ref_municipio.get("confianca") or municipio.get("confianca"),
+        "classificacao_municipio": municipio.get("classificacao"),
+        "tier1_tentativa": {
+            "n_validos": n_validos_t1,
+            "confianca": municipio.get("confianca"),
+            "classificacao": municipio.get("classificacao"),
+            "aviso_portais": municipio.get("aviso"),
+            "erros_portais": municipio.get("erros", [])[:10],
+            "urls_por_portal": {
+                p: len(u) for p, u in (municipio.get("urls_consultadas") or {}).items()
+            },
+        },
         "fontes_resumo": [
             {"query": (f.get("query") or "")[:60], "n_valores": f.get("n_valores", 0)}
             for f in (aluguel.get("fontes") or [])
+        ]
+        if tier_usado == 2
+        else [
+            {"portal": p, "n_urls": len(u)}
+            for p, u in (municipio.get("urls_consultadas") or {}).items()
         ],
+        "erros_portais": municipio.get("erros", [])[:10],
     }
     # Schema v1.5: contexto do tamanho/tipo pro A4 redator referenciar
     # benchmarks corretos e pro markdown final mostrar a faixa.
@@ -909,6 +1238,7 @@ def analise_financeira_completa(
         destino_lat=destino_lat,
         destino_lng=destino_lng,
         fornecedor_principal=fornecedor_principal,
+        renda_media_bairro=_renda_media_bairro(cidade, bairro, uf),
     )
 
     viabilidade["fonte_aluguel"] = fonte_aluguel
