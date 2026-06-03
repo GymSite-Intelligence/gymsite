@@ -52,6 +52,7 @@ from tools.redis_rate_limit import RateLimitMiddleware
 from tools.redis_cache import RedisCacheMiddleware
 from tools.redis_queue import RedisQueue, gymsite_worker
 from tools.redis_pubsub import notify_relatorio_pronto, notify_prospeccao_pronta
+from tools.relatorio_completeness import EMPTY_REPORT_MSG, validate_relatorio_has_content
 from pydantic import BaseModel, Field
 from pathlib import Path
 
@@ -100,7 +101,7 @@ def _resolve_relatorio_uuid(sb, relatorio_id: str) -> str:
             .maybe_single()
             .execute()
         )
-        if res.data:
+        if res and res.data:
             return res.data["id"]
     return relatorio_id
 
@@ -117,6 +118,7 @@ _STALE_MSG = (
 # Teto de wall-clock por execução (fila + retries 429 + ADK). Default 30 min.
 # Não substitui resume parcial do ADK — apenas evita runs de 50+ min.
 _PIPELINE_MAX_WALL_SEC = int(os.getenv("PIPELINE_MAX_WALL_SEC", "1800"))
+_PIPELINE_HEARTBEAT_SEC = int(os.getenv("PIPELINE_HEARTBEAT_SEC", "60"))
 
 
 class PipelineWallTimeoutError(TimeoutError):
@@ -171,16 +173,37 @@ def _mark_pipeline_failed(
 
 def _recover_stale_running_reports(sb, *, relatorio_id: str | None = None) -> int:
     """Marca como failed relatórios running/queued órfãos (sem output)."""
-    cutoff = _pipeline_stale_cutoff().isoformat()
+    rid_uuid: str | None = None
+    if relatorio_id:
+        rid_uuid = _resolve_relatorio_uuid(sb, relatorio_id)
+
+    try:
+        rpc_params: dict[str, Any] = {"p_orphan_minutes": _PIPELINE_ORPHAN_MINUTES}
+        if rid_uuid:
+            rpc_params["p_relatorio_id"] = rid_uuid
+        rpc_res = sb.rpc("recover_stale_running_reports", rpc_params).execute()
+        n = int(rpc_res.data) if rpc_res.data is not None else 0
+        if n:
+            logger.warning(
+                "recover_stale_running_reports (RPC): %d órfão(s)%s",
+                n,
+                f" incl. {rid_uuid}" if rid_uuid else "",
+            )
+        return n
+    except Exception as rpc_err:
+        logger.debug("recover_stale_running_reports RPC indisponível: %s", rpc_err)
+
+    cutoff = _pipeline_stale_cutoff()
+    cutoff_iso = cutoff.isoformat()
     try:
         q = (
             sb.table("relatorios")
             .select("id, status, updated_at")
             .in_("status", ["running", "queued"])
-            .lt("updated_at", cutoff)
+            .lt("updated_at", cutoff_iso)
         )
-        if relatorio_id:
-            q = q.eq("id", _resolve_relatorio_uuid(sb, relatorio_id))
+        if rid_uuid:
+            q = q.eq("id", rid_uuid)
         rows = q.execute().data or []
         recovered = 0
         for row in rows:
@@ -202,8 +225,66 @@ def _recover_stale_running_reports(sb, *, relatorio_id: str | None = None) -> in
             logger.warning("relatório órfão recuperado: %s (era %s)", rid, row.get("status"))
         return recovered
     except Exception as e:
-        logger.warning("recover_stale_running_reports: %s", e)
+        logger.error("recover_stale_running_reports falhou: %s", e, exc_info=True)
         return 0
+
+
+def _recover_done_empty_reports(sb, *, relatorio_id: str | None = None) -> int:
+    """Marca como failed relatórios done sem conteúdo persistido (outputs ausentes/vazios)."""
+    rid_uuid: str | None = None
+    if relatorio_id:
+        rid_uuid = _resolve_relatorio_uuid(sb, relatorio_id)
+
+    try:
+        q = sb.table("relatorios").select("id, status").eq("status", "done")
+        if rid_uuid:
+            q = q.eq("id", rid_uuid)
+        rows = q.execute().data or []
+        recovered = 0
+        for row in rows:
+            rid = row["id"]
+            ok, err = validate_relatorio_has_content(sb, rid)
+            if ok:
+                continue
+            sb.table("relatorios").update({
+                "status": "failed",
+                "erro_mensagem": (err or EMPTY_REPORT_MSG)[:500],
+            }).eq("id", rid).execute()
+            recovered += 1
+            logger.warning(
+                "relatório done sem conteúdo recuperado: %s — %s",
+                rid,
+                err,
+            )
+        return recovered
+    except Exception as e:
+        logger.error("recover_done_empty_reports falhou: %s", e, exc_info=True)
+        return 0
+
+
+async def _touch_relatorio_heartbeat(sb, relatorio_id: str) -> None:
+    """Atualiza updated_at (via trigger) enquanto o pipeline ADK está ativo."""
+    try:
+        sb.table("relatorios").update({"status": "running"}).eq(
+            "id", relatorio_id
+        ).eq("status", "running").execute()
+    except Exception as e:
+        logger.debug("heartbeat %s: %s", relatorio_id, e)
+
+
+async def _pipeline_heartbeat_loop(
+    sb,
+    relatorio_id: str,
+    stop: asyncio.Event,
+) -> None:
+    interval = max(15, _PIPELINE_HEARTBEAT_SEC)
+    while not stop.is_set():
+        await _touch_relatorio_heartbeat(sb, relatorio_id)
+        try:
+            await asyncio.wait_for(stop.wait(), timeout=float(interval))
+            return
+        except asyncio.TimeoutError:
+            continue
 
 
 # Observability + graceful shutdown
@@ -395,11 +476,18 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
     from google.adk.sessions import InMemorySessionService
     from google.genai.types import Content, Part
     from gymsite_intelligence.agent import root_agent
+    from tools.enrichment_cache import (
+        inject_cache_context,
+        reset_pipeline_enrichment_context,
+        set_pipeline_enrichment_context,
+    )
+    from tools.market_bundle import inject_market_bundle_context
     from tools.research_provider import set_a0_research_provider
     from tools.token_telemetry import reset_run_id, _get_run_id
 
     from tools.api_cost_tracker import current_relatorio_id
     token = current_relatorio_id.set(relatorio_id)
+    enrichment_cv_token = None
     try:
         with span("pipeline.adk.run", relatorio_id=relatorio_id, cidade=payload.cidade):
             set_a0_research_provider(payload.a0_research_provider or "auto")
@@ -407,33 +495,70 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
             # Reset run_id pra cada tentativa — telemetria fica separada por tentativa.
             reset_run_id()
 
+            uf = (payload.uf or "CE")[:2]
+            enrichment_ctx = inject_cache_context(
+                payload.cidade,
+                payload.bairro,
+                uf,
+                {},
+                area_min=payload.area_m2_min,
+                area_max=payload.area_m2_max,
+            )
+            enrichment_ctx = inject_market_bundle_context(
+                payload.cidade,
+                payload.bairro,
+                uf,
+                enrichment_ctx,
+            )
+            enrichment_cv_token = set_pipeline_enrichment_context(enrichment_ctx)
+            if enrichment_ctx.get("skip_tools"):
+                logger.info(
+                    "enrichment cache hit cache_key=%s skip_tools=%s",
+                    enrichment_ctx.get("cache_key"),
+                    enrichment_ctx.get("skip_tools"),
+                )
+
             session_service = InMemorySessionService()
             session_id = f"api_{relatorio_id}_{int(time.time())}"
             user_id = "api_user"
+
+            session_state: dict = {
+                "relatorio_id": relatorio_id,
+                "input_params": {
+                    "cidade": payload.cidade,
+                    "uf": payload.uf,
+                    "bairro": payload.bairro,
+                    "area_m2_min": payload.area_m2_min,
+                    "area_m2_max": payload.area_m2_max,
+                    "tamanho_preset": payload.tamanho_preset,
+                    "tipo_negocio": payload.tipo_negocio,
+                    "publico_alvo": payload.publico_alvo,
+                    "genero_alvo": payload.genero_alvo,
+                    "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
+                    "a0_research_provider": payload.a0_research_provider or "auto",
+                },
+            }
+            for key in (
+                "local_market_summary",
+                "cache_key",
+                "skip_tools",
+                "enrichment_cache",
+                "enrichment_cache_fresh",
+                "market_bundle",
+                "market_bundle_available",
+                "market_bundle_fresh",
+                "market_bundle_briefing_md",
+                "skip_deep_research",
+                "market_bundle_partial",
+            ):
+                if key in enrichment_ctx:
+                    session_state[key] = enrichment_ctx[key]
 
             await session_service.create_session(
                 app_name="gymsite",
                 user_id=user_id,
                 session_id=session_id,
-                state={
-                    "relatorio_id": relatorio_id,
-                    # Params estruturados acessíveis via tool_context.state em qualquer
-                    # tool — usado por A1 GeoScout (listings OLX+ImovelWeb filtra por
-                    # area_min/max) e potencialmente A4 (estacionamento, tipo_negocio).
-                    "input_params": {
-                        "cidade": payload.cidade,
-                        "uf": payload.uf,
-                        "bairro": payload.bairro,
-                        "area_m2_min": payload.area_m2_min,
-                        "area_m2_max": payload.area_m2_max,
-                        "tamanho_preset": payload.tamanho_preset,
-                        "tipo_negocio": payload.tipo_negocio,
-                        "publico_alvo": payload.publico_alvo,
-                        "genero_alvo": payload.genero_alvo,
-                        "estacionamento_obrigatorio": payload.estacionamento_obrigatorio,
-                        "a0_research_provider": payload.a0_research_provider or "auto",
-                    },
-                },
+                state=session_state,
             )
 
             runner = Runner(
@@ -445,20 +570,35 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
             prompt = _build_pipeline_prompt(payload)
             message = Content(role="user", parts=[Part(text=prompt)])
 
+            sb = _supabase_client()
+            hb_stop = asyncio.Event()
+            hb_task = asyncio.create_task(
+                _pipeline_heartbeat_loop(sb, relatorio_id, hb_stop)
+            )
+
             # ADK pode ignorar asyncio.CancelledError enquanto tools síncronas /
             # thread pool rodam — o teto global em _run_pipeline_async cancela a
             # task; Layer 3 (_recover_stale_running_reports) corrige status no DB.
-            async for _event in runner.run_async(
-                user_id=user_id,
-                session_id=session_id,
-                new_message=message,
-            ):
-                pass
+            try:
+                async for _event in runner.run_async(
+                    user_id=user_id,
+                    session_id=session_id,
+                    new_message=message,
+                ):
+                    pass
+            finally:
+                hb_stop.set()
+                hb_task.cancel()
+                try:
+                    await hb_task
+                except asyncio.CancelledError:
+                    pass
 
             run_id = _get_run_id()
-            sb = _supabase_client()
             return _agregar_e_persistir_custos(sb, relatorio_id, run_id)
     finally:
+        if enrichment_cv_token is not None:
+            reset_pipeline_enrichment_context(enrichment_cv_token)
         current_relatorio_id.reset(token)
 
 
@@ -541,6 +681,21 @@ async def _run_pipeline_async_body(
             raise last_exc
 
         elapsed = int(time.time() - t0)
+        ok_content, empty_err = validate_relatorio_has_content(sb, relatorio_id)
+        if not ok_content:
+            logger.error(
+                "pipeline %s concluiu ADK sem conteúdo persistido: %s",
+                relatorio_id,
+                empty_err,
+            )
+            _mark_pipeline_failed(
+                sb,
+                relatorio_id,
+                elapsed=elapsed,
+                erro_mensagem=empty_err or EMPTY_REPORT_MSG,
+            )
+            return
+
         sb.table("relatorios").update({
             "status": "done",
             "tempo_execucao_segundos": elapsed,
@@ -735,6 +890,64 @@ def health_maps() -> dict:
     }
 
 
+@app.get("/api/geocode/bairro")
+def geocode_bairro_endpoint(
+    bairro: str,
+    cidade: str,
+    uf: str | None = None,
+) -> dict:
+    """Centro aproximado do bairro (mapa de relatórios — não pin de imóvel)."""
+    from tools.maps_tools import geocode_endereco
+
+    parts = [p.strip() for p in (bairro, cidade, uf or "", "Brasil") if p and p.strip()]
+    endereco = ", ".join(parts)
+    return geocode_endereco(endereco)
+
+
+@app.get("/api/maps/street-view")
+def maps_street_view_proxy(
+    lat: float,
+    lng: float,
+    w: int = 640,
+    h: int = 400,
+):
+    """Proxy Street View Static — chave Google só no servidor."""
+    from fastapi.responses import Response
+    from tools.maps_street_view import build_street_view_google_url
+    from tools.google_maps_key import get_google_maps_api_key
+
+    if not get_google_maps_api_key():
+        raise HTTPException(status_code=503, detail="GOOGLE_MAPS_API_KEY ausente")
+    url = build_street_view_google_url(lat, lng, width=w, height=h)
+    try:
+        import httpx
+
+        with httpx.Client(timeout=20, follow_redirects=True) as client:
+            r = client.get(url)
+        if r.status_code != 200:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Street View HTTP {r.status_code}",
+            )
+        ctype = r.headers.get("content-type") or "image/jpeg"
+        return Response(content=r.content, media_type=ctype)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/api/config/maps-js")
+def maps_js_config_endpoint() -> dict:
+    """
+    Config para Maps JavaScript API (heatmap /mapa).
+    Chave permanece server-side — mesmo padrão do proxy places-autocomplete.
+    """
+    from tools.maps_js_config import maps_js_config
+
+    return maps_js_config()
+
+
 @app.post("/api/places-autocomplete")
 def places_autocomplete_endpoint(body: PlacesAutocompleteInput) -> dict:
     """
@@ -914,18 +1127,25 @@ def get_status(relatorio_id: str) -> dict:
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
     _recover_stale_running_reports(sb, relatorio_id=rid)
-    res = sb.table("relatorios").select(
-        "id, status, erro_mensagem, tempo_execucao_segundos, data_execucao"
-    ).eq("id", rid).single().execute()
-    if not res.data:
+    _recover_done_empty_reports(sb, relatorio_id=rid)
+    res = (
+        sb.table("relatorios")
+        .select("id, status, erro_mensagem, tempo_execucao_segundos, data_execucao")
+        .eq("id", rid)
+        .maybe_single()
+        .execute()
+    )
+    if not res or not res.data:
         raise HTTPException(status_code=404, detail="relatório não encontrado")
     return res.data
 
 
 def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
     """Detail completo: joins de todas as tabelas filhas."""
-    header = sb.table("relatorios").select("*").eq("id", rid).single().execute()
-    if not header.data:
+    header = (
+        sb.table("relatorios").select("*").eq("id", rid).maybe_single().execute()
+    )
+    if not header or not header.data:
         raise HTTPException(status_code=404, detail="relatório não encontrado")
 
     inputs = sb.table("relatorio_inputs").select("*").eq("relatorio_id", rid).maybe_single().execute()
@@ -963,6 +1183,7 @@ def get_relatorio(relatorio_id: str) -> dict:
     """Detail completo: joins de todas as tabelas filhas."""
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _recover_done_empty_reports(sb, relatorio_id=rid)
     return _fetch_relatorio_payload(sb, rid)
 
 
@@ -1014,6 +1235,72 @@ def patch_entrante_validacao(relatorio_id: str, body: EntranteValidacaoInput) ->
         "relatorio_id", rid
     ).execute()
     return {"ok": True, "cnpj": cnpj_limpo, "contato_validado": body.validado}
+
+
+class EntranteEnriquecerInput(BaseModel):
+    cnpj: str = Field(..., min_length=11, max_length=18)
+    usar_apollo: bool = True
+
+
+@app.post("/api/relatorios/{relatorio_id}/entrantes-cnpj/enriquecer")
+def post_entrante_enriquecer(relatorio_id: str, body: EntranteEnriquecerInput) -> dict:
+    """
+    Enriquece um entrante (ReceitaWS + Apollo opcional) e persiste em entrantes_cnpj_90d.
+    Disparo manual — não roda no pipeline A6.
+    """
+    import re
+
+    from tools.cnpj_enrichment import enriquecer_entrante_unico
+
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    cnpj_limpo = re.sub(r"\D", "", body.cnpj)
+    if len(cnpj_limpo) != 14:
+        raise HTTPException(status_code=400, detail="CNPJ inválido")
+
+    out_res = (
+        sb.table("relatorio_outputs")
+        .select("entrantes_cnpj_90d")
+        .eq("relatorio_id", rid)
+        .maybe_single()
+        .execute()
+    )
+    block = (out_res.data or {}).get("entrantes_cnpj_90d") if out_res.data else None
+    if not isinstance(block, dict):
+        raise HTTPException(status_code=404, detail="entrantes_cnpj_90d não encontrado")
+
+    entrantes = block.get("entrantes") or []
+    idx = None
+    ent_raw: dict | None = None
+    for i, ent in enumerate(entrantes):
+        if not isinstance(ent, dict):
+            continue
+        ecnpj = re.sub(r"\D", "", str(ent.get("cnpj") or ""))
+        if ecnpj == cnpj_limpo:
+            idx = i
+            ent_raw = ent
+            break
+    if ent_raw is None or idx is None:
+        raise HTTPException(status_code=404, detail="CNPJ não está na lista de entrantes")
+
+    enriched, meta = enriquecer_entrante_unico(
+        ent_raw,
+        usar_apollo=body.usar_apollo,
+        max_receita=1,
+        forcar_receita=True,
+    )
+    entrantes[idx] = enriched
+    block["entrantes"] = entrantes
+    meta_prev = block.get("enriquecimento_meta")
+    if not isinstance(meta_prev, dict):
+        meta_prev = {}
+    meta_prev[f"manual_{cnpj_limpo}"] = meta
+    block["enriquecimento_meta"] = meta_prev
+
+    sb.table("relatorio_outputs").update({"entrantes_cnpj_90d": block}).eq(
+        "relatorio_id", rid
+    ).execute()
+    return {"ok": True, "cnpj": cnpj_limpo, "entrante": enriched, "meta": meta}
 
 
 @app.get("/api/relatorios/{relatorio_id}/pdf")
@@ -1286,8 +1573,14 @@ def atualizar_proposta_otimizacao(
     sb = _supabase_client()
 
     # Busca proposta para validar permissão
-    res_get = sb.table("otimizacoes_custo").select("*").eq("id", proposta_id).single().execute()
-    if not res_get.data:
+    res_get = (
+        sb.table("otimizacoes_custo")
+        .select("*")
+        .eq("id", proposta_id)
+        .maybe_single()
+        .execute()
+    )
+    if not res_get or not res_get.data:
         raise HTTPException(status_code=404, detail="Proposta não encontrada")
 
     proposta = res_get.data
