@@ -13,16 +13,15 @@
  *   done           → redirect automático
  *   failed         → cartão de erro com mensagem do backend + CTA voltar
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, AlertTriangle, Clock, Trash2 } from 'lucide-react'
+import { Loader2, AlertTriangle, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { supabase } from '@/lib/supabase'
-import { useDeleteRelatorio } from '@/hooks/useDeleteRelatorio'
+import { DeleteRelatorioButton } from '@/components/domain/DeleteRelatorioButton'
+import { API_BASE } from '@/lib/supabase'
 import { useRerunPipeline } from '@/hooks/useRerunPipeline'
-import { notify } from '@/lib/notify'
 import { trackPipeline, untrackPipeline } from '@/lib/pipeline-tracker'
 import { pipelineEtaWaitingLine } from '@/lib/pipeline-eta'
 
@@ -62,33 +61,7 @@ export function RelatorioAguardandoPage() {
     if (isValidId) trackPipeline(relatorioId)
   }, [isValidId, relatorioId])
 
-  const [armed, setArmed] = useState(false)
-  const armedTimeoutRef = useRef<number | null>(null)
-  const deleteMutation = useDeleteRelatorio()
   const rerunMutation = useRerunPipeline()
-
-  useEffect(() => {
-    return () => {
-      if (armedTimeoutRef.current) window.clearTimeout(armedTimeoutRef.current)
-    }
-  }, [])
-
-  function handleApagar() {
-    if (!armed) {
-      setArmed(true)
-      armedTimeoutRef.current = window.setTimeout(() => setArmed(false), 3000)
-      return
-    }
-    if (armedTimeoutRef.current) window.clearTimeout(armedTimeoutRef.current)
-    setArmed(false)
-    deleteMutation.mutate(relatorioId, {
-      onSuccess: () => {
-        notify.success('Relatório apagado')
-        navigate({ to: '/relatorios' })
-      },
-      onError: (err) => notify.error(err),
-    })
-  }
 
   function tentarNovamente() {
     rerunMutation.mutate({ relatorioId })
@@ -100,13 +73,16 @@ export function RelatorioAguardandoPage() {
     // Polling roda a cada 5s — não queremos toast a cada falha transitória.
     meta: { silent: true },
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('relatorios')
-        .select('id, status, erro_mensagem, tempo_execucao_segundos, data_execucao')
-        .eq('id', relatorioId)
-        .single()
-      if (error) throw new Error(`Supabase: ${error.message}`)
-      return data as unknown as StatusResponse
+      const res = await fetch(
+        `${API_BASE.replace(/\/$/, '')}/api/relatorios/${relatorioId}/status`,
+      )
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '')
+        throw new Error(
+          detail || `API status ${res.status} — verifique se o backend está no ar`,
+        )
+      }
+      return (await res.json()) as StatusResponse
     },
     refetchInterval: (q) => {
       const s = q.state.data?.status
@@ -190,6 +166,12 @@ export function RelatorioAguardandoPage() {
               </li>
             ))}
           </ol>
+          <div className="flex justify-center pt-2 border-t border-border">
+            <DeleteRelatorioButton
+              relatorioId={relatorioId}
+              onDeleted={() => navigate({ to: '/relatorios' })}
+            />
+          </div>
         </div>
       )}
 
@@ -232,23 +214,13 @@ export function RelatorioAguardandoPage() {
               >
                 Começar do zero
               </Button>
-              <Button
-                variant={armed ? 'destructive' : 'ghost'}
-                size="sm"
-                onClick={handleApagar}
-                disabled={deleteMutation.isPending}
-                className={armed ? '' : 'text-veredito-reprovado hover:text-veredito-reprovado hover:bg-veredito-reprovado/10'}
-              >
-                {deleteMutation.isPending ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Trash2 size={14} />
-                )}
-                {armed ? 'Confirmar exclusão?' : 'Apagar este relatório'}
-              </Button>
+              <DeleteRelatorioButton
+                relatorioId={relatorioId}
+                onDeleted={() => navigate({ to: '/relatorios' })}
+              />
             </div>
             <p className="text-[10px] text-muted-foreground">
-              "Tentar novamente" cria um relatório novo — o falho fica no histórico.
+              "Tentar novamente" cria um relatório novo — o anterior fica no histórico.
               {' '}"Apagar" remove permanentemente da base.
             </p>
           </AlertDescription>
