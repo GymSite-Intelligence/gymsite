@@ -97,3 +97,11 @@ Every module/file must have:
 - One logical change per commit
 - No WIP commits in PRs
 - Rebase before merging to keep linear history
+
+## 8. Análise e Correção de Erros
+
+Antes de afirmar que o contexto está incompleto, verifique se o conteúdo do arquivo foi realmente recebido na íntegra. Se o arquivo foi fornecido pelo usuário, assuma que está completo e prossiga com a análise.
+
+Após criar correções de erros, sempre execute os testes existentes e atualize o relatório de quantidade de erros (antes → depois) para validar o progresso.
+
+Identifique todos os erros no projeto, categorize por tipo (lint, runtime, segurança, etc.), conte o total por categoria. Corrija os erros fixáveis em ordem de severidade. Ao final, reporte: total inicial → total final → erros pendentes não-fixáveis.

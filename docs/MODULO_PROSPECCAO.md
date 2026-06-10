@@ -371,7 +371,9 @@ psql $DATABASE_URL -f db/migrations/20260529_prospeccao_oportunidades.sql
 # Backend (.env)
 SUPABASE_URL=https://<ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-APOLLO_API_KEY=apk_...          # opcional, para enriquecimento
+APOLLO_API_KEY=apk_...          # header x-api-key; master key para api_search
+APOLLO_ENRICH_ON_PIPELINE=0     # default: Apollo só via UI «Enriquecer» no relatório
+APOLLO_REVEAL_PERSONAL_EMAILS=1 # people/match revela e-mail (créditos)
 
 # Frontend (.env)
 VITE_API_BASE_URL=https://api.gymsite.app

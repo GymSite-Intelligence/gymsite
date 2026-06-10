@@ -26,6 +26,25 @@ Guia completo para expor o GymSite Intelligence via Cloudflare Tunnel com CORS s
 
 ---
 
+## 1.1 Dev local — tunnel desligado (menos ruído no Docker)
+
+Por padrão, `docker compose up -d` sobe **só a API** (`http://localhost:8000`). O `cloudflared` está no profile `tunnel`.
+
+```powershell
+# API local, sem logs do tunnel / probes da borda Cloudflare
+docker compose up -d api
+
+# Parar tunnel se ainda estiver rodando de antes
+docker compose stop cloudflared
+
+# Expor gymsite-api.vectracargo.com.br (frontend Pages em produção)
+docker compose --profile tunnel up -d
+```
+
+Com o tunnel parado, o site em **Pages** ainda abre, mas chamadas a `https://gymsite-api.vectracargo.com.br` falham até subir o profile `tunnel` (ou VM de produção).
+
+---
+
 ## 2. Arquivos
 
 ### 2.1 `cloudflared/config.yml`
