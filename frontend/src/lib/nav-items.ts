@@ -6,6 +6,7 @@ import {
   Globe2Icon,
   LayoutDashboardIcon,
   MapIcon,
+  MessageSquareIcon,
   TargetIcon,
 } from 'lucide-react'
 
@@ -45,6 +46,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Prospecção',
     to: '/prospeccao',
     icon: TargetIcon,
+  },
+  {
+    title: 'Assistente',
+    to: '/assistente',
+    icon: MessageSquareIcon,
   },
 ]
 

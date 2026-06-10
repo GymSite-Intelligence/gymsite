@@ -35,10 +35,12 @@ import { DashboardPage } from '@/routes/DashboardPage'
 import { MarketAtlasPage } from '@/routes/MarketAtlasPage'
 import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
+import { LeadAccessPage } from '@/routes/LeadAccessPage'
+import { AssistentePage } from '@/routes/AssistentePage'
 import type { Veredito } from '@/types/domain'
 
 // Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
-const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade', '/pdf-smoke'])
+const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade', '/pdf-smoke', '/acesso'])
 
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -73,6 +75,15 @@ const privacidadeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/privacidade',
   component: PrivacidadePage,
+})
+
+const leadAccessRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/acesso',
+  validateSearch: (search: Record<string, unknown>): { code?: string } => ({
+    code: typeof search.code === 'string' ? search.code : undefined,
+  }),
+  component: LeadAccessPage,
 })
 
 // ── Rotas autenticadas ─────────────────────────────────────────────────────
@@ -267,6 +278,12 @@ const pdfSmokeRoute = createRoute({
   component: PdfSmokePage,
 })
 
+const assistenteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/assistente',
+  component: AssistentePage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
@@ -284,6 +301,8 @@ const routeTree = rootRoute.addChildren([
   dashboardRoute,
   marketAtlasRoute,
   pdfSmokeRoute,
+  leadAccessRoute,
+  assistenteRoute,
 ])
 
 export const router = createRouter({ routeTree })
