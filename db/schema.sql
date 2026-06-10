@@ -224,10 +224,14 @@ create table if not exists cnpj_fitness_estabelecimentos (
   situacao_cadastral integer,
   data_situacao_cadastral date,
   nome_fantasia text,
+  razao_social text,
   cep text,
   logradouro text,
   numero text,
   complemento text,
+  bairro text,
+  email text,
+  telefone text,
   segmento_operacao text,
   created_at timestamptz not null default now()
 );
@@ -311,6 +315,10 @@ create table competidores (
   endereco text,
   bairro_concorrente text,
   place_id text,
+  lat numeric(10,6),
+  lng numeric(10,6),
+  distancia_km numeric(8,2),
+  google_maps_uri text,
 
   rating_oficial numeric(3,2),
   num_avaliacoes integer,
