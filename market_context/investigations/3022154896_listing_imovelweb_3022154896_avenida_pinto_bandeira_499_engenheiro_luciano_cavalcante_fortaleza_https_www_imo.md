@@ -3,63 +3,55 @@
      tier: grounded:gemini-2.5-flash
      endereco: Avenida Pinto Bandeira, 499
 Engenheiro Luciano Cavalcante, Fortaleza
-     data: 2026-05-28T15:03:05.254952
+     data: 2026-06-01T23:51:12.855754
 -->
 
 
 
-
-
-## Relatório de Investigação do Endereço Comercial
+**Relatório de Investigação de Endereço Comercial**
 
 **Endereço Alvo:** Avenida Pinto Bandeira, 499, Engenheiro Luciano Cavalcante, Fortaleza, CE
 
-### Sumário da Investigação:
+**1. Qual negócio opera HOJE neste endereço (nome fantasia e segmento)?**
+Não foi possível identificar um negócio específico operando atualmente no endereço Avenida Pinto Bandeira, 499, em Fortaleza, CE. As buscas não retornaram nenhuma empresa ou estabelecimento comercial listado para este número específico. Há menções da Avenida Pinto Bandeira e do bairro Engenheiro Luciano Cavalcante, mas não para o número 499. Academias como a Sportif Training Center foram encontradas na mesma avenida, mas em outro número (1077).
 
-A investigação do endereço "Avenida Pinto Bandeira, 499 Engenheiro Luciano Cavalcante, Fortaleza, CE" não conseguiu identificar com clareza qual negócio opera *hoje* no local. A URL do anúncio no Imovelweb fornecida no contexto (`https://www.imovelweb.com.br/propriedades/casa-engenheiro-luciano-cavalcante-fortaleza-ce-3022154896.html`) não pôde ser acessada, impedindo a obtenção de detalhes do imóvel ou informações adicionais que pudessem levar a um operador atual.
+**2. Está aberto, fechado, em reforma ou aparenta vago?**
+Dada a ausência de informações sobre um negócio em funcionamento e o fato de o imóvel estar anunciado para aluguel (conforme o contexto do relatório do investidor), o ponto aparenta estar vago. Não há evidências de que esteja em operação, fechado ou em reforma.
 
-Pesquisas genéricas pelo endereço resultaram em informações sobre o CEP e a localização da rua no bairro Engenheiro Luciano Cavalcante, mas não apontaram para um negócio específico operando no número 499. Outras empresas como "Fábrica de Negócios - Centro de Eventos" foram identificadas em Fortaleza, mas com endereços diferentes (Av. Monsenhor Tabosa, 740).
+**3. O anúncio de aluguel (se houver URL) bate com a realidade do local?**
+A URL fornecida para o anúncio do Imovelweb (https://www.imovelweb.com.br/propriedades/casa-engenheiro-luciano-cavalcante-fortaleza-ce-3022154896.html) não pôde ser acessada. Portanto, não foi possível verificar a coerência entre o anúncio e a realidade do local.
 
-Não foram encontradas notícias ou menções em redes sociais recentes (últimos 12 meses) que associem um negócio específico ao número 499 da Avenida Pinto Bandeira. A impossibilidade de acessar o anúncio original e de obter imagens recentes (como Google Street View) impede a verificação da realidade do local ou a inferência sobre sua condição (aberto, fechado, em reforma, vago).
+**4. Há notícias ou redes sociais recentes (12 meses) sobre o ponto?**
+Não foram encontradas notícias ou menções em redes sociais recentes (últimos 12 meses) que se refiram especificamente ao imóvel localizado na Avenida Pinto Bandeira, 499.
 
-**Perguntas Obrigatórias:**
-
-1.  **Qual negócio opera HOJE neste endereço (nome fantasia e segmento)?**
-    *   Não foi possível identificar um negócio operando no endereço hoje.
-
-2.  **Está aberto, fechado, em reforma ou aparenta vago?**
-    *   O status atual do imóvel é incerto devido à falta de informações acessíveis.
-
-3.  **O anúncio de aluguel (se houver URL) bate com a realidade do local?**
-    *   A URL do anúncio não pôde ser acessada, impossibilitando a comparação com a realidade do local.
-
-4.  **Há notícias ou redes sociais recentes (12 meses) sobre o ponto?**
-    *   Não foram encontradas notícias ou menções em redes sociais recentes diretamente relacionadas ao número 499 da Avenida Pinto Bandeira.
-
-5.  **Se era varejo/academia grande: houve fechamento ou substituição?**
-    *   Não há informações para determinar se um varejo/academia grande existia ou se houve fechamento/substituição.
+**5. Se era varejo/academia grande: houve fechamento ou substituição?**
+Não há informações disponíveis sobre a existência prévia de um varejo ou academia de grande porte neste endereço, tampouco sobre seu eventual fechamento ou substituição.
 
 ---
-
 ```json
 {
-  "status_operacao": "incerto",
+  "status_operacao": "vago",
   "operador_atual": null,
   "segmento": "vazio",
   "confianca": "baixa",
-  "coerencia_listing": "na",
+  "coerencia_listing": "incerto",
   "evidencias": [
     {
-      "fonte": "Resultado da busca (CEP Avenida Pinto Bandeira)",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFpijb5eXU3czD2ce-cCJDNCR6uNoZqasua357-50PxL45Uv_i8P4p_Y9QFMKRy1xE1Pkt17KmInTuq9b0HMIfgyIFkuYF16Q4eMholq-IvO5TInMw7nErkJ2dcp6jcfZKCBkTGB32JQmHuufISYzJQFFECxPy64JELGdisMRCz2NEg8nooGUFyImNLj7VKO1bp1qf9ff-WNiRv7wdQguuK",
-      "trecho": "Avenida Pinto Bandeira, Engenheiro Luciano Cavalcante, Fortaleza, CE."
+      "fonte": "Google Search",
+      "url": "https://www.google.com/search?q=Avenida+Pinto+Bandeira,+499+Fortaleza",
+      "trecho": "Buscas por 'Avenida Pinto Bandeira, 499 Fortaleza' e variações não retornaram um negócio específico em funcionamento."
     },
     {
-      "fonte": "Browse result (Fábrica de Negócios)",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHj5elj3qLuMGVA4xxKgT4TBC301Xo7VFj-ZZsZUCR7vbHlfDQdOTTiEU6SkviDqhDJazDkss6y_Xk6L2tPDCK7B-TjRmhjuQyKxfspCCcE4V2_16JvaubOc1lMmnH2WH67Yv7MlQGATjY=",
-      "trecho": "Fábrica de Negócios - Centro de Eventos em Fortaleza [...] Av. Monsenhor Tabosa, 740 – Meireles – Fortaleza – CE"
+      "fonte": "Imovelweb (URL fornecida)",
+      "url": "https://www.imovelweb.com.br/propriedades/casa-engenheiro-luciano-cavalcante-fortaleza-ce-3022154896.html",
+      "trecho": "A URL do anúncio não pôde ser acessada para verificação do conteúdo."
+    },
+    {
+      "fonte": "Google Search (Sportif Training Center)",
+      "url": "https://www.google.com/search?q=Sportif+Training+Center+Avenida+Pinto+Bandeira",
+      "trecho": "Academias como 'Sportif Training Center' estão localizadas na mesma avenida, mas em outro número (1077) e não no 499."
     }
   ],
-  "implicacao_site": "Recomenda-se uma visita física ao local para verificar o status operacional, o tipo de edificação e sua compatibilidade com uma academia, dado que as fontes online não fornecem informações claras para este endereço específico."
+  "implicacao_site": "O imóvel está anunciado para aluguel e parece estar vago. Seria necessário uma visita ao local para confirmar o estado atual e a compatibilidade com o perfil de academia."
 }
 ```
