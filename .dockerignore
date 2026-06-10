@@ -1,73 +1,40 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Virtualenvs
-.venv/
-venv/
-env/
-ENV/
-
-# OpenClaw edge (nao vai pro container)
-.openclaw-edge/
-
-# Frontend (servido em outro container/Cloudflare Pages)
-frontend/node_modules/
-frontend/dist/
-frontend/.next/
-
-# Git / IDE
-.git/
-.gitignore
-.vscode/
-.idea/
-.claude/
-.serena/
-.adk/
-
-# Caches de runtime do gymsite
+.env
+__pycache__
+.git
+*.pyc
+frontend/node_modules
+frontend/dist
 competitor_cache/
-market_context/
 debug/
 metrics/
-.playwright-mcp/
 
-# Secrets
-.env
-.env.local
-.env.*.local
-*.pem
-*.key
-*-sa-key.json
-gymsite-pipeline-sa-key.json
-
-# Docs (nao precisam no container)
-docs/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
+# Adicionando exclusoes que podem causar problemas no build
+supabase/
+.venv/
+.venv
+.pytest_cache/
+tests/
+scripts/
 *.log
-
-# CI/CD / devenv — smokes e testes Python entram na imagem
-scripts/deploy.sh
-scripts/setup-*
-scripts/bootstrap-*
-scripts/verify-*
-scripts/*.ps1
-scripts/*.sh
-scripts/__pycache__/
-scripts/*.log
-scripts/.env*
-
-nginx/
-.github/
-docker-compose*.yml
+*.png
+*.jpg
+*.jpeg
+docs/
+.next/
+.next-app/
+artifacts/
+credentials/
+cloudflared/
+cloudflared;C
+market_context/
+competitor_cache/
+debug/
+metrics/
+prints/
+data/
+pdf/
+prospecting/
+eval/
+scratch/
+tools/__pycache__/
+agents/__pycache__/

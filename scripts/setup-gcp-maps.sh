@@ -79,6 +79,7 @@ log "Recomendado: restrinja a chave para estas APIs:"
 log "  - Geocoding API"
 log "  - Places API (New)"
 log "  - Maps JavaScript API (se usar no frontend)"
+log "  - Distance Matrix API"
 log ""
 log "Copie a chave para o campo GOOGLE_MAPS_API_KEY no .env.production"
 

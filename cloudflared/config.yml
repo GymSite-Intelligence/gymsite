@@ -1,23 +1,30 @@
 tunnel: 12675577-d94b-4a19-b1df-a86713dbaf80
 credentials-file: /etc/cloudflared/credentials.json
 
+# Força HTTP/2 ao invés de QUIC (mais estável em redes com NAT/instabilidade)
+protocol: http2
+no-autoupdate: true
+
 ingress:
   - hostname: api.vectracargo.com.br
-    service: http://api:8000
+    service: http://gymsite-api:8000
     originRequest:
       connectTimeout: 30s
       keepAliveTimeout: 90s
       keepAliveConnections: 100
       http2Origin: false
       noTLSVerify: true
+      # Tenta origin via IP interno Docker se DNS falhar
+      originServerName: gymsite-api
 
   - hostname: gymsite-api.vectracargo.com.br
-    service: http://api:8000
+    service: http://gymsite-api:8000
     originRequest:
       connectTimeout: 30s
       keepAliveTimeout: 90s
       keepAliveConnections: 100
       http2Origin: false
       noTLSVerify: true
+      originServerName: gymsite-api
 
   - service: http_status:404
