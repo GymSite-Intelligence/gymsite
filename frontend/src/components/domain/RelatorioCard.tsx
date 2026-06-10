@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { downloadRelatorioPdf } from '@/lib/download-relatorio-pdf'
 import { fetchRelatorioInputsForRerun } from '@/lib/submit-pipeline'
 import { notify } from '@/lib/notify'
+import { needsRelatorioRerun } from '@/lib/relatorio-completeness'
 import type { RelatorioResumo } from '@/types/domain'
 
 function formatData(iso: string | null): string {
@@ -125,13 +126,11 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
 
       {/* Ação */}
       <div className="flex flex-wrap justify-start items-center gap-1 sm:col-span-3 sm:min-w-[380px] sm:flex-nowrap sm:justify-end sm:gap-2">
-        {relatorio.status === 'failed' && (
-          <DeleteRelatorioButton
-            relatorioId={relatorio.id}
-            label={`${relatorio.bairro} · ${relatorio.cidade}`}
-          />
-        )}
-        {(relatorio.status === 'done' || relatorio.status === 'failed') && (
+        <DeleteRelatorioButton
+          relatorioId={relatorio.id}
+          label={`${relatorio.bairro} · ${relatorio.cidade}`}
+        />
+        {needsRelatorioRerun(relatorio) && (
           <RerunPipelineButton
             relatorioId={relatorio.id}
             status={relatorio.status}

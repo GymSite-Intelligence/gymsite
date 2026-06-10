@@ -7,12 +7,19 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Map, Marker } from 'pigeon-maps'
 import { ExternalLink } from 'lucide-react'
+import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { useRelatorioDetail } from '@/hooks/useRelatorioDetail'
+import {
+  relatorioViewerErrorMessage,
+  shouldShowRerunInViewer,
+} from '@/lib/relatorio-completeness'
+import type { RelatorioStatus } from '@/types/domain'
 import { FinanceiroKpiStrip } from '@/components/domain/FinanceiroKpiStrip'
 import { ScoreGauge } from '@/components/domain/ScoreGauge'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
 import { StatusPipelineBadge } from '@/components/domain/StatusPipelineBadge'
 import { PopularTimesHeatmap } from './PopularTimesHeatmap'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -34,6 +41,9 @@ export function RelatorioQuickView({ relatorioId, onClose }: RelatorioQuickViewP
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
         {isLoading || !data ? (
           <div className="p-6 space-y-6">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Carregando relatório…</SheetTitle>
+            </SheetHeader>
             <Skeleton className="h-8 w-3/4" />
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-32 w-full" />
@@ -62,6 +72,10 @@ function QuickViewContent({
   data: NonNullable<ReturnType<typeof useRelatorioDetail>['data']>
   onVerCompleto: () => void
 }) {
+  const viewerErr = relatorioViewerErrorMessage(data)
+  const showRerun = shouldShowRerunInViewer(data)
+  const pipelineStatus = (data.pipeline_status ?? 'done') as RelatorioStatus
+
   const out = data.output_consolidado
   const inp = data.input_canonico
   const cenarioMid = out.viabilidade_3_cenarios?.mid
@@ -85,10 +99,28 @@ function QuickViewContent({
           </p>
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <VeredictoBadge veredito={out.veredito} />
-          <StatusPipelineBadge status={'done'} />
+          {out.veredito ? <VeredictoBadge veredito={out.veredito} /> : null}
+          <StatusPipelineBadge status={pipelineStatus} />
         </div>
       </SheetHeader>
+
+      {viewerErr ? (
+        <div className="px-6">
+          <Alert variant="destructive">
+            <AlertDescription>{viewerErr}</AlertDescription>
+          </Alert>
+          {showRerun ? (
+            <div className="mt-3">
+              <RerunPipelineButton
+                relatorioId={data.id}
+                status={pipelineStatus}
+                className="w-full"
+                variant="default"
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* KPIs Financeiros */}
       <div className="px-6">
@@ -190,8 +222,16 @@ function QuickViewContent({
       )}
 
       {/* CTA */}
-      <div className="px-6 pt-2">
-        <Button onClick={onVerCompleto} className="w-full">
+      <div className="px-6 pt-2 space-y-2">
+        {showRerun && !viewerErr ? (
+          <RerunPipelineButton
+            relatorioId={data.id}
+            status={pipelineStatus}
+            className="w-full"
+            variant="outline"
+          />
+        ) : null}
+        <Button onClick={onVerCompleto} className="w-full" variant={viewerErr ? 'outline' : 'default'}>
           Abrir relatório completo <ExternalLink size={14} className="ml-1.5" />
         </Button>
       </div>

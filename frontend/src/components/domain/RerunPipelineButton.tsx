@@ -1,7 +1,7 @@
 /**
  * RerunPipelineButton — Re-executa o pipeline sem reabrir o formulário.
  */
-import type { MouseEvent } from 'react'
+import { useRef, type MouseEvent } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import { USE_MOCKS } from '@/mocks'
 import { useRerunPipeline } from '@/hooks/useRerunPipeline'
@@ -34,16 +34,26 @@ export function RerunPipelineButton({
   stopPropagation = false,
 }: RerunPipelineButtonProps) {
   const mutation = useRerunPipeline()
+  const clickLock = useRef(false)
 
   if (USE_MOCKS) return null
 
+  const disabled = mutation.isPending || clickLock.current
   const pipelineAtivo = status === 'queued' || status === 'running'
-  const disabled = mutation.isPending || pipelineAtivo
 
   function handleClick(e: MouseEvent) {
+    e.preventDefault()
     if (stopPropagation) e.stopPropagation()
-    if (disabled) return
-    mutation.mutate({ relatorioId, inputs })
+    if (disabled || clickLock.current) return
+    clickLock.current = true
+    mutation.mutate(
+      { relatorioId, inputs },
+      {
+        onSettled: () => {
+          clickLock.current = false
+        },
+      },
+    )
   }
 
   return (
@@ -55,7 +65,7 @@ export function RerunPipelineButton({
       disabled={disabled}
       title={
         pipelineAtivo
-          ? 'Pipeline em andamento — aguarde concluir'
+          ? 'Cria um novo relatório com os mesmos parâmetros (o anterior pode continuar em processamento)'
           : 'Rodar pipeline novamente com os mesmos parâmetros'
       }
       onClick={handleClick}

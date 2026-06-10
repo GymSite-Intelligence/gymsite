@@ -25,8 +25,12 @@ export interface RelatorioDetail {
   id: string
   tipo_relatorio: string
   data_execucao: string
+  /** Status do pipeline no Supabase (queued | running | done | failed). */
+  pipeline_status?: string
+  erro_mensagem?: string | null
   input_canonico: {
     cidade: string
+    uf?: string
     bairro: string
     area_m2_min: number
     area_m2_max: number
@@ -104,6 +108,15 @@ export interface OutputConsolidado {
   /** Schema v1.7: densidade no raio + referência CNPJ */
   panorama_competitivo?: PanoramaCompetitivoJSON
   total_encontrados_raio?: number | null
+  total_encontrados_raio_nearby?: number | null
+  agregados_competicao_places?: {
+    count_total?: number | null
+    count_rating_ge_4_2?: number | null
+    status?: string
+    radius_meters?: number
+  } | null
+  fonte_geocode?: string | null
+  fonte_busca_competidores?: string | null
   top_independentes?: AcademiaResumoJSON[]
   academias_analisadas?: AcademiaResumoJSON[]
   /** Schema v1.7: lista nominal de entrantes CNPJ (90d). */
@@ -139,6 +152,9 @@ export interface PosicionamentoEstrategicoJSON {
   veredito_posicionamento?: string
   justificativa_veredito?: string
   markdown?: string
+  /** langcache | gemini — diagnóstico dev quando A9 reutiliza resposta */
+  fonte_geracao?: string
+  cache_prompt?: string
   erro?: string
   raw_output?: string
 }
@@ -184,6 +200,8 @@ export interface EntranteCnpjJSON {
   cep?: string | null
   cnae_principal?: string
   ref_month?: string
+  lat?: number
+  lng?: number
   segmento_operacao?: string
   segmento_label?: string
   segmento_confianca?: 'alta' | 'media' | 'baixa' | string
@@ -385,6 +403,12 @@ export interface CandidatoJSON {
 
 export interface CompetidorJSON {
   nome: string
+  /** Google Place ID — cache SearchAPI / popular_times (Tier 0). */
+  place_id?: string | null
+  lat?: number | null
+  lng?: number | null
+  distancia_km?: number | null
+  google_maps_uri?: string | null
   rating_oficial?: number
   rating_geral?: number
   num_avaliacoes?: number
@@ -608,6 +632,48 @@ function extractResumoFromMarkdown(markdown: unknown): string | null {
   return text || null
 }
 
+function mapCompetidorRow(row: Record<string, unknown>): CompetidorJSON {
+  const reviews = row.reviews ?? row.reviews_traduzidas
+  const latRaw = row.lat
+  const lngRaw = row.lng
+  const lat =
+    latRaw != null && Number(latRaw) !== 0 ? Number(latRaw) : undefined
+  const lng =
+    lngRaw != null && Number(lngRaw) !== 0 ? Number(lngRaw) : undefined
+  return {
+    nome: String(row.nome ?? ''),
+    place_id: typeof row.place_id === 'string' ? row.place_id : null,
+    lat: lat ?? null,
+    lng: lng ?? null,
+    distancia_km:
+      row.distancia_km != null ? Number(row.distancia_km) : null,
+    google_maps_uri:
+      typeof row.google_maps_uri === 'string' ? row.google_maps_uri : null,
+    rating_oficial:
+      row.rating_oficial != null ? Number(row.rating_oficial) : undefined,
+    rating_geral: row.rating_geral != null ? Number(row.rating_geral) : undefined,
+    num_avaliacoes:
+      row.num_avaliacoes != null ? Number(row.num_avaliacoes) : undefined,
+    endereco: typeof row.endereco === 'string' ? row.endereco : undefined,
+    bairro_concorrente:
+      typeof row.bairro_concorrente === 'string' ? row.bairro_concorrente : undefined,
+    tem_24h: Boolean(row.tem_24h),
+    telefone: typeof row.telefone === 'string' ? row.telefone : null,
+    website: typeof row.website === 'string' ? row.website : null,
+    whatsapp_link:
+      typeof row.whatsapp_link === 'string' ? row.whatsapp_link : null,
+    horarios_pico:
+      row.horarios_pico != null && typeof row.horarios_pico === 'object'
+        ? (row.horarios_pico as Record<string, Record<string, number>>)
+        : null,
+    pico_semanal: typeof row.pico_semanal === 'string' ? row.pico_semanal : null,
+    reviews: Array.isArray(reviews) ? (reviews as ReviewJSON[]) : undefined,
+    reviews_traduzidas: Array.isArray(row.reviews_traduzidas)
+      ? (row.reviews_traduzidas as ReviewJSON[])
+      : undefined,
+  }
+}
+
 function mapCandidatoRow(row: Record<string, unknown>): CandidatoJSON {
   const listingUrl =
     typeof row.listing_url === 'string' ? row.listing_url : undefined
@@ -763,6 +829,8 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
   return {
     id: p.id,
     tipo_relatorio: (p.header.tipo_relatorio as string) ?? 'prospeccao_academia',
+    pipeline_status: (p.header.status as string) ?? undefined,
+    erro_mensagem: (p.header.erro_mensagem as string | null) ?? null,
     data_execucao:
       (p.header.data_execucao as string) ?? (p.header.created_at as string) ?? '',
     input_canonico: p.input_canonico as unknown as RelatorioDetail['input_canonico'],
@@ -778,10 +846,9 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
       top_3_candidatos: (p.candidatos ?? [])
         .slice(0, 3)
         .map((c) => mapCandidatoRow(c as Record<string, unknown>)),
-      // Competidores: passa direto (DB já tem rating_oficial, reviews jsonb,
-      // bairro_concorrente, tem_24h). Telefone/website/whatsapp_link saem
-      // como undefined até a Fase 2 do A3a enrichment.
-      competitors_set: p.competidores ?? [],
+      competitors_set: (p.competidores ?? []).map((c) =>
+        mapCompetidorRow(c as Record<string, unknown>),
+      ),
       viabilidade_3_cenarios: cenariosByModelo,
       // Mapeia colunas flat do DB pros nomes esperados pelo viewer.
       // DB: prioridade, status_competitivo / Viewer: prioridade_ajustada, status

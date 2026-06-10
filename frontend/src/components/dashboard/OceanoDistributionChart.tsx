@@ -1,15 +1,8 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { OCEANO_CONFIG } from '@/lib/oceano'
+import { OCEANO_CHART_COLORS, OCEANO_CONFIG } from '@/lib/oceano'
 import type { OceanoDistribution } from '@/hooks/useDashboardStats'
-
-const COLORS: Record<string, string> = {
-  OCEANO_AZUL: 'hsl(142 70% 45%)',
-  TRANSICAO: 'hsl(45 95% 55%)',
-  VERMELHO: 'hsl(0 70% 50%)',
-  SEM_A9: 'hsl(220 10% 70%)',
-}
 
 const LABELS: Record<string, string> = {
   OCEANO_AZUL: OCEANO_CONFIG.OCEANO_AZUL.label,
@@ -48,7 +41,7 @@ export function OceanoDistributionChart({
     name: LABELS[d.veredito] ?? d.veredito,
     value: d.count,
     pct: d.pct,
-    color: COLORS[d.veredito] ?? 'hsl(220 10% 70%)',
+    color: OCEANO_CHART_COLORS[d.veredito] ?? OCEANO_CHART_COLORS.SEM_A9,
   }))
 
   return (

@@ -30,7 +30,7 @@ import type { MarketWave, RelatorioResumo } from '@/types/domain'
 const WAVE_BADGE: Record<MarketWave, string> = {
   red: 'bg-red-600 text-white',
   transition: 'bg-amber-500 text-black',
-  blue: 'bg-emerald-600 text-white',
+  blue: 'bg-blue-600 text-white',
 }
 
 function matchScenario(

@@ -35,6 +35,11 @@ export function PosicionamentoCard({ data, className }: PosicionamentoCardProps)
     <div className={cn('space-y-6', className)}>
       <div className="flex flex-wrap items-center gap-3">
         <OceanoBadge veredito={data.veredito_posicionamento} />
+        {data.fonte_geracao === 'langcache' && (
+          <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+            cache A9
+          </Badge>
+        )}
         {ticket?.ticket_recomendado != null && (
           <span className="text-sm text-muted-foreground">
             Ticket recomendado:{' '}

@@ -3,7 +3,8 @@
  * Contato PJ + sócio administrador (QSA) e flag de validação manual.
  */
 import { useState } from 'react'
-import { Building2, ExternalLink, Mail, Phone, Linkedin } from 'lucide-react'
+import { Building2, ExternalLink, Mail, Phone, Linkedin, Sparkles, Send } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import {
@@ -11,7 +12,7 @@ import {
   SEGMENTO_PARQUE_LABELS,
 } from '@/lib/segmento-parque'
 import { Checkbox } from '@/components/ui/checkbox'
-import { API_BASE } from '@/lib/supabase'
+import { API_BASE, supabase } from '@/lib/supabase'
 import type { EntrantesCnpj90dJSON } from '@/hooks/useRelatorioDetail'
 
 export interface EntrantesCnpjTableProps {
@@ -72,6 +73,57 @@ export function EntrantesCnpjTable({
 }: EntrantesCnpjTableProps) {
   const queryClient = useQueryClient()
   const [localValidado, setLocalValidado] = useState<Record<string, boolean>>({})
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+
+  const [enriquecendoCnpj, setEnriquecendoCnpj] = useState<string | null>(null)
+
+  const enriquecerMutation = useMutation({
+    mutationFn: async ({ cnpj }: { cnpj: string }) => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+
+      const res = await fetch(
+        `${API_BASE}/api/relatorios/${relatorioId}/entrantes-cnpj/enriquecer`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ cnpj, usar_apollo: true }),
+        },
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(
+          (err as { detail?: string }).detail || `HTTP ${res.status}`,
+        )
+      }
+      return res.json()
+    },
+    onMutate: ({ cnpj }) => setEnriquecendoCnpj(cnpj),
+    onSettled: () => setEnriquecendoCnpj(null),
+    onSuccess: (data) => {
+      if (relatorioId) {
+        void queryClient.invalidateQueries({ queryKey: ['relatorio', relatorioId] })
+      }
+      const meta = (data as { meta?: Record<string, unknown> })?.meta
+      if (meta && typeof window !== 'undefined') {
+        const parts: string[] = []
+        if (meta.receita_fonte) parts.push(`Receita: ${meta.receita_fonte}`)
+        if (meta.receita_motivo) parts.push(String(meta.receita_motivo))
+        if (meta.apollo_habilitado) {
+          parts.push(
+            meta.apollo_ok ? 'Apollo: contato encontrado' : 'Apollo: sem e-mail/LinkedIn',
+          )
+        } else if (meta.apollo_habilitado === false) {
+          parts.push('Apollo: desligado (sem APOLLO_API_KEY)')
+        }
+        if (parts.length) {
+          window.alert(`Enriquecimento\n${parts.join('\n')}`)
+        }
+      }
+    },
+  })
 
   const validarMutation = useMutation({
     mutationFn: async ({
@@ -81,11 +133,16 @@ export function EntrantesCnpjTable({
       cnpj: string
       validado: boolean
     }) => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+
       const res = await fetch(
         `${API_BASE}/api/relatorios/${relatorioId}/entrantes-cnpj/validacao`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ cnpj, validado }),
         },
       )
@@ -101,6 +158,49 @@ export function EntrantesCnpjTable({
       if (relatorioId) {
         void queryClient.invalidateQueries({ queryKey: ['relatorio', relatorioId] })
       }
+    },
+  })
+
+  const enviarProspeccaoMutation = useMutation({
+    mutationFn: async (cnpjs: string[]) => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+
+      const res = await fetch(
+        `${API_BASE}/api/relatorios/${relatorioId}/entrantes-cnpj/prospeccao`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ cnpjs, cidade: block?.cidade ?? 'Fortaleza', uf: block?.uf ?? 'CE' }),
+        },
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(
+          (err as { detail?: string }).detail || `HTTP ${res.status}`,
+        )
+      }
+      return res.json() as Promise<{
+        ok: boolean
+        inseridos: string[]
+        atualizados: string[]
+        erros: { cnpj: string; motivo: string }[]
+        total_enviados: number
+      }>
+    },
+    onSuccess: (data) => {
+      setSelecionados(new Set())
+      void queryClient.invalidateQueries({ queryKey: ['prospeccao', 'oportunidades'] })
+      const parts: string[] = []
+      if (data.inseridos.length) parts.push(`${data.inseridos.length} inseridos`)
+      if (data.atualizados.length) parts.push(`${data.atualizados.length} já existiam`)
+      if (data.erros.length) parts.push(`${data.erros.length} erros`)
+      window.alert(`Prospecção\n${parts.join(' | ')}`)
+    },
+    onError: (err) => {
+      window.alert(`Erro ao enviar para prospecção: ${err.message}`)
     },
   })
 
@@ -133,6 +233,30 @@ export function EntrantesCnpjTable({
         </span>
       </header>
 
+      {selecionados.size > 0 && (
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="h-7 text-[10px] gap-1"
+            disabled={enviarProspeccaoMutation.isPending}
+            onClick={() => enviarProspeccaoMutation.mutate(Array.from(selecionados))}
+          >
+            <Send size={10} />
+            {enviarProspeccaoMutation.isPending
+              ? 'Enviando…'
+              : `Enviar ${selecionados.size} para Prospecção`}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-[10px]"
+            onClick={() => setSelecionados(new Set())}
+          >
+            Limpar
+          </Button>
+        </div>
+      )}
+
       {resumoSegmento && (
         <p className="text-[11px] text-muted-foreground leading-snug">
           Por segmento: {resumoSegmento}
@@ -144,15 +268,29 @@ export function EntrantesCnpjTable({
       )}
 
       <p className="text-[10px] text-muted-foreground leading-snug">
-        Razão social e bairro obrigatórios para prospecção. Sem nome fantasia, exibimos a
-        razão social. E-mail/telefone do sócio administrador dependem da fonte (ReceitaWS
-        costuma trazer só contatos da PJ).
+        Lista vem do snapshot RFB (90 dias). Razão social é carregada automaticamente;
+        QSA (sócio administrador) e contato do decisor (Apollo) são enriquecidos no pipeline
+        quando disponíveis. Use <strong>Enriquecer</strong> por linha para forçar uma nova
+        consulta ou quando os dados estiverem incompletos.
       </p>
 
       <div className="rounded-md border border-border overflow-x-auto">
         <table className="w-full text-xs min-w-[960px]">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left">
+              <th className="px-2 py-2 font-mono text-[10px] w-8">
+                <Checkbox
+                  checked={selecionados.size > 0 && selecionados.size === lista.length}
+                  onCheckedChange={(checked) => {
+                    if (checked === true) {
+                      setSelecionados(new Set(lista.map((e) => e.cnpj)))
+                    } else {
+                      setSelecionados(new Set())
+                    }
+                  }}
+                  aria-label="Selecionar todos"
+                />
+              </th>
               <th className="px-2 py-2 font-mono text-[10px] w-8">OK</th>
               <th className="px-2 py-2 font-mono text-[10px]">Abertura</th>
               <th className="px-2 py-2 font-mono text-[10px]">Segmento</th>
@@ -161,6 +299,7 @@ export function EntrantesCnpjTable({
               <th className="px-2 py-2 font-mono text-[10px]">Bairro</th>
               <th className="px-2 py-2 font-mono text-[10px]">PJ (e-mail / tel)</th>
               <th className="px-2 py-2 font-mono text-[10px]">Sócio adm.</th>
+              <th className="px-2 py-2 font-mono text-[10px] w-24">Ação</th>
               <th className="px-2 py-2 font-mono text-[10px]">CNPJ</th>
               <th className="px-2 py-2 font-mono text-[10px]">Endereço</th>
             </tr>
@@ -188,6 +327,21 @@ export function EntrantesCnpjTable({
                     !e.dados_completos && 'bg-veredito-investigar/5',
                   )}
                 >
+                  <td className="px-2 py-2 align-top">
+                    <Checkbox
+                      checked={selecionados.has(e.cnpj)}
+                      disabled={enviarProspeccaoMutation.isPending}
+                      onCheckedChange={(checked) => {
+                        setSelecionados((prev) => {
+                          const next = new Set(prev)
+                          if (checked === true) next.add(e.cnpj)
+                          else next.delete(e.cnpj)
+                          return next
+                        })
+                      }}
+                      aria-label={`Selecionar ${nome} para prospecção`}
+                    />
+                  </td>
                   <td className="px-2 py-2 align-top">
                     <Checkbox
                       checked={validado}
@@ -275,6 +429,26 @@ export function EntrantesCnpjTable({
                         </a>
                       )}
                     </div>
+                  </td>
+                  <td className="px-2 py-2 align-top">
+                    {canToggle && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] gap-1"
+                        disabled={
+                          enriquecerMutation.isPending &&
+                          enriquecendoCnpj === e.cnpj
+                        }
+                        onClick={() =>
+                          enriquecerMutation.mutate({ cnpj: e.cnpj })
+                        }
+                      >
+                        <Sparkles size={10} />
+                        {enriquecendoCnpj === e.cnpj ? '…' : 'Enriquecer'}
+                      </Button>
+                    )}
                   </td>
                   <td className="px-2 py-2 font-mono whitespace-nowrap align-top">
                     {e.cnpj_formatado || e.cnpj}

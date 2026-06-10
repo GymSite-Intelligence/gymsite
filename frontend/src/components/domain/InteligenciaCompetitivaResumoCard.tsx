@@ -18,9 +18,19 @@ const SATURACAO_STYLE: Record<string, string> = {
   SATURADO: 'text-veredito-reprovado',
 }
 
+export interface AgregadosCompeticaoPlaces {
+  count_total?: number | null
+  count_rating_ge_4_2?: number | null
+  status?: string
+  radius_meters?: number
+}
+
 export interface InteligenciaCompetitivaResumoCardProps {
   nivelSaturacao?: string | null
   panorama?: PanoramaCompetitivoJSON | null
+  agregadosPlaces?: AgregadosCompeticaoPlaces | null
+  totalEncontradosNearby?: number | null
+  fonteBuscaCompetidores?: string | null
   marketContext?: MarketContextJSON
   coberturaRedes?: CoberturaRedesA0JSON
   topIndependentes?: AcademiaResumoJSON[]
@@ -34,6 +44,9 @@ export interface InteligenciaCompetitivaResumoCardProps {
 export function InteligenciaCompetitivaResumoCard({
   nivelSaturacao,
   panorama,
+  agregadosPlaces,
+  totalEncontradosNearby,
+  fonteBuscaCompetidores,
   marketContext,
   coberturaRedes,
   topIndependentes = [],
@@ -47,6 +60,8 @@ export function InteligenciaCompetitivaResumoCard({
     panorama?.nivel_saturacao || nivelSaturacao || '—'
   const satClass = SATURACAO_STYLE[sat.toUpperCase()] ?? 'text-foreground'
   const raio = panorama?.total_encontrados_raio ?? totalEncontradosRaio
+  const aggTotal = agregadosPlaces?.count_total
+  const nearby = totalEncontradosNearby
   const analisados = panorama?.total_concorrentes_analisados ?? totalAnalisados
   const parqueAtivo =
     panorama?.cnpj_parque_ativo_cidade ??
@@ -88,6 +103,15 @@ export function InteligenciaCompetitivaResumoCard({
         )}
       </header>
 
+      {fonteBuscaCompetidores === 'google_places' && (
+        <p className="text-[11px] text-muted-foreground font-mono">
+          Fonte: Google Places (New) + Area Insights
+          {aggTotal != null && nearby != null
+            ? ` — ${aggTotal} no raio; ${nearby} na amostra detalhada`
+            : ''}
+        </p>
+      )}
+
       <dl className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Metric
           label="Saturação (raio 3 km)"
@@ -95,10 +119,19 @@ export function InteligenciaCompetitivaResumoCard({
           valueClassName={satClass}
         />
         {raio != null && (
-          <Metric label="Academias no raio" value={String(raio)} />
+          <Metric label="Academias no raio (est.)" value={String(raio)} />
+        )}
+        {aggTotal != null && aggTotal !== raio && (
+          <Metric
+            label="Area Insights (Google)"
+            value={String(aggTotal)}
+          />
+        )}
+        {nearby != null && (
+          <Metric label="Nearby (amostra)" value={String(nearby)} />
         )}
         {analisados != null && (
-          <Metric label="Amostra analisada" value={String(analisados)} />
+          <Metric label="Reviews analisados" value={String(analisados)} />
         )}
         {parqueAtivo != null && (
           <Metric label="Parque ativo (município)" value={String(parqueAtivo)} />

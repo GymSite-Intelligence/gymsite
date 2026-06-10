@@ -5,10 +5,6 @@
  * deleta da própria org. Schema tem `on delete cascade` em todas as filhas
  * (inputs, outputs, candidatos, competidores, cenarios, sensibilidade,
  * bairros_alt), então uma única chamada limpa tudo.
- *
- * UI só expõe pro status='failed' — backend zumbi (running travado) precisa
- * ser marcado como failed antes (por worker ou manualmente) pra evitar race
- * de deletar enquanto pipeline ainda escreve.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'

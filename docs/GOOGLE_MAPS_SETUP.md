@@ -12,7 +12,9 @@
 3. **API restrictions** → selecione:
    - Geocoding API
    - Places API (New)
-   - (opcional) Places API, Street View Static API, Distance Matrix API
+   - Distance Matrix API
+   - Maps JavaScript API (heatmap em `/mapa` via deck.gl — **não** exige Maps Visualization)
+   - (opcional) Street View Static API
 4. Ou em dev: **Don't restrict key**.
 5. [Billing](https://console.cloud.google.com/billing) ativo no projeto.
 6. Ative na [Library](https://console.cloud.google.com/apis/library):
@@ -23,7 +25,19 @@
 ```bash
 python tools/maps_health_check.py
 curl https://gymsite-api.vectracargo.com.br/health/maps
+curl http://localhost:8000/api/config/maps-js
 ```
+
+**Mapa /heatmap:** o frontend carrega a chave via `GET /api/config/maps-js` (nunca no bundle). Em dev, `npm run dev` + `uvicorn api:app --port 8000` com `VITE_API_BASE=http://localhost:8000`.
+
+### Heatmap (deprecação Maps Visualization, maio/2026)
+
+A partir da **v3.65** do Maps JavaScript API, `google.maps.visualization.HeatmapLayer` foi descontinuado. Este projeto usa **[deck.gl `HeatmapLayer`](https://deck.gl/docs/api-reference/aggregation-layers/heatmap-layer)** com [`@deck.gl/google-maps`](https://deck.gl/docs/api-reference/google-maps/overview) (`GoogleMapsOverlay`).
+
+- **APIs necessárias:** apenas **Maps JavaScript API** (mesma chave e restrições de referrer HTTP do mapa).
+- **Não ative** Maps Visualization só por causa do heatmap.
+- Paleta e pesos: `frontend/src/lib/heatmap-weight.ts` (`pinHeatmapWeight`, `oceanoDeckColorRange`).
+- Verificação: `/mapa` → lente Mercado (A9) → **Calor** ou **Ambos**; fallback pigeon inalterado.
 
 ## Fallback automático (já no código)
 

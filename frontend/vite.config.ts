@@ -26,6 +26,60 @@ function placesAutocompletePlugin() {
       }
       const apiKey = env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY
 
+      server.middlewares.use('/api/config/maps-js', async (_req, res) => {
+        if (!apiKey) {
+          res.statusCode = 200
+          res.setHeader('content-type', 'application/json')
+          res.end(JSON.stringify({ configured: false, key: '', map_id: '' }))
+          return
+        }
+        const mapId =
+          env.GOOGLE_MAPS_MAP_ID || process.env.GOOGLE_MAPS_MAP_ID || ''
+        res.statusCode = 200
+        res.setHeader('content-type', 'application/json')
+        res.end(
+          JSON.stringify({
+            configured: true,
+            key: apiKey,
+            map_id: mapId,
+          }),
+        )
+      })
+
+      // Geocode bairro/cidade — proxy para FastAPI local (mesmo padrão do maps-js em dev)
+      const apiBase =
+        (env.VITE_API_BASE || process.env.VITE_API_BASE || 'http://localhost:8000').replace(
+          /\/$/,
+          '',
+        )
+      server.middlewares.use('/api/geocode', async (req, res) => {
+        if (!req.url) {
+          res.statusCode = 400
+          res.end(JSON.stringify({ error: 'missing path' }))
+          return
+        }
+        try {
+          const upstream = await fetch(`${apiBase}${req.url}`, {
+            method: req.method,
+            headers: { accept: 'application/json' },
+          })
+          const body = await upstream.text()
+          res.statusCode = upstream.status
+          res.setHeader(
+            'content-type',
+            upstream.headers.get('content-type') || 'application/json',
+          )
+          res.end(body)
+        } catch (e) {
+          res.statusCode = 502
+          res.end(
+            JSON.stringify({
+              error: e instanceof Error ? e.message : String(e),
+            }),
+          )
+        }
+      })
+
       server.middlewares.use(
         '/api/places-autocomplete',
         async (req, res) => {

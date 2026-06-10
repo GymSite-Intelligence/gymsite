@@ -7,7 +7,7 @@
  * Quando bairro_concorrente está ausente (mocks antigos), todos caem em
  * um grupo "Outros".
  */
-import { Clock, MapPin, Star } from 'lucide-react'
+import { Clock, ExternalLink, MapPin, Star } from 'lucide-react'
 import { ReviewItem } from './ReviewItem'
 import { cn } from '@/lib/utils'
 import type { CompetidorJSON } from '@/hooks/useRelatorioDetail'
@@ -57,7 +57,10 @@ export function CompetidorGroup({ competidores, className }: CompetidorGroupProp
 
           <div className="space-y-3">
             {itens.map((comp, i) => (
-              <CompetidorCard key={`${comp.nome}-${i}`} competidor={comp} />
+              <CompetidorCard
+                key={comp.place_id ?? `${comp.nome}-${i}`}
+                competidor={comp}
+              />
             ))}
           </div>
         </section>
@@ -80,6 +83,18 @@ function CompetidorCard({ competidor }: { competidor: CompetidorJSON }) {
             <p className="text-[10px] font-mono text-muted-foreground mt-0.5 truncate">
               {competidor.endereco}
             </p>
+          )}
+          {competidor.place_id && (
+            <a
+              href={`https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(competidor.place_id)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground mt-1"
+              title={competidor.place_id}
+            >
+              <span className="truncate max-w-[220px]">{competidor.place_id}</span>
+              <ExternalLink size={9} />
+            </a>
           )}
         </div>
         <div className="flex items-center gap-3 text-xs shrink-0">

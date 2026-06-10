@@ -1,16 +1,13 @@
 /**
  * PinOceano — marcador SVG colorido por veredito A9 (oceano azul / transição / vermelho).
  */
-import { normalizeVereditoOceano, OCEANO_CONFIG } from '@/lib/oceano'
+import {
+  normalizeVereditoOceano,
+  OCEANO_CONFIG,
+  OCEANO_FILL,
+  OCEANO_FILL_SEM_A9,
+} from '@/lib/oceano'
 import type { VereditoOceano } from '@/types/domain'
-
-const OCEANO_HEX: Record<VereditoOceano, string> = {
-  OCEANO_AZUL: 'hsl(142 70% 45%)',
-  TRANSICAO: 'hsl(45 95% 55%)',
-  VERMELHO: 'hsl(0 70% 50%)',
-}
-
-const SEM_A9_HEX = 'hsl(220 10% 55%)'
 
 export interface PinOceanoProps {
   veredito: VereditoOceano | string | null | undefined
@@ -26,7 +23,7 @@ export function PinOceano({
   count = 1,
 }: PinOceanoProps) {
   const key = normalizeVereditoOceano(veredito)
-  const color = key ? OCEANO_HEX[key] : SEM_A9_HEX
+  const color = key ? OCEANO_FILL[key] : OCEANO_FILL_SEM_A9
   const label = key ? OCEANO_CONFIG[key].label : 'Sem A9'
   const size = selecionado || ativo ? 40 : count > 1 ? 36 : 32
 

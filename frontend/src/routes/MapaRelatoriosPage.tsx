@@ -1,15 +1,19 @@
 /**
  * MapaRelatoriosPage — visualização geográfica dos relatórios.
  *
- * Cada pin representa o Top 1 candidato de um relatório. Cor = veredito.
- * Click no pin abre popover com info resumida + CTA pro relatório completo.
- *
- * Lib: pigeon-maps (7KB, OpenStreetMap, zero deps).
- * Quando precisar de heatmap/clusters densos, migrar pra Mapbox GL ou Leaflet.
+ * Cada pin representa o bairro analisado no relatório (geocode bairro+cidade).
+ * Mapa: Google Maps JS + deck.gl heatmap (oceano) quando a chave está no backend;
+ * fallback pigeon-maps (OSM) se VITE_MAP_PROVIDER=pigeon ou chave indisponível.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Map, Marker } from 'pigeon-maps'
+import {
+  GoogleMapOceano,
+  type MapaCamada,
+} from '@/components/maps/GoogleMapOceano'
+import { useMapsJsConfig } from '@/hooks/useMapsJsConfig'
+import { OCEANO_FILL } from '@/lib/oceano'
 import {
   ChevronRight,
   ExternalLink,
@@ -26,10 +30,17 @@ import {
   type PinRelatorio,
 } from '@/hooks/useRelatoriosNoMapa'
 import { cn } from '@/lib/utils'
+import {
+  bairroPinsForCluster,
+  focusLabelForViewport,
+  focusLabelFromPins,
+  viewportFromPins,
+} from '@/lib/map-fly-to'
 import { PinVeredito } from '@/components/domain/PinVeredito'
 import { PinOceano } from '@/components/domain/PinOceano'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
 import { OceanoBadge } from '@/components/domain/OceanoBadge'
+import { OCEANO_LEGEND_ITEMS } from '@/lib/oceano'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -50,15 +61,34 @@ interface MapaSearch {
 
 type MapaLente = 'viabilidade' | 'mercado'
 
+const MAP_PROVIDER =
+  (import.meta.env.VITE_MAP_PROVIDER as string | undefined)?.trim() || 'google'
+
 export function MapaRelatoriosPage() {
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as MapaSearch
   const [lente, setLente] = useState<MapaLente>('viabilidade')
-  const { pins, isLoading, total, semCoordenadas } = useRelatoriosNoMapa({
+  const { pins, isLoading, isGeocodingBairros, total, semCoordenadas, totalResumos } =
+    useRelatoriosNoMapa({
     cidade: search.cidade,
     veredito: search.veredito,
   })
+  const { data: mapsJs, isLoading: loadingMapsJs, isError: mapsJsError } =
+    useMapsJsConfig()
+  const [googleMapFailed, setGoogleMapFailed] = useState(false)
+  const useGoogleMap =
+    MAP_PROVIDER !== 'pigeon' &&
+    !loadingMapsJs &&
+    !mapsJsError &&
+    !googleMapFailed &&
+    Boolean(mapsJs?.configured && mapsJs.key)
+  const [camada, setCamada] = useState<MapaCamada>('both')
   const [clusterAtivoIdx, setClusterAtivoIdx] = useState<number | null>(null)
+  const [mapFocus, setMapFocus] = useState<{
+    bairro: string
+    cidade: string
+  } | null>(null)
+  const camadaAnteriorRef = useRef<MapaCamada>('both')
   // Modo seleção pra comparação — ativado pelo botão "Comparar"
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState<string[]>([])
@@ -70,10 +100,47 @@ export function MapaRelatoriosPage() {
   // Usamos pra ajustar a tolerância de agrupamento: zoom out junta mais
   // pins num cluster, zoom in desagrupa.
   const [zoomAtual, setZoomAtual] = useState<number>(viewport.zoom)
+  const [pigeonCenter, setPigeonCenter] = useState<[number, number]>(
+    viewport.center,
+  )
+  const [pigeonZoom, setPigeonZoom] = useState<number>(viewport.zoom)
   // Sincroniza quando filtros mudam (viewport recalcula → reseta zoom)
   useEffect(() => {
     setZoomAtual(viewport.zoom)
-  }, [viewport.zoom])
+    setPigeonCenter(viewport.center)
+    setPigeonZoom(viewport.zoom)
+  }, [viewport.center, viewport.zoom])
+
+  const heatmapDisponivel =
+    useGoogleMap && Boolean(mapsJs?.key) && !googleMapFailed
+
+  useEffect(() => {
+    if (lente === 'viabilidade' && camada !== 'pins') {
+      setCamada('pins')
+    }
+  }, [lente, camada])
+
+  useEffect(() => {
+    if (!heatmapDisponivel && (camada === 'heat' || camada === 'both')) {
+      setCamada('pins')
+    }
+  }, [heatmapDisponivel, camada])
+
+  useEffect(() => {
+    setMapFocus(null)
+    setClusterAtivoIdx(null)
+  }, [viewport.center, viewport.zoom, pins.length])
+
+  useEffect(() => {
+    const nowHeat = camada === 'heat' || camada === 'both'
+    const wasHeat =
+      camadaAnteriorRef.current === 'heat' ||
+      camadaAnteriorRef.current === 'both'
+    camadaAnteriorRef.current = camada
+    if (nowHeat && !wasHeat && pins.length > 0) {
+      setMapFocus(focusLabelForViewport(pins))
+    }
+  }, [camada, pins])
 
   // Agrupa pins co-localizados pelo nível de zoom atual
   const clusters = useMemo(
@@ -85,6 +152,37 @@ export function MapaRelatoriosPage() {
       clusterAtivoIdx != null ? clusters[clusterAtivoIdx] ?? null : null,
     [clusters, clusterAtivoIdx],
   )
+
+  function handleClusterClick(idx: number) {
+    const c = clusters[idx]
+    if (!c) return
+
+    const bairroPins = bairroPinsForCluster(c, pins)
+    setMapFocus(focusLabelFromPins(bairroPins))
+
+    if (modoComparar && c.pins.length === 1) {
+      toggleSelecao(c.pins[0].id)
+      setClusterAtivoIdx(idx)
+      return
+    }
+    setClusterAtivoIdx(idx)
+  }
+
+  function handlePigeonClusterClick(idx: number) {
+    const c = clusters[idx]
+    if (!c) return
+    const bairroPins = bairroPinsForCluster(c, pins)
+    const { center, zoom } = viewportFromPins(bairroPins)
+    setPigeonCenter(center)
+    setPigeonZoom(zoom)
+    setZoomAtual(zoom)
+    handleClusterClick(idx)
+  }
+
+  function fecharCluster() {
+    setClusterAtivoIdx(null)
+    setMapFocus(null)
+  }
 
   function toggleSelecao(pinId: string) {
     setSelecionados((prev) => {
@@ -119,16 +217,40 @@ export function MapaRelatoriosPage() {
             Mapa de Relatórios
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isLoading
-              ? 'Carregando…'
-              : `${total} pin${total === 1 ? '' : 's'} (${clusters.length} marcador${clusters.length === 1 ? '' : 'es'} no mapa após agrupamento)`}
-            {semCoordenadas > 0 && (
-              <span className="ml-2 text-veredito-ressalvas">
-                · {semCoordenadas} relatório{semCoordenadas === 1 ? '' : 's'} sem
-                coordenadas
+            {isLoading ? (
+              'Carregando relatórios…'
+            ) : totalResumos === 0 ? (
+              'Nenhum relatório encontrado'
+            ) : total === 0 ? (
+              <>
+                {totalResumos} relatório{totalResumos === 1 ? '' : 's'} — nenhum
+                com coordenadas para o mapa
+              </>
+            ) : (
+              <>
+                {total} pin{total === 1 ? '' : 's'} ({clusters.length} marcador
+                {clusters.length === 1 ? '' : 'es'} após agrupamento)
+                {totalResumos > total && (
+                  <span className="ml-1 text-veredito-ressalvas">
+                    · {semCoordenadas} sem coordenadas (de {totalResumos})
+                  </span>
+                )}
+              </>
+            )}
+            {isGeocodingBairros && !isLoading && total > 0 && (
+              <span className="ml-2 text-muted-foreground/80">
+                · refinando posições por bairro…
               </span>
             )}
           </p>
+          {mapFocus && pins.length > 0 && (
+            <p className="text-xs text-foreground/80 mt-1 font-medium">
+              Visualizando:{' '}
+              <span className="text-foreground">
+                {mapFocus.bairro} · {mapFocus.cidade}
+              </span>
+            </p>
+          )}
         </div>
         <Button
           variant={modoComparar ? 'default' : 'outline'}
@@ -136,7 +258,7 @@ export function MapaRelatoriosPage() {
           onClick={() => {
             setModoComparar((v) => !v)
             setSelecionados([])
-            setClusterAtivoIdx(null)
+            fecharCluster()
           }}
         >
           <GitCompare size={14} />
@@ -199,6 +321,46 @@ export function MapaRelatoriosPage() {
             </option>
           ))}
         </select>
+        {lente === 'mercado' && (
+          <div
+            className="flex rounded-md border border-border overflow-hidden shrink-0"
+            title={
+              heatmapDisponivel
+                ? undefined
+                : 'Calor e Ambos exigem Google Maps (deck.gl). Configure GOOGLE_MAPS_API_KEY no backend.'
+            }
+          >
+            {(
+              [
+                { id: 'pins' as const, label: 'Pins' },
+                { id: 'heat' as const, label: 'Calor' },
+                { id: 'both' as const, label: 'Ambos' },
+              ] as const
+            ).map((opt) => {
+              const desabilitado =
+                !heatmapDisponivel && (opt.id === 'heat' || opt.id === 'both')
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  disabled={desabilitado}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium transition-colors',
+                    camada === opt.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-transparent text-muted-foreground hover:bg-muted',
+                    desabilitado && 'opacity-40 cursor-not-allowed hover:bg-transparent',
+                  )}
+                  onClick={() => {
+                    if (!desabilitado) setCamada(opt.id)
+                  }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
         {(search.cidade || search.veredito) && (
           <Button
             variant="ghost"
@@ -213,43 +375,59 @@ export function MapaRelatoriosPage() {
       {/* Mapa + popover lateral */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         {/* Mapa */}
-        <div className="relative h-[600px] rounded-lg border border-border overflow-hidden bg-muted/20">
-          {isLoading ? (
-            <Skeleton className="h-full w-full" />
+        <div className="relative h-[600px] min-h-[320px] rounded-lg border border-border overflow-hidden bg-muted/20">
+          {mapFocus && pins.length > 0 && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+              <div className="rounded-full border border-border bg-card/95 backdrop-blur px-3 py-1 text-[11px] font-medium shadow-sm">
+                {mapFocus.bairro} · {mapFocus.cidade}
+              </div>
+            </div>
+          )}
+          {isLoading || loadingMapsJs ? (
+            <Skeleton className="h-full w-full min-h-[320px]" />
           ) : pins.length === 0 ? (
-            <MapaVazio />
+            <MapaVazio totalResumos={totalResumos} />
+          ) : useGoogleMap && mapsJs?.key ? (
+            <GoogleMapOceano
+              apiKey={mapsJs.key}
+              mapId={mapsJs.mapId}
+              viewportCenter={{
+                lat: viewport.center[0],
+                lng: viewport.center[1],
+              }}
+              viewportZoom={viewport.zoom}
+              mapZoom={zoomAtual}
+              clusters={clusters}
+              heatmapPins={pins}
+              lente={lente}
+              camada={lente === 'mercado' ? camada : 'pins'}
+              clusterAtivoIdx={clusterAtivoIdx}
+              selecionados={selecionados}
+              onZoomChange={setZoomAtual}
+              onClusterClick={handleClusterClick}
+              onLoadError={() => setGoogleMapFailed(true)}
+              className="h-full"
+            />
           ) : (
             <Map
-              defaultCenter={viewport.center}
-              defaultZoom={viewport.zoom}
+              center={pigeonCenter}
+              zoom={pigeonZoom}
               attribution={false}
-              onBoundsChanged={({ zoom }) => setZoomAtual(zoom)}
+              onBoundsChanged={({ center, zoom }) => {
+                setPigeonCenter(center)
+                setPigeonZoom(zoom)
+                setZoomAtual(zoom)
+              }}
             >
               {clusters.map((c, idx) => {
                 const algumSelecionado = c.pins.some((p) =>
                   selecionados.includes(p.id),
                 )
-                // Comportamento do click muda conforme modo + tamanho do cluster:
-                // - modo comparar + cluster solo: toggla seleção do pin único
-                //   (UX direta, sem precisar abrir painel)
-                // - modo comparar + cluster N>1: abre painel pra escolher qual
-                //   relatório do cluster vai selecionar
-                // - modo normal: sempre abre painel
-                const handleClickPin = () => {
-                  if (modoComparar && c.pins.length === 1) {
-                    toggleSelecao(c.pins[0].id)
-                    setClusterAtivoIdx(idx) // mostra preview no painel também
-                    return
-                  }
-                  setClusterAtivoIdx(clusterAtivoIdx === idx ? null : idx)
-                }
-                // pigeon-maps Marker.onClick recebe { event, anchor, payload }
-                // mas como já temos closure sobre `idx`, ignoramos os args.
                 return (
                   <Marker
                     key={`${c.lat}-${c.lng}-${idx}`}
                     anchor={[c.lat, c.lng]}
-                    onClick={() => handleClickPin()}
+                    onClick={() => handlePigeonClusterClick(idx)}
                   >
                     {lente === 'mercado' ? (
                       <PinOceano
@@ -272,9 +450,24 @@ export function MapaRelatoriosPage() {
             </Map>
           )}
 
-          {/* Legenda flutuante */}
+          {googleMapFailed && pins.length > 0 && (
+            <div className="absolute top-3 right-3 z-10 max-w-[240px] rounded-md border border-border bg-card/95 px-2 py-1.5 text-[10px] text-muted-foreground shadow-sm">
+              Google Maps indisponível — exibindo mapa OpenStreetMap (pigeon).
+            </div>
+          )}
+
           {pins.length > 0 &&
-            (lente === 'mercado' ? <LegendaOceano /> : <LegendaVereditos />)}
+            (lente === 'mercado' ? (
+              <>
+                <LegendaOceano />
+                {heatmapDisponivel &&
+                  (camada === 'heat' || camada === 'both') && (
+                  <LegendaHeatmap />
+                )}
+              </>
+            ) : (
+              <LegendaVereditos />
+            ))}
         </div>
 
         {/* Painel lateral — pin selecionado ou cluster */}
@@ -295,7 +488,7 @@ export function MapaRelatoriosPage() {
                     params: { relatorioId: clusterAtivo.pins[0].id },
                   })
                 }
-                onFechar={() => setClusterAtivoIdx(null)}
+                onFechar={fecharCluster}
               />
             ) : (
               // Cluster com N>1 — mostra lista
@@ -310,7 +503,7 @@ export function MapaRelatoriosPage() {
                     params: { relatorioId: id },
                   })
                 }
-                onFechar={() => setClusterAtivoIdx(null)}
+                onFechar={fecharCluster}
               />
             )
           ) : (
@@ -608,13 +801,34 @@ function StreetViewPreview({
   )
 }
 
-function LegendaOceano() {
-  const items = [
-    { color: 'hsl(142 70% 45%)', label: 'Oceano azul' },
-    { color: 'hsl(45 95% 55%)', label: 'Transição' },
-    { color: 'hsl(0 70% 50%)', label: 'Oceano vermelho' },
-    { color: 'hsl(220 10% 55%)', label: 'Sem A9' },
+function LegendaHeatmap() {
+  const stops = [
+    { color: OCEANO_FILL.OCEANO_AZUL, label: 'Favorável' },
+    { color: OCEANO_FILL.TRANSICAO, label: 'Transição' },
+    { color: OCEANO_FILL.VERMELHO, label: 'Pressão' },
   ]
+  return (
+    <div className="absolute bottom-3 right-3 rounded-md border border-border bg-card/95 backdrop-blur px-3 py-2 shadow-lg max-w-[200px]">
+      <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground mb-1.5">
+        Calor (concorrência)
+      </p>
+      <div
+        className="h-2 rounded-full mb-1.5"
+        style={{
+          background: `linear-gradient(90deg, ${OCEANO_FILL.OCEANO_AZUL}, ${OCEANO_FILL.TRANSICAO}, ${OCEANO_FILL.VERMELHO})`,
+        }}
+      />
+      <div className="flex justify-between text-[10px] text-muted-foreground">
+        {stops.map((s) => (
+          <span key={s.label}>{s.label}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function LegendaOceano() {
+  const items = OCEANO_LEGEND_ITEMS
   return (
     <div className="absolute bottom-3 left-3 rounded-md border border-border bg-card/95 backdrop-blur px-3 py-2 shadow-lg">
       <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground mb-1.5">
@@ -664,13 +878,17 @@ function LegendaVereditos() {
   )
 }
 
-function MapaVazio() {
+function MapaVazio({ totalResumos = 0 }: { totalResumos?: number }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center space-y-2 text-muted-foreground">
+    <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center space-y-2 text-muted-foreground">
       <span className="text-4xl">🗺️</span>
-      <p className="text-sm">Nenhum relatório com coordenadas pra mapear</p>
+      <p className="text-sm">
+        {totalResumos > 0
+          ? `${totalResumos} relatório${totalResumos === 1 ? '' : 's'} sem coordenadas para mapear`
+          : 'Nenhum relatório com coordenadas pra mapear'}
+      </p>
       <p className="text-xs">
-        Os pins vêm do Top 1 candidato (A1 GeoScout) de cada relatório. Rode
+        Os pins vêm do bairro+cidade do relatório (geocode). Metadados do Top 1 aparecem no card. Rode
         novos relatórios pra popular o mapa.
       </p>
     </div>

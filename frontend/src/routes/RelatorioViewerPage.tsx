@@ -16,7 +16,7 @@
  * 12. Alertas Globais + Decisão
  */
 import { useEffect, useState } from 'react'
-import { Link, useParams, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { AlertTriangle, ArrowLeft, ChevronDown, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -42,6 +42,7 @@ import { ContextoMercadoCard } from '@/components/domain/ContextoMercadoCard'
 import { CandidatoCard } from '@/components/domain/CandidatoCard'
 import { CenarioFinanceiroTable } from '@/components/domain/CenarioFinanceiroTable'
 import { CapexBreakdownChart } from '@/components/domain/CapexBreakdownChart'
+import { ConsorcioCard } from '@/components/domain/ConsorcioCard'
 import { FinanceiroKpiStrip } from '@/components/domain/FinanceiroKpiStrip'
 import { KitEquipamentosTable } from '@/components/domain/KitEquipamentosTable'
 import {
@@ -55,6 +56,7 @@ import { recalcularCenariosComKit } from '@/lib/recalcula-cenario-com-kit'
 import { CompetidorGroup } from '@/components/domain/CompetidorGroup'
 import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
 import { EntrantesCnpjTable } from '@/components/domain/EntrantesCnpjTable'
+import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
 import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
 import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
@@ -64,10 +66,16 @@ import { TextoSecao } from '@/components/domain/TextoSecao'
 import { PosicionamentoCard } from '@/components/domain/PosicionamentoCard'
 import { AlertasGlobais } from '@/components/domain/AlertasGlobais'
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
+import { DeleteRelatorioButton } from '@/components/domain/DeleteRelatorioButton'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SectionHeader } from '@/components/ui/section-header'
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary'
+import {
+  relatorioViewerErrorMessage,
+  shouldRedirectToAguardando,
+  shouldShowRerunInViewer,
+} from '@/lib/relatorio-completeness'
 
 const TIPO_NEGOCIO_LABEL: Record<string, string> = {
   academia: 'Academia',
@@ -88,7 +96,18 @@ interface MetadataExecucaoShape {
 export function RelatorioViewerPage() {
   const { relatorioId } = useParams({ from: '/relatorios/$relatorioId' })
   const search = useSearch({ from: '/relatorios/$relatorioId' }) as { print?: string }
+  const navigate = useNavigate()
   const { data, isLoading, error } = useRelatorioDetail(relatorioId)
+
+  useEffect(() => {
+    if (isLoading || !data) return
+    if (shouldRedirectToAguardando(data.pipeline_status)) {
+      navigate({
+        to: '/relatorios/$relatorioId/aguardando',
+        params: { relatorioId },
+      })
+    }
+  }, [isLoading, data, relatorioId, navigate])
 
   // Hooks sempre antes de early return (React #310).
   useEffect(() => {
@@ -106,6 +125,17 @@ export function RelatorioViewerPage() {
 
   if (isLoading) return <ViewerSkeleton />
   if (error || !data) return <ViewerError message={error?.message} />
+
+  const viewerErr = relatorioViewerErrorMessage(data)
+  if (viewerErr) {
+    return (
+      <ViewerError
+        message={viewerErr}
+        relatorioId={relatorioId}
+        showRerun={shouldShowRerunInViewer(data)}
+      />
+    )
+  }
 
   return (
     <RouteErrorBoundary title="Erro ao exibir o relatório">
@@ -404,7 +434,7 @@ function RelatorioViewerContent({
                 modeloRecomendado={out.modelo_recomendado}
                 areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
               />
-              {/* <ConsorcioCard key={capexMid ?? 'sem-capex'} capexMid={capexMid} className="mt-4" /> */}
+              <ConsorcioCard key={cenariosAtivos?.mid?.capex_total ?? cenariosAtivos?.mid?.capex_estimado ?? 'sem-capex'} capexMid={cenariosAtivos?.mid?.capex_total ?? cenariosAtivos?.mid?.capex_estimado ?? null} className="mt-4" />
             </>
           )
         })()}
@@ -465,6 +495,13 @@ function RelatorioViewerContent({
       {/* 7.4 Novos entrantes CNPJ (90d) */}
       {out.entrantes_cnpj_90d && (out.entrantes_cnpj_90d.entrantes?.length ?? 0) > 0 && (
         <Section title="🆕 Novos entrantes (CNPJ — 90 dias)" collapsible>
+          <MapaMunicipioMercado
+            className="mb-4"
+            relatorioId={relatorioId}
+            cidade={inp.cidade}
+            uf={inp.uf ?? out.entrantes_cnpj_90d.uf}
+            bairro={inp.bairro}
+          />
           <EntrantesCnpjTable block={out.entrantes_cnpj_90d} relatorioId={relatorioId} />
         </Section>
       )}
@@ -489,10 +526,22 @@ function RelatorioViewerContent({
       {/* 8. Inteligência Competitiva — tabela por concorrente substituindo Dores Dominantes */}
       {out.competitors_set && out.competitors_set.length > 0 && (
         <Section title="🥊 Inteligência Competitiva" collapsible>
+          {(out.entrantes_cnpj_90d?.entrantes?.length ?? 0) === 0 && (
+            <MapaMunicipioMercado
+              className="mb-4"
+              relatorioId={relatorioId}
+              cidade={inp.cidade}
+              uf={inp.uf ?? out.market_context?.uf}
+              bairro={inp.bairro}
+            />
+          )}
           <InteligenciaCompetitivaResumoCard
             className="mb-4"
             nivelSaturacao={out.nivel_saturacao}
             panorama={out.panorama_competitivo}
+            agregadosPlaces={out.agregados_competicao_places ?? null}
+            totalEncontradosNearby={out.total_encontrados_raio_nearby ?? null}
+            fonteBuscaCompetidores={out.fonte_busca_competidores ?? null}
             marketContext={out.market_context}
             coberturaRedes={out.cobertura_redes_a0}
             topIndependentes={out.top_independentes}
@@ -677,7 +726,17 @@ function ViewerSkeleton() {
   )
 }
 
-function ViewerError({ message }: { message?: string }) {
+function ViewerError({
+  message,
+  relatorioId,
+  showRerun,
+}: {
+  message?: string
+  relatorioId?: string
+  showRerun?: boolean
+}) {
+  const navigate = useNavigate()
+
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" asChild>
@@ -685,13 +744,24 @@ function ViewerError({ message }: { message?: string }) {
           <ArrowLeft size={14} /> Voltar
         </Link>
       </Button>
-      <div className="rounded-lg border border-veredito-reprovado/40 bg-veredito-reprovado/5 p-6">
-        <h2 className="font-semibold text-veredito-reprovado mb-1">
-          Não foi possível carregar o relatório
-        </h2>
-        <p className="text-sm text-muted-foreground font-mono">
-          {message ?? 'Erro desconhecido'}
-        </p>
+      <div className="rounded-lg border border-veredito-reprovado/40 bg-veredito-reprovado/5 p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-veredito-reprovado mb-1">
+            Não foi possível exibir o relatório
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {message ?? 'Erro desconhecido'}
+          </p>
+        </div>
+        {showRerun && relatorioId ? (
+          <RerunPipelineButton relatorioId={relatorioId} />
+        ) : null}
+        {relatorioId ? (
+          <DeleteRelatorioButton
+            relatorioId={relatorioId}
+            onDeleted={() => navigate({ to: '/relatorios' })}
+          />
+        ) : null}
       </div>
     </div>
   )

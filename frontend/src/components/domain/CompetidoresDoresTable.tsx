@@ -50,9 +50,11 @@ function reviewRecente1Ano(dataRelativa: string | undefined): boolean {
 /** Agrega dores citadas nos reviews recentes (≤ 1 ano) de UM competidor. */
 function doresPorCompetidor(c: CompetidorJSON): DorAgregada[] {
   const reviews: ReviewJSON[] = c.reviews ?? c.reviews_traduzidas ?? []
+  const recentes = reviews.filter((r) => reviewRecente1Ano(r.data_relativa))
+  const baixaNota = recentes.filter((r) => (r.rating ?? 5) <= 3)
+  const fonte = baixaNota.length > 0 ? baixaNota : recentes
   const map = new Map<string, DorAgregada>()
-  for (const r of reviews) {
-    if (!reviewRecente1Ano(r.data_relativa)) continue
+  for (const r of fonte) {
     const cat = (r.categoria_dor || '').trim() as CategoriaDor
     if (!cat || cat === ('outra' as CategoriaDor)) continue
     const slot = map.get(cat)
@@ -107,10 +109,15 @@ export function CompetidoresDoresTable({
   return (
     <div className={cn('space-y-4', className)}>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <header className="px-4 py-2.5 border-b border-border bg-muted/20 flex items-center justify-between">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-mono font-medium">
-            Concorrentes — dores citadas nos reviews
-          </h3>
+        <header className="px-4 py-2.5 border-b border-border bg-muted/20 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-mono font-medium">
+              Concorrentes — dores citadas nos reviews
+            </h3>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Place ID alimenta horários de pico (SearchAPI → cache 7d por ficha).
+            </p>
+          </div>
           <span className="text-[10px] font-mono text-muted-foreground">
             {competidores.length} academia{competidores.length === 1 ? '' : 's'}
           </span>
@@ -120,6 +127,7 @@ export function CompetidoresDoresTable({
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono border-b border-border">
                 <th className="text-left p-3 font-medium">Concorrente</th>
+                <th className="text-left p-3 font-medium w-[148px]">Place ID</th>
                 <th className="text-left p-3 font-medium">Contato</th>
                 <th className="text-center p-3 font-medium w-20">Rating</th>
                 <th className="text-left p-3 font-medium w-[140px]">Pico (24h)</th>
@@ -133,8 +141,15 @@ export function CompetidoresDoresTable({
                 const sinal = sinalPredominante(dores)
                 const sinalCfg = SINAL_BADGE[sinal]
                 const rating = c.rating_oficial ?? c.rating_geral
+                const pid = c.place_id?.trim()
+                const mapsPlaceUrl = pid
+                  ? `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(pid)}`
+                  : null
                 return (
-                  <tr key={i} className="border-b border-border last:border-b-0 hover:bg-muted/30 align-top">
+                  <tr
+                    key={pid ?? `${c.nome}-${i}`}
+                    className="border-b border-border last:border-b-0 hover:bg-muted/30 align-top"
+                  >
                     <td className="p-3">
                       <div className="font-medium text-sm">{c.nome}</div>
                       {(c.bairro_concorrente || c.endereco) && (
@@ -145,6 +160,27 @@ export function CompetidoresDoresTable({
                       {c.tem_24h && (
                         <span className="inline-block mt-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-veredito-aprovado/15 text-veredito-aprovado">
                           24h
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 align-top">
+                      {pid ? (
+                        <a
+                          href={mapsPlaceUrl!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground"
+                          title={pid}
+                        >
+                          <span className="truncate max-w-[120px]">{pid}</span>
+                          <ExternalLink size={9} className="shrink-0" />
+                        </a>
+                      ) : (
+                        <span
+                          className="text-[10px] italic text-veredito-investigar"
+                          title="Sem Place ID — horários de pico (SearchAPI) não rodam para esta linha"
+                        >
+                          ausente
                         </span>
                       )}
                     </td>

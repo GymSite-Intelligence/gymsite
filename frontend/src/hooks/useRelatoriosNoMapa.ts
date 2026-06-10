@@ -1,9 +1,11 @@
 /**
  * useRelatoriosNoMapa — agrega lat/lng dos relatórios pra renderizar pins.
  *
- * Faz 2 queries Supabase:
+ * Queries Supabase:
  *   1. `useRelatorios` — lista resumo com filtros
- *   2. `candidatos` — top 1 (posicao=1) de cada relatório, com lat/lng
+ *   2. geocode bairro+cidade (API) — lat/lng do pin no mapa
+ *   3. `candidatos` — top 1 (só metadados / fallback coords)
+ *   4. `relatorio_outputs.score_concorrencia` — peso do heatmap
  *
  * Quando USE_MOCKS=true, cai no fallback antigo que lia RAW_MOCKS[i].top_3_candidatos[0].
  */
@@ -16,6 +18,8 @@ import { supabase } from '@/lib/supabase'
 import { RAW_MOCKS, USE_MOCKS } from '@/mocks'
 import type { Veredito, VereditoOceano } from '@/types/domain'
 import { normalizeVereditoOceano } from '@/lib/oceano'
+import { localidadeKey, viewportFromPins } from '@/lib/map-fly-to'
+import { fetchBairroCoordsBatch } from '@/lib/bairro-geocode'
 
 export interface PinRelatorio {
   id: string
@@ -32,6 +36,8 @@ export interface PinRelatorio {
   candidato_endereco: string
   /** URL Street View Static gerada pelo A1 GeoScout (640x400 c/ key). */
   street_view_url: string | null
+  /** A3/A6 — 0–10 (10 = mercado favorável). Prioridade no peso do heatmap. */
+  score_concorrencia: number | null
 }
 
 interface TopCandidatoRow {
@@ -51,6 +57,58 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
 
   // Top 1 candidato (posicao=1) de cada relatório visível — só os com lat/lng.
   // Query rola só quando temos IDs e estamos logados (RLS filtra por org).
+  const { data: scoresByRelatorio, isLoading: loadingScores } = useQuery({
+    queryKey: ['mapa-scores', user?.id ?? 'anon', ids],
+    enabled: !USE_MOCKS && !!user && ids.length > 0,
+    meta: { silent: true },
+    queryFn: async (): Promise<Map<string, number | null>> => {
+      const { data, error } = await supabase
+        .from('relatorio_outputs')
+        .select('relatorio_id, score_concorrencia')
+        .in('relatorio_id', ids)
+      if (error) throw new Error(`Supabase: ${error.message}`)
+      const map = new Map<string, number | null>()
+      for (const row of (data ?? []) as Array<{
+        relatorio_id: string
+        score_concorrencia: number | string | null
+      }>) {
+        const sc = row.score_concorrencia
+        const n =
+          typeof sc === 'string'
+            ? parseFloat(sc)
+            : typeof sc === 'number'
+              ? sc
+              : null
+        map.set(
+          row.relatorio_id,
+          n != null && Number.isFinite(n) ? n : null,
+        )
+      }
+      return map
+    },
+  })
+
+
+  const { data: bairroCoordsByKey, isLoading: loadingBairroGeo } = useQuery({
+    queryKey: [
+      'mapa-bairro-geo',
+      user?.id ?? 'anon',
+      ids,
+      (resumos ?? []).map((r) => localidadeKey(r.bairro, r.cidade)).join('|'),
+    ],
+    enabled: !USE_MOCKS && !!user && (resumos?.length ?? 0) > 0,
+    meta: { silent: true },
+    staleTime: 1000 * 60 * 60 * 24,
+    queryFn: async () => {
+      const items = (resumos ?? []).map((r) => ({
+        bairro: r.bairro,
+        cidade: r.cidade,
+        uf: r.uf,
+      }))
+      return fetchBairroCoordsBatch(items)
+    },
+  })
+
   const { data: topByRelatorio, isLoading: loadingTops } = useQuery({
     queryKey: ['mapa-top1', user?.id ?? 'anon', ids],
     enabled: !USE_MOCKS && !!user && ids.length > 0,
@@ -63,7 +121,6 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
         )
         .in('relatorio_id', ids)
         .eq('posicao', 1)
-        .not('lat', 'is', null)
       if (error) throw new Error(`Supabase: ${error.message}`)
       const map = new Map<string, TopCandidatoRow>()
       for (const row of (data ?? []) as TopCandidatoRow[]) {
@@ -95,6 +152,10 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
         ) {
           continue
         }
+        const oc = raw.output_consolidado as Record<string, unknown> | undefined
+        const rawSc = oc?.score_concorrencia
+        const outSc =
+          typeof rawSc === 'number' && Number.isFinite(rawSc) ? rawSc : null
         out.push({
           id: resumo.id,
           lat,
@@ -112,19 +173,26 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
             typeof top?.street_view_url === 'string' && top.street_view_url
               ? top.street_view_url
               : null,
+          score_concorrencia: outSc,
         })
       }
       return out
     }
 
-    // Modo real: usa o map de top1 candidato do Supabase
-    if (!topByRelatorio) return []
+    // Modo real: pin = geocode bairro+cidade do relatório (fallback: top1 imóvel)
     const out: PinRelatorio[] = []
     for (const resumo of resumos) {
-      const top = topByRelatorio.get(resumo.id)
-      if (!top) continue
-      const lat = typeof top.lat === 'string' ? parseFloat(top.lat) : top.lat
-      const lng = typeof top.lng === 'string' ? parseFloat(top.lng) : top.lng
+      const top = topByRelatorio?.get(resumo.id)
+      const scoreConc = scoresByRelatorio?.get(resumo.id) ?? null
+      const geo = bairroCoordsByKey?.get(localidadeKey(resumo.bairro, resumo.cidade))
+      let lat = geo?.lat
+      let lng = geo?.lng
+      if (lat == null || lng == null) {
+        const tLat = typeof top?.lat === 'string' ? parseFloat(top.lat) : top?.lat
+        const tLng = typeof top?.lng === 'string' ? parseFloat(top.lng) : top?.lng
+        lat = tLat ?? undefined
+        lng = tLng ?? undefined
+      }
       if (
         lat == null ||
         lng == null ||
@@ -134,9 +202,9 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
         continue
       }
       const scoreGeo =
-        typeof top.score_geoscout === 'string'
-          ? parseFloat(top.score_geoscout)
-          : top.score_geoscout
+        typeof top?.score_geoscout === 'string'
+          ? parseFloat(top?.score_geoscout as string)
+          : top?.score_geoscout
       out.push({
         id: resumo.id,
         lat,
@@ -150,19 +218,26 @@ export function useRelatoriosNoMapa(filters: RelatoriosFilters = {}) {
           ? (scoreGeo as number)
           : null,
         modelo_recomendado: resumo.modelo_recomendado,
-        candidato_nome: top.nome ?? '—',
-        candidato_endereco: top.endereco ?? '',
-        street_view_url: top.street_view_url ?? null,
+        candidato_nome: top?.nome ?? '—',
+        candidato_endereco: top?.endereco ?? '',
+        street_view_url: top?.street_view_url ?? null,
+        score_concorrencia: scoreConc,
       })
     }
     return out
-  }, [resumos, topByRelatorio])
+  }, [resumos, topByRelatorio, scoresByRelatorio, bairroCoordsByKey])
+
+  const totalResumos = resumos?.length ?? 0
 
   return {
     pins,
-    isLoading: loadingResumos || loadingTops,
+    /** Bloqueia o mapa só enquanto dados essenciais carregam (não geocode em background). */
+    isLoading: loadingResumos || loadingTops || loadingScores,
+    /** Geocode bairro+cidade — melhora posição do pin; top1 candidato é fallback imediato. */
+    isGeocodingBairros: loadingBairroGeo,
     total: pins.length,
-    semCoordenadas: (resumos?.length ?? 0) - pins.length,
+    semCoordenadas: totalResumos - pins.length,
+    totalResumos,
   }
 }
 
@@ -236,33 +311,9 @@ export function agruparPinsCoLocalizados(
   return clusters
 }
 
-/** Centro/zoom inicial: se há pins, usa centroide; senão Brasil (Brasília). */
+/** Centro/zoom inicial: enquadra pins em escala cidade/bairro (não Brasil nem rua). */
 export function calcularViewportInicial(
   pins: PinRelatorio[],
 ): { center: [number, number]; zoom: number } {
-  if (pins.length === 0) {
-    return { center: [-15.7942, -47.8822], zoom: 4 } // Brasília + Brasil
-  }
-  if (pins.length === 1) {
-    return { center: [pins[0].lat, pins[0].lng], zoom: 13 }
-  }
-  // Centroide simples (média) + zoom proporcional ao spread
-  const lats = pins.map((p) => p.lat)
-  const lngs = pins.map((p) => p.lng)
-  const center: [number, number] = [
-    lats.reduce((a, b) => a + b, 0) / pins.length,
-    lngs.reduce((a, b) => a + b, 0) / pins.length,
-  ]
-  const spreadLat = Math.max(...lats) - Math.min(...lats)
-  const spreadLng = Math.max(...lngs) - Math.min(...lngs)
-  const maxSpread = Math.max(spreadLat, spreadLng)
-  // Zoom heurístico: spread em graus → zoom level
-  // 0.01° ≈ z14, 0.1° ≈ z11, 1° ≈ z8, 10° ≈ z5
-  let zoom = 13
-  if (maxSpread > 10) zoom = 5
-  else if (maxSpread > 1) zoom = 8
-  else if (maxSpread > 0.1) zoom = 11
-  else if (maxSpread > 0.01) zoom = 13
-  else zoom = 15
-  return { center, zoom }
+  return viewportFromPins(pins)
 }

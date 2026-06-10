@@ -17,8 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { RelatorioResumo } from '@/types/domain'
+import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
+import { DeleteRelatorioButton } from '@/components/domain/DeleteRelatorioButton'
+import { needsRelatorioRerun } from '@/lib/relatorio-completeness'
 import { getDashboardDataSourceLabel } from '@/lib/dashboard/data-source'
+import type { RelatorioResumo } from '@/types/domain'
 
 function fmtData(iso: string | null): string {
   if (!iso) return '—'
@@ -119,6 +122,7 @@ export function DashboardRelatoriosTable({
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Score</TableHead>
                 <TableHead className="text-right">Custo</TableHead>
+                <TableHead className="w-[140px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -191,6 +195,26 @@ export function DashboardRelatoriosTable({
                             currency: 'BRL',
                           })
                         : '—'}
+                    </TableCell>
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <DeleteRelatorioButton
+                          relatorioId={r.id}
+                          label={`${r.bairro} · ${r.cidade}`}
+                        />
+                        {needsRelatorioRerun(r) ? (
+                          <RerunPipelineButton
+                            relatorioId={r.id}
+                            status={r.status}
+                            label="Gerar novamente"
+                            size="sm"
+                            stopPropagation
+                          />
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

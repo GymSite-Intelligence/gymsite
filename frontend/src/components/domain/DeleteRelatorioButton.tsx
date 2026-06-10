@@ -2,11 +2,7 @@
  * DeleteRelatorioButton — botão de delete com confirmação inline em 2 cliques.
  *
  * UX: 1º clique "arma" (vira vermelho com texto "Confirmar?"); 2º clique
- * dispara a mutation; sem clique em 3s, desarma sozinho. Sem AlertDialog
- * porque o projeto não tem @radix-ui/react-alert-dialog instalado — padrão
- * 2-click é menor e familiar (GitHub usa).
- *
- * Só usado pra relatórios com status='failed'.
+ * dispara a mutation; sem clique em 3s, desarma sozinho.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, Trash2 } from 'lucide-react'
@@ -22,12 +18,15 @@ export interface DeleteRelatorioButtonProps {
   /** Texto curto pra contexto no toast (ex: "Niterói/Itaipu"). */
   label?: string
   className?: string
+  /** Chamado após delete bem-sucedido (ex: redirect). */
+  onDeleted?: () => void
 }
 
 export function DeleteRelatorioButton({
   relatorioId,
   label,
   className,
+  onDeleted,
 }: DeleteRelatorioButtonProps) {
   const [armed, setArmed] = useState(false)
   const timeoutRef = useRef<number | null>(null)
@@ -63,6 +62,7 @@ export function DeleteRelatorioButton({
         notify.success(
           label ? `Relatório de ${label} apagado` : 'Relatório apagado',
         )
+        onDeleted?.()
       },
       onError: (err) => {
         notify.error(err)
@@ -111,7 +111,7 @@ export function DeleteRelatorioButton({
         'h-8 w-8 text-muted-foreground hover:text-veredito-reprovado hover:bg-veredito-reprovado/10',
         className,
       )}
-      aria-label="Apagar relatório que falhou"
+      aria-label="Apagar relatório"
       title="Apagar relatório"
     >
       <Trash2 size={14} />
