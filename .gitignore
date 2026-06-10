@@ -103,3 +103,35 @@ skills-lock.json
 
 # Artefatos estranhos
 =5.0.0
+
+# PIDs de processos locais
+*.pid
+
+# Caches de runtime
+tools/cache/
+eval/runs/
+
+# Dados gerados por pipelines (pesados, reproduzíveis)
+data/
+
+# Scripts de debug/patch descartáveis
+scripts/_debug_*.py
+scripts/_fix_*.py
+scripts/_patch_*.py
+scripts/_probe_*.py
+scripts/_smoke_*.py
+
+# Qwen CLI local
+.qwen/
+
+# Artefatos de scraping/inspeção Lark
+lark_*.html
+lark_*.txt
+lark_inspect.py
+lark_login.py
+
+# Relatórios de debug locais
+DEBUG_RELATORIO.md
+diagnose_imports.py
+estrutura_projeto.txt
+preview_assistente_ui.html
