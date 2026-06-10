@@ -135,3 +135,11 @@ DEBUG_RELATORIO.md
 diagnose_imports.py
 estrutura_projeto.txt
 preview_assistente_ui.html
+
+# Artefatos de execução de testes autônomos
+scripts/autonomous_test_report.md
+scripts/consolidated_report.json
+
+# Insumos brutos de pesquisa (já codificados nas tools / fixtures)
+Imobiliario/
+docs/reference/*.json
