@@ -1,0 +1,516 @@
+{
+  "cache_key": "2bf467ac9612a852",
+  "gerado_em": "2026-06-02T17:12:28.155132+00:00",
+  "local": {
+    "cidade": "Fortaleza",
+    "bairro": "Meireles",
+    "uf": "CE"
+  },
+  "parametros": {
+    "area_min_m2": 800,
+    "area_max_m2": 1500
+  },
+  "competicao_local": {
+    "status": "ok",
+    "cidade": "Fortaleza",
+    "bairro": "Meireles",
+    "uf": "CE",
+    "raio_metros": 5000,
+    "fonte_geocode": "nominatim",
+    "lat_centro": -3.7278218,
+    "lng_centro": -38.5003721,
+    "total_unidades_osm": 25,
+    "redes_detectadas_osm": [
+      "Selfit",
+      "Greenlife",
+      "Smart Fit"
+    ],
+    "amostra_unidades": [
+      {
+        "nome": "Via Clinic",
+        "endereco": "Rua Visconde de Mauá, 2600",
+        "distancia_km": 2.25,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Espaço F2 - Estúdio de Pilates",
+        "endereco": "",
+        "distancia_km": 1.85,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Academia (OSM)",
+        "endereco": "",
+        "distancia_km": 0.71,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Academia Agitate",
+        "endereco": "Rua Canuto de Aguiar, 429, Meireles, Fortaleza",
+        "distancia_km": 0.32,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Selfit",
+        "endereco": "Avenida Dom Luís, 1200, Meireles, Fortaleza",
+        "distancia_km": 1.43,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Greenlife Academia",
+        "endereco": "Avenida Santos Dumont, 1749, Aldeota, Fortaleza",
+        "distancia_km": 1.02,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Academia (OSM)",
+        "endereco": "",
+        "distancia_km": 2.6,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Selfit",
+        "endereco": "Rua Monsenhor Bruno, 1153, Aldeota, Fortaleza",
+        "distancia_km": 1.16,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Academia (OSM)",
+        "endereco": "",
+        "distancia_km": 3.35,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Academia (OSM)",
+        "endereco": "",
+        "distancia_km": 3.97,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Smart Fit",
+        "endereco": "Rua Tibúrcio Cavalcante, 1885",
+        "distancia_km": 1.53,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Smart Fit",
+        "endereco": "Avenida Deputado Oswaldo Studart, 200, Fátima, Fortaleza",
+        "distancia_km": 4.14,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Academia Ideal Fitness",
+        "endereco": "Rua Torquato Aguiar, 44, Meireles, Fortaleza",
+        "distancia_km": 1.16,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Academia (OSM)",
+        "endereco": "Rua Monsenhor Otávio de Castro, 43, José Bonifácio, Fortaleza",
+        "distancia_km": 3.44,
+        "fonte": "overpass_osm"
+      },
+      {
+        "nome": "Kalorias Academia",
+        "endereco": "Rua José Vilar, 1678, Aldeota, Fortaleza",
+        "distancia_km": 1.37,
+        "fonte": "overpass_osm"
+      }
+    ],
+    "nota": "Marcas inferidas por nome nas unidades OSM no raio. Independentes sem marca no nome não entram em redes_detectadas_osm."
+  },
+  "aluguel_portais": {
+    "tier": 1,
+    "tier1_suficiente": true,
+    "mediana_r_m2": 26.79,
+    "min_r_m2": 19.18,
+    "max_r_m2": 37.5,
+    "n_validos": 17,
+    "confianca": "alta",
+    "classificacao": "abaixo_do_benchmark",
+    "exemplos_urls": [
+      "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/alugo-apto-2-q-itaperi-proximo-ao-big-monster-1504175987",
+      "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-meireles-2-quartos-1507374113",
+      "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-na-maraponga-2-quartos-para-alugar-46m-1503939688",
+      "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/aluguel-apartamento-2-suites-monte-castelo-1507366048",
+      "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-parque-iracema-3-quartos-1505762138"
+    ],
+    "fonte": "Portais municipais (ZAP/Viva/OLX)",
+    "aviso": "Norte de mercado em Fortaleza/CE: faixa típica entre R$ 19 e R$ 38/m² (referência central ~R$ 27/m²), com base em 17 anúncios municipais. Confiança alta — use como orientação, não cotação pontual.",
+    "norte": "Norte de mercado em Fortaleza/CE: faixa típica entre R$ 19 e R$ 38/m² (referência central ~R$ 27/m²), com base em 17 anúncios municipais. Confiança alta — use como orientação, não cotação pontual.",
+    "faixa_rs_m2": {
+      "p25": 19.18,
+      "mediana": 26.79,
+      "p75": 37.5,
+      "baixo": 19.18,
+      "tipico": 26.79,
+      "alto": 37.5
+    },
+    "amostras": [
+      {
+        "price_reais": 1000.0,
+        "area_m2": 54.0,
+        "r_m2": 18.52,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/alugo-apto-2-q-itaperi-proximo-ao-big-monster-1504175987",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 4300.0,
+        "area_m2": 54.0,
+        "r_m2": 79.63,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-meireles-2-quartos-1507374113",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 1290.0,
+        "area_m2": 46.0,
+        "r_m2": 28.04,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-na-maraponga-2-quartos-para-alugar-46m-1503939688",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 1999.0,
+        "area_m2": 65.0,
+        "r_m2": 30.75,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/aluguel-apartamento-2-suites-monte-castelo-1507366048",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 2000.0,
+        "area_m2": 76.0,
+        "r_m2": 26.32,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-parque-iracema-3-quartos-1505762138",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 4200.0,
+        "area_m2": 82.0,
+        "r_m2": 51.22,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-residencial-3-suites-82m-para-aluguel-no-luciano-cavalcante-2-vagas-e-laz-1507356765",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 1400.0,
+        "area_m2": 73.0,
+        "r_m2": 19.18,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-parque-iracema-2-quartos-1507354093",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 600.0,
+        "area_m2": 50.0,
+        "r_m2": 12.0,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-2-quartos-quintino-cunha-600-00-nao-paga-agua-1507351911",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 4100.0,
+        "area_m2": 65.0,
+        "r_m2": 63.08,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/fixo-ou-temporada-100-mobiliado-2-suites-ar-split-varanda-garagem-prox-a-beiramar-1375098610",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 2879.0,
+        "area_m2": 72.0,
+        "r_m2": 39.99,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apto-03-quartos-02-suites-02-vagas-72m2-no-cond-vivendas-do-rio-branco-no-bairro-de-fatima-1507339163",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 3100.0,
+        "area_m2": 350.0,
+        "r_m2": 8.86,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/casa-ampla-com-piscina-vicente-pinzon-papicu-1507337613",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 7500.0,
+        "area_m2": 280.0,
+        "r_m2": 26.79,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apto-familiar-280m-4-suites-lavabo-2-vagas-meireles-perto-da-beira-mar-1507337833",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 1500.0,
+        "area_m2": 40.0,
+        "r_m2": 37.5,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apto-02-quartos-01-vaga-na-nogueira-acioli-aluguel-1-500-ja-incluso-condominio-1507334947",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 3700.0,
+        "area_m2": 100.0,
+        "r_m2": 37.0,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/alugo-apto-3-quatos-100m-aldeota-1507328931",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 1300.0,
+        "area_m2": 49.0,
+        "r_m2": 26.53,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-para-alugar-na-cidade-de-fortaleza-ce-1500250143",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 3000.0,
+        "area_m2": 150.0,
+        "r_m2": 20.0,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-para-alugar-no-bairro-joaquim-tavora-fortaleza-ce-1504154610",
+        "portal": "olx"
+      },
+      {
+        "price_reais": 900.0,
+        "area_m2": 100.0,
+        "r_m2": 9.0,
+        "url": "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/alugar-se-casa-de-02-quartos-1507304185",
+        "portal": "olx"
+      }
+    ],
+    "urls_consultadas": {
+      "zap": [
+        "https://www.zapimoveis.com.br/aluguel/galpoes-depositos-armazens/ce+fortaleza/?areaMin=800&areaMax=1500",
+        "https://www.zapimoveis.com.br/aluguel/imoveis-comerciais/ce+fortaleza/?areaMin=800&areaMax=1500",
+        "https://www.zapimoveis.com.br/aluguel/pontos-comerciais/ce+fortaleza/?areaMin=800&areaMax=1500"
+      ],
+      "viva": [
+        "https://www.vivareal.com.br/aluguel/ceara/fortaleza/imovel-comercial/?areaMin=800&areaMax=1500",
+        "https://www.vivareal.com.br/aluguel/ceara/fortaleza/galpao-deposito-armazem/?areaMin=800&areaMax=1500",
+        "https://www.vivareal.com.br/aluguel/ceara/fortaleza/salas-comerciais/?areaMin=800&areaMax=1500"
+      ],
+      "olx": [
+        "https://www.olx.com.br/imoveis/aluguel/lojas-salas-e-pontos-comerciais/fortaleza/estado-ce?re=CE&areaMin=800&areaMax=1500",
+        "https://www.olx.com.br/imoveis/aluguel/galpoes-e-depositos/fortaleza/estado-ce?re=CE&areaMin=800&areaMax=1500"
+      ]
+    },
+    "fetch_transport": "httpx+playwright",
+    "erros": [
+      "zap: sem HTML [httpx] (https://www.zapimoveis.com.br/aluguel/galpoes-depositos-armazens/ce+fo…)",
+      "zap: sem HTML [httpx] (https://www.zapimoveis.com.br/aluguel/imoveis-comerciais/ce+fortaleza/…)",
+      "zap: sem HTML [httpx] (https://www.zapimoveis.com.br/aluguel/pontos-comerciais/ce+fortaleza/?…)",
+      "viva: sem HTML [httpx] (https://www.vivareal.com.br/aluguel/ceara/fortaleza/imovel-comercial/?…)",
+      "viva: sem HTML [httpx] (https://www.vivareal.com.br/aluguel/ceara/fortaleza/galpao-deposito-ar…)",
+      "viva: sem HTML [httpx] (https://www.vivareal.com.br/aluguel/ceara/fortaleza/salas-comerciais/?…)",
+      "olx: sem HTML [httpx] (https://www.olx.com.br/imoveis/aluguel/lojas-salas-e-pontos-comerciais…)",
+      "olx: sem HTML [httpx] (https://www.olx.com.br/imoveis/aluguel/galpoes-e-depositos/fortaleza/e…)",
+      "zap: 0 anúncios parseados [playwright] (https://www.zapimoveis.com.br/aluguel/galpoes-depositos-armazens/ce+fo…)",
+      "zap: 0 anúncios parseados [playwright] (https://www.zapimoveis.com.br/aluguel/imoveis-comerciais/ce+fortaleza/…)",
+      "zap: 0 anúncios parseados [playwright] (https://www.zapimoveis.com.br/aluguel/pontos-comerciais/ce+fortaleza/?…)",
+      "viva: 0 anúncios parseados [playwright] (https://www.vivareal.com.br/aluguel/ceara/fortaleza/imovel-comercial/?…)",
+      "viva: 0 anúncios parseados [playwright] (https://www.vivareal.com.br/aluguel/ceara/fortaleza/galpao-deposito-ar…)",
+      "viva: 0 anúncios parseados [playwright] (https://www.vivareal.com.br/aluguel/ceara/fortaleza/salas-comerciais/?…)"
+    ],
+    "aluguel_municipio_referencia": {
+      "faixa_rs_m2": {
+        "p25": 19.18,
+        "mediana": 26.79,
+        "p75": 37.5,
+        "baixo": 19.18,
+        "tipico": 26.79,
+        "alto": 37.5
+      },
+      "classificacao": "abaixo_do_benchmark",
+      "confianca": "alta",
+      "n_amostras": 17,
+      "aviso": "Norte de mercado em Fortaleza/CE: faixa típica entre R$ 19 e R$ 38/m² (referência central ~R$ 27/m²), com base em 17 anúncios municipais. Confiança alta — use como orientação, não cotação pontual.",
+      "exemplos": [
+        "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/alugo-apto-2-q-itaperi-proximo-ao-big-monster-1504175987",
+        "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-meireles-2-quartos-1507374113",
+        "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-na-maraponga-2-quartos-para-alugar-46m-1503939688",
+        "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/aluguel-apartamento-2-suites-monte-castelo-1507366048",
+        "https://ce.olx.com.br/fortaleza-e-regiao/imoveis/apartamento-parque-iracema-3-quartos-1505762138"
+      ],
+      "fonte": "Portais municipais (ZAP/Viva/OLX)"
+    }
+  },
+  "bcb_imobiliario": {
+    "ok": true,
+    "fonte": "Banco Central do Brasil — MercadoImobiliario (Olinda)",
+    "url_base": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$top=1000&$orderby=Data%20desc",
+    "cidade_contexto": "Fortaleza",
+    "series": [
+      {
+        "info": "credito_contratacao_contratado_pf_comercial_br",
+        "data": "2026-02-28",
+        "valor": 97635625.69,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_comercial_br'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_comercial_es",
+        "data": "2026-02-28",
+        "valor": 1109697.58,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_comercial_es'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_comercial_ms",
+        "data": "2026-02-28",
+        "valor": 1048930.0,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_comercial_ms'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_comercial_pi",
+        "data": "2026-02-28",
+        "valor": 838470.09,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_comercial_pi'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_ap",
+        "data": "2026-02-28",
+        "valor": 6219048.54,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_ap'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_ce",
+        "data": "2026-02-28",
+        "valor": 346696811.89,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_ce'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_df",
+        "data": "2026-02-28",
+        "valor": 172824967.06,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_df'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_es",
+        "data": "2026-02-28",
+        "valor": 63471850.42,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_es'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_go",
+        "data": "2026-02-28",
+        "valor": 525465253.19,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_go'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_rr",
+        "data": "2026-02-28",
+        "valor": 33783066.59,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_rr'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_rs",
+        "data": "2026-02-28",
+        "valor": 539633996.49,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_rs'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_sc",
+        "data": "2026-02-28",
+        "valor": 339662250.78,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_sc'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_fgts_sp",
+        "data": "2026-02-28",
+        "valor": 2931548814.06,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_fgts_sp'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_home_equity_ac",
+        "data": "2026-02-28",
+        "valor": 263153.88,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_home_equity_ac'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_home_equity_ap",
+        "data": "2026-02-28",
+        "valor": 890168.91,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_home_equity_ap'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_home_equity_df",
+        "data": "2026-02-28",
+        "valor": 33825737.08,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_home_equity_df'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_home_equity_es",
+        "data": "2026-02-28",
+        "valor": 8390650.43,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_home_equity_es'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_home_equity_mg",
+        "data": "2026-02-28",
+        "valor": 79530401.87,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_home_equity_mg'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_home_equity_mt",
+        "data": "2026-02-28",
+        "valor": 18227373.47,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_home_equity_mt'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_home_equity_to",
+        "data": "2026-02-28",
+        "valor": 2765769.46,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_home_equity_to'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_livre_df",
+        "data": "2026-02-28",
+        "valor": 190843815.31,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_livre_df'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_livre_ms",
+        "data": "2026-02-28",
+        "valor": 73815204.35,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_livre_ms'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_livre_pe",
+        "data": "2026-02-28",
+        "valor": 89888196.2,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_livre_pe'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_livre_rr",
+        "data": "2026-02-28",
+        "valor": 1879111.84,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_livre_rr'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_sfh_ma",
+        "data": "2026-02-28",
+        "valor": 55319479.02,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_sfh_ma'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_sfh_pe",
+        "data": "2026-02-28",
+        "valor": 162955956.64,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_sfh_pe'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_sfh_rs",
+        "data": "2026-02-28",
+        "valor": 435489331.14,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_sfh_rs'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_sfh_sc",
+        "data": "2026-02-28",
+        "valor": 370988838.48,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_sfh_sc'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_sfh_se",
+        "data": "2026-02-28",
+        "valor": 51902518.72,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_sfh_se'"
+      },
+      {
+        "info": "credito_contratacao_contratado_pf_sfh_sp",
+        "data": "2026-02-28",
+        "valor": 2848925859.05,
+        "url": "https://olinda.bcb.gov.br/olinda/servico/MercadoImobiliario/versao/v1/odata/mercadoimobiliario?$format=json&$select=Data,Info,Valor&$filter=Info%20eq%20'credito_contratacao_contratado_pf_sfh_sp'"
+      }
+    ],
+    "destaques": {},
+    "norte": "Referência macro imobiliária para Fortaleza obtida em BCB/Olinda sem identificar séries específicas de financiamento/com crédito direcionado. Use as séries listadas como pano de fundo qualitativo."
+  }
+}

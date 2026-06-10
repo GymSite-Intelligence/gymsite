@@ -1,0 +1,12 @@
+{
+  "report_id": "smoke_test_20260603_100114",
+  "localizacao": "Fortaleza/Meireles",
+  "status": "done",
+  "tempo_execucao_segundos": 26.128,
+  "tempo_cache_segundos": 22.631,
+  "tempo_llm_segundos": 1.621,
+  "tokens_in_total": 442,
+  "tokens_out_total": 151,
+  "custo_total_brl": 0.002896,
+  "resumo_resposta": "1. **Viabilidade:** [MÉDIA] - A saturação moderada e a mediana do aluguel indicam uma viabilidade média.\n2. **Concorrência:** Existem 25 unidades concorrentes, com redes principais como Selfit, Greenl..."
+}

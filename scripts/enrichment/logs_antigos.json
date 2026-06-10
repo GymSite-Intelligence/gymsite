@@ -1,0 +1,299 @@
+[
+  {
+    "id": "3df0f6de-c094-4751-8c09-87c5c3fcab42",
+    "status": "done",
+    "tempo_execucao_segundos": 3084,
+    "tokens_in_total": 2148576,
+    "custo_total_brl": 7.8,
+    "created_at": "2026-05-28T17:27:10.703124+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "cccb77b5-58e4-405a-9c07-b81deaafb315",
+    "status": "done",
+    "tempo_execucao_segundos": 766,
+    "tokens_in_total": 775922,
+    "custo_total_brl": 3.43,
+    "created_at": "2026-05-28T18:34:12.961156+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "d12a0e99-b574-4bf0-8b24-6cb79e637261",
+    "status": "done",
+    "tempo_execucao_segundos": 2032,
+    "tokens_in_total": 2029134,
+    "custo_total_brl": 7.53,
+    "created_at": "2026-05-28T20:17:21.456938+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "ba3a3825-a5a4-4463-97b5-aea0a84c9502",
+    "status": "done",
+    "tempo_execucao_segundos": 367,
+    "tokens_in_total": 347342,
+    "custo_total_brl": 2.17,
+    "created_at": "2026-05-12T13:17:57.606988+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "8845b104-4536-444e-98d6-03b7319cbf08",
+    "status": "done",
+    "tempo_execucao_segundos": 1825,
+    "tokens_in_total": 2340084,
+    "custo_total_brl": 8.28,
+    "created_at": "2026-05-28T22:09:37.481338+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "4a812c48-d6d9-4f73-b027-74c66f6978a0",
+    "status": "done",
+    "tempo_execucao_segundos": 319,
+    "tokens_in_total": 385222,
+    "custo_total_brl": 2.22,
+    "created_at": "2026-05-12T14:21:38.279421+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "8219e932-907d-4a51-a0d9-1a99e30771d2",
+    "status": "done",
+    "tempo_execucao_segundos": 384,
+    "tokens_in_total": 493570,
+    "custo_total_brl": 2.64,
+    "created_at": "2026-05-12T14:29:23.113148+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "8aa99904-4681-4cbc-a7db-a2bf1d2298a9",
+    "status": "done",
+    "tempo_execucao_segundos": 1467,
+    "tokens_in_total": 1361694,
+    "custo_total_brl": 5.48,
+    "created_at": "2026-05-29T05:02:11.863606+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "56eabfb2-0115-45ad-a0f3-ea609f1abaeb",
+    "status": "done",
+    "tempo_execucao_segundos": 381,
+    "tokens_in_total": 455539,
+    "custo_total_brl": 2.5,
+    "created_at": "2026-05-12T15:04:16.280831+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "95d96e69-43eb-474a-9b04-5d39b0d6d32a",
+    "status": "done",
+    "tempo_execucao_segundos": 1470,
+    "tokens_in_total": 1844557,
+    "custo_total_brl": 6.95,
+    "created_at": "2026-05-29T12:23:07.239059+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "c765765e-03c5-44af-827d-b69fbb1ec9bf",
+    "status": "done",
+    "tempo_execucao_segundos": 659,
+    "tokens_in_total": 1831784,
+    "custo_total_brl": 6.78,
+    "created_at": "2026-05-29T12:54:07.69519+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "c49d472f-ff95-415a-af7d-f6735663e152",
+    "status": "done",
+    "tempo_execucao_segundos": 267,
+    "tokens_in_total": 481763,
+    "custo_total_brl": 2.53,
+    "created_at": "2026-05-12T16:40:11.101424+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "e982c485-fa33-4a35-8d22-5cd3d0eea25c",
+    "status": "done",
+    "tempo_execucao_segundos": 421,
+    "tokens_in_total": 574371,
+    "custo_total_brl": 3.04,
+    "created_at": "2026-05-12T18:04:35.334028+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "abd16249-fb4e-42a8-b371-83855c95099f",
+    "status": "done",
+    "tempo_execucao_segundos": 557,
+    "tokens_in_total": 878865,
+    "custo_total_brl": 4.45,
+    "created_at": "2026-05-12T18:37:45.847091+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "12ab02be-ca60-4850-9314-9afe6f751946",
+    "status": "done",
+    "tempo_execucao_segundos": 967,
+    "tokens_in_total": 1967591,
+    "custo_total_brl": 7.52,
+    "created_at": "2026-05-29T17:19:18.760288+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "3a19a954-21e6-43f1-ac44-e986f722fa8b",
+    "status": "done",
+    "tempo_execucao_segundos": 560,
+    "tokens_in_total": 715108,
+    "custo_total_brl": 3.77,
+    "created_at": "2026-05-12T22:27:01.900701+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "ca169191-6fea-477a-b3c0-2d7a59b6b18c",
+    "status": "done",
+    "tempo_execucao_segundos": 1437,
+    "tokens_in_total": 1154630,
+    "custo_total_brl": 4.97,
+    "created_at": "2026-05-29T18:17:29.090059+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "bdab58e1-3699-44d1-9fdf-de56bce61a7c",
+    "status": "done",
+    "tempo_execucao_segundos": 532,
+    "tokens_in_total": 1081362,
+    "custo_total_brl": 4.79,
+    "created_at": "2026-05-13T00:11:42.198069+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "d5cb8f29-459c-4d8a-a822-be88654f8a5c",
+    "status": "done",
+    "tempo_execucao_segundos": 584,
+    "tokens_in_total": 964541,
+    "custo_total_brl": 4.45,
+    "created_at": "2026-05-13T00:23:56.453234+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "02e42bad-2157-47f1-bdab-26d70c850f92",
+    "status": "done",
+    "tempo_execucao_segundos": 782,
+    "tokens_in_total": 2080074,
+    "custo_total_brl": 7.72,
+    "created_at": "2026-05-29T18:54:57.846629+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "dc1d6ad9-4bfa-40ba-83a2-ea923e377820",
+    "status": "done",
+    "tempo_execucao_segundos": 900,
+    "tokens_in_total": 954662,
+    "custo_total_brl": 4.32,
+    "created_at": "2026-05-13T00:36:02.591005+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "0474e1f8-7e42-4345-b9bc-73a3fc91f7a2",
+    "status": "done",
+    "tempo_execucao_segundos": 571,
+    "tokens_in_total": 927658,
+    "custo_total_brl": 4.37,
+    "created_at": "2026-05-13T00:53:12.146351+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "291f1a1f-1303-4da4-b487-bafaa3cc020e",
+    "status": "done",
+    "tempo_execucao_segundos": 1129,
+    "tokens_in_total": 1348448,
+    "custo_total_brl": 5.51,
+    "created_at": "2026-05-29T20:22:42.585483+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "d28cfc7d-4cf9-4fea-9ace-dad848ce6bf7",
+    "status": "done",
+    "tempo_execucao_segundos": 261,
+    "tokens_in_total": 205013,
+    "custo_total_brl": 1.29,
+    "created_at": "2026-05-26T18:05:57.587941+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "b3ef59a8-6382-4a3c-a7b8-a20b63dc1de8",
+    "status": "done",
+    "tempo_execucao_segundos": 136,
+    "tokens_in_total": 114914,
+    "custo_total_brl": 0.96,
+    "created_at": "2026-05-26T22:43:26.341493+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "ce837555-2ddb-4938-b3b2-0ddfbcf7c9f5",
+    "status": "done",
+    "tempo_execucao_segundos": 170,
+    "tokens_in_total": 224943,
+    "custo_total_brl": 1.47,
+    "created_at": "2026-05-26T23:11:02.405335+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "6fda525a-1dc4-4ce7-aa22-21e1a6fe1356",
+    "status": "done",
+    "tempo_execucao_segundos": 131,
+    "tokens_in_total": 122306,
+    "custo_total_brl": 0.98,
+    "created_at": "2026-05-27T00:13:19.180457+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "daa39e58-cc5a-4353-a021-146d29b8a13f",
+    "status": "done",
+    "tempo_execucao_segundos": 1026,
+    "tokens_in_total": 257041,
+    "custo_total_brl": 4.95,
+    "created_at": "2026-06-01T18:55:40.096336+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "1981b0d9-542e-4acf-aa1f-a2aabe42c8fa",
+    "status": "done",
+    "tempo_execucao_segundos": 1429,
+    "tokens_in_total": 1520931,
+    "custo_total_brl": 8.96,
+    "created_at": "2026-06-02T09:52:49.063842+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "bcfde417-c156-4bdd-b8f0-26ed0b8d1092",
+    "status": "done",
+    "tempo_execucao_segundos": 1103,
+    "tokens_in_total": 975803,
+    "custo_total_brl": 3.99,
+    "created_at": "2026-05-28T12:03:42.748399+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "b68515da-8cda-42a4-86e0-5062d55f5b8f",
+    "status": "done",
+    "tempo_execucao_segundos": 994,
+    "tokens_in_total": 1921163,
+    "custo_total_brl": 10.52,
+    "created_at": "2026-06-02T11:32:55.528863+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "6c4d714d-ccc1-4ed1-aaad-7682107e1259",
+    "status": "done",
+    "tempo_execucao_segundos": 1119,
+    "tokens_in_total": 1130709,
+    "custo_total_brl": 4.21,
+    "created_at": "2026-05-28T16:13:31.285051+00:00",
+    "fonte": "supabase.relatorios"
+  },
+  {
+    "id": "fb6dfa8a-16f7-4dab-a689-4c246860fd5f",
+    "status": "done",
+    "tempo_execucao_segundos": 1048,
+    "tokens_in_total": 1656308,
+    "custo_total_brl": 9.01,
+    "created_at": "2026-06-02T13:11:17.673389+00:00",
+    "fonte": "supabase.relatorios"
+  }
+]

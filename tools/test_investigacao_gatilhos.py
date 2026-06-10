@@ -48,6 +48,7 @@ def test_marcar_sem_endereco_nao_dispara():
 def test_extrair_json_investigacao():
     texto = 'Resumo\n```json\n{"status_operacao": "vago", "confianca": "media"}\n```'
     parsed = _extrair_json_investigacao(texto)
+    assert parsed is not None
     assert parsed["status_operacao"] == "vago"
 
 

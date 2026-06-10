@@ -1,0 +1,9 @@
+# GymSite — batch semanal de dados de mercado (CVM + SINAPI + bundles)
+# Instalar: crontab -e e colar (ajuste o path do repo)
+#
+# Domingo 03:00 — após publicação SINAPI (~dia 11 do mês) e ITR CVM
+
+0 3 * * 0 cd /opt/gymsite_intelligence && /usr/bin/python3 scripts/batch/run_weekly_market_batch.py >> /var/log/gym_market_batch.log 2>&1
+
+# Alternativa: só CVM + índices (sem refresh enrichment / Playwright)
+# 0 3 * * 0 cd /opt/gymsite_intelligence && /usr/bin/python3 scripts/batch/run_weekly_market_batch.py --skip-enrichment >> /var/log/gym_market_batch.log 2>&1

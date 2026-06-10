@@ -1,0 +1,65 @@
+{
+  "status": "running",
+  "relatorio_id": "f05c5464-da59-4803-ae11-016876d36681",
+  "gerado_em": "2026-06-02T18:09:30+00:00",
+  "local": "Fortaleza / Meireles / CE (800-1500 m²)",
+  "created_at": "2026-06-02T17:41:07.25836+00:00",
+  "monitoring": {
+    "polls": 23,
+    "poll_interval_s": 30,
+    "last_checked_at": "2026-06-02T18:09:30+00:00",
+    "elapsed_wall_s": 1703,
+    "note": "Re-check 2026-06-02: ainda running após ~28 min wall; poll adicional 30s (spot + background). MCP user-supabase Unauthorized — consulta via REST."
+  },
+  "metrics_partial": {
+    "tempo_execucao_segundos": null,
+    "elapsed_wall_s": 1703,
+    "custo_api_brl": 4.9572,
+    "custo_llm_brl": 0.0,
+    "custo_total_brl_partial": 4.9572,
+    "tokens_in_total_partial": 0,
+    "relatorio_api_calls_rows": 40,
+    "relatorio_custos_agentes_rows": 0,
+    "relatorio_outputs_rows": null,
+    "erro_mensagem": null
+  },
+  "metrics_final": null,
+  "enrichment_cache": {
+    "expected_fresh": true,
+    "cache_key": "fortaleza_meireles_ce",
+    "skip_tools_expected": [
+      "local_market_facts",
+      "aluguel_municipio_portais",
+      "bcb_imobiliario_olinda"
+    ],
+    "note": "Validado pre-run (inject_cache_context); skip_tools ainda não confirmável nos logs do job em curso."
+  },
+  "hook_validation": {
+    "pytest": "tools/test_enrichment_cache.py — 6 passed",
+    "inject_cache_context": {
+      "enrichment_cache_fresh": true,
+      "skip_tools": [
+        "local_market_facts",
+        "aluguel_municipio_portais",
+        "bcb_imobiliario_olinda"
+      ],
+      "local_market_summary_chars": 655
+    }
+  },
+  "post_run_aggregate": "python scripts/enrichment/roi_validator.py --logs scripts/enrichment/logs_antigos.json --tempo <tempo_execucao_segundos> --custo <custo_brl> --tokens <tokens_total>",
+  "verdict_full_pipeline_vs_thresholds": {
+    "thresholds": {
+      "tempo_s": 150,
+      "custo_brl": 1.3,
+      "tokens_in": 150000
+    },
+    "veredito": "PENDENTE_RUNNING",
+    "roi_validator": null,
+    "partial_trend": {
+      "tempo": "FORA (wall ~1703s; header tempo ainda null)",
+      "custo": "FORA (API parcial R$4.96; custo_brl/tokens_total null no header)",
+      "tokens": "OK (0 parcial; nenhum custo de agente persistido)"
+    },
+    "nota": "ROI validator e veredito GO/AJUSTAR/NO-GO somente após status=done."
+  }
+}
