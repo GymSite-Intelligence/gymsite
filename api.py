@@ -1412,9 +1412,22 @@ def post_entrantes_para_prospeccao(
     """
     import re
 
-    _, org_id = _require_authenticated(request)
+    user_id, _ = _require_authenticated(request)
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _assert_relatorio_access(request, sb, rid)
+
+    # Usa o org_id do relatório (não do usuário) para manter consistência
+    rel_row = (
+        sb.table("relatorios")
+        .select("org_id")
+        .eq("id", rid)
+        .maybe_single()
+        .execute()
+    )
+    org_id = str(rel_row.data["org_id"]) if rel_row.data and rel_row.data.get("org_id") else None
+    if not org_id:
+        raise HTTPException(status_code=400, detail="Relatório sem org_id associado")
 
     out_res = (
         sb.table("relatorio_outputs")
@@ -1511,6 +1524,7 @@ def post_entrantes_para_prospeccao(
                 sb.table("oportunidades_prospeccao").insert(row).execute()
                 inseridos.append(cnpj_limpo)
         except Exception as e:
+            logger.warning("Erro ao enviar CNPJ %s para prospecção: %s", cnpj_limpo, e)
             erros.append({"cnpj": cnpj_limpo, "motivo": f"Erro no Supabase: {e}"})
 
     return {

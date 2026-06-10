@@ -186,7 +186,7 @@ def list_oportunidades(
     if score_min is not None:
         query = query.gte("score_match", score_min)
 
-    query = query.order("score_match", desc=True).limit(limit).offset(offset)
+    query = query.order("created_at", desc=True).limit(limit).offset(offset)
     result = query.execute()
     return result.data or []
 
