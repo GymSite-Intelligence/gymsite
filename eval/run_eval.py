@@ -89,7 +89,17 @@ def main() -> int:
         action="store_true",
         help="Apenas CNO (sem structural/financial)",
     )
+    parser.add_argument(
+        "--bundle-a0-gate",
+        action="store_true",
+        help="Fase C: roda golden_bundle_a0_gate (A0_CONTEXT_SOURCE=ckan_bundle) e sai",
+    )
     args = parser.parse_args()
+
+    if args.bundle_a0_gate:
+        from scripts.batch.golden_bundle_a0_gate import main as bundle_gate_main
+
+        return bundle_gate_main()
 
     with_structural = not args.cno_only
     with_financial = not args.cno_only

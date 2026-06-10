@@ -252,7 +252,11 @@ def _executar_deep_research_interactions(query: str, *, deadline: float) -> str:
 def _executar_grounded_fallback(query: str, *, deadline: float) -> str:
     """Tier 2: Flash + Search + URL context (pesquisa grounded 'lite')."""
     from google.genai import types
-    from tools._genai_client import build_genai_client
+    from tools._genai_client import (
+        build_genai_client,
+        generate_content_resilient,
+        is_resource_exhausted,
+    )
 
     client = build_genai_client()
     config = types.GenerateContentConfig(
@@ -269,10 +273,13 @@ def _executar_grounded_fallback(query: str, *, deadline: float) -> str:
             raise TimeoutError("Deadline esgotado antes do fallback grounded")
 
         try:
-            response = client.models.generate_content(
+            response = generate_content_resilient(
+                client,
                 model=FALLBACK_MODEL,
                 contents=query,
                 config=config,
+                max_retries=3,
+                base_delay=4.0,
             )
             texto = _extrair_texto_generate(response)
             if texto:
@@ -281,7 +288,7 @@ def _executar_grounded_fallback(query: str, *, deadline: float) -> str:
         except Exception as e:
             ultimo_erro = e
             erro_str = str(e)
-            transient = any(
+            transient = is_resource_exhausted(e) or any(
                 t in erro_str for t in ["503", "UNAVAILABLE", "timed out", "504"]
             )
             if not transient:
@@ -358,6 +365,24 @@ def rodar_deep_research(cidade: str, bairro: str) -> str:
         Markdown com briefing. Nunca lança exceção para o ADK.
     """
     global _last_execution_tier
+
+    try:
+        from tools.enrichment_cache import get_pipeline_enrichment_context
+
+        ctx = get_pipeline_enrichment_context() or {}
+        if ctx.get("skip_deep_research") and ctx.get("market_bundle_briefing_md"):
+            _last_execution_tier = "market_bundle"
+            md = str(ctx["market_bundle_briefing_md"])
+            header = (
+                f"<!-- Deep Research cache\n"
+                f"     cidade: {cidade}\n"
+                f"     bairro: {bairro}\n"
+                f"     tier: market_bundle:pipeline\n"
+                f"-->\n\n"
+            )
+            return header + md
+    except Exception:
+        pass
 
     try:
         from tools.research_provider import get_a0_research_provider
@@ -501,19 +526,35 @@ def marcar_gatilhos_investigacao(candidatos: list[dict]) -> list[dict]:
 
 
 def _investigacao_id(candidato: dict) -> str:
-    parts = [
-        candidato.get("listing_id") or "",
-        candidato.get("place_id") or "",
-        candidato.get("endereco") or candidato.get("nome") or "",
-        candidato.get("listing_url") or "",
-    ]
-    base = "|".join(p.strip() for p in parts if p and str(p).strip())
+    """
+    ID estável para cache por candidato.
+
+    Regra: prioriza identificadores canônicos (`listing_id`, `place_id`) e só
+    usa endereço/URL como fallback. Isso evita "amarrar" a investigação a um
+    endereço específico quando o mesmo imóvel aparece com variações textuais.
+    """
+    listing_id = str((candidato.get("listing_id") or "")).strip()
+    if listing_id:
+        return _slug(f"listing:{listing_id}")[:120] or "sem_id"
+
+    place_id = str((candidato.get("place_id") or "")).strip()
+    if place_id:
+        return _slug(f"place:{place_id}")[:120] or "sem_id"
+
+    # Fallback: quando não há IDs, tenta algo ainda determinístico sem depender
+    # exclusivamente de uma string de endereço (que pode variar entre fontes).
+    endereco = str((candidato.get("endereco") or "")).strip()
+    nome = str((candidato.get("nome") or candidato.get("title") or "")).strip()
+    listing_url = str((candidato.get("listing_url") or "")).strip()
+
+    parts = [endereco, nome, listing_url]
+    base = "|".join(p for p in parts if p)
     if not base:
         base = json.dumps(
             {
                 "lat": candidato.get("lat"),
                 "lng": candidato.get("lng"),
-                "nome": candidato.get("nome"),
+                "nome": candidato.get("nome") or candidato.get("title"),
             },
             sort_keys=True,
             ensure_ascii=False,

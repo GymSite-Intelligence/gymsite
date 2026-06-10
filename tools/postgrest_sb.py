@@ -123,3 +123,31 @@ def fetch_posicionamento_flag(uuid: str) -> bool:
     pos = data[0].get("posicionamento_estrategico")
     return isinstance(pos, dict) and bool(pos)
 
+
+def patch_relatorio_atlas_meta(
+    relatorio_id: str,
+    *,
+    market_wave: str | None = None,
+    market_tier_qwen: str | None = None,
+) -> None:
+    """Atualiza metadados Market Atlas no header do relatório."""
+    import httpx
+
+    body: dict[str, Any] = {}
+    if market_wave is not None:
+        body["market_wave"] = market_wave
+    if market_tier_qwen is not None:
+        body["market_tier_qwen"] = market_tier_qwen
+    if not body:
+        return
+
+    base, headers = sb_headers()
+    r = httpx.patch(
+        f"{base}/rest/v1/relatorios",
+        headers=headers,
+        params={"id": f"eq.{relatorio_id}"},
+        json=body,
+        timeout=60,
+    )
+    r.raise_for_status()
+

@@ -85,6 +85,10 @@ EST_DDD1 = 21
 EST_TELEFONE1 = 22
 EST_EMAIL = 27
 
+# Layout Empresas (colunas relevantes) — docs/cnpj-metadados.pdf
+EMP_CNPJ_BASICO = 0
+EMP_RAZAO_SOCIAL = 1
+
 # IBGE → código interno RFB (tabela Municipios.zip da mesma ref; ex. Fortaleza-CE)
 IBGE_TO_RFB_MUNICIPIO: dict[str, str] = {
     "2304400": "1389",  # Fortaleza
@@ -323,6 +327,10 @@ def _municipios_zip_path(ref_month: str, *, local_dir: str) -> Path:
     return _cache_dir(ref_month, local_dir) / "Municipios.zip"
 
 
+def _empresas_zip_path(ref_month: str, part: int, *, local_dir: str) -> Path:
+    return _cache_dir(ref_month, local_dir) / f"Empresas{part}.zip"
+
+
 def _ensure_municipios_zip(
     ref_month: str,
     *,
@@ -350,6 +358,71 @@ def _title_municipio(nome: str) -> str:
         return ""
     lower = nome.lower()
     return " ".join(w[:1].upper() + w[1:] if w else "" for w in lower.split())
+
+
+def _ensure_empresas_zip(
+    ref_month: str,
+    part: int,
+    *,
+    local_dir: str,
+    rfb_share_token: str,
+    rfb_webdav_base: str,
+    skip_missing: bool,
+) -> Path | None:
+    dest = _empresas_zip_path(ref_month, part, local_dir=local_dir)
+    if dest.is_file() and dest.stat().st_size > 0 and _is_valid_zip(dest):
+        return dest
+    webdav_base = (rfb_webdav_base or DEFAULT_WEBDAV_BASE).rstrip("/")
+    headers = _webdav_headers(rfb_share_token) if rfb_share_token else None
+    try:
+        if rfb_share_token:
+            url = f"{webdav_base}/{ref_month}/Empresas{part}.zip"
+            _download(url, dest, headers=headers)
+        else:
+            url = f"{BASE_URL}/{ref_month}/Empresas{part}.zip"
+            _download(url, dest)
+        return dest
+    except Exception as exc:
+        if skip_missing:
+            print(f"[skip] Empresas{part}.zip ausente ou falha: {exc}")
+            return None
+        raise
+
+
+def _load_empresas_map(
+    ref_month: str,
+    parts: list[int],
+    *,
+    local_dir: str,
+    rfb_share_token: str,
+    rfb_webdav_base: str,
+    skip_missing: bool,
+) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for part in parts:
+        path = _ensure_empresas_zip(
+            ref_month,
+            part,
+            local_dir=local_dir,
+            rfb_share_token=rfb_share_token,
+            rfb_webdav_base=rfb_webdav_base,
+            skip_missing=skip_missing,
+        )
+        if not path:
+            continue
+        print(f"[info] lendo razão social: {path.name}")
+        count = 0
+        for row in _iter_estabelecimentos_zip(path):
+            if len(row) < 2:
+                continue
+            cnpj_basico = row[EMP_CNPJ_BASICO].strip()
+            razao = row[EMP_RAZAO_SOCIAL].strip()
+            if cnpj_basico and razao:
+                mapping[cnpj_basico] = razao
+                count += 1
+        print(f"[info] Empresas{part}: {count} razões sociais carregadas")
+    print(f"[info] total razões sociais em memória: {len(mapping)}")
+    return mapping
 
 
 def _load_municipios_map(
@@ -455,6 +528,15 @@ def load_ref_month(
         rfb_share_token=rfb_share_token,
         rfb_webdav_base=rfb_webdav_base,
         nacional=nacional,
+    )
+
+    empresas_map = _load_empresas_map(
+        ref_month,
+        parts or list(range(10)),
+        local_dir=local_dir,
+        rfb_share_token=rfb_share_token,
+        rfb_webdav_base=rfb_webdav_base,
+        skip_missing=skip_missing,
     )
 
     buffer: list[dict] = []
@@ -566,10 +648,12 @@ def load_ref_month(
                 municipio, cidade_cli=cidade_cli, municipios_map=municipios_map
             )
 
+            cnpj_completo = _build_cnpj(basico, ordem, dv)
+            razao_social = empresas_map.get(basico, "").strip() or None
             buffer.append(
                 {
                     "ref_month": ref_date,
-                    "cnpj": _build_cnpj(basico, ordem, dv),
+                    "cnpj": cnpj_completo,
                     "municipio_codigo": municipio,
                     "uf": uf_row,
                     "cidade": cidade_row,
@@ -579,6 +663,7 @@ def load_ref_month(
                     "situacao_cadastral": int(situacao) if situacao.isdigit() else None,
                     "data_situacao_cadastral": data_situacao,
                     "nome_fantasia": nome_fantasia,
+                    "razao_social": razao_social,
                     "cep": cep,
                     "logradouro": logradouro,
                     "numero": numero,

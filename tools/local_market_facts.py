@@ -58,6 +58,12 @@ def fatos_competicao_local(
 
     Retorna apenas dados observados; não lista redes do DR.
     """
+    from tools.enrichment_cache import cached_competicao_local
+
+    hit = cached_competicao_local()
+    if hit is not None:
+        return hit
+
     from tools.maps_fallback import fallback_habilitado, geocode_nominatim, overpass_fitness_near
     from tools.maps_tools import _geocode_google, calcular_distancia_km
 

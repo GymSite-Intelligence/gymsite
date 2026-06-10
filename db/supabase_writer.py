@@ -243,7 +243,100 @@ def _build_oferta_lookup(rel: dict) -> dict:
     return lookup
 
 
-def _rows_competidores(rel: dict, relatorio_id: str) -> list[dict]:
+def _merge_atividade_marketing(c: dict) -> dict | None:
+    """Preserva posts/marketing e anexa aba Sobre (Places API) quando existir."""
+    base = c.get("atividade_marketing")
+    sobre = c.get("atributos_sobre")
+    if not sobre and not base:
+        return None
+    out: dict = dict(base) if isinstance(base, dict) else {}
+    if isinstance(sobre, dict) and sobre:
+        out["sobre"] = sobre
+    return out or None
+
+
+_GEO_PRESERVE_FIELDS = ("lat", "lng", "place_id", "distancia_km", "google_maps_uri")
+
+
+def _norm_coord(v: Any) -> float | None:
+    if v is None:
+        return None
+    try:
+        f = float(v)
+        if f == 0.0:
+            return None
+        return f
+    except (TypeError, ValueError):
+        return None
+
+
+def _competidor_geo_key(place_id: Any, nome: Any) -> str | None:
+    if place_id:
+        key = str(place_id).strip().lower()
+        if key:
+            return key
+    n = (nome or "").strip().lower()
+    return n or None
+
+
+def _fetch_competidores_geo_lookup(client: Any, relatorio_id: str) -> dict[str, dict]:
+    """
+    Lê coordenadas já gravadas antes do delete+insert (re-run / UPDATE relatório).
+    Chave = place_id (lower) ou nome (lower).
+    """
+    try:
+        res = (
+            client.table("competidores")
+            .select("place_id,nome,lat,lng,distancia_km,google_maps_uri")
+            .eq("relatorio_id", relatorio_id)
+            .execute()
+        )
+    except Exception as e:
+        _log("warn", f"falha ao ler geo existente competidores: {e}", {"relatorio_id": relatorio_id})
+        return {}
+    lookup: dict[str, dict] = {}
+    for row in res.data or []:
+        if not isinstance(row, dict):
+            continue
+        key = _competidor_geo_key(row.get("place_id"), row.get("nome"))
+        if not key:
+            continue
+        lat = _norm_coord(row.get("lat"))
+        lng = _norm_coord(row.get("lng"))
+        if lat is None and lng is None and not row.get("place_id"):
+            continue
+        lookup[key] = {
+            "place_id": row.get("place_id"),
+            "lat": lat if lat is not None else row.get("lat"),
+            "lng": lng if lng is not None else row.get("lng"),
+            "distancia_km": row.get("distancia_km"),
+            "google_maps_uri": (row.get("google_maps_uri") or "").strip() or None,
+        }
+    return lookup
+
+
+def _merge_competidor_geo_row(row: dict, geo_lookup: dict[str, dict] | None) -> dict:
+    """Não sobrescreve lat/lng/place_id já persistidos quando o payload novo vem sem coords."""
+    if not geo_lookup:
+        return row
+    key = _competidor_geo_key(row.get("place_id"), row.get("nome"))
+    if not key:
+        return row
+    prev = geo_lookup.get(key)
+    if not prev:
+        return row
+    for field in _GEO_PRESERVE_FIELDS:
+        if row.get(field) is None and prev.get(field) is not None:
+            row[field] = prev[field]
+    return row
+
+
+def _rows_competidores(
+    rel: dict,
+    relatorio_id: str,
+    *,
+    geo_preserve: dict[str, dict] | None = None,
+) -> list[dict]:
     comps = _safe_get(rel, "output_consolidado", "competitors_set", default=[]) or []
     oferta_lookup = _build_oferta_lookup(rel)
     rows = []
@@ -271,19 +364,28 @@ def _rows_competidores(rel: dict, relatorio_id: str) -> list[dict]:
             oferta_mapeada = oferta_lookup.get(str(place_id).lower())
         if not oferta_mapeada and nome_lower:
             oferta_mapeada = oferta_lookup.get(nome_lower)
-        rows.append({
+        dist = c.get("distancia_km")
+        try:
+            dist_f = round(float(dist), 2) if dist is not None else None
+        except (TypeError, ValueError):
+            dist_f = None
+        row = {
             "relatorio_id": relatorio_id,
             "nome": (c.get("nome") or "?")[:255],
             "endereco": c.get("endereco"),
             "bairro_concorrente": c.get("bairro_concorrente"),
             "place_id": place_id,
+            "lat": _norm_coord(c.get("lat")),
+            "lng": _norm_coord(c.get("lng")),
+            "distancia_km": dist_f,
+            "google_maps_uri": (c.get("google_maps_uri") or "").strip() or None,
             "rating_oficial": c.get("rating_geral") or c.get("rating_oficial"),
             "num_avaliacoes": c.get("num_avaliacoes"),
             "tem_24h": bool(c.get("tem_24h", False)),
             "reviews": c.get("reviews_traduzidas") or c.get("reviews") or [],
             "horarios_pico": c.get("horarios_pico"),
             "pico_semanal": c.get("pico_semanal"),
-            "atividade_marketing": c.get("atividade_marketing"),
+            "atividade_marketing": _merge_atividade_marketing(c),
             "origem_busca": c.get("origem_busca") or "nearby",
             # Sprint 2026-05-12: Places API contact data — antes ignorada pelo writer
             "telefone": telefone,
@@ -292,7 +394,8 @@ def _rows_competidores(rel: dict, relatorio_id: str) -> list[dict]:
             # A3c shadow — GymSite #127. NULL nos top 6+ (limite 5) ou
             # competidores sem fonte (website/IG).
             "oferta_mapeada": oferta_mapeada,
-        })
+        }
+        rows.append(_merge_competidor_geo_row(row, geo_preserve))
     return rows
 
 
@@ -492,9 +595,11 @@ def write_relatorio_to_supabase(
     # 1. Header relatórios — INSERT novo OU UPDATE existente (modo API HTTP)
     header_row = _row_relatorios(relatorio, markdown, org_id)
     skip_inputs = False
+    geo_preserve: dict[str, dict] = {}
     if relatorio_id:
         # API HTTP pré-criou stub — UPDATE com payload final + filhos via insert
         client.table("relatorios").update(header_row).eq("id", relatorio_id).execute()
+        geo_preserve = _fetch_competidores_geo_lookup(client, relatorio_id)
         # Limpar filhos antes de reinserir (idempotência).
         # IMPORTANTE: NÃO deletar `relatorio_inputs` — eles foram inseridos
         # pelo endpoint POST /api/relatorios com os params do form do usuário.
@@ -521,12 +626,15 @@ def write_relatorio_to_supabase(
     # 3. Tabelas N:1 simples
     for table, rows_fn in [
         ("candidatos", _rows_candidatos),
-        ("competidores", _rows_competidores),
         ("bairros_alternativos", _rows_bairros_alternativos),
     ]:
         rows = rows_fn(relatorio, relatorio_id)
         if rows:
             client.table(table).insert(rows).execute()
+
+    rows_comp = _rows_competidores(relatorio, relatorio_id, geo_preserve=geo_preserve)
+    if rows_comp:
+        client.table("competidores").insert(rows_comp).execute()
 
     # 4. Cenários — precisa capturar IDs gerados pra ligar sensibilidade
     rows_cenarios = _rows_cenarios(relatorio, relatorio_id)

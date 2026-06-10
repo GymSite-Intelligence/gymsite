@@ -11,6 +11,7 @@ from tools.deep_research_tool import rodar_deep_research
 from tools.kimi_research import rodar_kimi_research
 from tools.cnpj_fitness_tools import dados_parque_cnpj_para_a0
 from tools.local_market_facts import fatos_competicao_local
+from tools.market_bundle import carregar_market_bundle
 
 _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=1024),
@@ -36,10 +37,13 @@ Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
 
 ## FLUXO
 1. Extrair cidade, bairro, uf, genero_alvo, tipo_negocio, tamanho_preset.
-2. `rodar_deep_research(cidade, bairro)` — ou `rodar_kimi_research` se briefing Kimi já em cache.
-3. `dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)` — fatos CNPJ + CNO.
-4. `fatos_competicao_local(cidade, bairro, uf)` — marcas no raio via OSM (se geocode ok).
-5. Montar JSON. Deep Research → ticket, aluguel, tendência (qualitativo).
+2. **`carregar_market_bundle(cidade, bairro, uf)` primeiro** — se retornar briefing com
+   `<!-- market_bundle` (sem `status=missing`), use como `briefing_completo_md` e preencha
+   demografia/aluguel a partir do texto. **Não** chame `rodar_deep_research` se o bundle estiver completo.
+3. Só se bundle `missing` ou `missing_fields` no texto → `rodar_deep_research` ou `rodar_kimi_research`.
+4. `dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)` — fatos CNPJ + CNO.
+5. `fatos_competicao_local(cidade, bairro, uf)` — marcas no raio via OSM (se geocode ok), salvo cache/skip.
+6. Montar JSON. Bundle/DR → ticket, aluguel, tendência (qualitativo).
    `principais_redes_concorrentes` = **somente** `redes_detectadas_osm` da tool local.
    Se a tool local falhar ou retornar lista vazia, use `[]` — **não** copie redes do DR.
    Tool CNPJ → números e composição. Tool CNO → área m² só onde houver match.
@@ -79,7 +83,7 @@ Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
       "lacunas": []
     },
     "fonte_entrantes": "",
-    "fonte": "Deep Research + CNPJ/CNO (tools)",
+    "fonte": "market_bundle + CNPJ/CNO (tools)",
     "data_coleta": "YYYY-MM-DD",
     "cached": false,
     "briefing_completo_md": ""
@@ -109,6 +113,12 @@ Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
 - DR indisponível → campos DR como dados_nao_disponiveis; CNPJ ainda preenche se ok.
 - CNPJ indisponível → lacunas explicam; não inventar parque.
 """,
-    tools=[rodar_deep_research, rodar_kimi_research, dados_parque_cnpj_para_a0, fatos_competicao_local],
+    tools=[
+        carregar_market_bundle,
+        rodar_deep_research,
+        rodar_kimi_research,
+        dados_parque_cnpj_para_a0,
+        fatos_competicao_local,
+    ],
     output_key="market_context",
 )

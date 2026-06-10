@@ -18,11 +18,13 @@ async def get_redis() -> redis.Redis:
     global _redis_pool
     if _redis_pool is None:
         url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        # socket_timeout must exceed longest blocking command (BRPOP ~30s in redis_queue)
         _redis_pool = redis.from_url(
             url,
             decode_responses=True,
-            socket_connect_timeout=10.0,
-            socket_timeout=60.0,
+            socket_connect_timeout=3.0,
+            socket_timeout=35.0,
+            max_connections=10,
         )
     return _redis_pool
 

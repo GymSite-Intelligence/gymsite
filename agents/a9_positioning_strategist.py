@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -91,16 +92,58 @@ def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None
         )
 
 
+def _a9_langcache_enabled() -> bool:
+    return os.getenv("LANGCACHE_A9_ENABLED", "1").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _resolve_location_from_state(state: dict) -> tuple[str, str]:
+    """cidade/bairro vêm de input_params, market_context ou chaves legadas no state."""
+    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    cidade = (
+        state.get("cidade")
+        or state.get("input_cidade")
+        or ip.get("cidade")
+        or ""
+    )
+    bairro = (
+        state.get("bairro")
+        or state.get("input_bairro")
+        or ip.get("bairro")
+        or ""
+    )
+    if not cidade or not bairro:
+        mc = state.get("market_context") or {}
+        inner = (
+            mc.get("market_context")
+            if isinstance(mc.get("market_context"), dict)
+            else mc
+        )
+        if isinstance(inner, dict):
+            cidade = cidade or inner.get("cidade") or ""
+            bairro = bairro or inner.get("bairro") or ""
+    return str(cidade).strip().lower(), str(bairro).strip().lower()
+
+
 def _a9_cache_prompt(state: dict) -> str:
     """
-    Chave semântica A9 com hash de concorrentes para evitar false positives.
+    Chave LangCache A9 — deve ser única por relatório + mercado.
 
-    Inclui hash dos top-5 place_ids/nomes para distinguir bairros com mesmo
-    número de concorrentes mas perfis competitivos diferentes.
+    Inclui relatorio_id (evita HIT entre Parangaba vs Meireles quando cidade/bairro
+    estavam vazios no state) e hash dos top-5 concorrentes.
     """
-    cidade = str(state.get("cidade") or state.get("input_cidade") or "").strip().lower()
-    bairro = str(state.get("bairro") or state.get("input_bairro") or "").strip().lower()
-    tipo = str(state.get("tipo_negocio") or "academia").strip().lower()
+    cidade, bairro = _resolve_location_from_state(state)
+    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    tipo = str(
+        state.get("tipo_negocio") or ip.get("tipo_negocio") or "academia"
+    ).strip().lower()
+    rel_id = str(
+        state.get("relatorio_id") or state.get("relatorio_local_id") or ""
+    ).strip()
+    rid = rel_id.replace("-", "")[:32] if rel_id else "no_rid"
 
     # Hash dos top-5 concorrentes para evitar false positives
     ic = state.get("inteligencia_competitiva") or {}
@@ -127,11 +170,13 @@ def _a9_cache_prompt(state: dict) -> str:
 
     n_conc = len(concorrentes) if isinstance(concorrentes, list) else 0
 
-    return f"positioning_a9:{cidade}:{bairro}:{tipo}:conc_{n_conc}:{conc_hash}"
+    return f"positioning_a9:{rid}:{cidade}:{bairro}:{tipo}:conc_{n_conc}:{conc_hash}"
 
 
 def _a9_before_model_callback(callback_context, llm_request):
     """LangCache hit → retorna LlmResponse e pula gemini-2.5-pro (~30–90s)."""
+    if not _a9_langcache_enabled():
+        return None
     try:
         from tools.langcache_client import langcache_search
 
@@ -142,14 +187,22 @@ def _a9_before_model_callback(callback_context, llm_request):
         # quando dois prompts diferentes têm os mesmos primeiros 1024 chars
         full_prompt_hash = hashlib.sha256(prompt_key.encode()).hexdigest()[:16]
 
+        # Threshold alto: chaves positioning_a9:* são parecidas entre bairros;
+        # 0.88 causava o mesmo JSON em relatórios diferentes (Fortaleza).
+        try:
+            threshold = float(os.getenv("LANGCACHE_A9_SIMILARITY", "0.97"))
+        except ValueError:
+            threshold = 0.97
+
         cached = langcache_search(
             prompt_key,
-            similarity_threshold=0.88,
+            similarity_threshold=threshold,
             attributes={"prompt_hash": full_prompt_hash, "agent": "a9"},
         )
         if not cached:
             return None
 
+        state["_a9_langcache_hit"] = True
         logger.info(
             "A9 LangCache HIT: %s",
             prompt_key[:80],
@@ -174,6 +227,8 @@ def _a9_before_model_callback(callback_context, llm_request):
 
 def _a9_after_model_callback(callback_context, llm_response):
     """Persiste output A9 no LangCache para runs futuros."""
+    if not _a9_langcache_enabled():
+        return llm_response
     try:
         from tools.langcache_client import langcache_set
 
@@ -223,6 +278,9 @@ def _a9_after_agent_callback(callback_context):
         state["relatorio_posicionamento"] = parsed
         if parsed.get("markdown"):
             state["relatorio_posicionamento_md"] = parsed["markdown"]
+        if state.get("_a9_langcache_hit"):
+            parsed["fonte_geracao"] = "langcache"
+            parsed["cache_prompt"] = _a9_cache_prompt(state)[:200]
 
         veredito = parsed.get("veredito_posicionamento", "N/A")
         gaps = len(parsed.get("gaps_identificados") or [])
@@ -328,9 +386,9 @@ Comunidade/eventos, Aulas idosos (50+), Beach tennis/esportes praia.
 GAP = serviço com penetração < 3 em TODOS os concorrentes.
 
 ## VEREDITO (um dos três)
-- OCEANO_AZUL: renda alta, baixa concorrência premium, 3+ GAPs, break-even viável
-- TRANSICAO: renda média-alta, concorrência moderada, 1–2 GAPs
-- VERMELHO: saturado low-cost, renda baixa, 0–1 GAPs
+- OCEANO_AZUL: renda alta, baixa densidade de concorrência local, ausência de redes premium fortes, 3+ GAPs evidentes. Se houver concorrência madura/saturada, NÃO pode ser Oceano Azul.
+- TRANSICAO: renda média/alta, concorrência existente e madura (mesmo que genérica), mas com espaço para nicho (1–2+ GAPs).
+- VERMELHO: mercado saturado focado em preço (low-cost), margens espremidas, 0–1 GAPs ou demanda estagnada.
 
 ## OUTPUT — retorne APENAS JSON válido (sem texto fora do JSON):
 

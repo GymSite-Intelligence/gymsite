@@ -351,9 +351,12 @@ def analisar_pontos_comerciais_completo(
         candidatos_brutos.extend(buscar_pontos_comerciais(lat, lng, raio) or [])
     except Exception:
         pass
+    alvo = bairro or cidade
     for query in [
-        f"supermercado {bairro or cidade}",
-        f"concessionária {bairro or cidade}",
+        f"supermercado {alvo}",
+        f"concessionária {alvo}",
+        f"imóvel comercial aluguel {alvo} {cidade}",
+        f"galpão comercial {alvo} {cidade}",
     ]:
         try:
             candidatos_brutos.extend(buscar_imoveis_texto(query, lat, lng, raio) or [])

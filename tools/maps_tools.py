@@ -13,6 +13,12 @@ GEOCODING_BASE = "https://maps.googleapis.com/maps/api/geocode/json"
 STREET_VIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
 
 
+def _google_maps_error_denied(result: dict) -> bool:
+    err = (result.get("error") or "").upper()
+    detail = str(result.get("detail") or "").upper()
+    return "REQUEST_DENIED" in err or "REQUEST_DENIED" in detail or "API_KEY" in detail
+
+
 def _geocode_google(endereco: str) -> dict:
     key = get_google_maps_api_key()
     if not key:
@@ -31,13 +37,23 @@ def _geocode_google(endereco: str) -> dict:
     if data.get("status") == "OK" and data.get("results"):
         r = data["results"][0]
         loc = r["geometry"]["location"]
-        return {
+        out: dict = {
             "lat": loc["lat"],
             "lng": loc["lng"],
             "formatted_address": r["formatted_address"],
             "place_id": r.get("place_id", ""),
             "fonte_geocode": "google",
         }
+        geom = r.get("geometry") or {}
+        viewport = geom.get("viewport") or geom.get("bounds")
+        if viewport and "northeast" in viewport and "southwest" in viewport:
+            ne = viewport["northeast"]
+            sw = viewport["southwest"]
+            out["viewport"] = {
+                "ne": {"lat": ne["lat"], "lng": ne["lng"]},
+                "sw": {"lat": sw["lat"], "lng": sw["lng"]},
+            }
+        return out
     msg = data.get("error_message") or data.get("status")
     return {"error": f"Geocoding falhou: {data.get('status')}", "detail": msg}
 
@@ -50,7 +66,7 @@ def geocode_endereco(endereco: str) -> dict:
     try:
         from tools.maps_fallback import fallback_habilitado, geocode_nominatim
 
-        if fallback_habilitado():
+        if fallback_habilitado() and _google_maps_error_denied(result):
             fb = geocode_nominatim(endereco)
             if "error" not in fb:
                 logger.warning(
@@ -88,6 +104,7 @@ def _extrair_lugar(p: dict) -> dict:
         # pra o decisor não receber "N/A" quando o Google tem o telefone.
         "telefone": p.get("nationalPhoneNumber", ""),
         "website": p.get("websiteUri", ""),
+        "google_maps_uri": p.get("googleMapsUri", ""),
         "tem_24h": tem_24h,
         "horarios": periodos[:3],
     }
@@ -105,7 +122,8 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
             "places.rating,places.userRatingCount,"
             # Contact Data — adicionado pra A5 ContactHunter ter telefone
             # real do candidato em vez de "N/A". Sobe SKU pricing Places.
-            "places.nationalPhoneNumber,places.websiteUri,places.regularOpeningHours"
+            "places.nationalPhoneNumber,places.websiteUri,places.regularOpeningHours,"
+            "places.googleMapsUri"
         ),
     }
     body = {
@@ -126,16 +144,11 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
     if resp.status_code == 200 and data.get("places"):
         return [_extrair_lugar(p) for p in data.get("places", [])]
 
-    try:
-        from tools.maps_fallback import fallback_habilitado, overpass_fitness_near
-
-        if fallback_habilitado():
-            fb = overpass_fitness_near(latitude, longitude, raio_metros, limit=20)
-            if fb.get("places"):
-                logger.warning("Places Nearby indisponível — fallback Overpass (%s lugares)", len(fb["places"]))
-                return fb["places"]
-    except Exception as exc:
-        logger.debug("fallback nearby falhou: %s", exc)
+    if resp.status_code != 200:
+        logger.warning(
+            "Places Nearby falhou HTTP %s — sem fallback OSM (tipos comerciais ≠ academias)",
+            resp.status_code,
+        )
     return []
 
 
@@ -149,7 +162,8 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.businessStatus,"
             "places.rating,places.userRatingCount,"
-            "places.nationalPhoneNumber,places.websiteUri,places.regularOpeningHours"
+            "places.nationalPhoneNumber,places.websiteUri,places.regularOpeningHours,"
+            "places.googleMapsUri"
         ),
     }
     body = {
@@ -170,24 +184,25 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
     if resp.status_code == 200 and data.get("places"):
         return [_extrair_lugar(p) for p in data.get("places", [])]
 
-    try:
-        from tools.maps_fallback import fallback_habilitado, overpass_fitness_near
-
-        if fallback_habilitado():
-            fb = overpass_fitness_near(latitude, longitude, raio_metros, limit=10)
-            if fb.get("places"):
-                logger.warning("Places Text Search indisponível — fallback Overpass")
-                return fb["places"]
-    except Exception as exc:
-        logger.debug("fallback text search falhou: %s", exc)
+    if resp.status_code != 200:
+        logger.warning("Places Text Search falhou HTTP %s para: %s", resp.status_code, query[:80])
     return []
 
 
 def obter_street_view_url(latitude: float, longitude: float,
                            width: int = 640, height: int = 400) -> str:
-    """URL de imagem Street View estática."""
-    return (f"{STREET_VIEW_BASE}?size={width}x{height}"
-            f"&location={latitude},{longitude}&fov=90&key={get_google_maps_api_key()}")
+    """URL de imagem Street View — proxy da API por padrão (sem key no JSON)."""
+    from tools.maps_street_view import (
+        build_street_view_proxy_url,
+        street_view_proxy_enabled,
+    )
+
+    if street_view_proxy_enabled():
+        return build_street_view_proxy_url(latitude, longitude, width=width, height=height)
+    return (
+        f"{STREET_VIEW_BASE}?size={width}x{height}"
+        f"&location={latitude},{longitude}&fov=90&key={get_google_maps_api_key()}"
+    )
 
 
 def obter_detalhes_contato(place_id: str) -> dict:
@@ -245,6 +260,60 @@ def obter_detalhes_contato(place_id: str) -> dict:
         "aberto_agora": current.get("openNow"),
         "business_status": data.get("businessStatus", ""),
         "price_level": data.get("priceLevel", ""),
+    }
+
+
+def obter_atributos_place(place_id: str) -> dict:
+    """
+    Atributos da aba Sobre (Places API New — SKU Enterprise + Atmosphere).
+
+    Campos típicos: accessibilityOptions, paymentOptions, restroom, etc.
+    Popular times NÃO está na API — continua via SearchAPI/Playwright.
+    """
+    if not get_google_maps_api_key() or not place_id:
+        return {}
+    headers = {
+        "X-Goog-Api-Key": get_google_maps_api_key(),
+        "X-Goog-FieldMask": (
+            "id,accessibilityOptions,paymentOptions,restroom,"
+            "goodForChildren,outdoorSeating"
+        ),
+    }
+    from tools.api_cost_tracker import track_api_call
+
+    with track_api_call("obter_atributos_place", "places_details_new", 1):
+        try:
+            with httpx.Client(timeout=12) as c:
+                r = c.get(
+                    f"{PLACES_BASE}/{place_id}",
+                    headers=headers,
+                    params={"languageCode": "pt-BR"},
+                )
+                if r.status_code != 200:
+                    return {"erro": f"HTTP {r.status_code}"}
+                data = r.json()
+        except Exception as e:
+            return {"erro": str(e)[:200]}
+
+    acc = data.get("accessibilityOptions") or {}
+    pay = data.get("paymentOptions") or {}
+    return {
+        "acessibilidade": {
+            "banheiro_acessivel_cadeira": acc.get("wheelchairAccessibleRestroom"),
+            "entrada_acessivel": acc.get("wheelchairAccessibleEntrance"),
+            "estacionamento_acessivel": acc.get("wheelchairAccessibleParking"),
+        },
+        "pagamentos": {
+            "cartao_credito": pay.get("acceptsCreditCards"),
+            "cartao_debito": pay.get("acceptsDebitCards"),
+            "nfc": pay.get("acceptsNfc"),
+            "dinheiro": pay.get("acceptsCashOnly") is False,
+        },
+        "comodidades": {
+            "banheiro": data.get("restroom"),
+        },
+        "opcoes_servico": {},
+        "fonte": "places_api_new",
     }
 
 

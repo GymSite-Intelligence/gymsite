@@ -1,0 +1,2 @@
+[functions.gymsite-sync]
+verify_jwt = false  # webhook externo não usa JWT

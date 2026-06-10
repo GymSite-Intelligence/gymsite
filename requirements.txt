@@ -20,3 +20,14 @@ matplotlib>=3.8.0
 redis>=5.0.0
 langcache>=0.12.0
 packaging>=24.0
+# OpenTelemetry (usado por tools/telemetry.py)
+opentelemetry-api>=1.25.0
+opentelemetry-sdk>=1.25.0
+# Google GenAI (usado por agents/ e tools/)
+google-genai>=0.3.0
+# Pydantic (explicitar versao compativel)
+pydantic>=2.0.0
+# Starlette (explicitar - usado por middlewares)
+starlette>=0.36.0
+# Tinker — inference e fine-tuning de LLMs (Thinking Machines)
+tinker

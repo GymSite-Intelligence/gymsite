@@ -12,9 +12,12 @@ import os
 import traceback
 from typing import Any, Callable
 
+from redis.exceptions import TimeoutError as RedisTimeoutError
+
 from tools.redis_client import get_redis
 
 logger = logging.getLogger("gymsite.api")
+BRPOP_TIMEOUT_SEC = 30
 QUEUE_KEY = "gymsite:queue"
 PROCESSING_KEY = "gymsite:queue:processing"
 
@@ -44,8 +47,7 @@ class RedisQueue:
         while self._running:
             try:
                 r = await get_redis()
-                # Blocking pop com timeout (redis brpop) — increased from 5s to 30s to avoid timeout errors
-                result = await r.brpop(QUEUE_KEY, timeout=30)
+                result = await r.brpop(QUEUE_KEY, timeout=BRPOP_TIMEOUT_SEC)
                 if result is None:
                     continue
                 _, payload = result
@@ -59,6 +61,10 @@ class RedisQueue:
                 self._tasks.add(task)
                 task.add_done_callback(self._tasks.discard)
 
+            except RedisTimeoutError:
+                # Idle queue: socket read timeout before BRPOP returns (misconfig or legacy client)
+                logger.debug("RedisQueue idle (BRPOP timeout)")
+                continue
             except Exception as e:
                 logger.error(f"RedisQueue error: {e}")
                 await asyncio.sleep(1)

@@ -86,6 +86,7 @@ def send_opportunity_webhook(
                 if resp.status_code < 300:
                     from datetime import datetime, timezone
                     updates["webhook_enviado_at"] = datetime.now(timezone.utc).isoformat()
+                    updates["status"] = "webhook_enviado"
                 try:
                     client.table("oportunidades_prospeccao").update(updates).eq("id", opp_id).execute()
                 except Exception as db_err:

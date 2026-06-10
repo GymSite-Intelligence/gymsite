@@ -1,5 +1,5 @@
 """
-Diagnóstico da Google Maps Platform API key (Geocoding + Places New).
+Diagnóstico da Google Maps Platform API key (Geocoding + Places + extensões).
 """
 from __future__ import annotations
 
@@ -9,12 +9,10 @@ from tools.google_maps_key import get_google_maps_api_key
 
 _GEOCODE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 _PLACES_SEARCH = "https://places.googleapis.com/v1/places:searchText"
-
-
 def check_google_maps() -> dict:
     """
-    Testa Geocoding e Places API (New). Não grava cache.
-    Retorna status + passos de correção no Cloud Console.
+    Testa Geocoding, Places (New), Street View metadata e Area Insights.
+    Não grava cache.
     """
     key = get_google_maps_api_key()
     base = {
@@ -23,6 +21,8 @@ def check_google_maps() -> dict:
         "ok": False,
         "geocoding": {},
         "places_new": {},
+        "street_view": {},
+        "area_insights": {},
         "remediation": [],
     }
     if not key:
@@ -32,16 +32,10 @@ def check_google_maps() -> dict:
         ]
         return base
 
-    remediation = [
-        "Abra https://console.cloud.google.com/apis/credentials e edite a chave usada em GOOGLE_MAPS_API_KEY.",
-        "Em API restrictions: inclua Geocoding API + Places API (New) OU use 'Don't restrict' em dev.",
-        "Habilite billing: https://console.cloud.google.com/billing",
-        "Ative APIs: https://console.cloud.google.com/apis/library/geocoding-backend.googleapis.com",
-        "Ative APIs: https://console.cloud.google.com/apis/library/places.googleapis.com",
-        "Aguarde ~5 min e rode: python tools/maps_health_check.py",
-        "Enquanto isso MAPS_FALLBACK_ENABLED=1 usa Nominatim + Overpass (OSM).",
+    base["remediation"] = [
+        "API restrictions: Geocoding, Places (New), Street View Static, Distance Matrix, Area Insights.",
+        "MAPS_FALLBACK_ENABLED=0 (padrão) para priorizar Google; =1 só se quiser OSM em falha.",
     ]
-    base["remediation"] = remediation
 
     try:
         with httpx.Client(timeout=12) as c:
@@ -76,7 +70,11 @@ def check_google_maps() -> dict:
         if pr.status_code == 200:
             base["places_new"] = {"ok": True, "status": pr.status_code}
         else:
-            err = pr.json().get("error", {}) if pr.headers.get("content-type", "").startswith("application/json") else {}
+            err = (
+                pr.json().get("error", {})
+                if pr.headers.get("content-type", "").startswith("application/json")
+                else {}
+            )
             base["places_new"] = {
                 "ok": False,
                 "status": pr.status_code,
@@ -85,7 +83,49 @@ def check_google_maps() -> dict:
     except Exception as exc:
         base["places_new"] = {"ok": False, "status": "EXCEPTION", "message": str(exc)}
 
+    try:
+        with httpx.Client(timeout=15) as c:
+            # Metadata API pode estar restrita na chave; valida imagem Static.
+            img = c.get(
+                "https://maps.googleapis.com/maps/api/streetview",
+                params={
+                    "size": "200x120",
+                    "location": "-3.724,-38.490",
+                    "fov": 90,
+                    "key": key,
+                },
+            )
+        ctype = (img.headers.get("content-type") or "").lower()
+        base["street_view"] = {
+            "ok": img.status_code == 200 and "image" in ctype,
+            "status": img.status_code,
+            "message": None if img.status_code == 200 else img.text[:120],
+        }
+    except Exception as exc:
+        base["street_view"] = {"ok": False, "status": "EXCEPTION", "message": str(exc)}
+
+    try:
+        from tools.places_aggregate_tools import compute_insight_count_circle
+
+        agg = compute_insight_count_circle(
+            latitude=-3.724,
+            longitude=-38.490,
+            radius_meters=3000,
+            included_types=["gym", "fitness_center"],
+        )
+        base["area_insights"] = {
+            "ok": "erro" not in agg,
+            "count": agg.get("count"),
+            "message": agg.get("erro"),
+        }
+    except Exception as exc:
+        base["area_insights"] = {"ok": False, "message": str(exc)}
+
+    # Street View é desejável mas não bloqueia pipeline (proxy pode servir 502).
     base["ok"] = bool(
-        base.get("geocoding", {}).get("ok") and base.get("places_new", {}).get("ok")
+        base.get("geocoding", {}).get("ok")
+        and base.get("places_new", {}).get("ok")
+        and base.get("area_insights", {}).get("ok")
     )
+    base["street_view_optional"] = bool(base.get("street_view", {}).get("ok"))
     return base

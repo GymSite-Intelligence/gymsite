@@ -25,7 +25,7 @@ from tools.anchoring_tools import analisar_pontos_comerciais_completo
 
 # Thinking calibrado: A1 agora só chama macro + emite JSON. Sem julgamento.
 _GENERATE_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(thinking_budget=0),
+    thinking_config=types.ThinkingConfig(thinking_budget=0),  # pyright: ignore[reportCallIssue]
 )
 
 geoscout_agent = Agent(

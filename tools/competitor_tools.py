@@ -1,8 +1,12 @@
+
 # tools/competitor_tools.py
 """Inteligência competitiva profunda: busca, reviews, gap analysis."""
+import logging
 import math
 import json
 import httpx
+
+logger = logging.getLogger(__name__)
 from tools.google_maps_key import get_google_maps_api_key
 from tools.maps_tools import calcular_distancia_km, geocode_endereco
 PLACES_BASE = "https://places.googleapis.com/v1/places"
@@ -474,18 +478,33 @@ def buscar_academias(
             "tipos": p.get("types", []),
             "telefone": p.get("nationalPhoneNumber", ""),
             "website": p.get("websiteUri", ""),
+            "google_maps_uri": p.get("googleMapsUri", ""),
             "tem_24h": tem_24h,
             "horarios": periodos[:3],
             "fonte_busca": "google_places",
         })
     if places_ok:
         concorrentes.sort(key=lambda x: x["distancia_km"])
+        try:
+            from tools.maps_tools import obter_detalhes_contato
+
+            for c in concorrentes[:5]:
+                pid = c.get("place_id")
+                if not pid or str(pid).startswith("osm"):
+                    continue
+                det = obter_detalhes_contato(pid)
+                if isinstance(det, dict) and "erro" not in det:
+                    c["telefone"] = det.get("telefone") or c.get("telefone", "")
+                    c["website"] = det.get("website") or c.get("website", "")
+                    c["tem_24h"] = det.get("tem_24h", c.get("tem_24h", False))
+                    c["horarios"] = det.get("horarios") or c.get("horarios", [])
+        except Exception as exc:
+            logger.debug("enriquecimento Place Details concorrentes: %s", exc)
 
     total_nearby = len(concorrentes)
+    _count_raw = agregados.get("count_total")
     total_agregado = (
-        int(agregados.get("count_total"))
-        if isinstance(agregados, dict) and agregados.get("count_total") is not None
-        else None
+        int(_count_raw) if isinstance(_count_raw, (int, float, str)) else None
     )
 
     redes_osm: list[str] = []
@@ -533,7 +552,29 @@ def buscar_reviews_academia(place_id: str, nome_academia: str = "") -> dict:
     except Exception as e:
         return {"erro": f"Details API falhou: {e}", "reviews": []}
 
-    reviews_raw = data.get("reviews", [])
+    reviews_raw = data.get("reviews", []) or []
+
+    def _publish_time_sort(r: dict) -> float:
+        pt = r.get("publishTime")
+        if isinstance(pt, (int, float)):
+            return float(pt)
+        if isinstance(pt, str) and pt:
+            try:
+                from datetime import datetime
+
+                return datetime.fromisoformat(pt.replace("Z", "+00:00")).timestamp()
+            except ValueError:
+                return 0.0
+        return 0.0
+
+    # Prioriza avaliações ≤3★ (dores) e mantém as mais recentes da amostra API.
+    reviews_raw = sorted(
+        reviews_raw,
+        key=lambda r: (
+            0 if (r.get("rating") or 5) <= 3 else 1,
+            -_publish_time_sort(r),
+        ),
+    )
     reviews_processados = []
     for r in reviews_raw[:5]:  # máx 5 reviews por place
         texto = (r.get("text", {}) or {}).get("text", "") or ""
@@ -569,7 +610,7 @@ def buscar_reviews_academia(place_id: str, nome_academia: str = "") -> dict:
 
 
 def montar_perfil_competitivo(concorrente: dict, reviews_processados: list[dict],
-                                enrichment_google: dict = None) -> dict:
+                                enrichment_google: dict | None = None) -> dict:
     """
     Monta perfil RICO de UM concorrente — não agregado.
     Junta dados básicos do Places + reviews nominados + enrichment do Google.
@@ -1528,8 +1569,29 @@ def _slim_concorrente(c: dict) -> dict:
                 "data_relativa": r.get("data_relativa"),
             })
     am = c.get("atividade_marketing") or {}
+    website_raw = (c.get("website") or "").strip()
+    lat = c.get("lat")
+    lng = c.get("lng")
+    try:
+        lat_f = float(lat) if lat is not None else None
+        lng_f = float(lng) if lng is not None else None
+        if lat_f == 0.0 and lng_f == 0.0:
+            lat_f, lng_f = None, None
+    except (TypeError, ValueError):
+        lat_f, lng_f = None, None
+    dist = c.get("distancia_km")
+    try:
+        dist_f = round(float(dist), 2) if dist is not None else None
+    except (TypeError, ValueError):
+        dist_f = None
+    maps_uri = (c.get("google_maps_uri") or "").strip() or None
     return {
         "nome": c.get("nome", "Desconhecido"),
+        "place_id": c.get("place_id"),
+        "lat": lat_f,
+        "lng": lng_f,
+        "distancia_km": dist_f,
+        "google_maps_uri": maps_uri,
         "endereco": c.get("endereco", ""),
         "bairro_concorrente": c.get("bairro_concorrente") or extrair_bairro_endereco(c.get("endereco", "")),
         "rating_geral": c.get("rating_oficial") or c.get("rating_geral"),
@@ -1538,7 +1600,7 @@ def _slim_concorrente(c: dict) -> dict:
         # Places API contact data — propaga pra writer salvar em competidores.
         # Truncado em 80 chars pra evitar MALFORMED em websites com query strings longas.
         "telefone": (c.get("telefone") or "").strip() or None,
-        "website": ((c.get("website") or "").strip() or None) and c.get("website")[:200],
+        "website": website_raw[:200] if website_raw else None,
         "reviews": reviews_slim,
         "horarios_pico": c.get("horarios_pico"),
         "servicos_oferecidos": (am.get("servicos_ofertados") or [])[:15] if isinstance(am, dict) else [],
@@ -1630,11 +1692,37 @@ async def analisar_concorrentes_a3a_completo(
         # NÃO bloqueia pipeline. Cache 7d por place_id.
         horarios_pico_dict: dict | None = None
         pico_semanal_str: str | None = enrichment.get("pico_semanal")
+        atributos_sobre: dict = {}
         if place_id:
             try:
+                from tools.maps_tools import obter_atributos_place
+
+                atributos_sobre = obter_atributos_place(place_id) or {}
+            except Exception:
+                atributos_sobre = {}
+
+        if place_id:
+            try:
+                from tools.maps_place_id import montar_maps_url_place
                 from tools.popular_times_tool import pesquisar_horarios_pico
-                maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
-                pico_resultado = await pesquisar_horarios_pico(maps_url, place_id)
+
+                maps_url = (
+                    c.get("google_maps_uri")
+                    or montar_maps_url_place(
+                        nome,
+                        place_id,
+                        c.get("lat"),
+                        c.get("lng"),
+                    )
+                )
+                pico_resultado = await pesquisar_horarios_pico(
+                    maps_url,
+                    place_id,
+                    nome=nome,
+                    cidade=cidade,
+                    lat=c.get("lat"),
+                    lng=c.get("lng"),
+                )
                 if pico_resultado.get("status") == "ok":
                     horarios_pico_dict = pico_resultado.get("dados_por_dia") or None
                     dia_top = pico_resultado.get("dia_mais_movimentado") or {}
@@ -1648,6 +1736,7 @@ async def analisar_concorrentes_a3a_completo(
         if horarios_pico_dict is None:
             horarios_pico_dict = enrichment.get("horarios_pico")
 
+        maps_uri = (c.get("google_maps_uri") or "").strip() or None
         return {
             "place_id": place_id,
             "nome": nome,
@@ -1655,6 +1744,8 @@ async def analisar_concorrentes_a3a_completo(
             "bairro_concorrente": c.get("bairro_concorrente"),
             "lat": c.get("lat"),
             "lng": c.get("lng"),
+            "distancia_km": c.get("distancia_km"),
+            "google_maps_uri": maps_uri,
             "rating_oficial": reviews_data.get("rating_geral", c.get("rating")),
             "num_avaliacoes": reviews_data.get("total_avaliacoes", c.get("num_avaliacoes", 0)),
             "tem_24h": c.get("tem_24h", False),
@@ -1664,6 +1755,7 @@ async def analisar_concorrentes_a3a_completo(
             "reviews": reviews,
             "horarios_pico": horarios_pico_dict,
             "pico_semanal": pico_semanal_str,
+            "atributos_sobre": atributos_sobre if atributos_sobre and "erro" not in atributos_sobre else None,
             "atividade_marketing": enrichment.get("atividade_marketing"),
             "enrichment_search_grounding_text": enrichment.get("scraping_text"),
         }
@@ -1815,7 +1907,11 @@ def analisar_concorrentes_completo(tool_context) -> dict:
         }
 
     # Métricas agregadas
-    ratings = [s.get("rating_geral") for s in slim if s.get("rating_geral") is not None]
+    ratings: list[float] = []
+    for s in slim:
+        r = s.get("rating_geral")
+        if isinstance(r, (int, float)):
+            ratings.append(float(r))
     rating_medio = round(sum(ratings) / len(ratings), 2) if ratings else 0.0
     num = len(slim)
     total_raio = int(
@@ -1832,23 +1928,22 @@ def analisar_concorrentes_completo(tool_context) -> dict:
     cnpj_cidade: int | None = None
     mc_raw = state.get("market_context")
     mc = _parse_market_context(mc_raw) if mc_raw is not None else {}
-    if isinstance(mc, dict):
-        mc_inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
-        val = mc_inner.get("parque_ativo_total")
-        if not isinstance(val, int):
-            val = mc_inner.get("academias_ativas_cidade_cnpj")
-        if isinstance(val, int):
-            cnpj_cidade = val
-        elif not cidade:
-            cidade = mc_inner.get("cidade") or ""
+    nested_mc = mc.get("market_context")
+    mc_inner: dict = nested_mc if isinstance(nested_mc, dict) else mc
+    val = mc_inner.get("parque_ativo_total")
+    if not isinstance(val, int):
+        val = mc_inner.get("academias_ativas_cidade_cnpj")
+    if isinstance(val, int):
+        cnpj_cidade = val
+    elif not cidade:
+        cidade_raw = mc_inner.get("cidade")
+        cidade = cidade_raw if isinstance(cidade_raw, str) else ""
     if cnpj_cidade is None and cidade:
         try:
             from tools.cnpj_fitness_tools import count_parque_ativo
 
-            uf_mc = ""
-            if isinstance(mc, dict):
-                mc_inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
-                uf_mc = (mc_inner.get("uf") or "") if isinstance(mc_inner, dict) else ""
+            uf_raw = mc_inner.get("uf")
+            uf_mc = uf_raw if isinstance(uf_raw, str) else ""
             cnpj_cidade = count_parque_ativo(cidade, uf_mc)
         except Exception:
             cnpj_cidade = None
@@ -1875,7 +1970,8 @@ def analisar_concorrentes_completo(tool_context) -> dict:
             {"bairro": b, "count": len(nomes), "academias": nomes}
             for b, nomes in distribuicao.items()
         ],
-        key=lambda x: -x["count"],
+        key=lambda x: x["count"],
+        reverse=True,
     )
 
     return {

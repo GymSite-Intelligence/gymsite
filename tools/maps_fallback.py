@@ -24,7 +24,11 @@ _USER_AGENT = os.getenv(
 
 
 def fallback_habilitado() -> bool:
-    return os.getenv("MAPS_FALLBACK_ENABLED", "1").strip().lower() in (
+    """
+    OSM/Nominatim só quando explicitamente ligado.
+    Com Google Maps OK, use MAPS_FALLBACK_ENABLED=0 (padrão) para carga enriquecida Places.
+    """
+    return os.getenv("MAPS_FALLBACK_ENABLED", "0").strip().lower() in (
         "1",
         "true",
         "yes",

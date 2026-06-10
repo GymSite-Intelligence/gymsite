@@ -173,6 +173,79 @@ def enriquecimento_habilitado() -> bool:
     )
 
 
+def apollo_no_pipeline_habilitado() -> bool:
+    """Apollo só no pipeline se APOLLO_ENRICH_ON_PIPELINE=1 (default: desligado)."""
+    return os.getenv("APOLLO_ENRICH_ON_PIPELINE", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _aplicar_apollo_no_socio(
+    socio_adm: dict,
+    apollo_data: dict,
+) -> None:
+    """Mescla resultado Apollo no bloco socio_administrador."""
+    if apollo_data.get("nome"):
+        socio_adm.setdefault("nome", apollo_data.get("nome"))
+    if apollo_data.get("email_direto"):
+        socio_adm["email_direto"] = apollo_data.get("email_direto")
+    if apollo_data.get("telefone_direto"):
+        socio_adm["telefone"] = apollo_data.get("telefone_direto")
+    if apollo_data.get("linkedin_url"):
+        socio_adm["linkedin_url"] = apollo_data.get("linkedin_url")
+    if apollo_data.get("empresa_match"):
+        socio_adm["empresa_match_apollo"] = apollo_data.get("empresa_match")
+    if apollo_data.get("fonte_apollo"):
+        socio_adm["fonte_apollo"] = apollo_data.get("fonte_apollo")
+    socio_adm["contato_individual_disponivel"] = bool(
+        socio_adm.get("email_direto")
+        or socio_adm.get("telefone")
+        or socio_adm.get("linkedin_url")
+    )
+
+
+def _apollo_tem_contato(data: dict | None) -> bool:
+    if not data:
+        return False
+    return bool(
+        data.get("email_direto")
+        or data.get("linkedin_url")
+        or data.get("telefone_direto")
+    )
+
+
+def _chamar_apollo_para_entrante(
+    razao: str,
+    socio_adm: dict,
+    *,
+    cidade: str | None = None,
+) -> dict | None:
+    import inspect
+
+    from tools.apollo_enrichment import (
+        enriquecer_empresa_com_apollo,
+        enriquecer_socio_qsa_com_apollo,
+    )
+
+    nome_qsa = (socio_adm.get("nome") or "").strip() or None
+    sig = inspect.signature(enriquecer_empresa_com_apollo)
+    if "nome_socio_qsa" in sig.parameters:
+        return enriquecer_empresa_com_apollo(
+            razao,
+            cidade=cidade,
+            nome_socio_qsa=nome_qsa,
+        )
+
+    out = enriquecer_empresa_com_apollo(razao, cidade=cidade)
+    if nome_qsa and not _apollo_tem_contato(out):
+        qsa_out = enriquecer_socio_qsa_com_apollo(razao.strip(), nome_qsa, cidade)
+        if _apollo_tem_contato(qsa_out):
+            return qsa_out
+    return out
+
+
 def max_enriquecimentos_por_lista() -> int:
     try:
         return max(0, min(int(os.getenv("CNPJ_ENRIQUECER_MAX", "20") or "20"), 50))
@@ -180,7 +253,12 @@ def max_enriquecimentos_por_lista() -> int:
         return 20
 
 
-def fetch_cartao_cnpj(cnpj: str, *, use_cache: bool = True) -> dict:
+def fetch_cartao_cnpj(
+    cnpj: str,
+    *,
+    use_cache: bool = True,
+    usar_apollo: bool | None = None,
+) -> dict:
     """Cartão CNPJ + QSA (cache → ReceitaWS)."""
     cached = _cache_get(cnpj) if use_cache else None
     if cached:
@@ -225,20 +303,15 @@ def fetch_cartao_cnpj(cnpj: str, *, use_cache: bool = True) -> dict:
         "socio_administrador": socio_adm,
     }
 
-    # Enriquecimento com Apollo se API key configurada
-    if os.getenv("APOLLO_API_KEY") and socio_adm:
+    # Apollo: só com flag explícita (UI) ou APOLLO_ENRICH_ON_PIPELINE=1
+    do_apollo = usar_apollo if usar_apollo is not None else apollo_no_pipeline_habilitado()
+    if do_apollo and os.getenv("APOLLO_API_KEY") and socio_adm:
         razao = payload.get("razao_social") or payload.get("nome_fantasia")
         if razao:
             try:
-                from tools.apollo_enrichment import enriquecer_empresa_com_apollo
-                apollo_data = enriquecer_empresa_com_apollo(razao)
+                apollo_data = _chamar_apollo_para_entrante(razao, socio_adm)
                 if apollo_data:
-                    socio_adm["email_direto"] = apollo_data.get("email_direto")
-                    socio_adm["linkedin_url"] = apollo_data.get("linkedin_url")
-                    socio_adm["empresa_match_apollo"] = apollo_data.get("empresa_match")
-                    socio_adm["contato_individual_disponivel"] = bool(
-                        apollo_data.get("email_direto") or apollo_data.get("linkedin_url")
-                    )
+                    _aplicar_apollo_no_socio(socio_adm, apollo_data)
             except Exception as e:
                 print(f"[Apollo Enrichment Error] {e}")
 
@@ -328,10 +401,48 @@ def aplicar_enriquecimento_entrante(
     return out
 
 
+def enriquecer_entrante_unico(
+    ent: dict[str, Any],
+    *,
+    usar_apollo: bool = True,
+    max_receita: int | None = 1,
+    forcar_receita: bool = False,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Enriquece um entrante (Receita + Apollo opcional). Uso: ação manual na UI."""
+    lista, meta = enriquecer_entrantes(
+        [ent],
+        max_receita=max_receita,
+        usar_apollo=usar_apollo,
+        forcar_receita=forcar_receita,
+    )
+    return (lista[0] if lista else ent), meta
+
+
+def _entrante_precisa_fetch_receita(ent: dict[str, Any]) -> bool:
+    precisa_rs = not (ent.get("razao_social") or "").strip()
+    precisa_contato = not ent.get("email_empresa") and not ent.get("telefone_empresa")
+    qsa = ent.get("qsa")
+    precisa_qsa = not qsa or (isinstance(qsa, list) and len(qsa) == 0)
+    precisa_socio = not ent.get("socio_administrador")
+    precisa_email_socio = not (ent.get("email_socio_administrador") or "").strip()
+    return bool(
+        ent.get("cnpj")
+        and (
+            precisa_rs
+            or precisa_contato
+            or precisa_qsa
+            or precisa_socio
+            or precisa_email_socio
+        )
+    )
+
+
 def enriquecer_entrantes(
     entrantes: list[dict[str, Any]],
     *,
     max_receita: int | None = None,
+    usar_apollo: bool | None = None,
+    forcar_receita: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """
     Enriquece lista de entrantes. Respeita limite de chamadas ReceitaWS.
@@ -345,18 +456,25 @@ def enriquecer_entrantes(
     limite = max_receita if max_receita is not None else max_enriquecimentos_por_lista()
     receita_calls = 0
     cache_hits = 0
+    apollo_tentado = False
+    apollo_ok = False
+    receita_fonte: str | None = None
+    receita_motivo: str | None = None
     out_list: list[dict] = []
+
+    do_apollo = usar_apollo if usar_apollo is not None else apollo_no_pipeline_habilitado()
+    apollo_key = bool((os.getenv("APOLLO_API_KEY") or "").strip())
 
     for ent in entrantes:
         cnpj = ent.get("cnpj") or ""
-        precisa_rs = not (ent.get("razao_social") or "").strip()
-        precisa_contato = not ent.get("email_empresa") and not ent.get("telefone_empresa")
         cartao: dict | None = None
+        deve_buscar = forcar_receita or _entrante_precisa_fetch_receita(ent)
 
-        if cnpj and (precisa_rs or precisa_contato or not ent.get("qsa")):
+        if deve_buscar and cnpj:
             cached = _cache_get(cnpj)
             if cached:
                 cache_hits += 1
+                receita_fonte = "cache"
                 cartao = {
                     "status": "ok",
                     "fonte": "cache",
@@ -368,18 +486,63 @@ def enriquecer_entrantes(
                     "qsa": cached.get("qsa"),
                     "socio_administrador": cached.get("socio_administrador"),
                 }
+                socio = cartao.get("socio_administrador") or {}
+                razao = (cartao.get("razao_social") or cartao.get("nome_fantasia") or "").strip()
+                if (
+                    forcar_receita
+                    and do_apollo
+                    and apollo_key
+                    and razao
+                    and socio
+                    and not socio.get("email_direto")
+                    and not socio.get("linkedin_url")
+                    and not socio.get("telefone")
+                ):
+                    apollo_tentado = True
+                    try:
+                        apollo_data = _chamar_apollo_para_entrante(razao, socio)
+                        if apollo_data:
+                            apollo_ok = True
+                            _aplicar_apollo_no_socio(socio, apollo_data)
+                            cartao["socio_administrador"] = socio
+                    except Exception as exc:
+                        receita_motivo = f"apollo_erro:{exc}"
             elif receita_calls < limite:
-                cartao = fetch_cartao_cnpj(cnpj)
+                cartao = fetch_cartao_cnpj(cnpj, usar_apollo=usar_apollo)
                 if cartao.get("status") == "ok":
                     receita_calls += 1
+                    receita_fonte = cartao.get("fonte") or "receitaws"
+                    socio = cartao.get("socio_administrador") or {}
+                    if do_apollo and apollo_key and socio:
+                        apollo_tentado = True
+                        apollo_ok = bool(
+                            socio.get("email_direto")
+                            or socio.get("linkedin_url")
+                            or socio.get("telefone")
+                        )
+                else:
+                    receita_motivo = cartao.get("motivo") or cartao.get("erro") or "receita_falhou"
+            else:
+                receita_motivo = "limite_receita_atingido"
+        elif not cnpj:
+            receita_motivo = "cnpj_ausente"
+        else:
+            receita_motivo = "dados_ja_presentes"
 
         out_list.append(
             aplicar_enriquecimento_entrante(ent, cartao=cartao, viacep=True)
         )
 
-    return out_list, {
+    meta: dict[str, Any] = {
         "enriquecimento": "ok",
         "receita_chamadas": receita_calls,
         "cache_hits": cache_hits,
         "limite_receita": limite,
+        "receita_fonte": receita_fonte,
+        "receita_motivo": receita_motivo,
+        "apollo_habilitado": do_apollo and apollo_key,
+        "apollo_tentado": apollo_tentado,
+        "apollo_ok": apollo_ok,
+        "forcar_receita": forcar_receita,
     }
+    return out_list, meta

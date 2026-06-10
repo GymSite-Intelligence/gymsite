@@ -145,7 +145,7 @@ def _executar_grounding_sync(query: str, cache_key_override: Optional[str] = Non
     _bump_stat("miss")
 
     from google.genai import types
-    from tools._genai_client import build_genai_client
+    from tools._genai_client import build_genai_client, generate_content_resilient
 
     try:
         client = build_genai_client()
@@ -161,10 +161,13 @@ def _executar_grounding_sync(query: str, cache_key_override: Optional[str] = Non
     last_error = None
     for tentativa, delay in enumerate(RETRY_BACKOFFS, start=1):
         try:
-            response = client.models.generate_content(
+            response = generate_content_resilient(
+                client,
                 model=GROUNDING_MODEL,
                 contents=query,
                 config=config,
+                max_retries=3,
+                base_delay=4.0,
             )
             # Extrai texto
             text = None

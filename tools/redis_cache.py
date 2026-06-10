@@ -20,6 +20,7 @@ CACHE_TTL: dict[str, int] = {
     "/api/metrics": 15,
     "/api/relatorios": 300,
     "/api/relatorios/{id}/pdf": 3600,
+    "/api/relatorios/{id}/mapa-mercado": 300,
     "/api/relatorios/{id}/custos-api": 300,
     "/api/relatorios/{id}/status": 30,
     "/api/custos": 900,

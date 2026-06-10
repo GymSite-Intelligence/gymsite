@@ -48,8 +48,12 @@ fluxo_obrigatorio (2 passos APENAS):
     _candidatos = state.get("candidatos_geoscout", {}).get("candidatos", [{}])
     _top1 = _candidatos[0] if _candidatos else {}
     _latlng = _top1.get("latlng") or _top1.get("location") or {}
-    _destino_lat = _latlng.get("lat") if isinstance(_latlng, dict) else None
-    _destino_lng = _latlng.get("lng") if isinstance(_latlng, dict) else None
+    _destino_lat = _top1.get("lat")
+    _destino_lng = _top1.get("lng")
+    if _destino_lat is None and isinstance(_latlng, dict):
+        _destino_lat = _latlng.get("lat")
+    if _destino_lng is None and isinstance(_latlng, dict):
+        _destino_lng = _latlng.get("lng")
     # fim extracao lat/lng
     analise_financeira_a4_completo(bairro, cidade, uf, area_m2,
         destino_lat=_destino_lat,

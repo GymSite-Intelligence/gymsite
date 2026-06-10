@@ -1,9 +1,12 @@
 """
 Popular Times Tool — extrai horários de pico de fichas Google Maps.
 
-DESCOBERTA TÉCNICA (validada em 2026-05-08):
-- Os 168 dados (24h × 7 dias) estão no DOM **pré-renderizado**, off-screen
-  (top: 931px enquanto viewport é 855px). Não precisa scroll.
+DESCOBERTA TÉCNICA (validada em 2026-05-08, revisada 2026-06-03):
+- Os 168 dados (24h × 7 dias) costumam estar no DOM após a seção carregar.
+- Em fichas Smart Fit / redes grandes a seção **"Horários de pico"** é lazy:
+  exige scroll no painel `.m6QErb` / `[role=main]` antes dos aria-labels.
+- URLs `place/{nome}/@.../1sChIJ` redirecionam para `place//` (painel vazio);
+  usar busca georreferenciada ou `googleMapsUri` com ftid `0x:0x`.
 - Aria-label estável: "Movimento às HH:00: XX%."
 - httpx puro NÃO funciona — Maps é SPA, dados vêm via JS bundle pós-load.
   matches_movimento_as = 0 em HTML cru de 178KB.
@@ -124,6 +127,195 @@ def _calcular_perfil(hora_pico_str: str, max_pct: int, min_pct: int, picos_altos
     return "noite_pico"
 
 
+# Textos da seção de popular times (PT-BR / EN)
+_SECAO_PICO_TEXTOS = (
+    "Horários de pico",
+    "Horários populares",
+    "Popular times",
+    "Movimento normal",
+    "Usually busy",
+)
+
+_POPULAR_TIMES_SELECTORS = [
+    '[aria-label*="Movimento às"]',
+    '[aria-label*="Busy at"]',
+    '[aria-label*="Usually busy"]',
+    '[aria-label*="Geralmente"]',
+    '[aria-label*="Movimento normal"]',
+]
+
+_PLACE_PANEL_SELECTORS = [
+    "h1.DUwDvf",
+    'h1[class*="DU"]',
+    'button[data-value="Rota"]',
+    'button[data-value="Directions"]',
+    '[aria-label*="Salvar"]',
+    '[aria-label*="Save"]',
+    '[role="main"]',
+]
+
+_BUSCA_RESULTADO_SELECTORS = [
+    "a.hfpxzc",
+    ".Nv2PK a.hfpxzc",
+    '[role="feed"] a.hfpxzc',
+]
+
+
+def _dismiss_maps_consent(page) -> bool:
+    """Fecha banner de cookies (page + iframes)."""
+    for texto in ("Aceitar tudo", "Concordo", "Accept all", "I agree", "Reject all"):
+        try:
+            btn = page.get_by_role("button", name=texto).first
+            if btn.is_visible(timeout=1200):
+                btn.click()
+                page.wait_for_timeout(1200)
+                return True
+        except Exception:
+            continue
+    for frame in page.frames:
+        for texto in ("Aceitar tudo", "Concordo", "Accept all"):
+            try:
+                btn = frame.get_by_role("button", name=texto).first
+                if btn.is_visible(timeout=800):
+                    btn.click()
+                    page.wait_for_timeout(1200)
+                    return True
+            except Exception:
+                continue
+    return False
+
+
+def _scroll_maps_panel(page, steps: int = 10, delta: int = 650, delay_ms: int = 550) -> None:
+    """Scroll no painel lateral — força lazy-load de Horários de pico."""
+    scroll_js = f"""
+    () => {{
+      const els = [
+        document.querySelector('[role="main"]'),
+        ...document.querySelectorAll('.m6QErb.DxyBCb'),
+        ...document.querySelectorAll('.m6QErb'),
+      ].filter(Boolean);
+      for (const el of els) el.scrollTop += {delta};
+      return els.length;
+    }}
+    """
+    try:
+        for _ in range(steps):
+            page.evaluate(scroll_js)
+            page.wait_for_timeout(delay_ms)
+    except Exception:
+        pass
+
+
+def _painel_place_texto(page) -> str:
+    try:
+        return page.evaluate(
+            "() => { const m = document.querySelector('[role=\"main\"]'); "
+            "return m ? (m.innerText || '') : ''; }"
+        ) or ""
+    except Exception:
+        return ""
+
+
+def _painel_place_ok(page) -> bool:
+    """Painel com ficha real (não stub de login / place// vazio)."""
+    url = (page.url or "").lower()
+    if "/maps/place//" in url or url.rstrip("/").endswith("/place"):
+        return False
+    txt = _painel_place_texto(page)
+    if len(txt) < 280:
+        return False
+    if "Fazer login" in txt and "Horários de pico" not in txt and "Horários populares" not in txt:
+        return False
+    return True
+
+
+def _abrir_primeiro_resultado_busca(page) -> bool:
+    for sel in _BUSCA_RESULTADO_SELECTORS:
+        try:
+            page.wait_for_selector(sel, timeout=10000)
+            page.locator(sel).first.click()
+            page.wait_for_timeout(2800)
+            return _painel_place_ok(page)
+        except Exception:
+            continue
+    return False
+
+
+def _scroll_ate_secao_pico(page) -> bool:
+    """Rola até achar texto da seção ou aria-label de barra."""
+    for _ in range(14):
+        for texto in _SECAO_PICO_TEXTOS:
+            try:
+                loc = page.get_by_text(texto, exact=False).first
+                if loc.count() and loc.is_visible(timeout=400):
+                    loc.scroll_into_view_if_needed(timeout=2000)
+                    page.wait_for_timeout(800)
+                    return True
+            except Exception:
+                continue
+        for sel in _POPULAR_TIMES_SELECTORS:
+            try:
+                loc = page.locator(sel).first
+                if loc.count():
+                    loc.scroll_into_view_if_needed(timeout=2000)
+                    page.wait_for_timeout(800)
+                    return True
+            except Exception:
+                continue
+        _scroll_maps_panel(page, steps=1, delta=700, delay_ms=500)
+    return False
+
+
+_RE_ARIA_MOVIMENTO_HTML = re.compile(
+    r'aria-label="((?:Movimento[^"]{8,120}|(?:Usually )?Busy at[^"]{5,80}|Geralmente[^"]{5,80}))"',
+    re.IGNORECASE,
+)
+
+
+def _coletar_movimentos_aria(page) -> list:
+    movimentos = page.evaluate(
+        "() => { const out = []; "
+        "document.querySelectorAll('[aria-label]').forEach(el => { "
+        "const l = el.getAttribute('aria-label') || ''; "
+        "if (l.indexOf('Movimento \\u00e0s') !== -1 || l.indexOf('Busy at') !== -1 "
+        "|| l.indexOf('Usually') !== -1 || l.indexOf('Geralmente') !== -1 "
+        "|| /Movimento (?:normal|moderado|alto)/i.test(l)) out.push(l); "
+        "}); return out; }"
+    )
+    if movimentos:
+        return movimentos
+    # Fallback: labels no HTML (off-screen / ainda não no DOM acessível via querySelector)
+    try:
+        html = page.content()
+        found = _RE_ARIA_MOVIMENTO_HTML.findall(html)
+        # dedupe preservando ordem
+        seen: set[str] = set()
+        out: list[str] = []
+        for label in found:
+            if label not in seen:
+                seen.add(label)
+                out.append(label)
+        return out
+    except Exception:
+        return []
+
+
+def _cache_deve_ignorar(
+    dados: dict,
+    *,
+    force_refresh: bool,
+    nome: str,
+    lat: float | None,
+    lng: float | None,
+) -> bool:
+    if force_refresh:
+        return True
+    if dados.get("status") != "sem_popular_times":
+        return False
+    # Re-scrape quando temos busca rica (evita repetir falso negativo de URL place//)
+    return bool((nome or "").strip() and lat is not None and lng is not None)
+
+
 def _calcular_oportunidade(resumo_por_dia: dict) -> str:
     if not resumo_por_dia:
         return "Dados insuficientes para análise de oportunidade."
@@ -169,14 +361,18 @@ def _calcular_oportunidade(resumo_por_dia: dict) -> str:
     )
 
 
-def _extrair_sync(maps_url: str, place_id: str) -> dict:
+def _extrair_sync(
+    maps_url: str,
+    place_id: str,
+    *,
+    nome: str = "",
+    cidade: str = "",
+    lat: float | None = None,
+    lng: float | None = None,
+) -> dict:
     """
     Versão SÍNCRONA do scraping. Roda em thread separada via asyncio.to_thread.
     Não chamar diretamente do código async — use pesquisar_horarios_pico().
-
-    FIX 2026-05-29: o Maps é uma SPA — com wait_until="domcontentloaded" o
-    painel do lugar ainda não está renderizado. Agora aguardamos o painel
-    antes de tentar o seletor de popular_times.
     """
     base_result = {
         "status": "indeterminado",
@@ -195,92 +391,119 @@ def _extrair_sync(maps_url: str, place_id: str) -> dict:
         base_result["motivo"] = "playwright_nao_instalado"
         return base_result
 
-    movimentos = []
-
-    # Seletores alternativos (PT-BR e EN) para popular times
-    # O Google pode retornar o painel em idiomas diferentes dependendo da região.
-    POPULAR_TIMES_SELECTORS = [
-        '[aria-label*="Movimento às"]',   # PT-BR: "Movimento às 18:00: 87%."
-        '[aria-label*="Busy at"]',           # EN: "Busy at 6 PM: 87%."
-        '[aria-label*="Usually busy"]',      # EN alternativo
-        '[aria-label*="Geralmente"]',         # PT-BR alternativo (playwright_enrichment)
-    ]
-
-    # Seletores para detectar que o painel do lugar carregou
-    PLACE_PANEL_SELECTORS = [
-        'h1.DUwDvf',       # título do lugar (Maps 2024)
-        'h1[class*="DU"]', # fallback
-        'button[data-value="Rota"]',        # botão de rota PT-BR
-        'button[data-value="Directions"]',  # botão de rota EN
-        '[aria-label*="Salvar"]',
-        '[aria-label*="Save"]',
-        '.Nv2PK',          # card de resultado
-    ]
+    movimentos: list = []
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled"],
+            )
             context = browser.new_context(
                 user_agent=USER_AGENT,
                 locale="pt-BR",
                 viewport={"width": 1280, "height": 900},
+                extra_http_headers={"Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"},
             )
             page = context.new_page()
 
             try:
-                page.goto(maps_url, timeout=30000, wait_until="domcontentloaded")
+                page.goto(maps_url, timeout=45000, wait_until="load")
+                page.wait_for_timeout(2500)
+                _dismiss_maps_consent(page)
+                page.wait_for_timeout(1000)
 
-                # Aguarda o painel do lugar carregar antes de tentar popular times.
-                # O Maps é SPA — domcontentloaded não garante o painel renderizado.
-                panel_found = False
-                for panel_sel in PLACE_PANEL_SELECTORS:
-                    try:
-                        page.wait_for_selector(panel_sel, timeout=12000)
-                        panel_found = True
-                        break
-                    except PlaywrightTimeout:
-                        continue
+                is_search = "/maps/search/" in (maps_url or "")
+                if is_search and not _painel_place_ok(page):
+                    if not _abrir_primeiro_resultado_busca(page):
+                        base_result["status"] = "sem_popular_times"
+                        base_result["motivo"] = (
+                            "Busca Maps não abriu ficha do lugar — "
+                            "sem resultado clicável no feed."
+                        )
+                        browser.close()
+                        return base_result
+                else:
+                    panel_found = False
+                    for panel_sel in _PLACE_PANEL_SELECTORS:
+                        try:
+                            page.wait_for_selector(
+                                panel_sel, timeout=12000, state="attached"
+                            )
+                            panel_found = True
+                            break
+                        except PlaywrightTimeout:
+                            continue
+                    if not panel_found:
+                        if nome and lat is not None and lng is not None:
+                            from tools.maps_place_id import montar_maps_url_place
 
-                if not panel_found:
-                    # Sem painel do lugar — pode ser página de busca ou redirecionamento
-                    base_result["status"] = "sem_popular_times"
-                    base_result["motivo"] = (
-                        "Painel do lugar não encontrado no Google Maps — "
-                        "URL pode ser de busca genérica ou lugar sem ficha."
-                    )
-                    browser.close()
-                    return base_result
+                            alt = montar_maps_url_place(
+                                nome, place_id, lat, lng, cidade=cidade
+                            )
+                            if alt and alt != maps_url:
+                                page.goto(alt, timeout=45000, wait_until="load")
+                                page.wait_for_timeout(2500)
+                                _dismiss_maps_consent(page)
+                                if "/maps/search/" in alt:
+                                    _abrir_primeiro_resultado_busca(page)
+                                panel_found = True
+                                for panel_sel in _PLACE_PANEL_SELECTORS:
+                                    try:
+                                        page.wait_for_selector(
+                                            panel_sel, timeout=8000, state="attached"
+                                        )
+                                        panel_found = True
+                                        break
+                                    except PlaywrightTimeout:
+                                        panel_found = False
+                        if not panel_found:
+                            base_result["status"] = "sem_popular_times"
+                            base_result["motivo"] = (
+                                "Painel do lugar não carregou no Google Maps "
+                                "(URL inválida, login ou redirecionamento)."
+                            )
+                            browser.close()
+                            return base_result
 
-                # Com painel carregado, tenta localizar popular times.
-                # Itera pelos seletores conhecidos (PT-BR e EN).
+                _scroll_ate_secao_pico(page)
+                page.wait_for_timeout(2000)
+
                 popular_found_sel = None
-                for sel in POPULAR_TIMES_SELECTORS:
+                for sel in _POPULAR_TIMES_SELECTORS:
                     try:
-                        page.wait_for_selector(sel, timeout=8000)
+                        page.wait_for_selector(sel, timeout=15000)
                         popular_found_sel = sel
                         break
                     except PlaywrightTimeout:
                         continue
 
-                if not popular_found_sel:
+                movimentos = _coletar_movimentos_aria(page)
+
+                if len(movimentos) < 24:
+                    _scroll_maps_panel(page, steps=8, delay_ms=700)
+                    page.wait_for_timeout(2000)
+                    for sel in _POPULAR_TIMES_SELECTORS:
+                        try:
+                            page.wait_for_selector(sel, timeout=8000)
+                            popular_found_sel = sel
+                            break
+                        except PlaywrightTimeout:
+                            continue
+                    extra = _coletar_movimentos_aria(page)
+                    if len(extra) > len(movimentos):
+                        movimentos = extra
+
+                if not movimentos:
                     base_result["status"] = "sem_popular_times"
+                    preview = _painel_place_texto(page)[:120].replace("\n", " ")
                     base_result["motivo"] = (
-                        "Local não possui gráfico de horários de pico no Google Maps "
-                        "(visitas insuficientes ou Google optou por não exibir)."
+                        "Gráfico Horários de pico não encontrado após scroll "
+                        f"(painel {len(_painel_place_texto(page))} chars; "
+                        f"prévia: {preview!r})."
                     )
                     browser.close()
                     return base_result
-
-                # Extrai todos os aria-labels de movimento de uma vez via JS
-                movimentos = page.evaluate(
-                    "() => { const out = []; "
-                    "document.querySelectorAll('[aria-label]').forEach(el => { "
-                    "const l = el.getAttribute('aria-label') || ''; "
-                    "if (l.indexOf('Movimento \u00e0s') !== -1 || l.indexOf('Busy at') !== -1 "
-                    "|| l.indexOf('Usually') !== -1 || l.indexOf('Geralmente') !== -1) "
-                    "out.push(l); }); "
-                    "return out; }"
-                )
             finally:
                 browser.close()
 
@@ -291,7 +514,9 @@ def _extrair_sync(maps_url: str, place_id: str) -> dict:
 
     if not movimentos:
         base_result["status"] = "sem_popular_times"
-        base_result["motivo"] = "Seletor de popular_times encontrou elementos mas evaluate retornou vazio"
+        base_result["motivo"] = (
+            "Seção de pico visível mas nenhum aria-label Movimento/Busy extraído."
+        )
         return base_result
 
     # Organizar movimentos em 7 dias × 24h.
@@ -480,6 +705,9 @@ def _tentar_searchapi(place_id: str) -> dict | None:
                 },
                 timeout=15,
             )
+        if resp.status_code == 429:
+            print(f"[searchapi] {place_id}: quota mensal esgotada (HTTP 429)")
+            return None
         if resp.status_code != 200:
             print(f"[searchapi] {place_id}: HTTP {resp.status_code}: {resp.text[:140]}")
             return None
@@ -582,7 +810,16 @@ def _tentar_populartimes_lib(place_id: str) -> dict | None:
         return None
 
 
-async def pesquisar_horarios_pico(maps_url: str, place_id: str = "") -> dict:
+async def pesquisar_horarios_pico(
+    maps_url: str,
+    place_id: str = "",
+    *,
+    nome: str = "",
+    cidade: str = "",
+    lat: float | None = None,
+    lng: float | None = None,
+    force_refresh: bool = False,
+) -> dict:
     """
     Extrai horários de pico (7 dias × 24h) de uma ficha Google Maps.
 
@@ -598,14 +835,25 @@ async def pesquisar_horarios_pico(maps_url: str, place_id: str = "") -> dict:
     Returns:
         Dict com: status, dados_por_dia, resumo_por_dia, dia_mais_movimentado, etc.
     """
-    # Cache hit?
+    from tools.maps_place_id import extrair_hex_ftid_de_url, montar_maps_url_place
+
+    hex_ftid = extrair_hex_ftid_de_url(maps_url)
+
+    # Cache hit? (ignora sem_popular_times quando há busca rica ou force_refresh)
     if place_id:
         cp = _cache_path(place_id)
         if cp.exists():
             try:
                 dados = json.loads(cp.read_text(encoding="utf-8"))
                 cached_status = dados.get("status", "ok")
-                if _cache_valido(cp, cached_status):
+                ignorar = _cache_deve_ignorar(
+                    dados,
+                    force_refresh=force_refresh,
+                    nome=nome,
+                    lat=lat,
+                    lng=lng,
+                )
+                if _cache_valido(cp, cached_status) and not ignorar:
                     dados["cached"] = True
                     return dados
             except (json.JSONDecodeError, OSError):
@@ -639,9 +887,36 @@ async def pesquisar_horarios_pico(maps_url: str, place_id: str = "") -> dict:
                 pass
         return resultado_lib
 
+    # Normaliza URL Playwright: evita place/{nome}/1sChIJ (vira place// vazio)
+    url_playwright = maps_url
+    if place_id:
+        broken = (
+            not maps_url
+            or "place//" in maps_url
+            or "/place//@" in maps_url
+            or (
+                "/maps/place/" in maps_url
+                and "q=place_id:" not in maps_url
+                and "1s0x" not in maps_url
+                and "/maps/search/" not in maps_url
+            )
+        )
+        if broken:
+            url_playwright = montar_maps_url_place(
+                nome, place_id, lat, lng, cidade=cidade, hex_ftid=hex_ftid or ""
+            ) or maps_url
+
     # Tier 2: Playwright fallback
     try:
-        resultado = await asyncio.to_thread(_extrair_sync, maps_url, place_id)
+        resultado = await asyncio.to_thread(
+            _extrair_sync,
+            url_playwright,
+            place_id,
+            nome=nome,
+            cidade=cidade,
+            lat=lat,
+            lng=lng,
+        )
     except Exception as e:
         return {
             "status": "erro",
@@ -654,6 +929,34 @@ async def pesquisar_horarios_pico(maps_url: str, place_id: str = "") -> dict:
             "data_coleta": datetime.now().strftime("%Y-%m-%d"),
             "cached": False,
         }
+
+    # Retry busca georreferenciada se primeira URL ainda falhou
+    if (
+        resultado.get("status") != "ok"
+        and place_id
+        and nome
+        and lat is not None
+        and lng is not None
+    ):
+        try:
+            alt_url = montar_maps_url_place(
+                nome, place_id, lat, lng, cidade=cidade, hex_ftid=hex_ftid or ""
+            )
+            if alt_url and alt_url != url_playwright:
+                alt = await asyncio.to_thread(
+                    _extrair_sync,
+                    alt_url,
+                    place_id,
+                    nome=nome,
+                    cidade=cidade,
+                    lat=lat,
+                    lng=lng,
+                )
+                if alt.get("status") == "ok":
+                    resultado = alt
+                    resultado["maps_url"] = alt_url
+        except Exception:
+            pass
 
     # Salva cache (mesmo pra sem_popular_times — TTL menor evita re-tentativa em loop)
     if place_id and resultado.get("status") in ("ok", "sem_popular_times"):

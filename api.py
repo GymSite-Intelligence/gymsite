@@ -5,6 +5,7 @@ Endpoints:
 - POST /api/relatorios            cria stub + dispara pipeline em background
 - GET  /api/relatorios            lista (suporta filtros)
 - GET  /api/relatorios/{id}       detail completo (joins de todas as 9 tabelas)
+- GET  /api/relatorios/{id}/mapa-mercado   pins concorrentes + heat entrantes (município)
 - GET  /api/relatorios/{id}/pdf   PDF estruturado (layout=classic|executive|data_room)
 - GET  /api/relatorios/{id}/status   polling leve do status
 
@@ -369,7 +370,7 @@ app = FastAPI(
 # comma-separated. Ex: CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
 _cors_origins = [
     o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
-]
+] + ["https://vectracargo.com.br", "https://www.vectracargo.com.br"]
 if _cors_origins:
     logger.info("CORS origins from env: %s", _cors_origins)
 else:
@@ -904,6 +905,14 @@ def geocode_bairro_endpoint(
     return geocode_endereco(endereco)
 
 
+@app.get("/api/geocode/cidade")
+def geocode_cidade_endpoint(cidade: str, uf: str | None = None) -> dict:
+    """Centro do município — bounds iniciais do mapa no viewer (não Brasil)."""
+    from tools.mapa_mercado import _geocode_cidade
+
+    return _geocode_cidade(cidade, (uf or "").strip())
+
+
 @app.get("/api/maps/street-view")
 def maps_street_view_proxy(
     lat: float,
@@ -1024,6 +1033,46 @@ def _require_org_access(request: Request, org_id: str) -> str:
     if org_id not in orgs:
         raise HTTPException(status_code=403, detail="Sem permissão para esta organização")
     return user_id
+
+
+def _assert_relatorio_access(request: Request, sb, rid: str, access_code: str | None = None) -> None:
+    """Se JWT presente, valida org do relatório (espelha RLS Supabase).
+    Se access_code presente, valida com o access_code do relatório e permite acesso."""
+    
+    if access_code:
+        res = sb.table("relatorios").select("access_code").eq("id", rid).maybe_single().execute()
+        row = res.data if res else None
+        if not row:
+            raise HTTPException(status_code=404, detail="relatório não encontrado")
+        
+        db_code = row.get("access_code")
+        if not db_code or str(db_code) != access_code:
+            raise HTTPException(status_code=403, detail="access_code inválido ou não autorizado")
+            
+        from datetime import datetime, timezone
+        sb.table("relatorios").update({"access_code_used_at": datetime.now(timezone.utc).isoformat()}).eq("id", rid).execute()
+        return
+
+    auth = request.headers.get("authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        return
+    user_id, _ = _require_authenticated(request)
+    res = (
+        sb.table("relatorios")
+        .select("org_id")
+        .eq("id", rid)
+        .maybe_single()
+        .execute()
+    )
+    row = res.data if res else None
+    if not row:
+        raise HTTPException(status_code=404, detail="relatório não encontrado")
+    org_id = str(row.get("org_id") or "")
+    if not org_id:
+        return
+    orgs = _user_org_ids(sb, user_id)
+    if org_id not in orgs:
+        raise HTTPException(status_code=403, detail="Sem permissão para este relatório")
 
 
 def _assert_oportunidade_access(request: Request, oportunidade_id: str) -> dict:
@@ -1179,12 +1228,54 @@ def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
 
 
 @app.get("/api/relatorios/{relatorio_id}")
-def get_relatorio(relatorio_id: str) -> dict:
+def get_relatorio(relatorio_id: str, request: Request, access_code: str | None = None) -> dict:
     """Detail completo: joins de todas as tabelas filhas."""
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _assert_relatorio_access(request, sb, rid, access_code=access_code)
     _recover_done_empty_reports(sb, relatorio_id=rid)
     return _fetch_relatorio_payload(sb, rid)
+
+
+@app.get("/api/relatorios/{relatorio_id}/mapa-mercado")
+def get_mapa_mercado(relatorio_id: str, request: Request) -> dict:
+    """
+    Pins + heat de concorrentes e entrantes CNPJ (90d) no município do relatório.
+    Geocodifica entrantes sem lat (cap 25). Não persiste coords no JSON do output.
+    Cache Redis 5 min (middleware). JWT opcional — se presente, valida org (RLS).
+    """
+    from tools.mapa_mercado import build_mapa_mercado_payload
+
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _assert_relatorio_access(request, sb, rid)
+    payload = _fetch_relatorio_payload(sb, rid)
+    inp = payload.get("input_canonico") or {}
+    out = payload.get("output_consolidado") or {}
+    cidade = (inp.get("cidade") or out.get("cidade_efetiva") or "").strip()
+    uf = (inp.get("uf") or "").strip()
+    bairro = (inp.get("bairro") or "").strip()
+    if not cidade:
+        raise HTTPException(status_code=400, detail="cidade ausente no relatório")
+
+    top = (payload.get("candidatos") or [])[:1]
+    site_lat = site_lng = None
+    if top and isinstance(top[0], dict):
+        try:
+            site_lat = float(top[0]["lat"]) if top[0].get("lat") is not None else None
+            site_lng = float(top[0]["lng"]) if top[0].get("lng") is not None else None
+        except (TypeError, ValueError):
+            site_lat = site_lng = None
+
+    return build_mapa_mercado_payload(
+        cidade=cidade,
+        uf=uf,
+        bairro=bairro,
+        competidores=payload.get("competidores") or [],
+        entrantes_block=out.get("entrantes_cnpj_90d"),
+        site_lat=site_lat,
+        site_lng=site_lng,
+    )
 
 
 class EntranteValidacaoInput(BaseModel):
@@ -1240,6 +1331,12 @@ def patch_entrante_validacao(relatorio_id: str, body: EntranteValidacaoInput) ->
 class EntranteEnriquecerInput(BaseModel):
     cnpj: str = Field(..., min_length=11, max_length=18)
     usar_apollo: bool = True
+
+
+class EntrantesProspeccaoInput(BaseModel):
+    cnpjs: list[str] = Field(..., min_length=1)
+    cidade: str = "Fortaleza"
+    uf: str = "CE"
 
 
 @app.post("/api/relatorios/{relatorio_id}/entrantes-cnpj/enriquecer")
@@ -1301,6 +1398,130 @@ def post_entrante_enriquecer(relatorio_id: str, body: EntranteEnriquecerInput) -
         "relatorio_id", rid
     ).execute()
     return {"ok": True, "cnpj": cnpj_limpo, "entrante": enriched, "meta": meta}
+
+
+@app.post("/api/relatorios/{relatorio_id}/entrantes-cnpj/prospeccao")
+def post_entrantes_para_prospeccao(
+    request: Request,
+    relatorio_id: str,
+    body: EntrantesProspeccaoInput,
+) -> dict:
+    """
+    Envia CNPJs selecionados no relatório para a área de prospecção
+    (oportunidades_prospeccao), mesmo sem match CNO.
+    """
+    import re
+
+    _, org_id = _require_authenticated(request)
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+
+    out_res = (
+        sb.table("relatorio_outputs")
+        .select("entrantes_cnpj_90d")
+        .eq("relatorio_id", rid)
+        .maybe_single()
+        .execute()
+    )
+    block = (out_res.data or {}).get("entrantes_cnpj_90d") if out_res.data else None
+    if not isinstance(block, dict):
+        raise HTTPException(status_code=404, detail="entrantes_cnpj_90d não encontrado")
+
+    entrantes = block.get("entrantes") or []
+    cnpj_idx: dict[str, dict] = {}
+    for ent in entrantes:
+        if not isinstance(ent, dict):
+            continue
+        ecnpj = re.sub(r"\D", "", str(ent.get("cnpj") or ""))
+        if len(ecnpj) == 14:
+            cnpj_idx[ecnpj] = ent
+
+    inseridos: list[str] = []
+    ignorados: list[str] = []
+    erros: list[dict] = []
+
+    for cnpj_raw in body.cnpjs:
+        cnpj_limpo = re.sub(r"\D", "", cnpj_raw)
+        if len(cnpj_limpo) != 14:
+            erros.append({"cnpj": cnpj_raw, "motivo": "CNPJ inválido"})
+            continue
+
+        ent = cnpj_idx.get(cnpj_limpo)
+        if not ent:
+            erros.append({"cnpj": cnpj_limpo, "motivo": "CNPJ não encontrado no relatório"})
+            continue
+
+        # Endereço
+        endereco_raw = (ent.get("endereco") or "").strip()
+        numero = ""
+        logradouro = endereco_raw
+        if "," in endereco_raw:
+            parts = [p.strip() for p in endereco_raw.rsplit(",", 1)]
+            logradouro, numero = parts[0], parts[1]
+
+        # Contato
+        socio = ent.get("socio_administrador") or {}
+        email = ent.get("email_socio_administrador") or ent.get("email_empresa")
+        telefone = ent.get("telefone_socio_administrador") or ent.get("telefone_empresa")
+        tel_digits = re.sub(r"\D", "", telefone or "")
+
+        row = {
+            "org_id": org_id,
+            "cnpj": cnpj_limpo,
+            "cidade": body.cidade,
+            "uf": body.uf,
+            "razao_social": ent.get("razao_social"),
+            "nome_fantasia": ent.get("nome_fantasia") or ent.get("nome_exibicao"),
+            "segmento_operacao": ent.get("segmento_operacao"),
+            "data_inicio_atividade": ent.get("data_abertura"),
+            "endereco_cnpj": {
+                "logradouro": logradouro or None,
+                "numero": numero or None,
+                "bairro": ent.get("bairro"),
+                "cidade": body.cidade,
+                "uf": body.uf,
+            },
+            "contato_cnpj": {
+                "decision_maker": socio.get("nome") if isinstance(socio, dict) else None,
+                "cargo": "Sócio-administrador",
+                "email": email,
+                "telefone": telefone,
+                "whatsapp_link": f"https://wa.me/55{tel_digits}" if tel_digits else None,
+            },
+            "score_match": None,
+            "motivo_match": "manual_relatorio",
+            "status": "novo",
+            "prioridade": "media",
+        }
+
+        try:
+            # Upsert baseado em cnpj + cno null (mesma semântica do engine)
+            existing = (
+                sb.table("oportunidades_prospeccao")
+                .select("id")
+                .eq("cnpj", cnpj_limpo)
+                .is_("cno", "null")
+                .limit(1)
+                .execute()
+            )
+            if existing.data:
+                sb.table("oportunidades_prospeccao").update(row).eq("id", existing.data[0]["id"]).execute()
+                ignorados.append(cnpj_limpo)
+            else:
+                sb.table("oportunidades_prospeccao").insert(row).execute()
+                inseridos.append(cnpj_limpo)
+        except Exception as e:
+            erros.append({"cnpj": cnpj_limpo, "motivo": f"Erro no Supabase: {e}"})
+
+    return {
+        "ok": True,
+        "relatorio_id": rid,
+        "org_id": org_id,
+        "inseridos": inseridos,
+        "atualizados": ignorados,
+        "erros": erros,
+        "total_enviados": len(inseridos) + len(ignorados),
+    }
 
 
 @app.get("/api/relatorios/{relatorio_id}/pdf")
@@ -1752,6 +1973,166 @@ def configurar_webhook_claw(request: Request, payload: WebhookConfigureInput) ->
         return {"status": "ok", "org_id": payload.org_id, "webhook_url": payload.webhook_url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Tinker Bot Assistente ──────────────────────────────────────────────────
+
+class AssistenteChatInput(BaseModel):
+    pergunta: str
+    relatorio_id: str | None = None
+
+
+class AssistenteChatOutput(BaseModel):
+    resposta: str
+
+
+@app.post("/api/assistente/chat", response_model=AssistenteChatOutput)
+async def assistente_chat(request: Request, payload: AssistenteChatInput) -> AssistenteChatOutput:
+    """Endpoint do GymSite Assistant — responde perguntas usando Tinker SamplingClient.
+
+    Requer autenticação JWT. Opcionalmente aceita um relatorio_id para
+    contextualizar a resposta em um relatório específico.
+    """
+    user_id, _ = _require_authenticated(request)
+
+    # Lazy imports — evita quebra no startup se tinker não estiver instalado
+    try:
+        from services.tinker_bot import chat_async
+        from services.tinker_context import build_contexto_chat
+    except ImportError as e:
+        logger.error("Tinker SDK não instalado. Rode: uv pip install tinker")
+        raise HTTPException(status_code=503, detail="Serviço de assistente indisponível. Tinker SDK não instalado.")
+
+    try:
+        contexto = build_contexto_chat(
+            user_id=user_id,
+            pergunta=payload.pergunta,
+            relatorio_id=payload.relatorio_id,
+        )
+        resposta = await chat_async(
+            prompt_text=contexto,
+            max_tokens=1024,
+            temperature=0.7,
+        )
+        return AssistenteChatOutput(resposta=resposta)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Erro no Tinker Bot: %s", e)
+        raise HTTPException(status_code=500, detail=f"Erro no assistente: {str(e)}")
+
+
+# ── Agente de IA Conversacional ────────────────────────────────────────────
+
+class ConversarInput(BaseModel):
+    mensagem: str
+    session_id: str | None = None
+
+
+class ConversarOutput(BaseModel):
+    session_id: str
+    intencao: str
+    slots: dict[str, Any]
+    slots_faltando: list[str]
+    resposta: str
+    relatorio_id: str | None = None
+    status: str
+
+
+@app.post("/api/assistente/conversar", response_model=ConversarOutput)
+async def assistente_conversar(request: Request, payload: ConversarInput) -> ConversarOutput:
+    """Endpoint do Agente de IA Especialista em Fitness — fluxo conversacional.
+
+    Substitui o formulário tradicional por slot-filling via chat natural.
+    Quando todos os slots são preenchidos, cria stub e dispara pipeline A0-A9.
+    """
+    from services.conversational_engine import processar_mensagem
+    from services.chat_state import atualizar_sessao
+
+    user_id, org_from_jwt = _require_authenticated(request)
+
+    try:
+        resultado = processar_mensagem(
+            user_id=user_id,
+            mensagem=payload.mensagem,
+            session_id=payload.session_id,
+        )
+    except Exception as e:
+        logger.exception("Erro no ConversationalEngine: %s", e)
+        raise HTTPException(status_code=500, detail=f"Erro no agente: {str(e)}")
+
+    intencao = resultado.get("intencao", "indefinido")
+
+    # Fallback para chat Q&A (pergunta_simples / status_relatorio)
+    if intencao in ("pergunta_simples", "status_relatorio"):
+        try:
+            from services.tinker_bot import chat_async
+            from services.tinker_context import build_contexto_chat
+            contexto = build_contexto_chat(
+                user_id=user_id,
+                pergunta=payload.mensagem,
+                relatorio_id=resultado.get("relatorio_id"),
+            )
+            resposta_qa = await chat_async(prompt_text=contexto, max_tokens=1024, temperature=0.7)
+            resultado["resposta"] = resposta_qa
+        except Exception:
+            logger.warning("Fallback QA falhou para intencao=%s", intencao)
+            resultado["resposta"] = (
+                "Entendo sua pergunta. Para que eu possa responder com precisão, "
+                "poderia confirmar se você está perguntando sobre um relatório específico?"
+            )
+
+    # Quando pronto, criar stub e disparar pipeline
+    if resultado.get("status") == "pronto_para_pipeline":
+        slots = resultado.get("slots", {})
+        try:
+            rel_input = NovoRelatorioInput(
+                cidade=slots.get("cidade", ""),
+                uf=slots.get("uf") or None,
+                bairro=slots.get("bairro", ""),
+                area_m2_min=int(slots.get("area_m2_min", 800)),
+                area_m2_max=int(slots.get("area_m2_max", 1500)),
+                tamanho_preset=slots.get("tamanho_preset", "m"),
+                publico_alvo=slots.get("publico_alvo", "25-40"),
+                genero_alvo=slots.get("genero_alvo", "misto"),
+                tipo_negocio=slots.get("tipo_negocio", "academia"),
+                estacionamento_obrigatorio=bool(slots.get("estacionamento_obrigatorio", True)),
+                bairros_indicados=[],
+                org_id=org_from_jwt,
+                a0_research_provider="auto",
+            )
+            relatorio_id, _ = create_relatorio_stub(
+                rel_input,
+                org_id=org_from_jwt,
+                user_id=user_id,
+            )
+            if _queue is None:
+                raise RuntimeError("Task queue não inicializado")
+            await _queue.enqueue({
+                "type": "pipeline",
+                "relatorio_id": relatorio_id,
+                "payload": rel_input.model_dump(),
+            })
+            atualizar_sessao(
+                resultado["session_id"],
+                relatorio_id=relatorio_id,
+                status="pipeline_rodando",
+            )
+            resultado["relatorio_id"] = relatorio_id
+            resultado["status"] = "pipeline_rodando"
+        except Exception as e:
+            logger.exception("Erro ao criar relatório do chat: %s", e)
+            raise HTTPException(status_code=500, detail=f"Erro ao iniciar relatório: {str(e)}")
+
+    return ConversarOutput(
+        session_id=resultado["session_id"],
+        intencao=resultado["intencao"],
+        slots=resultado.get("slots", {}),
+        slots_faltando=resultado.get("slots_faltando", []),
+        resposta=resultado.get("resposta", ""),
+        relatorio_id=resultado.get("relatorio_id"),
+        status=resultado.get("status", "coletando_slots"),
+    )
 
 
 # Preflight catch-all — garante 204 mesmo se o router não capturar

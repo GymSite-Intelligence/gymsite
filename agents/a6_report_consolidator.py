@@ -2,8 +2,10 @@
 """A6: Consolidador final — relatório executivo markdown com gap + bairros alternativos + crowdsource."""
 import json
 import logging
+import re
 import time
 from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger("gymsite.a6")
 from pathlib import Path
@@ -616,6 +618,7 @@ def _precompute_entrantes_cnpj(callback_context) -> dict:
     if not cidade:
         return {"status": "indisponivel", "motivo": "cidade_ausente", "entrantes": []}
 
+    # Snapshot RFB no Supabase apenas — Receita/Apollo sob demanda na UI do relatório.
     return listar_entrantes_cnpj_fitness(cidade, uf, dias=90, limit=50)
 
 
@@ -1082,6 +1085,99 @@ def _renderizar_secao_novos_entrantes(entrantes_block: dict) -> str:
     return "\n".join(linhas)
 
 
+def _renderizar_secao_referencia_aluguel(inner_fin: dict) -> str:
+    """
+    Markdown determinístico da cascata Tier 1 portais → Tier 2 Grounding
+    (+ panorama macro BCB quando portais vazios). Evita silêncio quando N=0.
+    """
+    if not isinstance(inner_fin, dict):
+        return ""
+
+    det = inner_fin.get("aluguel_pesquisa_detalhes") or {}
+    tier = det.get("tier")
+    if tier is None:
+        return ""
+
+    linhas = ["## SEÇÃO PRÉ-COMPUTADA — REFERÊNCIA DE ALUGUEL (A4)"]
+    linhas.append("")
+    linhas.append(
+        "Inclua um bloco visível na seção financeira (antes ou junto de "
+        "'⚠️ <aviso_metodologia do A4>') com os fatos abaixo. "
+        "NÃO diga que portais 'passaram' se N=0. NÃO use BCB como aluguel local."
+    )
+    linhas.append("")
+
+    fonte = inner_fin.get("fonte_aluguel") or "—"
+    aviso = (inner_fin.get("aviso_metodologia_aluguel") or "").strip()
+    linhas.append(f"- **Fonte ativa no modelo:** {fonte}")
+    linhas.append(f"- **Tier usado:** {tier}")
+
+    t1 = det.get("tier1_tentativa") or {}
+    n_t1 = det.get("n_validos_tier1", t1.get("n_validos", 0))
+    linhas.append(f"- **Portais municipais (Tier 1):** N={n_t1} anúncios válidos")
+    if det.get("tier1_vazio"):
+        linhas.append("  - Status: **sem amostra** (consulta feita, nenhum preço/área parseável)")
+    elif not det.get("tier1_suficiente"):
+        linhas.append("  - Status: amostra **insuficiente** para mediana confiável")
+    if det.get("motivo_tier1"):
+        linhas.append(f"  - Motivo: {det['motivo_tier1']}")
+    if t1.get("urls_por_portal"):
+        urls_txt = ", ".join(f"{p}={n}" for p, n in t1["urls_por_portal"].items())
+        linhas.append(f"  - URLs consultadas: {urls_txt}")
+    erros = t1.get("erros_portais") or det.get("erros_portais") or []
+    if erros:
+        linhas.append(f"  - Erros portais (amostra): {'; '.join(str(e)[:80] for e in erros[:3])}")
+
+    if tier == 2:
+        med = det.get("mediana_r_m2")
+        q = det.get("queries_com_dados", 0)
+        linhas.append("")
+        linhas.append("### Search Grounding (Tier 2 — referência ativa)")
+        if med:
+            linhas.append(
+                f"- Mediana **R$ {float(med):.0f}/m²** ({q} consulta(s) com dados)"
+            )
+        faixa = det.get("faixa_rs_m2") or {}
+        if isinstance(faixa, dict) and faixa.get("mediana"):
+            linhas.append(
+                f"- Faixa orientativa: R$ {faixa.get('p25', faixa.get('baixo', '—'))} – "
+                f"R$ {faixa.get('p75', faixa.get('alto', '—'))}/m² "
+                f"(mediana {faixa.get('mediana')})"
+            )
+        vals = det.get("valores_coletados") or []
+        if vals:
+            amostra = ", ".join(f"R$ {v:.0f}" for v in vals[:8])
+            linhas.append(f"- Valores extraídos (amostra): {amostra}")
+
+    macro = inner_fin.get("referencia_macro_bcb")
+    if isinstance(macro, dict) and macro:
+        linhas.append("")
+        linhas.append("### Panorama macro BCB (contexto — **não** é aluguel local)")
+        linhas.append(
+            "_Crédito/financiamento imobiliário nacional; não substitui R$/m² do bairro._"
+        )
+        if macro.get("ok"):
+            linhas.append(f"- {macro.get('norte', '')}")
+            dest = macro.get("destaques") or {}
+            if isinstance(dest, dict):
+                for chave, s in list(dest.items())[:3]:
+                    if isinstance(s, dict):
+                        linhas.append(
+                            f"  - {chave}: {s.get('valor')} ({s.get('data', '—')})"
+                        )
+        else:
+            linhas.append(
+                f"- Indisponível: {macro.get('erro') or macro.get('norte', 'erro BCB')}"
+            )
+
+    if aviso:
+        linhas.append("")
+        linhas.append(f"**Aviso metodologia (copiar ou parafrasear):** {aviso}")
+
+    linhas.append("")
+    return "\n".join(linhas)
+
+
 def _a6_before_model_callback(callback_context, llm_request):
     """
     Antes de cada chamada ao modelo do A6, anexa o markdown pré-renderizado
@@ -1093,6 +1189,7 @@ def _a6_before_model_callback(callback_context, llm_request):
             return
 
         sections_injected = []
+        from tools.competitor_tools import _parse_market_context
 
         # 1. Bairros Alternativos
         pronto = state.get("bairros_alternativos_pronto")
@@ -1114,7 +1211,6 @@ def _a6_before_model_callback(callback_context, llm_request):
                     sections_injected.append("bairros_alternativos")
 
         # 2. Ofertas Mapeadas
-        from tools.competitor_tools import _parse_market_context
         oferta_raw = state.get("oferta_concorrentes")
         ic_raw = _parse_market_context(state.get("inteligencia_competitiva"))
         inner_ic = ic_raw.get("inteligencia_competitiva") if isinstance(ic_raw.get("inteligencia_competitiva"), dict) else ic_raw
@@ -1155,6 +1251,30 @@ def _a6_before_model_callback(callback_context, llm_request):
                 if "SEÇÃO PRÉ-COMPUTADA — NOVOS ENTRANTES DE MERCADO" not in existing_si:
                     llm_request.append_instructions([markdown_entrantes])
                     sections_injected.append("novos_entrantes")
+
+        # 4. Referência de aluguel (Tier 1 portais / Tier 2 Grounding / macro BCB)
+        fin_raw = _parse_market_context(state.get("analise_financeira"))
+        inner_fin_aluguel = (
+            fin_raw.get("analise_financeira")
+            if isinstance(fin_raw.get("analise_financeira"), dict)
+            else fin_raw
+        )
+        if isinstance(inner_fin_aluguel, dict):
+            markdown_aluguel = _renderizar_secao_referencia_aluguel(inner_fin_aluguel)
+            if markdown_aluguel:
+                existing_si = ""
+                try:
+                    existing_si = llm_request.config.system_instruction or ""
+                except Exception:
+                    logger.debug(
+                        "A6 existing_si parse skip",
+                        exc_info=True,
+                        extra={"agent": "A6", "context": "before_model_aluguel_si"},
+                    )
+                    existing_si = ""
+                if "SEÇÃO PRÉ-COMPUTADA — REFERÊNCIA DE ALUGUEL" not in existing_si:
+                    llm_request.append_instructions([markdown_aluguel])
+                    sections_injected.append("referencia_aluguel")
 
         if sections_injected:
             logger.info(
@@ -1238,6 +1358,253 @@ def _navegar_aninhado(d, *chaves, default=None):
         if cur is None:
             return default
     return cur
+
+
+def _lista_candidatos_geoscout(geo_raw: dict) -> list[dict]:
+    """Candidatos A1 — chaves alternativas quando o LLM não copia `candidatos`."""
+    if not isinstance(geo_raw, dict):
+        return []
+    for key in ("candidatos", "candidatos_filtrados", "top_candidatos"):
+        raw = geo_raw.get(key)
+        if isinstance(raw, list) and raw:
+            return [c for c in raw if isinstance(c, dict)]
+    return []
+
+
+def _envelope_concorrentes_brutos(cs_raw: Any) -> tuple[dict, list[dict]]:
+    """Extrai envelope A3a + lista de concorrentes do session state."""
+    from tools.competitor_tools import _parse_market_context
+
+    envelope: dict = {}
+    lista: list[dict] = []
+    if isinstance(cs_raw, list):
+        return envelope, [c for c in cs_raw if isinstance(c, dict)]
+    if isinstance(cs_raw, dict):
+        nested = cs_raw.get("concorrentes_brutos")
+        if isinstance(nested, list):
+            lista = [c for c in nested if isinstance(c, dict)]
+            envelope = {k: v for k, v in cs_raw.items() if k != "concorrentes_brutos"}
+        elif isinstance(nested, dict):
+            envelope = nested
+            inner_list = nested.get("concorrentes") or nested.get("concorrentes_brutos")
+            if isinstance(inner_list, list):
+                lista = [c for c in inner_list if isinstance(c, dict)]
+        else:
+            envelope = cs_raw
+            raw_list = cs_raw.get("concorrentes_brutos") or cs_raw.get("concorrentes")
+            if isinstance(raw_list, list):
+                lista = [c for c in raw_list if isinstance(c, dict)]
+        return envelope, lista
+
+    parsed = _parse_market_context(cs_raw)
+    if isinstance(parsed, dict):
+        envelope = parsed
+        inner = parsed.get("concorrentes_brutos")
+        if isinstance(inner, list):
+            lista = [c for c in inner if isinstance(c, dict)]
+        elif isinstance(inner, dict):
+            envelope = inner
+            inner_list = inner.get("concorrentes") or inner.get("concorrentes_brutos")
+            if isinstance(inner_list, list):
+                lista = [c for c in inner_list if isinstance(c, dict)]
+        else:
+            raw_list = parsed.get("concorrentes") or parsed.get("concorrentes_brutos")
+            if isinstance(raw_list, list):
+                lista = [c for c in raw_list if isinstance(c, dict)]
+    elif isinstance(parsed, list):
+        lista = [c for c in parsed if isinstance(c, dict)]
+    return envelope, lista
+
+
+def _bruto_para_detalhado(c: dict) -> dict:
+    """Normaliza item A3a para o formato de `concorrentes_detalhados` / Supabase."""
+    out = dict(c)
+    if out.get("rating_geral") is not None and out.get("rating_oficial") is None:
+        out["rating_oficial"] = out["rating_geral"]
+    if out.get("reviews") and not out.get("reviews_traduzidas"):
+        out["reviews_traduzidas"] = out["reviews"]
+    return out
+
+
+def _resolver_competitividade_extracao(
+    *,
+    ic_raw: dict,
+    inner_ic: dict,
+    cs_raw: Any,
+) -> dict[str, Any]:
+    """
+    Une A3b (detalhados) com fallback A3a (concorrentes_brutos).
+    Recalcula score_concorrencia quando há lista mas score ausente no state.
+    """
+    from tools.competitor_tools import calcular_score_concorrencia, classificar_saturacao
+
+    if not isinstance(ic_raw, dict):
+        ic_raw = {}
+    if not isinstance(inner_ic, dict):
+        inner_ic = {}
+
+    # A3b às vezes grava só em inteligencia_competitiva aninhado com inner_ic vazio
+    if not inner_ic.get("concorrentes_detalhados"):
+        nested = ic_raw.get("inteligencia_competitiva")
+        if isinstance(nested, dict):
+            inner_ic = nested
+
+    detalhados = [
+        c
+        for c in (
+            inner_ic.get("concorrentes_detalhados")
+            or ic_raw.get("concorrentes_detalhados")
+            or inner_ic.get("concorrentes")
+            or []
+        )
+        if isinstance(c, dict)
+    ]
+    fonte_fallback: str | None = None
+    envelope, brutos = _envelope_concorrentes_brutos(cs_raw)
+
+    if not detalhados and brutos:
+        detalhados = [_bruto_para_detalhado(c) for c in brutos]
+        fonte_fallback = "concorrentes_brutos_a3a"
+        logger.info(
+            "A6 fallback concorrentes: %d itens de concorrentes_brutos (A3a)",
+            len(detalhados),
+            extra={"agent": "A6", "context": "competitividade_fallback"},
+        )
+
+    score_conc = ic_raw.get("score_concorrencia") or inner_ic.get("score_concorrencia")
+    nivel_sat = (
+        ic_raw.get("nivel_saturacao")
+        or inner_ic.get("nivel_saturacao")
+        or ""
+    )
+    rating_medio = ic_raw.get("rating_medio_concorrentes") or inner_ic.get(
+        "rating_medio_concorrentes"
+    )
+    total_analisados = (
+        ic_raw.get("total_concorrentes_analisados")
+        or inner_ic.get("total_concorrentes_analisados")
+        or len(detalhados)
+    )
+    agregados = (
+        envelope.get("agregados_competicao_places")
+        if isinstance(envelope, dict)
+        else {}
+    )
+    total_raio = (
+        ic_raw.get("total_encontrados_raio")
+        or inner_ic.get("total_encontrados_raio")
+        or envelope.get("total_encontrados_raio")
+        or envelope.get("total_encontrados")
+        or (
+            agregados.get("count_total")
+            if isinstance(agregados, dict)
+            else None
+        )
+    )
+
+    if detalhados and score_conc is None:
+        ratings = [
+            _safe_float(c.get("rating_geral") or c.get("rating_oficial"))
+            for c in detalhados
+        ]
+        ratings_ok = [r for r in ratings if r is not None and r > 0]
+        rating_medio_calc = (
+            round(sum(ratings_ok) / len(ratings_ok), 2) if ratings_ok else 0.0
+        )
+        rating_medio = rating_medio if rating_medio is not None else rating_medio_calc
+        num = len(detalhados)
+        if not nivel_sat:
+            nivel_sat = classificar_saturacao(num, 3.0)
+        score_conc = calcular_score_concorrencia(
+            num, _safe_float(rating_medio) or 0.0, nivel_sat
+        )
+        if not total_analisados:
+            total_analisados = num
+        logger.info(
+            "A6 score_concorrencia recalculado: %.2f (%d concorrentes)",
+            score_conc,
+            num,
+            extra={"agent": "A6"},
+        )
+
+    return {
+        "concorrentes_detalhados": detalhados,
+        "score_concorrencia": score_conc,
+        "nivel_saturacao": nivel_sat,
+        "rating_medio_concorrentes": rating_medio,
+        "total_concorrentes_analisados": total_analisados,
+        "total_encontrados_raio": total_raio,
+        "total_encontrados_raio_nearby": envelope.get("total_encontrados_nearby")
+        if isinstance(envelope, dict)
+        else None,
+        "agregados_competicao_places": agregados if isinstance(agregados, dict) else {},
+        "fonte_geocode": envelope.get("fonte_geocode") if isinstance(envelope, dict) else None,
+        "fonte_busca_competidores": envelope.get("fonte_busca_competidores")
+        if isinstance(envelope, dict)
+        else None,
+        "envelope_a3a": envelope,
+        "fonte_fallback": fonte_fallback,
+        "dores_dominantes": inner_ic.get("dores_dominantes") or ic_raw.get("dores_dominantes") or [],
+        "servicos_nao_oferecidos": inner_ic.get("servicos_nao_oferecidos")
+        or ic_raw.get("servicos_nao_oferecidos")
+        or [],
+        "panorama_competitivo": ic_raw.get("panorama_competitivo")
+        or inner_ic.get("panorama_competitivo"),
+        "top_independentes": ic_raw.get("top_independentes")
+        or inner_ic.get("top_independentes")
+        or envelope.get("top_independentes")
+        or [],
+        "academias_analisadas": ic_raw.get("academias_analisadas")
+        or inner_ic.get("academias_analisadas")
+        or envelope.get("academias_analisadas")
+        or [],
+    }
+
+
+def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
+    """Ajusta veredito/scores no markdown para bater com output_consolidado (pós-guards)."""
+    if not md or not isinstance(out, dict):
+        return md
+    veredito = out.get("veredito")
+    sb = out.get("score_bairro")
+    st = out.get("score_top1_candidato")
+    sc = out.get("score_concorrencia")
+
+    if veredito:
+        md = re.sub(
+            r"(\*\*⚠️\s*)(APROVADO(?: COM RESSALVAS)?|INVESTIGAR MAIS|REPROVADO)(\*?\*\*\.?)",
+            lambda m: f"{m.group(1)}{veredito}{m.group(3)}",
+            md,
+            count=1,
+        )
+        md = re.sub(
+            r"(## 📌 Decisão Recomendada\s*\n\*\*)([^*]+)(\*\*)",
+            lambda m: f"{m.group(1)}{veredito}{m.group(3)}",
+            md,
+            count=1,
+        )
+    if sb is not None:
+        md = re.sub(
+            r"(\*\*Score Bairro:\*\*)\s*[\d\.,]+",
+            rf"\1 {sb}",
+            md,
+            count=1,
+        )
+    if st is not None:
+        md = re.sub(
+            r"(\*\*Score Top 1 Candidato:\*\*)\s*[\d\.,]+",
+            rf"\1 {st}",
+            md,
+            count=1,
+        )
+    if sc is not None:
+        md = re.sub(
+            r"(\| Competitivo \| )\s*[\d\.,]+",
+            rf"\1 {sc} ",
+            md,
+            count=1,
+        )
+    return md
 
 
 def _extrair_relatorio_estruturado(callback_context) -> dict:
@@ -1348,29 +1715,28 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # Plugado em 2026-05-11 após fix geo-fence (#89): quando o DR pede uma rede
     # que não tem unidade local no raio alvo, A3a marca em redes_a0_nao_encontradas.
     cs_raw = _parse_market_context(state.get("concorrentes_brutos"))
+    comp = _resolver_competitividade_extracao(
+        ic_raw=ic_raw if isinstance(ic_raw, dict) else {},
+        inner_ic=inner_ic,
+        cs_raw=cs_raw,
+    )
+    if comp.get("fonte_fallback"):
+        inner_ic = {**inner_ic, "concorrentes_detalhados": comp["concorrentes_detalhados"]}
+
     cobertura_redes_a0 = _build_cobertura_redes_a0(cs_raw, inner_mc, inner_ic)
     slim_market_context = _slim_market_context(inner_mc)
     slim_market_context = _apply_redes_validadas_market_context(
         slim_market_context, cobertura_redes_a0
     )
 
-    # Scores podem estar no top-level OU dentro de inteligencia_competitiva
-    score_concorrencia = (
-        ic_raw.get("score_concorrencia")
-        or inner_ic.get("score_concorrencia")
-    )
-    nivel_saturacao = (
-        ic_raw.get("nivel_saturacao")
-        or inner_ic.get("nivel_saturacao", "")
-    )
+    score_concorrencia = comp.get("score_concorrencia")
+    nivel_saturacao = comp.get("nivel_saturacao") or ""
 
     # ── Output: candidatos GeoScout (A1) ──
     geo_raw = _parse_market_context(state.get("candidatos_geoscout"))
-    candidatos = (
-        geo_raw.get("candidatos")
-        if isinstance(geo_raw.get("candidatos"), list)
-        else []
-    )
+    if not isinstance(geo_raw, dict):
+        geo_raw = {}
+    candidatos = _lista_candidatos_geoscout(geo_raw)
     ranked = _rank_candidatos_for_top3(candidatos)  # pyright: ignore[reportArgumentType]
     top_3 = [_enriquecer_candidato_investigacao(c) for c in (ranked[:3] if ranked else [])]
     investigacoes_resumo = (
@@ -1512,17 +1878,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             veredito = "INVESTIGAR MAIS"
 
     # ── Guard determinístico: 0 concorrentes (P1) ──
-    # Quando a busca competitiva não retorna nenhum concorrente, o
-    # score_concorrencia teórico tende a parecer "ideal" e inflar o veredito.
-    # Sem dado real de mercado, não se aprova com base só em ticket teórico:
-    # limita o veredito a INVESTIGAR MAIS e sinaliza saturação indeterminada.
-    concorrentes_detalhados = [
-        c for c in (inner_ic.get("concorrentes_detalhados") or [])
-        if isinstance(c, dict)
-    ]
+    # Só dispara se A3b E A3a (fallback) estiverem vazios — evita falso
+    # INVESTIGAR MAIS quando concorrentes_brutos existe no state.
+    concorrentes_detalhados = comp.get("concorrentes_detalhados") or []
     total_concorrentes = (
-        ic_raw.get("total_concorrentes_analisados")
-        or inner_ic.get("total_concorrentes_analisados")
+        comp.get("total_concorrentes_analisados")
         or len(concorrentes_detalhados)
     )
     alertas_financeiros = list(inner_fin.get("alertas", []) or [])
@@ -1537,6 +1897,41 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         )
         if alerta_zero_conc not in alertas_financeiros:
             alertas_financeiros.append(alerta_zero_conc)
+
+    # ── Guard financeiro: ticket Premium fora da banda local ──
+    modelo_recomendado = (inner_fin.get("recomendacao_modelo") or "").strip()
+    cenarios = inner_fin.get("cenarios") or {}
+    ticket_recomendado = None
+    if isinstance(cenarios, dict) and modelo_recomendado:
+        modelo_norm = modelo_recomendado.lower()
+        for c in cenarios.values():
+            if not isinstance(c, dict):
+                continue
+            modelo_c = (c.get("modelo") or "").strip()
+            if modelo_c and modelo_c.lower() == modelo_norm:
+                ticket_recomendado = _safe_float(c.get("ticket_medio"))
+                break
+
+    renda_local = _safe_float(
+        (slim_market_context.get("renda_media_bairro") if isinstance(slim_market_context, dict) else None)
+        or (inner_mc.get("renda_media_bairro") if isinstance(inner_mc, dict) else None)
+    )
+    is_premium = "premium" in modelo_recomendado.lower()
+    if is_premium and ticket_recomendado:
+        outlier_ticket = False
+        if ticket_recomendado >= 750:
+            outlier_ticket = True
+        if renda_local and ticket_recomendado >= renda_local * 0.5:
+            outlier_ticket = True
+        if outlier_ticket:
+            alerta_ticket = (
+                f"ticket Premium R${int(ticket_recomendado)} destoa da renda local/tier de mercado; "
+                "revisar cenário financeiro."
+            )
+            if alerta_ticket not in alertas_financeiros:
+                alertas_financeiros.append(alerta_ticket)
+            if veredito == "APROVADO":
+                veredito = "APROVADO COM RESSALVAS"
 
     return {
         "id": f"rpt_{int(time.time())}",
@@ -1566,34 +1961,24 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             # score_top1_candidato: ranking prático do melhor imóvel (4 dim)
             "score_bairro": score_bairro,
             "score_top1_candidato": score_top1_candidato,
+            "score_concorrencia": _safe_float(score_concorrencia),
             "scores_regionais": {
                 "demografico": _safe_float(score_demografico),
                 "competitivo": _safe_float(score_concorrencia),
                 "viabilidade": _safe_float(score_viab),
             },
             "nivel_saturacao": nivel_saturacao,
-            "panorama_competitivo": (
-                ic_raw.get("panorama_competitivo")
-                or inner_ic.get("panorama_competitivo")
-            ),
-            "total_encontrados_raio": (
-                ic_raw.get("total_encontrados_raio")
-                or inner_ic.get("total_encontrados_raio")
-            ),
+            "panorama_competitivo": comp.get("panorama_competitivo"),
+            "total_encontrados_raio": comp.get("total_encontrados_raio"),
+            "total_encontrados_raio_nearby": comp.get("total_encontrados_raio_nearby"),
+            "agregados_competicao_places": comp.get("agregados_competicao_places") or {},
+            "fonte_geocode": comp.get("fonte_geocode"),
+            "fonte_busca_competidores": comp.get("fonte_busca_competidores"),
             "total_concorrentes_analisados": total_concorrentes,
-            "top_independentes": (
-                ic_raw.get("top_independentes")
-                or inner_ic.get("top_independentes")
-                or []
-            ),
-            "academias_analisadas": (
-                ic_raw.get("academias_analisadas")
-                or inner_ic.get("academias_analisadas")
-                or []
-            ),
+            "top_independentes": comp.get("top_independentes") or [],
+            "academias_analisadas": comp.get("academias_analisadas") or [],
             "rating_medio_concorrentes": _safe_float(
-                ic_raw.get("rating_medio_concorrentes")
-                or inner_ic.get("rating_medio_concorrentes")
+                comp.get("rating_medio_concorrentes")
             ),
             "top_3_candidatos": top_3,
             "investigacoes_imoveis": investigacoes_resumo,
@@ -1614,11 +1999,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                         or mapeamento_ofertas.get((c.get("nome") or "").lower())
                     ) if isinstance(c, dict) else None
                 }
-                for c in (inner_ic.get("concorrentes_detalhados") or [])
+                for c in concorrentes_detalhados
                 if isinstance(c, dict)
             ],
-            "dores_dominantes": inner_ic.get("dores_dominantes", []),
-            "servicos_nao_oferecidos": inner_ic.get("servicos_nao_oferecidos", []),
+            "dores_dominantes": comp.get("dores_dominantes") or [],
+            "servicos_nao_oferecidos": comp.get("servicos_nao_oferecidos") or [],
             "distribuicao_geografica": distribuicao_geo,
             "bairros_alternativos": bap.get("bairros_alternativos", []),
             # Schema v1.5: aviso geográfico quando A6 detectou que o
@@ -1631,6 +2016,12 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "viabilidade_3_cenarios": inner_fin.get("cenarios", {}),
             "modelo_recomendado": inner_fin.get("recomendacao_modelo"),
             "aluguel_mensal": _safe_float(inner_fin.get("aluguel_mensal")),
+            "aluguel_municipio_referencia": inner_fin.get("aluguel_municipio_referencia"),
+            "aluguel_pesquisa_detalhes": inner_fin.get("aluguel_pesquisa_detalhes"),
+            "referencia_macro_bcb": inner_fin.get("referencia_macro_bcb"),
+            "tier_aluguel": (inner_fin.get("aluguel_pesquisa_detalhes") or {}).get("tier"),
+            "fonte_aluguel": inner_fin.get("fonte_aluguel"),
+            "aviso_metodologia_aluguel": inner_fin.get("aviso_metodologia_aluguel"),
             "alertas_financeiros": alertas_financeiros,
             "posicionamento_recomendado": (
                 ic_raw.get("posicionamento_recomendado")
@@ -1663,6 +2054,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "data_coleta_market_context": inner_mc.get("data_coleta", ""),
             "cached_market_context": inner_mc.get("cached"),
             "redes_a0_solicitadas": inner_mc.get("principais_redes_concorrentes", []),
+            "competitividade_fonte_fallback": comp.get("fonte_fallback"),
             "schema_version": "1.5",
         },
     }
@@ -1937,6 +2329,11 @@ def _a6_after_agent_callback(callback_context):
             from db.supabase_writer import write_relatorio_failsafe
             state = getattr(callback_context, "state", {}) or {}
             markdown = state.get("relatorio_md") if isinstance(state.get("relatorio_md"), str) else None
+            out_cons = relatorio.get("output_consolidado") or {}
+            if markdown and isinstance(out_cons, dict):
+                markdown = _alinhar_markdown_ao_estruturado(markdown, out_cons)
+                callback_context.state["relatorio_md"] = markdown
+                relatorio["markdown_alinhado"] = True
             relatorio_id = state.get("relatorio_id") if isinstance(state.get("relatorio_id"), str) else None
             supabase_uuid = write_relatorio_failsafe(
                 relatorio, markdown, relatorio_id=relatorio_id
