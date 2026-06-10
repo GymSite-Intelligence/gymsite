@@ -19,7 +19,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from typing import Iterable
+import sys
+from typing import Any, Iterable
 
 from models.schemas import ListingResult
 from tools.imobiliaria_scraper import (
@@ -121,6 +122,43 @@ def _dedup_and_filter(
 # Orquestrador async — chamado pelo A1 (que já roda em event loop ADK)
 # ─────────────────────────────────────────────────────────────────────────────
 
+async def _gather_scrapes(
+    cidade_slug_olx: str,
+    estado_sigla: str,
+    cidade_slug: str,
+    estado_slug_iw: str,
+) -> tuple[Any, Any, Any]:
+    return await asyncio.gather(
+        fetch_olx_nextdata(cidade_slug_olx, estado_sigla, "lojas"),
+        fetch_olx_nextdata(cidade_slug_olx, estado_sigla, "galpoes"),
+        fetch_imovelweb_jsonld(cidade_slug, estado_slug_iw),
+        return_exceptions=True,
+    )
+
+
+def _gather_scrapes_em_proactor(
+    cidade_slug_olx: str,
+    estado_sigla: str,
+    cidade_slug: str,
+    estado_slug_iw: str,
+) -> tuple[Any, Any, Any]:
+    """Roda os scrapes num event loop Proactor próprio, em thread dedicada.
+
+    BUG-002: no Windows, o loop principal (ADK/uvicorn) é SelectorEventLoop,
+    que não implementa subprocess — playwright.async_api lança
+    NotImplementedError em create_subprocess_exec. Um ProactorEventLoop
+    isolado nesta thread resolve sem tocar na policy global (mesma estratégia
+    de tools/playwright_enrichment.py).
+    """
+    loop = asyncio.ProactorEventLoop()  # type: ignore[attr-defined]
+    try:
+        return loop.run_until_complete(
+            _gather_scrapes(cidade_slug_olx, estado_sigla, cidade_slug, estado_slug_iw)
+        )
+    finally:
+        loop.close()
+
+
 async def fetch_commercial_listings_async(
     cidade: str,
     estado: str,
@@ -143,12 +181,15 @@ async def fetch_commercial_listings_async(
     cidade_slug = _slug(cidade)
     cidade_slug_olx = f"{cidade_slug}-e-regiao"
 
-    olx_lojas, olx_galpoes, imovelweb = await asyncio.gather(
-        fetch_olx_nextdata(cidade_slug_olx, estado_sigla, "lojas"),
-        fetch_olx_nextdata(cidade_slug_olx, estado_sigla, "galpoes"),
-        fetch_imovelweb_jsonld(cidade_slug, estado_slug_iw),
-        return_exceptions=True,
-    )
+    if sys.platform == "win32":
+        olx_lojas, olx_galpoes, imovelweb = await asyncio.to_thread(
+            _gather_scrapes_em_proactor,
+            cidade_slug_olx, estado_sigla, cidade_slug, estado_slug_iw,
+        )
+    else:
+        olx_lojas, olx_galpoes, imovelweb = await _gather_scrapes(
+            cidade_slug_olx, estado_sigla, cidade_slug, estado_slug_iw,
+        )
 
     all_listings: list[ListingResult] = []
     for batch in (olx_lojas, olx_galpoes, imovelweb):
