@@ -477,6 +477,24 @@ def _is_429_error(exc: BaseException) -> bool:
     return "429" in msg or "resource_exhausted" in msg
 
 
+def _is_transient_network_error(exc: BaseException) -> bool:
+    """Queda de conexão no meio de chamada LLM (rede local oscilou, Vertex
+    derrubou o socket). Mitigação de borda: re-tenta o pipeline com o mesmo
+    backoff do 429. A correção estrutural (checkpoint por agente + retomar)
+    está planejada em docs/agente/03_AGENTES_LONGA_DURACAO.md.
+    """
+    if isinstance(exc, BaseExceptionGroup):
+        return any(_is_transient_network_error(sub) for sub in exc.exceptions)
+    if isinstance(exc, (ConnectionResetError, ConnectionAbortedError)):
+        return True
+    name = type(exc).__name__
+    if name in ("ServerDisconnectedError", "ClientConnectorError", "ClientOSError",
+                "ServerTimeoutError", "ClientConnectionResetError"):
+        return True
+    msg = str(exc).lower()
+    return "server disconnected" in msg or "connection reset" in msg
+
+
 async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioInput) -> dict:
     """Executa o pipeline ADK e persiste custos. Retorna summary."""
     from google.adk.runners import Runner
@@ -662,9 +680,10 @@ async def _run_pipeline_async_body(
         for tentativa, backoff in enumerate([0] + _RETRY_BACKOFFS_429):
             _ensure_pipeline_wall_clock(t0)
             if backoff > 0:
+                motivo = type(last_exc).__name__ if last_exc else "?"
                 logger.warning(
-                    f"pipeline {relatorio_id} hit 429 — retry {tentativa}/{len(_RETRY_BACKOFFS_429)} "
-                    f"em {backoff}s"
+                    f"pipeline {relatorio_id} erro transitório ({motivo}) — "
+                    f"retry {tentativa}/{len(_RETRY_BACKOFFS_429)} em {backoff}s"
                 )
                 await asyncio.sleep(min(backoff, _pipeline_wall_remaining_sec(t0)))
                 _ensure_pipeline_wall_clock(t0)
@@ -679,7 +698,7 @@ async def _run_pipeline_async_body(
             except asyncio.TimeoutError:
                 raise PipelineWallTimeoutError() from None
             except BaseException as e:
-                if _is_429_error(e):
+                if _is_429_error(e) or _is_transient_network_error(e):
                     last_exc = e
                     continue  # tenta de novo após backoff
                 raise  # outros erros não fazem retry
