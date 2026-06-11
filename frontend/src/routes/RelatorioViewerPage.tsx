@@ -66,6 +66,7 @@ import { TextoSecao } from '@/components/domain/TextoSecao'
 import { PosicionamentoCard } from '@/components/domain/PosicionamentoCard'
 import { AlertasGlobais } from '@/components/domain/AlertasGlobais'
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
+import { RebuscarCandidatosButton } from '@/components/domain/RebuscarCandidatosButton'
 import { GerarPlanoButton } from '@/components/execucao/GerarPlanoButton'
 import { DeleteRelatorioButton } from '@/components/domain/DeleteRelatorioButton'
 import { Button } from '@/components/ui/button'
@@ -339,6 +340,7 @@ function RelatorioViewerContent({
             </span>
             <span className="ml-auto flex items-center gap-2">
               <GerarPlanoButton relatorioId={relatorioId} />
+              <RebuscarCandidatosButton relatorioId={relatorioId} />
               <RerunPipelineButton relatorioId={relatorioId} />
             </span>
           </div>

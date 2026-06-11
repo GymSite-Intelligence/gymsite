@@ -368,20 +368,24 @@ app = FastAPI(
 
 from backend.routers.parceiros_admin import router as parceiros_admin_router
 from backend.routers.execucao import router as execucao_router
+from backend.routers.rebusca import router as rebusca_router
 
 app.include_router(parceiros_admin_router)
 app.include_router(execucao_router)
+app.include_router(rebusca_router)
 
 # CORS: dev libera localhost:* via regex; producao vem de CORS_ORIGINS (.env),
 # comma-separated. Ex: CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
+_env_cors = os.getenv("CORS_ORIGINS", "")
 _cors_origins = [
-    o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
-] + ["https://vectracargo.com.br", "https://www.vectracargo.com.br"]
-if _cors_origins:
+    o.strip() for o in _env_cors.split(",") if o.strip()
+] + ["https://vectracargo.com.br", "https://www.vectracargo.com.br", "https://gymsite.vectracargo.com.br"]
+
+if _env_cors:
     logger.info("CORS origins from env: %s", _cors_origins)
 else:
     logger.warning(
-        "CORS_ORIGINS nao definida em .env — somente localhost:* via regex liberado"
+        "CORS_ORIGINS nao definida em .env — usando defaults e regex de localhost"
     )
 
 # Regex extras: localhost dev + Cloudflare Pages (preview hash.gymsite-3p0.pages.dev)
@@ -878,6 +882,19 @@ def _build_pipeline_prompt(p: NovoRelatorioInput) -> str:
 # ════════════════════════════════════════════════════════════════════════════
 # Endpoints
 # ════════════════════════════════════════════════════════════════════════════
+
+@app.get("/")
+def read_root() -> dict:
+    """Root endpoint for health checks from Google Cloud Run."""
+    return {"status": "ok", "service": "gymsite-api"}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Favicon endpoint to avoid 404/405 errors from browsers and crawlers."""
+    from fastapi import Response
+    return Response(content=b"", media_type="image/x-icon")
+
 
 @app.get("/health")
 def health(probe: bool = False) -> dict:
