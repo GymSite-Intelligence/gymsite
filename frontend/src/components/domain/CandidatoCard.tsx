@@ -107,6 +107,14 @@ export function CandidatoCard({
             {portalLabel}
           </Badge>
         )}
+        {candidato.qualidade_sinal === 'rebusca-ampliada' && (
+          <Badge
+            variant="secondary"
+            className="absolute bottom-2 left-2 bg-emerald-600/90 text-white backdrop-blur"
+          >
+            achado na re-busca
+          </Badge>
+        )}
         {/* Badge visibilidade (canto direito) — tonalidade por nível */}
         <Badge
           variant={

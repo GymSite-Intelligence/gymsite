@@ -29,21 +29,8 @@ function formatArea(m2: number | undefined): string {
 }
 
 export function ObrasEmAndamentoTable({ block, className }: ObrasEmAndamentoTableProps) {
-  if (!block || block.status === 'nao_configurado' || block.status === 'indisponivel') {
-    return (
-      <p className="text-xs text-muted-foreground">
-        {block?.status === 'nao_configurado'
-          ? 'Cadastro CNO não configurado no servidor (CNO_DATA_DIR).'
-          : 'Obras em andamento indisponíveis para esta cidade.'}
-      </p>
-    )
-  }
-  if (block.status === 'erro') {
-    return (
-      <p className="text-xs text-veredito-reprovado">
-        Erro ao carregar obras CNO: {block.motivo ?? 'desconhecido'}
-      </p>
-    )
+  if (!block || block.status !== 'ok') {
+    return null
   }
 
   const bench = block.benchmark_tempo_obra
