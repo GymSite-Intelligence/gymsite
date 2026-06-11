@@ -12,6 +12,9 @@
 - **Validação no servidor** (P-005): cliente é cosmético. Toda regra de negócio é re-validada no backend.
 - **Estado refletido na URL** (P-006): filtros, seleção, aba ativa e etapa de wizard ficam em query params. F5 mantém estado.
 - **Soft delete e auditoria por padrão** (P-007): nada é apagado de verdade. Eventos importantes geram log append-only.
+- **Vocabulário de domínio é dado, não código** (P-008): conjunto com rótulo/cor/ordem próprios (áreas, papéis, situações novas) vira TABELA DE DOMÍNIO seedada por migration — nunca enum hardcoded nem mapa duplicado em front e back. CRUD aberto ao usuário só quando o domínio realmente pertence a ele; vocabulário que o sistema consome (ex.: área → mapa de capex) é editável apenas por seed/admin.
+- **Referência é FK, nunca texto livre** (P-009): se a entidade existe em tabela, todo apontamento usa FK. Campo texto correspondente só sobrevive como cache de exibição/fallback, populado a partir da FK — jamais como fonte da verdade.
+- **Cardinalidade real desde o dia 1** (P-010): relacionamento que é N:N no mundo real nasce como tabela associativa — nunca FK singular "por enquanto". FK singular só quando a regra de negócio GARANTE 1:N (e a regra fica escrita na migration). Adotadas em 2026-06-11 após o form de etapa nascer com responsável em texto livre ignorando projeto_pessoas.
 
 ## Regras Gerais de Código
 
@@ -49,6 +52,12 @@ Toda entidade de domínio tem:
 - `deleted_at TIMESTAMPTZ` — soft delete (P-007)
 - `created_at` / `updated_at`
 - Status via CHECK constraint ou enum
+
+Modelagem (P-008..P-010 na prática):
+- Vocabulário com rótulo/cor (área, papel) = tabela de domínio seedada; UI lê do payload, nunca de mapa hardcoded.
+- Apontamento para entidade existente = FK + cache de exibição opcional.
+- N:N real = tabela associativa desde a primeira migration (ex.: tarefa↔pessoa participante, tarefa↔meta).
+- Checklist antes de criar campo: "isso é referência a algo que já tem (ou merece) tabela?" Se sim, FK.
 
 Auditoria: eventos importantes (confirmar workflow, concluir tarefa de alto valor, aceitar sugestão IA, convite/remoção de membro) gravam evento em tabela `auditoria_eventos` append-only com snapshot antes/depois.
 

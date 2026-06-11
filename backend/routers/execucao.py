@@ -116,7 +116,8 @@ class TarefaCreateRequest(BaseModel):
     custo_planejado: Optional[int] = Field(None, ge=0, description="Centavos")
     data_inicio: Optional[str] = None
     data_prevista_conclusao: Optional[str] = None
-    responsavel_nome: Optional[str] = Field(None, max_length=120)
+    responsavel_pessoa_id: Optional[str] = None
+    responsavel_nome: Optional[str] = Field(None, max_length=120, description="Fallback sem pessoa cadastrada")
 
 
 class TarefaEditRequest(BaseModel):
@@ -126,7 +127,8 @@ class TarefaEditRequest(BaseModel):
     custo_planejado: Optional[int] = Field(None, ge=0, description="Centavos")
     data_inicio: Optional[str] = None
     data_prevista_conclusao: Optional[str] = None
-    responsavel_nome: Optional[str] = Field(None, max_length=120)
+    responsavel_pessoa_id: Optional[str] = None
+    responsavel_nome: Optional[str] = Field(None, max_length=120, description="Fallback sem pessoa cadastrada")
 
 
 class ChecklistCreateRequest(BaseModel):

@@ -420,6 +420,12 @@ def criar_tarefa(sb, playbook_id: str, user_id: str, campos: dict[str, Any]) -> 
     )
     ordem = ((ultima.data[0]["ordem"] if ultima.data else 0) or 0) + 10
 
+    responsavel_pessoa_id = campos.get("responsavel_pessoa_id")
+    responsavel_nome = (campos.get("responsavel_nome") or "").strip() or None
+    if responsavel_pessoa_id:
+        pessoa = _pessoa_do_usuario(sb, responsavel_pessoa_id, user_id)
+        responsavel_nome = pessoa["nome"]
+
     row = {
         "playbook_id": playbook_id,
         "projeto_id": pb["projeto_id"],
@@ -431,7 +437,8 @@ def criar_tarefa(sb, playbook_id: str, user_id: str, campos: dict[str, Any]) -> 
         "custo_planejado": int(campos["custo_planejado"]) if campos.get("custo_planejado") is not None else None,
         "data_inicio": campos.get("data_inicio"),
         "data_prevista_conclusao": campos.get("data_prevista_conclusao"),
-        "responsavel_nome": (campos.get("responsavel_nome") or "").strip() or None,
+        "responsavel_pessoa_id": responsavel_pessoa_id,
+        "responsavel_nome": responsavel_nome,
         "sugerida_pela_ia": False,
         "aceita_pelo_usuario": True,
     }
@@ -456,10 +463,17 @@ def editar_tarefa(sb, tarefa_id: str, user_id: str, campos: dict[str, Any]) -> d
     permitidos = {
         "titulo", "descricao", "categoria", "custo_planejado",
         "data_inicio", "data_prevista_conclusao", "responsavel_nome",
+        "responsavel_pessoa_id",
     }
     update: dict[str, Any] = {}
     for k, v in campos.items():
         if k not in permitidos:
+            continue
+        if k == "responsavel_pessoa_id":
+            update[k] = v
+            if v:
+                pessoa = _pessoa_do_usuario(sb, v, user_id)
+                update["responsavel_nome"] = pessoa["nome"]
             continue
         if k == "titulo":
             if not (v or "").strip():

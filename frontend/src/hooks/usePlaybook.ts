@@ -320,6 +320,7 @@ export interface NovaTarefa {
   custo_planejado?: number | null
   data_inicio?: string
   data_prevista_conclusao?: string
+  responsavel_pessoa_id?: string | null
   responsavel_nome?: string
 }
 

@@ -129,7 +129,54 @@ código de acesso). Reusar o padrão:
 F3 (não iniciar antes do F2 rodar de verdade): formulários externos, página
 de consulta pública, dashboard de execução, lembretes.
 
-## 7. Fora de escopo decidido
+## 7. Modelo de metadados (pacote pós-F2, antes do F3)
+
+Decisão 11/06 (origem: form de etapa nasceu com responsável em texto livre;
+regras P-008..P-010 adotadas na sequência). O módulo migra para modelo
+pautado em metadados em um pacote único com migração de dados:
+
+```sql
+-- P-008: vocabulário de área vira dado (seed fixo; sem CRUD de usuário —
+-- o mapa de capex do gerador é chaveado por slug)
+CREATE TABLE areas (
+  slug TEXT PRIMARY KEY,              -- 'IMOBILIARIO', 'LEGAL', ...
+  rotulo TEXT NOT NULL,               -- 'Imóvel', 'Documentação'
+  cor TEXT NOT NULL,                  -- token de cor para badge/barra
+  ordem INT NOT NULL DEFAULT 0,
+  tipo_negocio TEXT NOT NULL DEFAULT 'academia'
+);
+ALTER TABLE tarefas ADD CONSTRAINT fk_tarefas_area
+  FOREIGN KEY (categoria) REFERENCES areas(slug);
+-- CATEGORIA_LABEL/CATEGORIA_COR saem do código; payload entrega `areas`.
+
+-- P-010: participações N:N (fundação do formulário por papel do F3)
+CREATE TABLE tarefa_participantes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tarefa_id UUID NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
+  pessoa_id UUID NOT NULL REFERENCES projeto_pessoas(id),
+  papel TEXT NOT NULL DEFAULT 'EXECUTA'
+    CHECK (papel IN ('RESPONDE','EXECUTA','CONSULTADO','INFORMADO')),
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
+  UNIQUE (tarefa_id, pessoa_id, papel)
+);
+
+-- P-010: tarefa serve várias metas (substitui tarefas.okr_id, hoje morto)
+CREATE TABLE tarefa_okrs (
+  tarefa_id UUID NOT NULL REFERENCES tarefas(id) ON DELETE CASCADE,
+  okr_id UUID NOT NULL REFERENCES okrs(id) ON DELETE CASCADE,
+  PRIMARY KEY (tarefa_id, okr_id)
+);
+```
+
+- P-009 aplicado imediatamente (11/06): form de etapa usa select de
+  `projeto_pessoas`; `responsavel_nome` rebaixado a cache de exibição.
+- Migração de dados: `tarefas.responsavel_pessoa_id` existente preservado;
+  `okr_id` copiado para `tarefa_okrs` antes de ser descontinuado.
+- Sequência: F2 item 6 fecha → este pacote roda → F3 (formulários) consome
+  `tarefa_participantes`.
+
+## 8. Fora de escopo decidido
 
 - CRUD de setores/categorias (§2).
 - Prioridade na tarefa: adiada — a ordenação real do plano vem das

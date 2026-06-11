@@ -306,6 +306,7 @@ export function ProjetoExecucaoPage() {
         onFechar={() => setEtapaFormAberto(false)}
         playbookId={playbookId}
         tarefa={etapaEditando}
+        pessoas={playbook.pessoas ?? []}
       />
 
       <PessoasDialog

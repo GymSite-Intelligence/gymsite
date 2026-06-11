@@ -29,6 +29,7 @@ import {
   useCriarTarefa,
   useEditarTarefa,
   type NovaTarefa,
+  type Pessoa,
   type Tarefa,
 } from '@/hooks/usePlaybook'
 
@@ -45,18 +46,21 @@ export function EtapaFormDialog({
   onFechar,
   playbookId,
   tarefa,
+  pessoas,
 }: {
   aberto: boolean
   onFechar: () => void
   playbookId: string
   /** null = criar nova; preenchida = editar existente */
   tarefa: Tarefa | null
+  pessoas: Pessoa[]
 }) {
   const [titulo, setTitulo] = useState('')
   const [categoria, setCategoria] = useState('OUTRO')
   const [prazo, setPrazo] = useState('')
   const [custoReais, setCustoReais] = useState('')
   const [responsavel, setResponsavel] = useState('')
+  const [pessoaId, setPessoaId] = useState<string>('')
   const [descricao, setDescricao] = useState('')
 
   const criar = useCriarTarefa(playbookId)
@@ -72,6 +76,7 @@ export function EtapaFormDialog({
       tarefa?.custo_planejado != null ? String(tarefa.custo_planejado / 100).replace('.', ',') : '',
     )
     setResponsavel(tarefa?.responsavel_nome ?? '')
+    setPessoaId(tarefa?.responsavel_pessoa_id ?? '')
     setDescricao(tarefa?.descricao ?? '')
   }, [aberto, tarefa?.id])
 
@@ -83,7 +88,8 @@ export function EtapaFormDialog({
       descricao: descricao.trim() || undefined,
       custo_planejado: reaisParaCentavos(custoReais),
       data_prevista_conclusao: prazo || undefined,
-      responsavel_nome: responsavel.trim() || undefined,
+      responsavel_pessoa_id: pessoaId || null,
+      responsavel_nome: pessoaId ? undefined : responsavel.trim() || undefined,
     }
     const opts = {
       onSuccess: () => {
@@ -157,12 +163,29 @@ export function EtapaFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Responsável</Label>
-              <Input
-                value={responsavel}
-                onChange={(e) => setResponsavel(e.target.value)}
-                placeholder="Ex.: Empreendedor"
-                className="h-10"
-              />
+              {pessoas.length > 0 ? (
+                <Select value={pessoaId || 'ninguem'} onValueChange={(v) => setPessoaId(v === 'ninguem' ? '' : v)}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="Quem cuida?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ninguem">— sem pessoa —</SelectItem>
+                    {pessoas.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                        {p.papel ? ` (${p.papel})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={responsavel}
+                  onChange={(e) => setResponsavel(e.target.value)}
+                  placeholder="Ex.: Empreendedor"
+                  className="h-10"
+                />
+              )}
             </div>
           </div>
           <div className="space-y-1.5">
