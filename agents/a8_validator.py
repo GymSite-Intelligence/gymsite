@@ -31,9 +31,36 @@ class AlertaValidacao:
     severidade: str
 
 
+def _state_to_dict(state: Any) -> dict[str, Any]:
+    """Converte o State do ADK (ou dict) em dict puro.
+
+    Desde ~2026-05-29 o runner entrega google.adk.sessions.State em vez de
+    dict; dict(State) cai no protocolo de sequência (state[0] → KeyError: 0)
+    e derrubava o A8 silenciosamente — validacoes vazia desde então."""
+    if isinstance(state, dict):
+        return dict(state)
+    if state is None:
+        return {}
+    to_dict = getattr(state, "to_dict", None)
+    if callable(to_dict):
+        try:
+            d = to_dict()
+            if isinstance(d, dict):
+                return dict(d)
+        except Exception:
+            pass
+    value = getattr(state, "_value", None)
+    if isinstance(value, dict):
+        return dict(value)
+    try:
+        return dict(state)
+    except Exception:
+        return {}
+
+
 def _normalize_state(state: dict[str, Any], relatorio: dict[str, Any] | None) -> dict[str, Any]:
     """Unifica keys do ADK state + JSON canônico do A6."""
-    out = dict(state or {})
+    out = _state_to_dict(state)
     rel = relatorio or {}
     oc = rel.get("output_consolidado") if isinstance(rel.get("output_consolidado"), dict) else {}
     if not oc and isinstance(out.get("output_consolidado"), dict):
