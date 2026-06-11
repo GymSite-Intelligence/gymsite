@@ -51,8 +51,14 @@ function reviewRecente1Ano(dataRelativa: string | undefined): boolean {
 function doresPorCompetidor(c: CompetidorJSON): DorAgregada[] {
   const reviews: ReviewJSON[] = c.reviews ?? c.reviews_traduzidas ?? []
   const recentes = reviews.filter((r) => reviewRecente1Ano(r.data_relativa))
-  const baixaNota = recentes.filter((r) => (r.rating ?? 5) <= 3)
-  const fonte = baixaNota.length > 0 ? baixaNota : recentes
+  const baixaNotaRecente = recentes.filter((r) => (r.rating ?? 5) <= 3)
+  const baixaNotaQualquer = reviews.filter((r) => (r.rating ?? 5) <= 3)
+  const fonte =
+    baixaNotaRecente.length > 0
+      ? baixaNotaRecente
+      : baixaNotaQualquer.length > 0
+        ? baixaNotaQualquer
+        : recentes
   const map = new Map<string, DorAgregada>()
   for (const r of fonte) {
     const cat = (r.categoria_dor || '').trim() as CategoriaDor

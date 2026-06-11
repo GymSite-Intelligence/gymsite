@@ -401,8 +401,16 @@ export interface CandidatoJSON {
   cartorio?: Record<string, any> | null
 }
 
+export interface PlanoPrecoJSON {
+  plano?: string
+  preco_mensal?: string
+  inclui?: string[]
+  fidelidade?: string
+}
+
 export interface CompetidorJSON {
   nome: string
+  planos_precos?: PlanoPrecoJSON[] | null
   /** Google Place ID — cache SearchAPI / popular_times (Tier 0). */
   place_id?: string | null
   lat?: number | null
@@ -642,6 +650,9 @@ function mapCompetidorRow(row: Record<string, unknown>): CompetidorJSON {
     lngRaw != null && Number(lngRaw) !== 0 ? Number(lngRaw) : undefined
   return {
     nome: String(row.nome ?? ''),
+    planos_precos: Array.isArray(row.planos_precos)
+      ? (row.planos_precos as PlanoPrecoJSON[])
+      : null,
     place_id: typeof row.place_id === 'string' ? row.place_id : null,
     lat: lat ?? null,
     lng: lng ?? null,

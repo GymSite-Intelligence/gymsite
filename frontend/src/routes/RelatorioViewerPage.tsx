@@ -60,6 +60,7 @@ import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
 import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
 import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
+import { PlanosConcorrenciaTable } from '@/components/domain/PlanosConcorrenciaTable'
 import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairrosTable'
 import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativosTable'
 import { TextoSecao } from '@/components/domain/TextoSecao'
@@ -602,6 +603,9 @@ function RelatorioViewerContent({
               competidores={out.competitors_set}
               servicosNaoOferecidos={out.servicos_nao_oferecidos}
             />
+          </div>
+          <div className="mt-4">
+            <PlanosConcorrenciaTable competidores={out.competitors_set} />
           </div>
         </Section>
       )}
