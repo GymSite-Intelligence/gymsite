@@ -1,0 +1,632 @@
+{
+  "modelo": "CF-2179",
+  "nome": "Commercial 3-Way Olympic Bench",
+  "linha": "CPL Freeweights (Commercial Freeweight)",
+  "fornecedor": "HOIST Fitness",
+  "documento": "Owner's Manual (May 2003) - Part Listing + Hardware Listing + Decals",
+  "fonte_manual": "https://hoistfitnesscom.s3.amazonaws.com/Resources/OwnerManuals/CF-2179-OM.pdf",
+  "data_coleta": "2026-06-11",
+  "metodo": "Manual escaneado (sem camada de texto). Dados lidos visualmente das paginas PART LISTING (pag. 20), HARDWARE LISTING (pag. 21) e DECAL PLACEMENTS (pag. 30 interna). Part numbers conferidos com zoom.",
+  "confianca": "Media-alta: as paginas PART LISTING e HARDWARE LISTING trazem os part numbers oficiais HOIST; recomenda-se conferencia visual dos part numbers criticos antes de uso em garantia.",
+  "uso": "Base de dados para assistencia tecnica: o tecnico seleciona a peca exata necessaria (ex.: garantia/reposicao) navegando por categoria e subcategoria",
+  "total_itens_part_list": 54,
+  "total_quantidade_pecas": 234,
+  "total_categorias": 10,
+  "notas": {
+    "estrutura_manual": "Manual antigo (2003) usa sistema de legenda: componentes numerados (1-16, pagina PART LISTING) e ferragens por letra (A-CL, pagina HARDWARE LISTING). Os adesivos (decals) tem numeracao propria 1-10 na pagina DECAL PLACEMENTS.",
+    "campo_item": "Para ferragens, o campo item corresponde a Key# (letra) do manual; para componentes e adesivos, ao numero do item.",
+    "atributos": "Fixadores incluem atributos (bitola, comprimento_pol, acabamento, observacao). Acabamento (WZ) = Zincado."
+  },
+  "categorias": [
+    {
+      "categoria": "Estrutura Soldada",
+      "total_itens": 10,
+      "total_quantidade": 13,
+      "subcategorias": [
+        {
+          "subcategoria": "Braco / Ajuste",
+          "pecas": [
+            {
+              "item": 2,
+              "part_number": "026-01X1378",
+              "descricao": "BACK ADJUSTER ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 9,
+              "part_number": "026-01X1397",
+              "descricao": "HANDLE ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Suporte de Assento",
+          "pecas": [
+            {
+              "item": 3,
+              "part_number": "026-01X1381",
+              "descricao": "PIVOTING SEAT MOUNT ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Quadro / Base",
+          "pecas": [
+            {
+              "item": 4,
+              "part_number": "026-01X1382",
+              "descricao": "BASE FRAME",
+              "quantidade": 1
+            },
+            {
+              "item": 5,
+              "part_number": "026-01X1392",
+              "descricao": "BASE MOUNT ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 6,
+              "part_number": "026-01X1394",
+              "descricao": "CROSS BRACE ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Coluna (Upright)",
+          "pecas": [
+            {
+              "item": 7,
+              "part_number": "026-01X1395",
+              "descricao": "UPRIGHT STAND ASSEMBLY",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Elo / Link",
+          "pecas": [
+            {
+              "item": 8,
+              "part_number": "026-01X1396",
+              "descricao": "LINKAGE ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Suporte de Barra (Gun Rack)",
+          "pecas": [
+            {
+              "item": 12,
+              "part_number": "026-01P1377",
+              "descricao": "GUN RACK",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Apoio de Pe (Foot Peg)",
+          "pecas": [
+            {
+              "item": 13,
+              "part_number": "026-01M0475",
+              "descricao": "FOOT PEG",
+              "quantidade": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Eixos e Espacadores",
+      "total_itens": 1,
+      "total_quantidade": 4,
+      "subcategorias": [
+        {
+          "subcategoria": "Eixo",
+          "pecas": [
+            {
+              "item": 16,
+              "part_number": "026-01M0753",
+              "descricao": "Ø.75\" X 3.598\" AXLE",
+              "quantidade": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Sistema de Peso",
+      "total_itens": 2,
+      "total_quantidade": 10,
+      "subcategorias": [
+        {
+          "subcategoria": "Pino Seletor",
+          "pecas": [
+            {
+              "item": 1,
+              "part_number": "026-01X0185",
+              "descricao": "1/2\" SHORT PULL PIN ASSEMBLY",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Suporte de Anilha (Weight Peg)",
+          "pecas": [
+            {
+              "item": 14,
+              "part_number": "026-01M0476",
+              "descricao": "WEIGHT PEG",
+              "quantidade": 8
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Rolamentos e Buchas",
+      "total_itens": 4,
+      "total_quantidade": 19,
+      "subcategorias": [
+        {
+          "subcategoria": "Bucha Delrin",
+          "pecas": [
+            {
+              "item": "CH",
+              "part_number": "026-01PL364",
+              "descricao": "Ø1.00\" DELRIN",
+              "quantidade": 8
+            },
+            {
+              "item": "CI",
+              "part_number": "026-01PL365",
+              "descricao": "Ø1.00\" X 3.625\" LG. DELRIN",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Rolamento Flangeado",
+          "pecas": [
+            {
+              "item": "CJ",
+              "part_number": "014-0005001",
+              "descricao": "0.75\" FLANGED BEARING",
+              "quantidade": 8
+            }
+          ]
+        },
+        {
+          "subcategoria": "Bucha Oil-Lite",
+          "pecas": [
+            {
+              "item": "CK",
+              "part_number": "014-0101004",
+              "descricao": "1/2\" OIL LITE",
+              "quantidade": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Fixadores - Parafusos",
+      "total_itens": 8,
+      "total_quantidade": 40,
+      "subcategorias": [
+        {
+          "subcategoria": "Parafuso BHS (Button Head)",
+          "pecas": [
+            {
+              "item": "A",
+              "part_number": "011-0101019",
+              "descricao": "1/2-13 X 3\" BHS (WZ)",
+              "quantidade": 12,
+              "atributos": {
+                "bitola": "1/2-13",
+                "comprimento_pol": 3,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "B",
+              "part_number": "011-0101049",
+              "descricao": "3/8-16 X 2 1/2\" BHS (WZ)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "3/8-16",
+                "comprimento_pol": 2.5,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "C",
+              "part_number": "011-0101033",
+              "descricao": "5/16-18 X 3\" BHS (WZ)",
+              "quantidade": 4,
+              "atributos": {
+                "bitola": "5/16-18",
+                "comprimento_pol": 3,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "D",
+              "part_number": "011-0101048",
+              "descricao": "3/8-16 X 3\" BHS (WZ)",
+              "quantidade": 8,
+              "atributos": {
+                "bitola": "3/8-16",
+                "comprimento_pol": 3,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "E",
+              "part_number": "011-0101061",
+              "descricao": "3/8-16 X 1 3/4\" BHS (WZ)",
+              "quantidade": 6,
+              "atributos": {
+                "bitola": "3/8-16",
+                "comprimento_pol": 1.75,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "F",
+              "part_number": "011-0101046",
+              "descricao": "3/8-16 X 2 1/4\" BHS (WZ)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "3/8-16",
+                "comprimento_pol": 2.25,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "G",
+              "part_number": "011-0101076",
+              "descricao": "1/2-13 X 3 1/4\" BHS (WZ)",
+              "quantidade": 1,
+              "atributos": {
+                "bitola": "1/2-13",
+                "comprimento_pol": 3.25,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "H",
+              "part_number": "011-0101077",
+              "descricao": "1/2-13 X 5\" BHS (WZ)",
+              "quantidade": 5,
+              "atributos": {
+                "bitola": "1/2-13",
+                "comprimento_pol": 5,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Fixadores - Porcas",
+      "total_itens": 3,
+      "total_quantidade": 29,
+      "subcategorias": [
+        {
+          "subcategoria": "Porca Nylock",
+          "pecas": [
+            {
+              "item": "BA",
+              "part_number": "012-0304011",
+              "descricao": "1/2\" THIN NYLOK NUT (WZ)",
+              "quantidade": 18,
+              "atributos": {
+                "bitola": "1/2",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "BB",
+              "part_number": "012-0102006",
+              "descricao": "5/16\" NYLOK NUT (WZ)",
+              "quantidade": 1,
+              "atributos": {
+                "bitola": "5/16",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "BC",
+              "part_number": "012-0104008",
+              "descricao": "3/8\" NYLOK NUT (WZ)",
+              "quantidade": 10,
+              "atributos": {
+                "bitola": "3/8",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Fixadores - Arruelas",
+      "total_itens": 5,
+      "total_quantidade": 81,
+      "subcategorias": [
+        {
+          "subcategoria": "Arruela Lisa",
+          "pecas": [
+            {
+              "item": "AA",
+              "part_number": "013-0102003",
+              "descricao": "1/2\" FLAT WASHER (WZ)",
+              "quantidade": 36,
+              "atributos": {
+                "bitola": "1/2",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "AB",
+              "part_number": "013-0102010",
+              "descricao": "3/8\" FLAT WASHER (WZ)",
+              "quantidade": 28,
+              "atributos": {
+                "bitola": "3/8",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "AC",
+              "part_number": "013-0002001",
+              "descricao": "5/16\" FLAT WASHER (WZ)",
+              "quantidade": 5,
+              "atributos": {
+                "bitola": "5/16",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Arruela de Trava Interna",
+          "pecas": [
+            {
+              "item": "AD",
+              "part_number": "013-0102021",
+              "descricao": "5/16\" INTERNAL LOCK WASHER (WZ)",
+              "quantidade": 4,
+              "atributos": {
+                "bitola": "5/16",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": "AE",
+              "part_number": "013-0102010",
+              "descricao": "3/8\" INTERNAL LOCK WASHER (WZ)",
+              "quantidade": 8,
+              "atributos": {
+                "bitola": "3/8",
+                "comprimento_pol": null,
+                "acabamento": "Zincado (WZ)",
+                "observacao": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Estofados",
+      "total_itens": 2,
+      "total_quantidade": 2,
+      "subcategorias": [
+        {
+          "subcategoria": "Almofada (Pad)",
+          "pecas": [
+            {
+              "item": 10,
+              "part_number": "022-01PD0104-A",
+              "descricao": "BACK PAD ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 11,
+              "part_number": "022-01PD0105-A",
+              "descricao": "SEAT PAD ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Acabamentos Plasticos",
+      "total_itens": 8,
+      "total_quantidade": 25,
+      "subcategorias": [
+        {
+          "subcategoria": "Roda / Rodizio",
+          "pecas": [
+            {
+              "item": "CA",
+              "part_number": "020-0014024",
+              "descricao": "Ø2.50\" X 1.50\" WHEEL",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Batente (Bumper)",
+          "pecas": [
+            {
+              "item": "CB",
+              "part_number": "026-01PL264",
+              "descricao": "WEIGHT BUMPER",
+              "quantidade": 12
+            },
+            {
+              "item": "CL",
+              "part_number": "019-0001001",
+              "descricao": "PLUG BUMPER",
+              "quantidade": 4
+            }
+          ]
+        },
+        {
+          "subcategoria": "Ponteira (End Cap)",
+          "pecas": [
+            {
+              "item": "CC",
+              "part_number": "026-01PL187RV",
+              "descricao": "2\" X 4\" END CAP VERTICAL (H)",
+              "quantidade": 2
+            },
+            {
+              "item": "CD",
+              "part_number": "026-01PL187RH",
+              "descricao": "2\" X 4\" END CAP HORIZONTAL (H)",
+              "quantidade": 1
+            },
+            {
+              "item": "CE",
+              "part_number": "026-01PL192RH",
+              "descricao": "2\" X 3\" END CAP HORIZONTAL (H)",
+              "quantidade": 2
+            },
+            {
+              "item": "CF",
+              "part_number": "026-01PL192RV",
+              "descricao": "2\" X 3\" END CAP VERTICAL (H)",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Manipulo / Knob",
+          "pecas": [
+            {
+              "item": "CG",
+              "part_number": "020-0007004",
+              "descricao": "KNOB HANDLE",
+              "quantidade": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Adesivos e Etiquetas",
+      "total_itens": 11,
+      "total_quantidade": 11,
+      "subcategorias": [
+        {
+          "subcategoria": "Placa (Plate)",
+          "pecas": [
+            {
+              "item": 15,
+              "part_number": "026-01P1422",
+              "descricao": "DECAL PLATE",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Adesivo (Decal)",
+          "pecas": [
+            {
+              "item": 1,
+              "part_number": "021-0003128",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 2,
+              "part_number": "021-0003127",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 3,
+              "part_number": "021-0003126",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 4,
+              "part_number": "021-0003113",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 5,
+              "part_number": "021-0003153",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 6,
+              "part_number": "021-0003131",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 7,
+              "part_number": "021-0003130",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 8,
+              "part_number": "021-0004105",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 9,
+              "part_number": "021-0004106",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            },
+            {
+              "item": 10,
+              "part_number": "021-0004107",
+              "descricao": "DECAL / ADESIVO (ref. pagina DECAL PLACEMENTS)",
+              "quantidade": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
