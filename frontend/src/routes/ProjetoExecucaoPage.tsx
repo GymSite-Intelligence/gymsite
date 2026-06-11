@@ -4,10 +4,11 @@
  * P-006: filtro de categoria e etapa aberta vivem nos query params —
  * F5 mantém exatamente onde o usuário estava.
  */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
-import { CalendarDays, Wallet } from 'lucide-react'
+import { CalendarDays, Users, Wallet } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -26,6 +27,7 @@ import {
 } from '@/hooks/usePlaybook'
 import { PlaybookKanban, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
 import { TarefaModal } from '@/components/execucao/TarefaModal'
+import { PessoasDialog } from '@/components/execucao/PessoasDialog'
 
 export function ProjetoExecucaoPage() {
   const { playbookId } = useParams({ strict: false }) as { playbookId: string }
@@ -35,6 +37,7 @@ export function ProjetoExecucaoPage() {
   const { data: playbook, isLoading, error } = usePlaybook(playbookId)
   const atualizar = useAtualizarTarefa(playbookId)
   const marcarChecklist = useMarcarChecklist(playbookId)
+  const [pessoasAberto, setPessoasAberto] = useState(false)
 
   const categoriaFiltro = search.categoria ?? 'todas'
   const tarefaAbertaId = search.etapa ?? null
@@ -165,6 +168,13 @@ export function ProjetoExecucaoPage() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" className="h-10" onClick={() => setPessoasAberto(true)}>
+            <Users className="mr-1.5 h-4 w-4" />
+            Pessoas
+            {(playbook.pessoas ?? []).length > 0 && (
+              <span className="ml-1.5 text-muted-foreground">{playbook.pessoas.length}</span>
+            )}
+          </Button>
         </div>
       </header>
 
@@ -186,6 +196,16 @@ export function ProjetoExecucaoPage() {
           )
         }
         salvando={atualizar.isPending}
+        playbookId={playbookId}
+        pessoas={playbook.pessoas ?? []}
+      />
+
+      <PessoasDialog
+        aberto={pessoasAberto}
+        onFechar={() => setPessoasAberto(false)}
+        pessoas={playbook.pessoas ?? []}
+        playbookId={playbookId}
+        projetoId={playbook.projeto_id}
       />
     </div>
   )

@@ -7,8 +7,8 @@
  * Concluir etapa de valor alto (> R$ 10.000 previstos) pede o gasto real
  * (CST-003); nas demais o campo é opcional.
  */
-import { useEffect, useState } from 'react'
-import { AlertTriangle, Send, Sparkles } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { AlertTriangle, FileText, Paperclip, Send, Sparkles, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -31,7 +31,18 @@ import {
 import { notify } from '@/lib/notify'
 import { formatBRL } from '@/lib/format'
 import { CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
-import { useAdicionarNota, useNotasTarefa, type Tarefa } from '@/hooks/usePlaybook'
+import {
+  abrirAnexo,
+  useAdicionarNota,
+  useAnexosTarefa,
+  useAtribuirResponsavelChecklist,
+  useAtribuirResponsavelTarefa,
+  useEnviarAnexo,
+  useExcluirAnexo,
+  useNotasTarefa,
+  type Pessoa,
+  type Tarefa,
+} from '@/hooks/usePlaybook'
 
 const STATUS_LABEL: Record<Tarefa['status'], string> = {
   A_FAZER: 'A fazer',
@@ -64,6 +75,8 @@ export function TarefaModal({
   onMudarStatus,
   onMarcarChecklist,
   salvando,
+  playbookId,
+  pessoas,
 }: {
   tarefa: Tarefa | null
   aberto: boolean
@@ -71,13 +84,21 @@ export function TarefaModal({
   onMudarStatus: (status: Tarefa['status'], custoRealCentavos: number | null) => void
   onMarcarChecklist: (itemId: string, concluido: boolean) => void
   salvando: boolean
+  playbookId: string
+  pessoas: Pessoa[]
 }) {
   const [novoStatus, setNovoStatus] = useState<Tarefa['status'] | ''>('')
   const [gastoReais, setGastoReais] = useState('')
   const [novaNota, setNovaNota] = useState('')
+  const arquivoRef = useRef<HTMLInputElement>(null)
 
   const { data: notas } = useNotasTarefa(tarefa?.id ?? null)
   const adicionarNota = useAdicionarNota(tarefa?.id ?? null)
+  const { data: anexos } = useAnexosTarefa(tarefa?.id ?? null)
+  const enviarAnexo = useEnviarAnexo(tarefa?.id ?? null)
+  const excluirAnexo = useExcluirAnexo(tarefa?.id ?? null)
+  const atribuirTarefa = useAtribuirResponsavelTarefa(playbookId)
+  const atribuirPasso = useAtribuirResponsavelChecklist(playbookId)
 
   useEffect(() => {
     setNovoStatus('')
@@ -94,6 +115,16 @@ export function TarefaModal({
   const mudou = Boolean(novoStatus) && novoStatus !== tarefa.status
 
   const variacao = tarefa.variacao_conclusao_dias
+
+  function aoEscolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0]
+    e.target.value = ''
+    if (!arquivo) return
+    enviarAnexo.mutate(
+      { arquivo },
+      { onError: (err: Error) => notify.error(err.message) },
+    )
+  }
 
   function enviarNota() {
     const texto = novaNota.trim()
@@ -153,7 +184,34 @@ export function TarefaModal({
         <div className="space-y-5 px-6 py-5">
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <Campo rotulo="Prazo">{formatData(tarefa.data_prevista_conclusao)}</Campo>
-            <Campo rotulo="Responsável">{tarefa.responsavel_nome ?? '—'}</Campo>
+            <Campo rotulo="Responsável">
+              {pessoas.length > 0 ? (
+                <Select
+                  value={tarefa.responsavel_pessoa_id ?? 'sugestao'}
+                  onValueChange={(v) =>
+                    atribuirTarefa.mutate(
+                      { tarefaId: tarefa.id, pessoaId: v === 'sugestao' ? null : v },
+                      { onError: (e: Error) => notify.error(e.message) },
+                    )
+                  }
+                >
+                  <SelectTrigger className="h-8 w-full text-sm font-medium">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sugestao">{tarefa.responsavel_nome ?? '—'}</SelectItem>
+                    {pessoas.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                        {p.papel ? ` (${p.papel})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                (tarefa.responsavel_nome ?? '—')
+              )}
+            </Campo>
             <Campo rotulo="Previsto">
               {tarefa.custo_planejado != null ? formatBRL(tarefa.custo_planejado / 100) : '—'}
             </Campo>
@@ -181,16 +239,41 @@ export function TarefaModal({
               <p className="mb-2 text-xs text-muted-foreground">Passo a passo</p>
               <div className="flex flex-col gap-2">
                 {tarefa.checklist.map((item) => (
-                  <label key={item.id} className="flex cursor-pointer items-start gap-2 text-sm">
-                    <Checkbox
-                      checked={item.concluido}
-                      onCheckedChange={(v) => onMarcarChecklist(item.id, v === true)}
-                      className="mt-0.5"
-                    />
-                    <span className={item.concluido ? 'text-muted-foreground line-through' : ''}>
-                      {item.descricao}
-                    </span>
-                  </label>
+                  <div key={item.id} className="flex items-start gap-2 text-sm">
+                    <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                      <Checkbox
+                        checked={item.concluido}
+                        onCheckedChange={(v) => onMarcarChecklist(item.id, v === true)}
+                        className="mt-0.5"
+                      />
+                      <span className={item.concluido ? 'text-muted-foreground line-through' : ''}>
+                        {item.descricao}
+                      </span>
+                    </label>
+                    {pessoas.length > 0 && (
+                      <Select
+                        value={item.responsavel_pessoa_id ?? 'ninguem'}
+                        onValueChange={(v) =>
+                          atribuirPasso.mutate(
+                            { itemId: item.id, pessoaId: v === 'ninguem' ? null : v },
+                            { onError: (e: Error) => notify.error(e.message) },
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-28 shrink-0 border-dashed text-xs text-muted-foreground">
+                          <SelectValue placeholder="quem faz?" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ninguem">quem faz?</SelectItem>
+                          {pessoas.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.nome}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -216,7 +299,57 @@ export function TarefaModal({
               >
                 <Send className="h-4 w-4" />
               </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                disabled={enviarAnexo.isPending}
+                onClick={() => arquivoRef.current?.click()}
+                aria-label="Anexar arquivo"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <input
+                ref={arquivoRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.doc,.docx,.xls,.xlsx"
+                className="hidden"
+                onChange={aoEscolherArquivo}
+              />
             </div>
+            {enviarAnexo.isPending && (
+              <p className="mt-2 text-xs text-muted-foreground">Enviando arquivo…</p>
+            )}
+            {(anexos ?? []).length > 0 && (
+              <div className="mt-3 flex flex-col gap-1.5">
+                {(anexos ?? []).map((a) => (
+                  <div key={a.id} className="flex items-center gap-2 rounded-md border px-3 py-1.5">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
+                      onClick={() => abrirAnexo(a.id).catch((e: Error) => notify.error(e.message))}
+                    >
+                      {a.nome_arquivo}
+                    </button>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {a.tamanho_bytes != null ? `${Math.max(1, Math.round(a.tamanho_bytes / 1024))} KB` : ''}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground hover:text-red-600"
+                      aria-label={`Excluir ${a.nome_arquivo}`}
+                      onClick={() =>
+                        excluirAnexo.mutate(a.id, { onError: (e: Error) => notify.error(e.message) })
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
             {(notas ?? []).length > 0 && (
               <div className="mt-3 flex max-h-48 flex-col gap-2 overflow-y-auto">
                 {(notas ?? []).map((n) => (

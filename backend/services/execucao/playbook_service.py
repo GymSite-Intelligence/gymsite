@@ -113,7 +113,7 @@ def obter_playbook_completo(sb, playbook_id: str, user_id: str) -> Optional[dict
         ).data or []
         checklist = (
             sb.table("tarefa_checklist")
-            .select("id, tarefa_id, descricao, concluido, ordem")
+            .select("id, tarefa_id, descricao, concluido, ordem, responsavel_pessoa_id")
             .in_("tarefa_id", ids)
             .is_("deleted_at", "null")
             .order("ordem")
@@ -126,9 +126,19 @@ def obter_playbook_completo(sb, playbook_id: str, user_id: str) -> Optional[dict
     for t in lista:
         t["checklist"] = por_tarefa.get(t["id"], [])
 
+    pessoas = (
+        sb.table("projeto_pessoas")
+        .select("id, nome, papel, email, telefone")
+        .eq("projeto_id", pb.data["projeto_id"])
+        .is_("deleted_at", "null")
+        .order("nome")
+        .execute()
+    ).data or []
+
     out = dict(pb.data)
     concluidas = sum(1 for t in lista if t["status"] == "CONCLUIDA")
     contaveis = [t for t in lista if t["status"] != "CANCELADA"]
+    out["pessoas"] = pessoas
     out["tarefas"] = lista
     out["dependencias"] = deps
     out["total_tarefas"] = len(contaveis)
@@ -256,6 +266,121 @@ def atualizar_status_tarefa(
     return {"tarefa": atualizada, "tarefas_liberadas": liberadas}
 
 
+def _projeto_do_usuario(sb, projeto_id: str, user_id: str) -> dict[str, Any]:
+    p = (
+        sb.table("user_projects")
+        .select("id, user_id")
+        .eq("id", projeto_id)
+        .maybe_single()
+        .execute()
+    )
+    if not p or not p.data or p.data.get("user_id") != user_id:
+        raise LookupError("Projeto não encontrado.")
+    return p.data
+
+
+def listar_pessoas(sb, projeto_id: str, user_id: str) -> list[dict[str, Any]]:
+    _projeto_do_usuario(sb, projeto_id, user_id)
+    res = (
+        sb.table("projeto_pessoas")
+        .select("id, nome, papel, email, telefone")
+        .eq("projeto_id", projeto_id)
+        .is_("deleted_at", "null")
+        .order("nome")
+        .execute()
+    )
+    return res.data or []
+
+
+def criar_pessoa(
+    sb, projeto_id: str, user_id: str, *, nome: str,
+    papel: Optional[str] = None, email: Optional[str] = None, telefone: Optional[str] = None,
+) -> dict[str, Any]:
+    if not nome or not nome.strip():
+        raise ValueError("Informe o nome da pessoa.")
+    _projeto_do_usuario(sb, projeto_id, user_id)
+    res = sb.table("projeto_pessoas").insert({
+        "projeto_id": projeto_id,
+        "nome": nome.strip(),
+        "papel": (papel or "").strip() or None,
+        "email": (email or "").strip() or None,
+        "telefone": (telefone or "").strip() or None,
+    }).execute()
+    return res.data[0] if res.data else {}
+
+
+def _pessoa_do_usuario(sb, pessoa_id: str, user_id: str) -> dict[str, Any]:
+    p = (
+        sb.table("projeto_pessoas")
+        .select("*, user_projects!inner(user_id)")
+        .eq("id", pessoa_id)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
+    )
+    if not p or not p.data or (p.data.get("user_projects") or {}).get("user_id") != user_id:
+        raise LookupError("Pessoa não encontrada.")
+    return p.data
+
+
+def atualizar_pessoa(sb, pessoa_id: str, user_id: str, campos: dict[str, Any]) -> dict[str, Any]:
+    _pessoa_do_usuario(sb, pessoa_id, user_id)
+    update = {
+        k: (str(v).strip() or None if v is not None else None)
+        for k, v in campos.items()
+        if k in ("nome", "papel", "email", "telefone")
+    }
+    if "nome" in update and not update["nome"]:
+        raise ValueError("O nome da pessoa não pode ficar vazio.")
+    if not update:
+        raise ValueError("Nada para atualizar.")
+    res = sb.table("projeto_pessoas").update(update).eq("id", pessoa_id).execute()
+    return res.data[0] if res.data else {}
+
+
+def remover_pessoa(sb, pessoa_id: str, user_id: str) -> None:
+    _pessoa_do_usuario(sb, pessoa_id, user_id)
+    sb.table("projeto_pessoas").update({"deleted_at": _agora_iso()}).eq("id", pessoa_id).execute()
+    sb.table("tarefas").update({"responsavel_pessoa_id": None}).eq("responsavel_pessoa_id", pessoa_id).execute()
+    sb.table("tarefa_checklist").update({"responsavel_pessoa_id": None}).eq("responsavel_pessoa_id", pessoa_id).execute()
+
+
+def atribuir_responsavel_tarefa(
+    sb, tarefa_id: str, user_id: str, pessoa_id: Optional[str]
+) -> dict[str, Any]:
+    tarefa = _tarefa_do_usuario(sb, tarefa_id, user_id)
+    update: dict[str, Any] = {"responsavel_pessoa_id": pessoa_id, "updated_at": _agora_iso()}
+    if pessoa_id:
+        pessoa = _pessoa_do_usuario(sb, pessoa_id, user_id)
+        update["responsavel_nome"] = pessoa["nome"]
+    res = sb.table("tarefas").update(update).eq("id", tarefa["id"]).execute()
+    return _enriquecer_tarefa(res.data[0]) if res.data else {}
+
+
+def atribuir_responsavel_checklist(
+    sb, item_id: str, user_id: str, pessoa_id: Optional[str]
+) -> dict[str, Any]:
+    item = (
+        sb.table("tarefa_checklist")
+        .select("id, tarefa_id")
+        .eq("id", item_id)
+        .maybe_single()
+        .execute()
+    )
+    if not item or not item.data:
+        raise LookupError("Item não encontrado.")
+    _tarefa_do_usuario(sb, item.data["tarefa_id"], user_id)
+    if pessoa_id:
+        _pessoa_do_usuario(sb, pessoa_id, user_id)
+    res = (
+        sb.table("tarefa_checklist")
+        .update({"responsavel_pessoa_id": pessoa_id})
+        .eq("id", item_id)
+        .execute()
+    )
+    return res.data[0] if res.data else {}
+
+
 def listar_notas(sb, tarefa_id: str, user_id: str) -> list[dict[str, Any]]:
     _tarefa_do_usuario(sb, tarefa_id, user_id)
     res = (
@@ -285,6 +410,66 @@ def adicionar_nota(
         "texto": texto.strip(),
     }).execute()
     return res.data[0] if res.data else {}
+
+
+BUCKET_ANEXOS = "execucao-anexos"
+
+
+def listar_anexos(sb, tarefa_id: str, user_id: str) -> list[dict[str, Any]]:
+    _tarefa_do_usuario(sb, tarefa_id, user_id)
+    res = (
+        sb.table("tarefa_anexos")
+        .select("id, tarefa_id, nota_id, nome_arquivo, content_type, tamanho_bytes, criado_em")
+        .eq("tarefa_id", tarefa_id)
+        .is_("deleted_at", "null")
+        .order("criado_em", desc=True)
+        .execute()
+    )
+    return res.data or []
+
+
+def registrar_anexo(
+    sb, tarefa_id: str, user_id: str, *, nome_arquivo: str, storage_path: str,
+    content_type: Optional[str], tamanho_bytes: int, nota_id: Optional[str] = None,
+) -> dict[str, Any]:
+    res = sb.table("tarefa_anexos").insert({
+        "tarefa_id": tarefa_id,
+        "nota_id": nota_id,
+        "nome_arquivo": nome_arquivo,
+        "storage_path": storage_path,
+        "content_type": content_type,
+        "tamanho_bytes": tamanho_bytes,
+    }).execute()
+    return res.data[0] if res.data else {}
+
+
+def _anexo_do_usuario(sb, anexo_id: str, user_id: str) -> dict[str, Any]:
+    a = (
+        sb.table("tarefa_anexos")
+        .select("*")
+        .eq("id", anexo_id)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
+    )
+    if not a or not a.data:
+        raise LookupError("Anexo não encontrado.")
+    _tarefa_do_usuario(sb, a.data["tarefa_id"], user_id)
+    return a.data
+
+
+def url_download_anexo(sb, anexo_id: str, user_id: str, *, validade_s: int = 300) -> str:
+    anexo = _anexo_do_usuario(sb, anexo_id, user_id)
+    signed = sb.storage.from_(BUCKET_ANEXOS).create_signed_url(anexo["storage_path"], validade_s)
+    url = (signed or {}).get("signedURL") or (signed or {}).get("signedUrl")
+    if not url:
+        raise ValueError("Não foi possível gerar o link do arquivo.")
+    return url
+
+
+def remover_anexo(sb, anexo_id: str, user_id: str) -> None:
+    _anexo_do_usuario(sb, anexo_id, user_id)
+    sb.table("tarefa_anexos").update({"deleted_at": _agora_iso()}).eq("id", anexo_id).execute()
 
 
 def marcar_checklist_item(sb, item_id: str, user_id: str, concluido: bool) -> dict[str, Any]:

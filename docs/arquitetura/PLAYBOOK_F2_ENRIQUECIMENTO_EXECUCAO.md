@@ -83,6 +83,14 @@ de consulta como **views sobre a mesma tabela**. Para nós:
 O padrão Lark = colaboração externa sem conta. Nosso produto tem o mesmo
 problema: contador, arquiteto e fornecedor não terão login no GymSite.
 
+**Decisão (11/06): formulário é interface por papel, vale para processo
+interno também.** O mesmo link recortado serve contador externo e sócio
+interno — elimina UI dedicada de atribuição/atualização multi-stakeholder.
+Caso VISA: tarefa tem 1 dono (Accountable); passo "Pagar taxa" atribuído ao
+contador (Responsible) via `responsavel_pessoa_id` no checklist; comprovante
+entra como anexo. Setor duplo na tarefa foi descartado (quebraria capex por
+categoria e o kanban).
+
 Já temos o mecanismo análogo pronto: `/acesso?code=` (LeadAccessPage com
 código de acesso). Reusar o padrão:
 

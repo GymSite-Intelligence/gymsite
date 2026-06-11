@@ -7,9 +7,11 @@ filtro por user_id no nível mais baixo (espelha as policies RLS).
 from __future__ import annotations
 
 import os
+import re
+import uuid
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from supabase import create_client
 
@@ -58,6 +60,34 @@ class ChecklistRequest(BaseModel):
 
 class NotaRequest(BaseModel):
     texto: str = Field(..., min_length=1, max_length=4000)
+
+
+class PessoaRequest(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=120)
+    papel: Optional[str] = Field(None, max_length=80)
+    email: Optional[str] = Field(None, max_length=200)
+    telefone: Optional[str] = Field(None, max_length=40)
+
+
+class PessoaPatchRequest(BaseModel):
+    nome: Optional[str] = Field(None, max_length=120)
+    papel: Optional[str] = Field(None, max_length=80)
+    email: Optional[str] = Field(None, max_length=200)
+    telefone: Optional[str] = Field(None, max_length=40)
+
+
+class AtribuirRequest(BaseModel):
+    pessoa_id: Optional[str] = None
+
+
+ANEXO_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+ANEXO_TIPOS = {
+    "application/pdf", "image/png", "image/jpeg", "image/webp", "image/heic",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
 
 
 @router.post("/playbooks/gerar", status_code=201)
@@ -148,5 +178,142 @@ def marcar_checklist(item_id: str, data: ChecklistRequest, request: Request):
     user_id = _require_user(request)
     try:
         return playbook_service.marcar_checklist_item(_sb(), item_id, user_id, data.concluido)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Pessoas do projeto ─────────────────────────────────────────────────────
+@router.get("/projetos/{projeto_id}/pessoas")
+def listar_pessoas(projeto_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        return {"items": playbook_service.listar_pessoas(_sb(), projeto_id, user_id)}
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/projetos/{projeto_id}/pessoas", status_code=201)
+def criar_pessoa(projeto_id: str, data: PessoaRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.criar_pessoa(
+            _sb(), projeto_id, user_id,
+            nome=data.nome, papel=data.papel, email=data.email, telefone=data.telefone,
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/pessoas/{pessoa_id}")
+def atualizar_pessoa(pessoa_id: str, data: PessoaPatchRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.atualizar_pessoa(
+            _sb(), pessoa_id, user_id, data.model_dump(exclude_unset=True)
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/pessoas/{pessoa_id}", status_code=204)
+def remover_pessoa(pessoa_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        playbook_service.remover_pessoa(_sb(), pessoa_id, user_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.patch("/tarefas/{tarefa_id}/responsavel")
+def atribuir_responsavel_tarefa(tarefa_id: str, data: AtribuirRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.atribuir_responsavel_tarefa(_sb(), tarefa_id, user_id, data.pessoa_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.patch("/checklist/{item_id}/responsavel")
+def atribuir_responsavel_checklist(item_id: str, data: AtribuirRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.atribuir_responsavel_checklist(_sb(), item_id, user_id, data.pessoa_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Anexos ─────────────────────────────────────────────────────────────────
+@router.get("/tarefas/{tarefa_id}/anexos")
+def listar_anexos(tarefa_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        return {"items": playbook_service.listar_anexos(_sb(), tarefa_id, user_id)}
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/tarefas/{tarefa_id}/anexos", status_code=201)
+async def enviar_anexo(
+    tarefa_id: str,
+    request: Request,
+    arquivo: UploadFile = File(...),
+    nota_id: Optional[str] = Form(None),
+):
+    user_id = _require_user(request)
+    sb = _sb()
+    try:
+        tarefa = playbook_service._tarefa_do_usuario(sb, tarefa_id, user_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    content_type = (arquivo.content_type or "").lower()
+    if content_type not in ANEXO_TIPOS:
+        raise HTTPException(
+            status_code=400,
+            detail="Tipo de arquivo não aceito. Envie PDF, imagem, Word ou Excel.",
+        )
+    conteudo = await arquivo.read()
+    if len(conteudo) > ANEXO_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Arquivo acima de 10 MB.")
+    if not conteudo:
+        raise HTTPException(status_code=400, detail="Arquivo vazio.")
+
+    nome_original = arquivo.filename or "arquivo"
+    nome_seguro = re.sub(r"[^A-Za-z0-9._-]+", "_", nome_original)[-120:]
+    storage_path = f"{tarefa['projeto_id']}/{tarefa_id}/{uuid.uuid4().hex}_{nome_seguro}"
+    try:
+        sb.storage.from_(playbook_service.BUCKET_ANEXOS).upload(
+            storage_path, conteudo, {"content-type": content_type}
+        )
+    except Exception:
+        raise HTTPException(status_code=502, detail="Falha ao guardar o arquivo. Tente de novo.")
+
+    return playbook_service.registrar_anexo(
+        sb, tarefa_id, user_id,
+        nome_arquivo=nome_original, storage_path=storage_path,
+        content_type=content_type, tamanho_bytes=len(conteudo), nota_id=nota_id,
+    )
+
+
+@router.get("/anexos/{anexo_id}/download")
+def baixar_anexo(anexo_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        return {"url": playbook_service.url_download_anexo(_sb(), anexo_id, user_id)}
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.delete("/anexos/{anexo_id}", status_code=204)
+def excluir_anexo(anexo_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        playbook_service.remover_anexo(_sb(), anexo_id, user_id)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))

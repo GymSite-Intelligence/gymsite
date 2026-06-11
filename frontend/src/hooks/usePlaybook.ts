@@ -13,6 +13,25 @@ export interface ChecklistItem {
   descricao: string
   concluido: boolean
   ordem: number
+  responsavel_pessoa_id: string | null
+}
+
+export interface Pessoa {
+  id: string
+  nome: string
+  papel: string | null
+  email: string | null
+  telefone: string | null
+}
+
+export interface Anexo {
+  id: string
+  tarefa_id: string
+  nota_id: string | null
+  nome_arquivo: string
+  content_type: string | null
+  tamanho_bytes: number | null
+  criado_em: string
 }
 
 export interface Tarefa {
@@ -30,6 +49,7 @@ export interface Tarefa {
   data_prevista_conclusao: string | null
   data_conclusao: string | null
   responsavel_nome: string | null
+  responsavel_pessoa_id: string | null
   sugerida_pela_ia: boolean
   origem_relatorio_secao: string | null
   origem_relatorio_insight: string | null
@@ -70,6 +90,7 @@ export interface PlaybookCompleto {
   tarefas_atrasadas: number
   tarefas: Tarefa[]
   dependencias: Dependencia[]
+  pessoas: Pessoa[]
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -86,6 +107,22 @@ async function authHeaders(): Promise<Record<string, string>> {
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = await authHeaders()
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers })
+  if (res.status === 204) return undefined as T
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(body?.detail || `Erro ${res.status}`)
+  }
+  return body as T
+}
+
+/** Upload multipart — sem Content-Type manual (o browser define o boundary). */
+async function apiUpload<T>(path: string, form: FormData): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const headers: Record<string, string> = {}
+  if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`
+  const res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: form })
   const body = await res.json().catch(() => ({}))
   if (!res.ok) {
     throw new Error(body?.detail || `Erro ${res.status}`)
@@ -97,6 +134,7 @@ export const playbookKeys = {
   all: ['playbooks'] as const,
   detail: (id: string) => ['playbooks', id] as const,
   notas: (tarefaId: string) => ['playbooks', 'notas', tarefaId] as const,
+  anexos: (tarefaId: string) => ['playbooks', 'anexos', tarefaId] as const,
 }
 
 export function usePlaybook(playbookId: string | undefined) {
@@ -165,6 +203,106 @@ export function useAdicionarNota(tarefaId: string | null) {
       }),
     onSuccess: () => {
       if (tarefaId) qc.invalidateQueries({ queryKey: playbookKeys.notas(tarefaId) })
+    },
+  })
+}
+
+export function useCriarPessoa(playbookId: string, projetoId: string | undefined) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { nome: string; papel?: string; email?: string; telefone?: string }) =>
+      api<Pessoa>(`/api/execucao/projetos/${projetoId}/pessoas`, {
+        method: 'POST',
+        body: JSON.stringify(vars),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useAtualizarPessoa(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { pessoaId: string; nome?: string; papel?: string; email?: string; telefone?: string }) => {
+      const { pessoaId, ...campos } = vars
+      return api<Pessoa>(`/api/execucao/pessoas/${pessoaId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(campos),
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useRemoverPessoa(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (pessoaId: string) =>
+      api<void>(`/api/execucao/pessoas/${pessoaId}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useAtribuirResponsavelTarefa(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { tarefaId: string; pessoaId: string | null }) =>
+      api<Tarefa>(`/api/execucao/tarefas/${vars.tarefaId}/responsavel`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pessoa_id: vars.pessoaId }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useAtribuirResponsavelChecklist(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { itemId: string; pessoaId: string | null }) =>
+      api<ChecklistItem>(`/api/execucao/checklist/${vars.itemId}/responsavel`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pessoa_id: vars.pessoaId }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useAnexosTarefa(tarefaId: string | null) {
+  return useQuery({
+    queryKey: playbookKeys.anexos(tarefaId ?? ''),
+    enabled: Boolean(tarefaId),
+    queryFn: () => api<{ items: Anexo[] }>(`/api/execucao/tarefas/${tarefaId}/anexos`),
+    select: (r) => r.items,
+    staleTime: 15_000,
+  })
+}
+
+export function useEnviarAnexo(tarefaId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { arquivo: File; notaId?: string }) => {
+      const form = new FormData()
+      form.append('arquivo', vars.arquivo)
+      if (vars.notaId) form.append('nota_id', vars.notaId)
+      return apiUpload<Anexo>(`/api/execucao/tarefas/${tarefaId}/anexos`, form)
+    },
+    onSuccess: () => {
+      if (tarefaId) qc.invalidateQueries({ queryKey: playbookKeys.anexos(tarefaId) })
+    },
+  })
+}
+
+export async function abrirAnexo(anexoId: string): Promise<void> {
+  const r = await api<{ url: string }>(`/api/execucao/anexos/${anexoId}/download`)
+  window.open(r.url, '_blank', 'noopener')
+}
+
+export function useExcluirAnexo(tarefaId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (anexoId: string) =>
+      api<void>(`/api/execucao/anexos/${anexoId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      if (tarefaId) qc.invalidateQueries({ queryKey: playbookKeys.anexos(tarefaId) })
     },
   })
 }
