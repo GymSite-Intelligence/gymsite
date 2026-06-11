@@ -143,7 +143,8 @@ CREATE TABLE IF NOT EXISTS tarefas (
     origem_relatorio_secao TEXT,
     origem_relatorio_insight TEXT,
 
-    okr_id UUID REFERENCES okrs(id),
+    -- FK adicionada após a criação de okrs (seção 7) — okrs ainda não existe aqui
+    okr_id UUID,
 
     ordem INT DEFAULT 0,
 
@@ -225,6 +226,17 @@ CREATE TABLE IF NOT EXISTS okrs (
 
 CREATE INDEX IF NOT EXISTS idx_okrs_playbook ON okrs(playbook_id);
 CREATE INDEX IF NOT EXISTS idx_okrs_projeto ON okrs(projeto_id);
+
+-- FK de tarefas.okr_id (okrs criada depois de tarefas)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_tarefas_okr'
+    ) THEN
+        ALTER TABLE tarefas
+            ADD CONSTRAINT fk_tarefas_okr FOREIGN KEY (okr_id) REFERENCES okrs(id);
+    END IF;
+END $$;
 
 -- =============================================================================
 -- 8. TIMELINE_EVENTOS
