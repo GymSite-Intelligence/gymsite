@@ -55,7 +55,7 @@ class ChatSession:
 def criar_sessao(user_id: str) -> ChatSession:
     sb = _supabase()
     res = (
-        sb.table("chat_sessions")
+        sb.table("sessions")
         .insert({"user_id": user_id, "slots": {}, "messages": []})
         .execute()
     )
@@ -66,7 +66,7 @@ def criar_sessao(user_id: str) -> ChatSession:
 def buscar_sessao(session_id: str) -> ChatSession | None:
     sb = _supabase()
     res = (
-        sb.table("chat_sessions")
+        sb.table("sessions")
         .select("*")
         .eq("id", session_id)
         .maybe_single()
@@ -81,7 +81,7 @@ def buscar_ultima_sessao_ativa(user_id: str) -> ChatSession | None:
     """Retorna a sessão mais recente do usuário que ainda não está encerrada."""
     sb = _supabase()
     res = (
-        sb.table("chat_sessions")
+        sb.table("sessions")
         .select("*")
         .eq("user_id", user_id)
         .neq("status", "encerrado")
@@ -117,7 +117,7 @@ def atualizar_sessao(
         update["messages"] = messages
 
     res = (
-        sb.table("chat_sessions")
+        sb.table("sessions")
         .update(update)
         .eq("id", session_id)
         .execute()
@@ -138,4 +138,4 @@ def adicionar_mensagem(session_id: str, role: str, content: str) -> None:
         "content": content,
         "timestamp": "now()",
     })
-    sb.table("chat_sessions").update({"messages": messages}).eq("id", session_id).execute()
+    sb.table("sessions").update({"messages": messages}).eq("id", session_id).execute()

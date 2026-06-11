@@ -37,6 +37,7 @@ import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
 import { LeadAccessPage } from '@/routes/LeadAccessPage'
 import { AssistentePage } from '@/routes/AssistentePage'
+import AdminParceirosPage from '@/routes/AdminParceirosPage'
 import type { Veredito } from '@/types/domain'
 
 // Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
@@ -284,6 +285,12 @@ const assistenteRoute = createRoute({
   component: AssistentePage,
 })
 
+const adminParceirosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/parceiros',
+  component: AdminParceirosPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
@@ -303,6 +310,7 @@ const routeTree = rootRoute.addChildren([
   pdfSmokeRoute,
   leadAccessRoute,
   assistenteRoute,
+  adminParceirosRoute,
 ])
 
 export const router = createRouter({ routeTree })

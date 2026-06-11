@@ -2,15 +2,20 @@
 Router Admin — Parceiros (Fornecedores Curados)
 
 Endpoints para cadastro, curadoria e gestão de parceiros.
-Acesso restrito a admins da plataforma.
+Acesso restrito a admins da plataforma: JWT Supabase válido + (user_metadata.role
+em {admin, superadmin} OU email presente em ADMIN_EMAILS do ambiente).
+Valores monetários (lead_valor, valor_mensalidade) em centavos (int).
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field, validator
+from supabase import create_client
 from typing import Optional
 from uuid import UUID
 
-from services.execucao.parceiro_service import (
+from backend.services.execucao.parceiro_service import (
     ParceiroService,
     ParceiroCreate,
     ParceiroUpdate,
@@ -20,6 +25,45 @@ from services.execucao.parceiro_service import (
 )
 
 router = APIRouter(prefix="/api/admin/parceiros", tags=["Admin — Parceiros"])
+
+
+def _sb():
+    url = os.getenv("SUPABASE_URL", "").strip()
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if not url or not key:
+        raise HTTPException(status_code=500, detail="Supabase não configurado")
+    return create_client(url, key)
+
+
+def get_service() -> ParceiroService:
+    return ParceiroService(_sb())
+
+
+def require_admin(request: Request) -> dict:
+    auth = request.headers.get("authorization", "")
+    token = auth.removeprefix("Bearer ").strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Não autenticado")
+
+    try:
+        user_res = _sb().auth.get_user(token)
+        user = user_res.user
+    except Exception:
+        user = None
+    if not user:
+        raise HTTPException(status_code=401, detail="Sessão inválida ou expirada")
+
+    role = (user.user_metadata or {}).get("role", "")
+    admins = {
+        e.strip().lower()
+        for e in os.getenv("ADMIN_EMAILS", "").split(",")
+        if e.strip()
+    }
+    email = (user.email or "").lower()
+    if role not in ("admin", "superadmin") and email not in admins:
+        raise HTTPException(status_code=403, detail="Acesso restrito a administradores")
+
+    return {"user_id": user.id, "email": email, "role": role or "admin"}
 
 
 # =============================================================================
@@ -37,10 +81,10 @@ class ParceiroCreateRequest(BaseModel):
     ufs_atuacao: list[str] = Field(default_factory=list)
     cidades_atuacao: list[str] = Field(default_factory=list)
     tipo_parceria: str = Field(default="LEAD_GENERATION")
-    lead_valor: Optional[float] = Field(None, ge=0)
+    lead_valor: Optional[int] = Field(None, ge=0, description="Centavos")
     lead_maximo_mes: Optional[int] = Field(None, ge=1)
     comissao_percentual: Optional[float] = Field(None, ge=0, le=100)
-    valor_mensalidade: Optional[float] = Field(None, ge=0)
+    valor_mensalidade: Optional[int] = Field(None, ge=0, description="Centavos")
     desconto_oferecido: Optional[str] = Field(None, max_length=200)
     desconto_codigo: Optional[str] = Field(None, max_length=100)
     diferenciais: list[str] = Field(default_factory=list)
@@ -70,14 +114,14 @@ class ParceiroUpdateRequest(BaseModel):
     ufs_atuacao: Optional[list[str]] = None
     cidades_atuacao: Optional[list[str]] = None
     tipo_parceria: Optional[str] = None
-    lead_valor: Optional[float] = Field(None, ge=0)
+    lead_valor: Optional[int] = Field(None, ge=0, description="Centavos")
     lead_maximo_mes: Optional[int] = Field(None, ge=1)
     comissao_percentual: Optional[float] = Field(None, ge=0, le=100)
-    valor_mensalidade: Optional[float] = Field(None, ge=0)
+    valor_mensalidade: Optional[int] = Field(None, ge=0, description="Centavos")
     desconto_oferecido: Optional[str] = Field(None, max_length=200)
     desconto_codigo: Optional[str] = Field(None, max_length=100)
     diferenciais: Optional[list[str]] = None
-    status: Optional[str] = Field(None)
+    status: Optional[str] = None
     curadoria_nota: Optional[int] = Field(None, ge=1, le=5)
     curadoria_observacao: Optional[str] = Field(None, max_length=2000)
 
@@ -107,47 +151,29 @@ class ParceiroUpdateRequest(BaseModel):
         return v
 
 
-class ParceiroListResponse(BaseModel):
-    items: list[dict]
-    total: int
-    limit: int
-    offset: int
-
-
-# =============================================================================
-# Dependências
-# =============================================================================
-
-# TODO: Implementar autenticação admin real
-# Por enquanto, placeholder para depender de um usuário autenticado
-async def require_admin():
-    """Middleware que verifica se o usuário é admin da plataforma."""
-    # Implementar: verificar JWT + role == 'admin' ou 'superadmin'
-    # Por enquanto, retorna um user_id mock para desenvolvimento
-    return {"user_id": "admin-mock", "role": "admin"}
-
-
 # =============================================================================
 # Endpoints
 # =============================================================================
 
 @router.post("", status_code=201)
-async def criar_parceiro(
+def criar_parceiro(
     data: ParceiroCreateRequest,
     admin=Depends(require_admin),
-    db=None,  # TODO: injetar dependência real do banco
+    service: ParceiroService = Depends(get_service),
 ):
     """Criar novo parceiro (status inicial: PENDENTE)."""
-    service = ParceiroService(db)
-    parceiro = await service.criar(
-        ParceiroCreate(**data.dict()),
-        curador_id=admin.get("user_id")
-    )
-    return parceiro
+    try:
+        parceiro = service.criar(
+            ParceiroCreate(**data.dict()),
+            curador_id=admin["user_id"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return dict(parceiro.__dict__)
 
 
 @router.get("")
-async def listar_parceiros(
+def listar_parceiros(
     status: Optional[str] = Query(None, description="Filtrar por status"),
     categoria: Optional[str] = Query(None, description="Filtrar por categoria"),
     uf: Optional[str] = Query(None, description="Filtrar por UF"),
@@ -156,11 +182,10 @@ async def listar_parceiros(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     admin=Depends(require_admin),
-    db=None,
+    service: ParceiroService = Depends(get_service),
 ):
     """Listar parceiros com filtros e paginação."""
-    service = ParceiroService(db)
-    items, total = await service.listar(
+    items, total = service.listar(
         status=status,
         categoria=categoria,
         uf=uf,
@@ -177,103 +202,89 @@ async def listar_parceiros(
     }
 
 
+@router.get("/publico/para-tarefa")
+def parceiros_para_tarefa(
+    categoria: str = Query(..., description="Categoria da tarefa"),
+    uf: Optional[str] = Query(None),
+    cidade: Optional[str] = Query(None),
+    service: ParceiroService = Depends(get_service),
+):
+    """Sugestão de parceiros para uma tarefa do playbook (não exige admin)."""
+    if categoria not in CATEGORIAS_VALIDAS:
+        raise HTTPException(status_code=400, detail=f"Categoria inválida. Use: {CATEGORIAS_VALIDAS}")
+
+    parceiros = service.buscar_para_tarefa(categoria=categoria, uf=uf, cidade=cidade, limite=3)
+    return {
+        "parceiros": [dict(p.__dict__) for p in parceiros],
+        "categoria": categoria,
+    }
+
+
 @router.get("/{parceiro_id}")
-async def obter_parceiro(
+def obter_parceiro(
     parceiro_id: UUID,
     admin=Depends(require_admin),
-    db=None,
+    service: ParceiroService = Depends(get_service),
 ):
     """Obter detalhes de um parceiro."""
-    service = ParceiroService(db)
-    parceiro = await service.obter(parceiro_id)
+    parceiro = service.obter(parceiro_id)
     if not parceiro:
         raise HTTPException(status_code=404, detail="Parceiro não encontrado")
     return dict(parceiro.__dict__)
 
 
 @router.patch("/{parceiro_id}")
-async def atualizar_parceiro(
+def atualizar_parceiro(
     parceiro_id: UUID,
     data: ParceiroUpdateRequest,
     admin=Depends(require_admin),
-    db=None,
+    service: ParceiroService = Depends(get_service),
 ):
     """Atualizar parceiro (incluindo curadoria)."""
-    service = ParceiroService(db)
-    parceiro = await service.atualizar(
-        parceiro_id,
-        ParceiroUpdate(**data.dict(exclude_unset=True)),
-        curador_id=admin.get("user_id")
-    )
+    try:
+        parceiro = service.atualizar(
+            parceiro_id,
+            ParceiroUpdate(**data.dict(exclude_unset=True)),
+            curador_id=admin["user_id"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     if not parceiro:
         raise HTTPException(status_code=404, detail="Parceiro não encontrado")
     return dict(parceiro.__dict__)
 
 
 @router.delete("/{parceiro_id}", status_code=204)
-async def excluir_parceiro(
+def excluir_parceiro(
     parceiro_id: UUID,
     admin=Depends(require_admin),
-    db=None,
+    service: ParceiroService = Depends(get_service),
 ):
     """Excluir parceiro (soft delete)."""
-    service = ParceiroService(db)
-    ok = await service.excluir(parceiro_id)
+    ok = service.excluir(parceiro_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Parceiro não encontrado")
     return None
 
 
 @router.post("/{parceiro_id}/curadoria")
-async def aprovar_parceiro(
+def aprovar_parceiro(
     parceiro_id: UUID,
     nota: int = Query(..., ge=1, le=5),
     observacao: Optional[str] = Query(None),
     admin=Depends(require_admin),
-    db=None,
+    service: ParceiroService = Depends(get_service),
 ):
     """Aprovar parceiro após curadoria."""
-    service = ParceiroService(db)
-    parceiro = await service.atualizar(
+    parceiro = service.atualizar(
         parceiro_id,
         ParceiroUpdate(
             status="ATIVO",
             curadoria_nota=nota,
             curadoria_observacao=observacao,
         ),
-        curador_id=admin.get("user_id")
+        curador_id=admin["user_id"],
     )
     if not parceiro:
         raise HTTPException(status_code=404, detail="Parceiro não encontrado")
     return dict(parceiro.__dict__)
-
-
-# =============================================================================
-# Endpoints Públicos (para o Playbook)
-# =============================================================================
-
-@router.get("/publico/para-tarefa")
-async def parceiros_para_tarefa(
-    categoria: str = Query(..., description="Categoria da tarefa"),
-    uf: Optional[str] = Query(None),
-    cidade: Optional[str] = Query(None),
-    db=None,
-):
-    """
-    Endpoint público (não requer admin) para sugerir parceiros
-    em uma tarefa específica do playbook.
-    """
-    if categoria not in CATEGORIAS_VALIDAS:
-        raise HTTPException(status_code=400, detail=f"Categoria inválida. Use: {CATEGORIAS_VALIDAS}")
-
-    service = ParceiroService(db)
-    parceiros = await service.buscar_para_tarefa(
-        categoria=categoria,
-        uf=uf,
-        cidade=cidade,
-        limite=3
-    )
-    return {
-        "parceiros": [dict(p.__dict__) for p in parceiros],
-        "categoria": categoria,
-    }

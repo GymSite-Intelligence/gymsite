@@ -2,12 +2,13 @@
 Parceiro Service — CRUD de fornecedores curados para o playbook.
 
 Acesso admin para cadastro, curadoria e gestão de parceiros.
+Usa supabase-py (padrão do projeto). Valores monetários em centavos (int).
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Any, Optional
 from uuid import UUID
-import json
 
 
 @dataclass
@@ -18,17 +19,17 @@ class ParceiroCreate:
     site_url: Optional[str] = None
     telefone: Optional[str] = None
     email: Optional[str] = None
-    categorias: list[str] = None
-    ufs_atuacao: list[str] = None
-    cidades_atuacao: list[str] = None
+    categorias: Optional[list[str]] = None
+    ufs_atuacao: Optional[list[str]] = None
+    cidades_atuacao: Optional[list[str]] = None
     tipo_parceria: str = "LEAD_GENERATION"
-    lead_valor: Optional[float] = None
+    lead_valor: Optional[int] = None
     lead_maximo_mes: Optional[int] = None
     comissao_percentual: Optional[float] = None
-    valor_mensalidade: Optional[float] = None
+    valor_mensalidade: Optional[int] = None
     desconto_oferecido: Optional[str] = None
     desconto_codigo: Optional[str] = None
-    diferenciais: list[str] = None
+    diferenciais: Optional[list[str]] = None
 
 
 @dataclass
@@ -43,10 +44,10 @@ class ParceiroUpdate:
     ufs_atuacao: Optional[list[str]] = None
     cidades_atuacao: Optional[list[str]] = None
     tipo_parceria: Optional[str] = None
-    lead_valor: Optional[float] = None
+    lead_valor: Optional[int] = None
     lead_maximo_mes: Optional[int] = None
     comissao_percentual: Optional[float] = None
-    valor_mensalidade: Optional[float] = None
+    valor_mensalidade: Optional[int] = None
     desconto_oferecido: Optional[str] = None
     desconto_codigo: Optional[str] = None
     diferenciais: Optional[list[str]] = None
@@ -68,10 +69,10 @@ class ParceiroOut:
     ufs_atuacao: list[str]
     cidades_atuacao: list[str]
     tipo_parceria: str
-    lead_valor: Optional[float]
+    lead_valor: Optional[int]
     lead_maximo_mes: Optional[int]
     comissao_percentual: Optional[float]
-    valor_mensalidade: Optional[float]
+    valor_mensalidade: Optional[int]
     desconto_oferecido: Optional[str]
     desconto_codigo: Optional[str]
     diferenciais: list[str]
@@ -84,7 +85,6 @@ class ParceiroOut:
     created_at: str
 
 
-# Categorias válidas (mesmas do playbook)
 CATEGORIAS_VALIDAS = {
     "IMOBILIARIO", "LEGAL", "OBRAS", "EQUIPAMENTOS",
     "TECNOLOGIA", "RH", "MARKETING", "FINANCEIRO", "OPERACIONAL", "OUTRO"
@@ -93,6 +93,14 @@ CATEGORIAS_VALIDAS = {
 TIPOS_PARCERIA_VALIDOS = {"LEAD_GENERATION", "AFILIADO", "SPONSORED", "WHITE_LABEL"}
 STATUS_VALIDOS = {"PENDENTE", "ATIVO", "PAUSADO", "CANCELADO", "REPROVADO"}
 
+_CAMPOS_UPDATE = (
+    "nome", "descricao", "logo_url", "site_url", "telefone", "email",
+    "categorias", "ufs_atuacao", "cidades_atuacao", "tipo_parceria",
+    "lead_valor", "lead_maximo_mes", "comissao_percentual", "valor_mensalidade",
+    "desconto_oferecido", "desconto_codigo", "diferenciais",
+    "status", "curadoria_nota", "curadoria_observacao",
+)
+
 
 def _validar_categorias(categorias: list[str]) -> None:
     invalidas = set(categorias or []) - CATEGORIAS_VALIDAS
@@ -100,7 +108,7 @@ def _validar_categorias(categorias: list[str]) -> None:
         raise ValueError(f"Categorias inválidas: {invalidas}")
 
 
-def _row_to_parceiro_out(row: dict) -> ParceiroOut:
+def _row_to_parceiro_out(row: dict[str, Any]) -> ParceiroOut:
     return ParceiroOut(
         id=row["id"],
         nome=row["nome"],
@@ -113,10 +121,10 @@ def _row_to_parceiro_out(row: dict) -> ParceiroOut:
         ufs_atuacao=row.get("ufs_atuacao") or [],
         cidades_atuacao=row.get("cidades_atuacao") or [],
         tipo_parceria=row["tipo_parceria"],
-        lead_valor=row.get("lead_valor"),
+        lead_valor=int(row["lead_valor"]) if row.get("lead_valor") is not None else None,
         lead_maximo_mes=row.get("lead_maximo_mes"),
-        comissao_percentual=row.get("comissao_percentual"),
-        valor_mensalidade=row.get("valor_mensalidade"),
+        comissao_percentual=float(row["comissao_percentual"]) if row.get("comissao_percentual") is not None else None,
+        valor_mensalidade=int(row["valor_mensalidade"]) if row.get("valor_mensalidade") is not None else None,
         desconto_oferecido=row.get("desconto_oferecido"),
         desconto_codigo=row.get("desconto_codigo"),
         diferenciais=row.get("diferenciais") or [],
@@ -130,118 +138,31 @@ def _row_to_parceiro_out(row: dict) -> ParceiroOut:
     )
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 class ParceiroService:
-    def __init__(self, db):
-        self.db = db
+    """CRUD sobre a tabela parceiros via supabase-py (service role)."""
 
-    async def criar(self, data: ParceiroCreate, curador_id: Optional[UUID] = None) -> ParceiroOut:
+    def __init__(self, sb):
+        self.sb = sb
+
+    def criar(self, data: ParceiroCreate, curador_id: Optional[str] = None) -> ParceiroOut:
         _validar_categorias(data.categorias or [])
-
         if data.tipo_parceria not in TIPOS_PARCERIA_VALIDOS:
             raise ValueError(f"Tipo de parceria inválido: {data.tipo_parceria}")
 
-        row = await self.db.execute(
-            """
-            INSERT INTO parceiros (
-                nome, descricao, logo_url, site_url, telefone, email,
-                categorias, ufs_atuacao, cidades_atuacao, tipo_parceria,
-                lead_valor, lead_maximo_mes, comissao_percentual, valor_mensalidade,
-                desconto_oferecido, desconto_codigo, diferenciais,
-                status, curadoria_por
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'PENDENTE', $18)
-            RETURNING *
-            """,
-            data.nome, data.descricao, data.logo_url, data.site_url, data.telefone, data.email,
-            data.categorias or [], data.ufs_atuacao or [], data.cidades_atuacao or [], data.tipo_parceria,
-            data.lead_valor, data.lead_maximo_mes, data.comissao_percentual, data.valor_mensalidade,
-            data.desconto_oferecido, data.desconto_codigo, data.diferenciais or [],
-            curador_id
-        )
-        return _row_to_parceiro_out(row)
-
-    async def listar(
-        self,
-        status: Optional[str] = None,
-        categoria: Optional[str] = None,
-        uf: Optional[str] = None,
-        tipo_parceria: Optional[str] = None,
-        busca: Optional[str] = None,
-        limit: int = 50,
-        offset: int = 0
-    ) -> tuple[list[ParceiroOut], int]:
-        where_clauses = ["deleted_at IS NULL"]
-        params = []
-        param_idx = 1
-
-        if status:
-            where_clauses.append(f"status = ${param_idx}")
-            params.append(status)
-            param_idx += 1
-
-        if categoria:
-            where_clauses.append(f"${param_idx} = ANY(categorias)")
-            params.append(categoria)
-            param_idx += 1
-
-        if uf:
-            where_clauses.append(f"${param_idx} = ANY(ufs_atuacao)")
-            params.append(uf)
-            param_idx += 1
-
-        if tipo_parceria:
-            where_clauses.append(f"tipo_parceria = ${param_idx}")
-            params.append(tipo_parceria)
-            param_idx += 1
-
-        if busca:
-            where_clauses.append(f"(nome ILIKE ${param_idx} OR descricao ILIKE ${param_idx})")
-            params.append(f"%{busca}%")
-            param_idx += 1
-
-        where_sql = " AND ".join(where_clauses)
-
-        count_row = await self.db.fetchrow(
-            f"SELECT COUNT(*) FROM parceiros WHERE {where_sql}",
-            *params
-        )
-        total = count_row["count"]
-
-        rows = await self.db.fetch(
-            f"""
-            SELECT * FROM parceiros
-            WHERE {where_sql}
-            ORDER BY created_at DESC
-            LIMIT ${param_idx} OFFSET ${param_idx + 1}
-            """,
-            *params, limit, offset
-        )
-
-        return [_row_to_parceiro_out(dict(r)) for r in rows], total
-
-    async def obter(self, parceiro_id: UUID) -> Optional[ParceiroOut]:
-        row = await self.db.fetchrow(
-            "SELECT * FROM parceiros WHERE id = $1 AND deleted_at IS NULL",
-            parceiro_id
-        )
-        if not row:
-            return None
-        return _row_to_parceiro_out(dict(row))
-
-    async def atualizar(self, parceiro_id: UUID, data: ParceiroUpdate, curador_id: Optional[UUID] = None) -> Optional[ParceiroOut]:
-        updates = []
-        params = []
-        param_idx = 1
-
-        fields = {
+        payload = {
             "nome": data.nome,
             "descricao": data.descricao,
             "logo_url": data.logo_url,
             "site_url": data.site_url,
             "telefone": data.telefone,
             "email": data.email,
-            "categorias": data.categorias,
-            "ufs_atuacao": data.ufs_atuacao,
-            "cidades_atuacao": data.cidades_atuacao,
+            "categorias": data.categorias or [],
+            "ufs_atuacao": data.ufs_atuacao or [],
+            "cidades_atuacao": data.cidades_atuacao or [],
             "tipo_parceria": data.tipo_parceria,
             "lead_valor": data.lead_valor,
             "lead_maximo_mes": data.lead_maximo_mes,
@@ -249,85 +170,139 @@ class ParceiroService:
             "valor_mensalidade": data.valor_mensalidade,
             "desconto_oferecido": data.desconto_oferecido,
             "desconto_codigo": data.desconto_codigo,
-            "diferenciais": data.diferenciais,
-            "status": data.status,
-            "curadoria_nota": data.curadoria_nota,
-            "curadoria_observacao": data.curadoria_observacao,
+            "diferenciais": data.diferenciais or [],
+            "status": "PENDENTE",
+            "curadoria_por": curador_id,
         }
+        res = self.sb.table("parceiros").insert(payload).execute()
+        return _row_to_parceiro_out(res.data[0])
 
-        for field, value in fields.items():
-            if value is not None:
-                if field == "categorias":
-                    _validar_categorias(value)
-                updates.append(f"{field} = ${param_idx}")
-                params.append(value)
-                param_idx += 1
+    def listar(
+        self,
+        status: Optional[str] = None,
+        categoria: Optional[str] = None,
+        uf: Optional[str] = None,
+        tipo_parceria: Optional[str] = None,
+        busca: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[ParceiroOut], int]:
+        query = (
+            self.sb.table("parceiros")
+            .select("*", count="exact")
+            .is_("deleted_at", "null")
+        )
+        if status:
+            query = query.eq("status", status)
+        if categoria:
+            query = query.contains("categorias", [categoria])
+        if uf:
+            query = query.contains("ufs_atuacao", [uf])
+        if tipo_parceria:
+            query = query.eq("tipo_parceria", tipo_parceria)
+        if busca:
+            query = query.or_(f"nome.ilike.%{busca}%,descricao.ilike.%{busca}%")
 
-        if curador_id and (data.curadoria_nota is not None or data.curadoria_observacao is not None):
-            updates.append(f"curadoria_por = ${param_idx}")
-            params.append(curador_id)
-            param_idx += 1
-            updates.append(f"curadoria_em = NOW()")
+        res = (
+            query.order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+        items = [_row_to_parceiro_out(r) for r in (res.data or [])]
+        return items, res.count or 0
+
+    def obter(self, parceiro_id: UUID) -> Optional[ParceiroOut]:
+        res = (
+            self.sb.table("parceiros")
+            .select("*")
+            .eq("id", str(parceiro_id))
+            .is_("deleted_at", "null")
+            .maybe_single()
+            .execute()
+        )
+        if not res or not res.data:
+            return None
+        return _row_to_parceiro_out(res.data)
+
+    def atualizar(
+        self,
+        parceiro_id: UUID,
+        data: ParceiroUpdate,
+        curador_id: Optional[str] = None,
+    ) -> Optional[ParceiroOut]:
+        updates: dict[str, Any] = {}
+        for campo in _CAMPOS_UPDATE:
+            valor = getattr(data, campo)
+            if valor is not None:
+                if campo == "categorias":
+                    _validar_categorias(valor)
+                if campo == "tipo_parceria" and valor not in TIPOS_PARCERIA_VALIDOS:
+                    raise ValueError(f"Tipo de parceria inválido: {valor}")
+                if campo == "status" and valor not in STATUS_VALIDOS:
+                    raise ValueError(f"Status inválido: {valor}")
+                updates[campo] = valor
 
         if not updates:
-            return await self.obter(parceiro_id)
+            return self.obter(parceiro_id)
 
-        params.append(parceiro_id)
-        set_sql = ", ".join(updates)
+        if curador_id and (data.curadoria_nota is not None or data.curadoria_observacao is not None):
+            updates["curadoria_por"] = curador_id
+            updates["curadoria_em"] = _now_iso()
 
-        row = await self.db.fetchrow(
-            f"UPDATE parceiros SET {set_sql}, updated_at = NOW() WHERE id = ${param_idx} AND deleted_at IS NULL RETURNING *",
-            *params
+        updates["updated_at"] = _now_iso()
+
+        res = (
+            self.sb.table("parceiros")
+            .update(updates)
+            .eq("id", str(parceiro_id))
+            .is_("deleted_at", "null")
+            .execute()
         )
-        if not row:
+        if not res.data:
             return None
-        return _row_to_parceiro_out(dict(row))
+        return _row_to_parceiro_out(res.data[0])
 
-    async def excluir(self, parceiro_id: UUID) -> bool:
-        result = await self.db.execute(
-            "UPDATE parceiros SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL",
-            parceiro_id
+    def excluir(self, parceiro_id: UUID) -> bool:
+        res = (
+            self.sb.table("parceiros")
+            .update({"deleted_at": _now_iso()})
+            .eq("id", str(parceiro_id))
+            .is_("deleted_at", "null")
+            .execute()
         )
-        return result != "UPDATE 0"
+        return bool(res.data)
 
-    async def buscar_para_tarefa(
+    def buscar_para_tarefa(
         self,
         categoria: str,
         uf: Optional[str] = None,
         cidade: Optional[str] = None,
-        limite: int = 3
+        limite: int = 3,
     ) -> list[ParceiroOut]:
-        """
-        Retorna parceiros ativos para sugestão em uma tarefa específica.
-        Prioriza: sponsored first, depois rating, depois recência.
-        """
-        where_clauses = [
-            "status = 'ATIVO'",
-            "deleted_at IS NULL",
-            f"'{categoria}' = ANY(categorias)"
-        ]
-        params = []
-        param_idx = 1
+        """Parceiros ativos para sugestão em uma tarefa do playbook.
+        Prioriza sponsored, depois rating, depois recência. Filtro de
+        uf/cidade aceita parceiro de cobertura nacional (arrays vazios)."""
+        res = (
+            self.sb.table("parceiros")
+            .select("*")
+            .eq("status", "ATIVO")
+            .is_("deleted_at", "null")
+            .contains("categorias", [categoria])
+            .execute()
+        )
+        candidatos = [_row_to_parceiro_out(r) for r in (res.data or [])]
 
         if uf:
-            where_clauses.append(f"('{uf}' = ANY(ufs_atuacao) OR ufs_atuacao = '{{}}')")
-
+            candidatos = [p for p in candidatos if not p.ufs_atuacao or uf in p.ufs_atuacao]
         if cidade:
-            where_clauses.append(f"('{cidade}' = ANY(cidades_atuacao) OR cidades_atuacao = '{{}}')")
+            candidatos = [p for p in candidatos if not p.cidades_atuacao or cidade in p.cidades_atuacao]
 
-        where_sql = " AND ".join(where_clauses)
-
-        rows = await self.db.fetch(
-            f"""
-            SELECT * FROM parceiros
-            WHERE {where_sql}
-            ORDER BY
-                CASE tipo_parceria WHEN 'SPONSORED' THEN 0 WHEN 'WHITE_LABEL' THEN 1 ELSE 2 END,
-                rating_medio DESC,
-                created_at DESC
-            LIMIT ${param_idx}
-            """,
-            limite
+        ordem_tipo = {"SPONSORED": 0, "WHITE_LABEL": 1}
+        candidatos.sort(
+            key=lambda p: (
+                ordem_tipo.get(p.tipo_parceria, 2),
+                -p.rating_medio,
+                p.created_at,
+            )
         )
-
-        return [_row_to_parceiro_out(dict(r)) for r in rows]
+        return candidatos[:limite]
