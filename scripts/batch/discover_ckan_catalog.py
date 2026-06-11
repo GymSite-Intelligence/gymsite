@@ -18,7 +18,11 @@ def main() -> int:
     p = argparse.ArgumentParser(description="CKAN package_search por cidade")
     p.add_argument("--cidade", required=True)
     p.add_argument("--uf", default="CE")
-    p.add_argument("--portal", default="https://dados.gov.br")
+    p.add_argument(
+        "--portal",
+        default=None,
+        help="Força um portal; default: municipal mapeado + federal (se CKAN_API_KEY)",
+    )
     args = p.parse_args()
 
     from tools.ckan_client import search_datasets_for_city

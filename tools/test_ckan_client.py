@@ -6,6 +6,18 @@ import pytest
 from tools.ckan_client import CkanApiError, ckan_action, package_search, search_datasets_for_city
 
 
+def _mock_client(resp):
+    """Client fake cobrindo GET (ações de leitura) e POST (demais)."""
+    handler = type("H", (), {
+        "get": lambda *a, **k: resp,
+        "post": lambda *a, **k: resp,
+    })()
+    return type("C", (), {
+        "__enter__": lambda s: handler,
+        "__exit__": lambda *a: None,
+    })()
+
+
 def test_ckan_action_success(monkeypatch):
     class Resp:
         status_code = 200
@@ -13,10 +25,7 @@ def test_ckan_action_success(monkeypatch):
         def json(self):
             return {"success": True, "result": {"count": 0, "results": []}}
 
-    monkeypatch.setattr(
-        "tools.ckan_client.httpx.Client",
-        lambda **kw: type("C", (), {"__enter__": lambda s: type("H", (), {"post": lambda *a, **k: Resp()})(), "__exit__": lambda *a: None})(),
-    )
+    monkeypatch.setattr("tools.ckan_client.httpx.Client", lambda **kw: _mock_client(Resp()))
     r = ckan_action("status_show", portal_base="https://example.com")
     assert r == {"count": 0, "results": []}
 
@@ -28,10 +37,7 @@ def test_ckan_action_failure(monkeypatch):
         def json(self):
             return {"success": False, "error": {"message": "not found"}}
 
-    monkeypatch.setattr(
-        "tools.ckan_client.httpx.Client",
-        lambda **kw: type("C", (), {"__enter__": lambda s: type("H", (), {"post": lambda *a, **k: Resp()})(), "__exit__": lambda *a: None})(),
-    )
+    monkeypatch.setattr("tools.ckan_client.httpx.Client", lambda **kw: _mock_client(Resp()))
     with pytest.raises(CkanApiError):
         ckan_action("package_show", {"id": "x"}, portal_base="https://example.com")
 

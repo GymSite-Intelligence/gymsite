@@ -1,0 +1,64 @@
+{
+  "cidade": "Fortaleza",
+  "uf": "CE",
+  "portal": null,
+  "datasets_matched": [
+    {
+      "id": "607f1ecf-73b3-4ef1-9a4f-0db2eb8c7b39",
+      "name": "desenvolvimento_humano_bairro",
+      "title": "Desenvolvimento Humano, por Bairro de Fortaleza",
+      "organization": "Secretaria de Desenvolvimento Econômico",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    },
+    {
+      "id": "183a5478-ffc7-462f-8a70-fcbf2ab565cd",
+      "name": "demografia-fortaleza",
+      "title": "Dados Demográficos por Bairro de Fortaleza",
+      "organization": "Secretaria de Desenvolvimento Econômico",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    },
+    {
+      "id": "a94a891c-f7e7-4e53-ad1e-fe1c72c34005",
+      "name": "idh-fortaleza",
+      "title": "IDH por Bairro",
+      "organization": "Secretaria de Desenvolvimento Econômico",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    },
+    {
+      "id": "b04429cc-abaa-48a7-a4fe-e95b9c3afe74",
+      "name": "estoque-empregos-fortaleza",
+      "title": "Estoque de Empregos e Vínculos Empregatícios nos Bairros de Fortaleza",
+      "organization": "Secretaria de Desenvolvimento Econômico",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    },
+    {
+      "id": "af6e5400-9f51-4b79-9be5-71dd43fce37c",
+      "name": "dados_demograficos_bairro_regional_2010",
+      "title": "Dados Demográficos de Fortaleza, por Bairro e Regional, até o ano de 2010",
+      "organization": "Secretaria de Desenvolvimento Econômico",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    },
+    {
+      "id": "420db3e9-f3de-4034-85bd-9f9bfb8249df",
+      "name": "rede_atencao_cuidado_fortaleza",
+      "title": "Rede de Atenção e Cuidado de Fortaleza",
+      "organization": "Coordenadoria Especial de Políticas sobre Drogas",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    },
+    {
+      "id": "22671eac-b73c-49fc-a979-5575ca03ab0b",
+      "name": "programa_cidade_com_futuro_informe",
+      "title": "Programa Fortaleza Cidade com Futuro - Informe de Missão",
+      "organization": "SEGOV",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    },
+    {
+      "id": "fe0f4877-dc9d-40ce-9b9e-aebae88936b5",
+      "name": "saude-bucal-fortaleza",
+      "title": "Cobertura da Saúde Bucal na Atenção Primária à Saúde",
+      "organization": "Secretaria Municipal da Saúde",
+      "portal": "https://dados.fortaleza.ce.gov.br"
+    }
+  ],
+  "count": 8
+}
