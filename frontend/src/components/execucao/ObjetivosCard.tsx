@@ -98,13 +98,16 @@ export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: 
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      {okrs.map((okr) => (
+    <div>
+      <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
+        <Target className="h-4 w-4 text-primary" />
+        Metas da abertura
+        <span className="font-normal text-muted-foreground">— vindas da sua análise</span>
+      </h2>
+      <div className="grid gap-3 md:grid-cols-3">
+        {okrs.map((okr) => (
         <div key={okr.id} className="rounded-lg border bg-card px-4 py-3">
-          <p className="flex items-center gap-1.5 text-sm font-medium">
-            <Target className="h-4 w-4 shrink-0 text-primary" />
-            {okr.objetivo}
-          </p>
+          <p className="text-sm font-medium">{okr.objetivo}</p>
           <div className="mt-2.5 flex flex-col gap-2.5">
             {okr.kr1_descricao && okr.kr1_target != null && okr.kr1_target > 0 && (
               <KrLinha
@@ -132,7 +135,8 @@ export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: 
             )}
           </div>
         </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
