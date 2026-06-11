@@ -83,7 +83,12 @@ ROTULOS_SLOTS = {
 
 
 def _llm_call(system_prompt: str, user_prompt: str, max_tokens: int = 1024, temperature: float = 0.3) -> str:
-    """Chamada unificada ao Gemini para classificação e extração."""
+    """Chamada unificada ao Gemini para classificação e extração.
+
+    thinking_budget=0: tarefas mecânicas (classificar/extrair JSON). No 2.5 os
+    thought tokens CONSOMEM max_output_tokens — com thinking dinâmico o JSON
+    saía truncado ("```json" cortado) e extrair_slots devolvia {} em loop
+    (regressão pega no E2E de 2026-06-12)."""
     client = build_genai_client()
     model = os.getenv("TINKER_FALLBACK_MODEL", "gemini-2.5-flash")
     response = generate_content_resilient(
@@ -92,8 +97,9 @@ def _llm_call(system_prompt: str, user_prompt: str, max_tokens: int = 1024, temp
         contents=f"{system_prompt}\n\n{user_prompt}",
         config=genai_types.GenerateContentConfig(
             system_instruction=system_prompt,
-            max_output_tokens=max_tokens,
+            max_output_tokens=max(max_tokens, 1024),
             temperature=temperature,
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),  # pyright: ignore[reportCallIssue]
         ),
     )
     return response.text or ""
