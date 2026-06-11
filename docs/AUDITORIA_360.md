@@ -380,26 +380,29 @@ This bypasses the _require_authenticated() JWT check at the endpoint level (api.
 
 ## P3 — Baixo (limpeza e higiene)
 
-### B1. Rota /api/geocode/cidade não é chamada pelo frontend
+### B1. Rota /api/geocode/cidade não é chamada pelo frontend — ✅ RESOLVIDO: NÃO é órfã, MANTER
 
 - **Area:** rotas
-- **Onde:** `api.py:908`
-- **Evidencia:** GET /api/geocode/cidade está definido em api.py linha 908, mas não há nenhuma chamada fetch/axios no frontend (testado com grep em frontend/src).
-- **Acao:** Verificar se a rota é consumida por webhook/CLI externo ou remover se órfã.
+- **Onde:** `api.py:912`
+- **Evidencia:** GET /api/geocode/cidade está definido em api.py, mas não há nenhuma chamada fetch/axios no frontend (testado com grep em frontend/src).
+- **Resolução (2026-06-10):** rota tem consumidor real fora do frontend: `mcp_server.py:187` (tool MCP do GymSite chama `/api/geocode/cidade`). Além disso `_geocode_cidade` é usada internamente pelo Market Atlas (`tools/mapa_mercado.py:237`). O geocode do PIPELINE de relatório é outro caminho: `geocode_endereco` chamado direto dentro da macro-tool do A1 (`tools/anchoring_tools.py:327-341` + batch em `:610-625`) — não passa por rota HTTP, logo nenhuma dessas rotas afeta o relatório. A rota `/api/geocode/bairro` (api.py:898) TEM consumidor frontend (`frontend/src/lib/bairro-geocode.ts:28` — pin do mapa).
+- **Acao:** Nenhuma. Manter rota.
 
-### B2. Rota /api/maps/street-view não é chamada pelo frontend
+### B2. Rota /api/maps/street-view não é chamada pelo frontend — ✅ VERIFICADO: órfã utilitária, manter por ora
 
 - **Area:** rotas
-- **Onde:** `api.py:916`
-- **Evidencia:** GET /api/maps/street-view está definido em api.py linha 916, mas não há nenhuma chamada fetch/axios no frontend.
-- **Acao:** Verificar se é consumida por script externo ou remover se órfã.
+- **Onde:** `api.py:920`
+- **Evidencia:** GET /api/maps/street-view está definido em api.py, mas não há nenhuma chamada fetch/axios no frontend.
+- **Resolução (2026-06-10):** confirmado sem consumidor (nem mcp_server). O frontend usa `street_view_url` PERSISTIDA pelo pipeline (gerada por `tools/maps_tools.obter_street_view_url` dentro do A1 e gravada via `db/supabase_writer.py:205`), não a rota. Rota é proxy utilitário inofensivo.
+- **Acao:** Manter como utilitária; remover só se aparecer no caminho de alguma refatoração.
 
-### B3. Rota /health/maps não é chamada pelo frontend
+### B3. Rota /health/maps não é chamada pelo frontend — ✅ MANTER
 
 - **Area:** rotas
 - **Onde:** `api.py:879`
-- **Evidencia:** GET /health/maps está definido em api.py linha 879, mas não há nenhuma chamada fetch/axios no frontend.
-- **Acao:** Verificar se é consumida por monitoramento externo ou remover se órfã.
+- **Evidencia:** GET /health/maps está definido em api.py, mas não há nenhuma chamada fetch/axios no frontend.
+- **Resolução (2026-06-10):** healthcheck de integração Maps — alvo natural de monitoramento externo (uptime checks), não de frontend.
+- **Acao:** Nenhuma. Manter.
 
 ### B4. TODO: Bairros persistidos no Supabase (futuro)
 
