@@ -154,6 +154,32 @@ export const playbookKeys = {
   anexos: (tarefaId: string) => ['playbooks', 'anexos', tarefaId] as const,
 }
 
+export interface PlaybookResumo {
+  id: string
+  projeto_id: string
+  relatorio_id: string | null
+  nome: string
+  projeto_nome: string | null
+  status: string
+  data_inicio: string | null
+  data_prevista_conclusao: string | null
+  custo_planejado_total: number | null
+  custo_real_total: number | null
+  total_tarefas: number
+  tarefas_concluidas: number
+  percentual_concluido: number | null
+  created_at: string
+}
+
+export function usePlaybooks() {
+  return useQuery({
+    queryKey: playbookKeys.all,
+    queryFn: () => api<{ items: PlaybookResumo[] }>('/api/execucao/playbooks'),
+    select: (r) => r.items,
+    staleTime: 30_000,
+  })
+}
+
 export function usePlaybook(playbookId: string | undefined) {
   return useQuery({
     queryKey: playbookKeys.detail(playbookId ?? ''),

@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3Icon,
+  ClipboardListIcon,
   FileTextIcon,
   GitCompareIcon,
   Globe2Icon,
@@ -26,6 +27,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Relatórios',
     to: '/relatorios',
     icon: FileTextIcon,
+  },
+  {
+    title: 'Planos de abertura',
+    to: '/execucao',
+    icon: ClipboardListIcon,
   },
   {
     title: 'Mapa',

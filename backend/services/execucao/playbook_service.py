@@ -69,13 +69,19 @@ def listar_playbooks(sb, user_id: str) -> list[dict[str, Any]]:
         sb.table("playbooks")
         .select("id, projeto_id, relatorio_id, nome, status, data_inicio, "
                 "data_prevista_conclusao, custo_planejado_total, custo_real_total, "
-                "total_tarefas, tarefas_concluidas, created_at")
+                "total_tarefas, tarefas_concluidas, percentual_concluido, created_at, "
+                "user_projects(nome)")
         .eq("user_id", user_id)
+        .neq("status", "ARQUIVADO")
         .is_("deleted_at", "null")
         .order("created_at", desc=True)
         .execute()
     )
-    return res.data or []
+    itens = res.data or []
+    for p in itens:
+        projeto = p.pop("user_projects", None) or {}
+        p["projeto_nome"] = projeto.get("nome")
+    return itens
 
 
 def obter_playbook_completo(sb, playbook_id: str, user_id: str) -> Optional[dict[str, Any]]:
