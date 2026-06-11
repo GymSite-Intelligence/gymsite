@@ -25,7 +25,7 @@ import {
   type Tarefa,
 } from '@/hooks/usePlaybook'
 import { PlaybookKanban, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
-import { TarefaDrawer } from '@/components/execucao/TarefaDrawer'
+import { TarefaModal } from '@/components/execucao/TarefaModal'
 
 export function ProjetoExecucaoPage() {
   const { playbookId } = useParams({ strict: false }) as { playbookId: string }
@@ -174,7 +174,7 @@ export function ProjetoExecucaoPage() {
         onAbrir={(id) => setSearch({ etapa: id })}
       />
 
-      <TarefaDrawer
+      <TarefaModal
         tarefa={tarefaAberta}
         aberto={Boolean(tarefaAberta)}
         onFechar={() => setSearch({ etapa: null })}
