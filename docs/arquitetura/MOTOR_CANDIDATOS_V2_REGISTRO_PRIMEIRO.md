@@ -195,3 +195,32 @@ montadoras. Lead perecível e datado = alto valor. Vira **módulo de
 prospecção B2B** com assinatura própria (alinha com monetização híbrida,
 PD-001..005) — receita cross-sell sobre a mesma base territorial.
 Vectra fecha o ciclo com o frete do equipamento na entrega.
+
+## Apêndice D — Concorrência em Anéis (caso Wally, 11/06)
+
+Maps mostra 40 pins de "academia" no Cocó; nosso relatório listou 7 — e
+quase todos de OUTROS bairros (Aldeota ×4, Papicu, Mucuripe). Dois
+defeitos: cobertura cortada por proeminência (independentes do próprio
+bairro de fora) e lista plana sem hierarquia geográfica (score
+competitivo do bairro distorcido pela força do vizinho).
+
+Modelo (schema no pacote de metadados, spec F2 §7 — `aneis_competitivos`,
+`portes_academia`, colunas `anel`/`dist_borda_km`/`porte`/`multiesporte`):
+
+| Anel | Critério | Peso no score | Pergunta que responde |
+|---|---|---|---|
+| NO_BAIRRO | dentro do polígono | 1.00 | quem disputa o aluno que mora AQUI |
+| FRONTEIRA | ≤ 2 km da borda | 0.50 | pra onde o aluno atravessa |
+| REGIONAL | até o raio da análise | 0.20 | benchmark de preço/posicionamento |
+
+Coleta (A3a):
+1. Paginação Places até 60 resultados + grade de buscas pelo polígono
+   (não só centróide) — pega independente pequena.
+2. Classificação por distância à BORDA do polígono, nunca ao centróide.
+3. `type=gym` + termo aquático/luta no nome → entra com
+   `multiesporte=true` em vez de exclusão (falso negativo VS Club Cocó).
+4. Porte por `min_avaliacoes` da tabela (regra recalibrável como dado).
+
+Efeitos: score "Competitivo" regional ponderado por anel; tabelas de
+dores e de planos agrupadas por anel na UI; A9 ganha leitura honesta de
+densidade ("2 tradicionais no anel do bairro" ≠ "7 concorrentes").

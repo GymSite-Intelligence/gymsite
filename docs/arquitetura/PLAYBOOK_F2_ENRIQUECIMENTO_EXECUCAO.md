@@ -169,12 +169,38 @@ CREATE TABLE tarefa_okrs (
 );
 ```
 
+```sql
+-- P-008: anéis competitivos — vocabulário e PESO são dado, não código.
+-- Decisão 11/06 (caso Cocó: tabela de concorrentes dominada por Aldeota/
+-- Papicu, quase nada do próprio bairro; score competitivo distorcido).
+CREATE TABLE aneis_competitivos (
+  slug TEXT PRIMARY KEY,             -- 'NO_BAIRRO' | 'FRONTEIRA' | 'REGIONAL'
+  rotulo TEXT NOT NULL,              -- 'No bairro' | 'Vizinho de fronteira' | 'Referência regional'
+  peso NUMERIC(4,2) NOT NULL,        -- 1.00 / 0.50 / 0.20 — score pondera por aqui (recalibra sem deploy)
+  dist_max_borda_km NUMERIC(5,2),    -- 0 / 2.0 / NULL (regional = até o raio da análise)
+  ordem INT NOT NULL
+);
+
+CREATE TABLE portes_academia (
+  slug TEXT PRIMARY KEY,             -- 'REDE' | 'INDEP_GRANDE' | 'INDEP_PEQUENA'
+  rotulo TEXT NOT NULL,
+  min_avaliacoes INT NOT NULL        -- regra de classificação como dado
+);
+
+ALTER TABLE competidores ADD COLUMN anel TEXT REFERENCES aneis_competitivos(slug);
+ALTER TABLE competidores ADD COLUMN dist_borda_km NUMERIC(6,3);  -- distância à BORDA do polígono do bairro (centróide engana em bairro comprido)
+ALTER TABLE competidores ADD COLUMN porte TEXT REFERENCES portes_academia(slug);
+ALTER TABLE competidores ADD COLUMN multiesporte BOOLEAN DEFAULT false;  -- type gym + nome com natação/etc: entra com flag, mata o falso negativo VS Club
+```
+
 - P-009 aplicado imediatamente (11/06): form de etapa usa select de
   `projeto_pessoas`; `responsavel_nome` rebaixado a cache de exibição.
 - Migração de dados: `tarefas.responsavel_pessoa_id` existente preservado;
-  `okr_id` copiado para `tarefa_okrs` antes de ser descontinuado.
+  `okr_id` copiado para `tarefa_okrs` antes de ser descontinuado;
+  competidores existentes classificados por anel via dist_borda_km
+  retroativo (geometria do bairro + lat/lng já gravados).
 - Sequência: F2 item 6 fecha → este pacote roda → F3 (formulários) consome
-  `tarefa_participantes`.
+  `tarefa_participantes`; Motor v2 (Apêndice D) consome anéis.
 
 ## 8. Fora de escopo decidido
 
