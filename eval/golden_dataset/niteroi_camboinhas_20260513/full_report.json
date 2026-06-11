@@ -185,7 +185,7 @@
         "point_of_interest",
         "establishment"
       ],
-      "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.9518713,-43.0579724&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+      "street_view_url": "/api/maps/street-view?lat=-22.9518713&lng=-43.0579724&w=640&h=400",
       "status_business": "OPERATIONAL",
       "telefone": "(21) 99985-4945",
       "website": null,
@@ -227,7 +227,7 @@
         "point_of_interest",
         "establishment"
       ],
-      "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.943646599999997,-43.061861&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+      "street_view_url": "/api/maps/street-view?lat=-22.943646599999997&lng=-43.061861&w=640&h=400",
       "status_business": "OPERATIONAL",
       "telefone": "(21) 99462-8177",
       "website": "http://levelcar.com.br/",
@@ -269,7 +269,7 @@
         "point_of_interest",
         "establishment"
       ],
-      "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-22.932599699999997,-43.068238699999995&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+      "street_view_url": "/api/maps/street-view?lat=-22.932599699999997&lng=-43.068238699999995&w=640&h=400",
       "status_business": "OPERATIONAL",
       "telefone": "(21) 99564-3080",
       "website": "http://www.royalemotors.com.br/Veiculos",

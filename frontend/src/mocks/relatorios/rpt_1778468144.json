@@ -42,7 +42,7 @@
         "score_ancoragem": 10,
         "score_geoscout": 7,
         "status": "OPERATIONAL",
-        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-3.7345217,-38.492239999999995&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "street_view_url": "/api/maps/street-view?lat=-3.7345217&lng=-38.492239999999995&w=640&h=400",
         "tipos": [
           "supermarket",
           "grocery_store",
@@ -72,7 +72,7 @@
         "score_ancoragem": 10,
         "score_geoscout": 7,
         "status": "OPERATIONAL",
-        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-3.726483,-38.497502&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "street_view_url": "/api/maps/street-view?lat=-3.726483&lng=-38.497502&w=640&h=400",
         "tipos": [
           "supermarket",
           "grocery_store",
@@ -102,7 +102,7 @@
         "score_ancoragem": 10,
         "score_geoscout": 7,
         "status": "OPERATIONAL",
-        "street_view_url": "https://maps.googleapis.com/maps/api/streetview?size=640x400&location=-3.7274751000000004,-38.4937798&fov=90&key=AIzaSyDcWIDhwMB2e0y8AM-yNhKWi8m54X0lvSY",
+        "street_view_url": "/api/maps/street-view?lat=-3.7274751000000004&lng=-38.4937798&w=640&h=400",
         "tipos": [
           "supermarket",
           "butcher_shop",

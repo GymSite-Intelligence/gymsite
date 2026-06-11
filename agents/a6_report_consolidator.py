@@ -2747,6 +2747,18 @@ OBRIGATÓRIO: SEMPRE incluir a coluna "Mencionado por" usando o campo
 ### 💡 Posicionamento Recomendado
 <posicionamento_recomendado do A3 em 1-2 frases concretas>
 
+⚠️ **GATE DE COERÊNCIA FINANCEIRA (OBRIGATÓRIO — vale para esta seção E para o
+Resumo Executivo):** se TODOS os cenários da `analise_financeira` forem INVIAVEL
+ou o veredito final for REPROVADO, o posicionamento e o resumo NÃO podem vender
+otimismo incondicional. PROIBIDO usar "oportunidade excepcional", "alto potencial",
+"excelente oportunidade" ou equivalentes sem condicional. Reescreva o
+posicionamento do A3 abrindo com a restrição financeira dominante, no formato:
+"Apesar do potencial competitivo do bairro, o modelo NÃO fecha financeiramente
+nas condições atuais (<motivo dominante — ex.: aluguel representa 67% da receita
+projetada>). O posicionamento abaixo só se aplica SE <condição concreta —
+ex.: aluguel renegociado abaixo de R$ X/m², imóvel menor, ou outro ponto>."
+O leitor não pode sair do relatório com dois vereditos opostos.
+
 ⚠️ Se `market_context.genero_alvo` existir e for diferente de "misto", incluir
 uma sub-linha explícita após o posicionamento padrão:
 

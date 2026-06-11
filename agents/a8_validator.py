@@ -48,6 +48,8 @@ def _normalize_state(state: dict[str, Any], relatorio: dict[str, Any] | None) ->
 
     out.setdefault("score_bairro", oc.get("score_bairro"))
     out.setdefault("veredito", oc.get("veredito"))
+    out.setdefault("posicionamento_recomendado", oc.get("posicionamento_recomendado"))
+    out.setdefault("resumo_executivo", oc.get("resumo_executivo"))
     out.setdefault("total_concorrentes_analisados", oc.get("total_concorrentes_analisados"))
     out.setdefault("bairros_alternativos", oc.get("bairros_alternativos") or [])
     out.setdefault("top_3_candidatos", oc.get("top_3_candidatos") or oc.get("candidatos") or [])
@@ -83,6 +85,8 @@ class A8ValidadorCruzado:
         self._validar_redes_fantasma(state)
         await self._validar_fontes_externas(claims)
         self._validar_veredito(md, claims, state)
+        self._validar_narrativa_vs_financeiro(md, state)
+        self._validar_evidencia_oportunidade(state)
 
         score_validacao = self._calcular_score_validacao()
         return {
@@ -273,6 +277,78 @@ class A8ValidadorCruzado:
                 "Saturação sem bairros alternativos",
                 f"score_concorrencia={score_comp} sem bairros_alternativos.",
                 "Forçar bairros alternativos no A6.",
+                "ALTA",
+            )
+
+    _TERMOS_OTIMISTAS = (
+        "oportunidade excepcional",
+        "excelente oportunidade",
+        "alto potencial",
+        "potencial excepcional",
+        "oportunidade única",
+        "oportunidade unica",
+    )
+    _MARCADORES_CONDICIONAL = ("apesar", "não fecha", "nao fecha", "inviável", "inviavel", "só se aplica", "so se aplica")
+
+    def _validar_narrativa_vs_financeiro(self, md: str, state: dict) -> None:
+        """REPROVADO com posicionamento/resumo vendendo otimismo incondicional
+        (caso rpt_1778371974 Meireles: payback 999 + 'oportunidade excepcional')."""
+        veredito = (state.get("veredito") or "").upper()
+        if veredito != "REPROVADO":
+            return
+        texto = " ".join(
+            str(state.get(k) or "")
+            for k in ("posicionamento_recomendado", "resumo_executivo")
+        ).lower()
+        if not texto.strip():
+            texto = (md or "").lower()
+        otimistas = [t for t in self._TERMOS_OTIMISTAS if t in texto]
+        condicionado = any(m in texto for m in self._MARCADORES_CONDICIONAL)
+        if otimistas and not condicionado:
+            self._add(
+                "inconsistencia",
+                f"REPROVADO com narrativa otimista ('{otimistas[0]}')",
+                "Veredito REPROVADO mas posicionamento/resumo vendem otimismo sem condicional financeira — leitor recebe dois vereditos opostos.",
+                "Aplicar gate de coerência do A6: posicionamento condicionado à restrição financeira dominante.",
+                "ALTA",
+            )
+
+    def _validar_evidencia_oportunidade(self, state: dict) -> None:
+        """score_oportunidade_mercado >= 9 sustentado por reviews vazios ('Top')."""
+        ic = state.get("inteligencia_competitiva") or {}
+        inner = (
+            ic.get("inteligencia_competitiva")
+            if isinstance(ic.get("inteligencia_competitiva"), dict)
+            else ic
+        )
+        if not isinstance(inner, dict):
+            return
+        try:
+            score = float(inner.get("score_oportunidade_mercado"))
+        except (TypeError, ValueError):
+            return
+        if score < 9:
+            return
+
+        informativos = 0
+        concorrentes = inner.get("concorrentes_detalhados") or []
+        for c in concorrentes if isinstance(concorrentes, list) else []:
+            if not isinstance(c, dict):
+                continue
+            reviews = c.get("reviews_traduzidas") or c.get("reviews") or []
+            for r in reviews if isinstance(reviews, list) else []:
+                if not isinstance(r, dict):
+                    continue
+                cat = str(r.get("categoria_dor") or "").strip().lower()
+                quote = str(r.get("quote_pt_br") or r.get("quote_curta") or "")
+                if cat not in ("", "null", "none") or len(quote) >= 40:
+                    informativos += 1
+        if informativos < 3:
+            self._add(
+                "dado_nao_verificavel",
+                f"score_oportunidade_mercado={score:g} com {informativos} review(s) informativo(s)",
+                "Score de oportunidade máximo sustentado por reviews vazios ('Top') — ausência de dado não é oportunidade.",
+                "Coletar mais evidência (reviews, A3c oferta real) ou rebaixar score no A3b.",
                 "ALTA",
             )
 
