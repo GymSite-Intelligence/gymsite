@@ -107,6 +107,16 @@ Fallback permanente: município sem cadastro aberto → fluxo v2.0
 (anúncio-primeiro com gates). A inversão é progressiva por cobertura de
 dados, não big-bang.
 
+**Re-busca cirúrgica de candidatos (v2.1, casa com checkpoint por agente —
+docs/agente/03_AGENTES_LONGA_DURACAO.md):** quando o GATE 3 zera (estoque
+anunciado nulo no bairro — casos reais: Parquelândia 11/06, Bessa 11/06),
+o sistema re-executa SÓ o estágio de descoberta com parâmetros expandidos
+(raio +N km, fontes extras, modo off-market opt-in), reaproveitando
+A0/A2/demografia do checkpoint. Custo ~1-2 min em vez do pipeline inteiro.
+O relatório registra a cascata: "1ª varredura: 0 no bairro → re-busca
+raio +2 km → N opções adjacentes". Hoje "Gerar novamente" refaz tudo —
+este item substitui isso para o caso candidatos.
+
 ## 7. Fora de escopo
 
 - Raspar e-mail/contato de páginas de anúncio de terceiros (decisão ética
