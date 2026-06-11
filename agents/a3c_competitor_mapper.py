@@ -112,7 +112,11 @@ def _a3c_after_agent_fallback(callback_context):
                 "fallback_executado_no_callback": True,
             }
         except Exception:
-            pass  # nunca bloqueia pipeline (shadow)
+            import logging
+            logging.getLogger("gymsite.a3c").warning(
+                "A3c fallback falhou — oferta_concorrentes ficará vazio (shadow, não bloqueia)",
+                exc_info=True,
+            )
 
     # Preserva state_dump da telemetria existente
     try:

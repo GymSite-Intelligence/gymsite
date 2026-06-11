@@ -39,7 +39,18 @@ _DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001"
 
 
 def _log(level: str, msg: str, extra: Optional[dict] = None) -> None:
-    """Escreve log estruturado em metrics/supabase_writes/. Best-effort."""
+    """Log estruturado em metrics/supabase_writes/ + espelho no logging padrão.
+
+    O espelho é obrigatório: o incidente de 29/05–10/06 (candidatos rejeitados
+    por coluna inexistente) ficou 2 semanas registrado APENAS neste arquivo,
+    invisível no console do worker."""
+    import logging as _logging
+
+    if level in ("error", "warn", "warning"):
+        _logging.getLogger("gymsite.supabase_writer").log(
+            _logging.ERROR if level == "error" else _logging.WARNING,
+            "%s | %s", msg, json.dumps(extra or {}, ensure_ascii=False, default=str)[:300],
+        )
     try:
         _LOG_DIR.mkdir(parents=True, exist_ok=True)
         entry = {
