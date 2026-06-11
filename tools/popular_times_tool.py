@@ -706,7 +706,10 @@ def _tentar_searchapi(place_id: str) -> dict | None:
                 timeout=15,
             )
         if resp.status_code == 429:
-            print(f"[searchapi] {place_id}: quota mensal esgotada (HTTP 429)")
+            global _avisou_searchapi_429
+            if not _avisou_searchapi_429:
+                _avisou_searchapi_429 = True
+                print("[searchapi] quota mensal esgotada (HTTP 429) — tier desabilitado até renovar; Playwright assume")
             return None
         if resp.status_code != 200:
             print(f"[searchapi] {place_id}: HTTP {resp.status_code}: {resp.text[:140]}")
@@ -781,24 +784,28 @@ def _converter_populartimes_lib(raw: dict, place_id: str) -> dict:
     }
 
 
+_avisou_sem_chave_legacy = False
+_avisou_searchapi_429 = False
+
+
 def _tentar_populartimes_lib(place_id: str) -> dict | None:
     """Tenta extrair via biblioteca `populartimes` (Google Places API legacy).
 
-    Retorna None se a lib não está instalada, place_id vazio, ou se a Places
-    API legacy não está habilitada no projeto (REQUEST_DENIED).
+    Exige PLACES_API_KEY_LEGACY dedicada. A chave Maps server NÃO serve de
+    fallback: ela é restrita às APIs novas (split de chaves 2026-06-11) e cada
+    tentativa gerava REQUEST_DENIED por concorrente — só ruído no log.
     """
+    global _avisou_sem_chave_legacy
     if not place_id:
         return None
     try:
         import os
         import populartimes  # type: ignore[import-not-found]
-        # Preferir chave dedicada (PLACES_API_KEY_LEGACY) — restrita à Places API
-        # legacy. Fallback pra chave Maps compartilhada quando não definida.
-        api_key = (
-            os.environ.get("PLACES_API_KEY_LEGACY")
-            or os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        )
+        api_key = os.environ.get("PLACES_API_KEY_LEGACY", "").strip()
         if not api_key:
+            if not _avisou_sem_chave_legacy:
+                _avisou_sem_chave_legacy = True
+                print("[popular_times lib] PLACES_API_KEY_LEGACY ausente — tier desabilitado (Playwright assume)")
             return None
         raw = populartimes.get_id(api_key, place_id)
         return _converter_populartimes_lib(raw, place_id)
