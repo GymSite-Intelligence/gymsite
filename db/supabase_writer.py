@@ -57,9 +57,14 @@ def _log(level: str, msg: str, extra: Optional[dict] = None) -> None:
 
 def _get_client():
     """Cria cliente Supabase com service_role key. Retorna None se não configurado."""
+    import logging
     url = os.getenv("SUPABASE_URL", "").strip()
     key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not url or not key:
+        _log("error", "SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY ausentes — persistência de relatórios DESABILITADA")
+        logging.getLogger("gymsite.supabase_writer").error(
+            "Supabase não configurado — relatório NÃO será persistido (defina SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY)"
+        )
         return None
     try:
         # pyrefly: ignore [missing-import]

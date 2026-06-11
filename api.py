@@ -1542,6 +1542,102 @@ def post_entrantes_para_prospeccao(
     }
 
 
+def _persistir_sync_apollo(sb, oportunidade_id: str, result: dict, log_atual: list) -> None:
+    from datetime import datetime, timezone
+
+    agora = datetime.now(timezone.utc).isoformat()
+    update = {
+        "apollo_sync_status": result.get("sync_status", "failed"),
+        "apollo_person_id": result.get("apollo_person_id"),
+        "apollo_account_id": result.get("apollo_account_id"),
+        "apollo_sync_error": result.get("erro"),
+        "apollo_enrichment_log": (log_atual or []) + [{
+            "timestamp": agora,
+            "ok": result.get("ok", False),
+            "enriched": bool(result.get("enriched")),
+        }],
+    }
+    if result.get("sync_status") == "synced":
+        update["apollo_synced_at"] = agora
+    sb.table("oportunidades_prospeccao").update(update).eq("id", oportunidade_id).execute()
+
+
+@app.post("/api/prospeccao/oportunidades/{oportunidade_id}/sync-apollo")
+def post_sync_apollo_oportunidade(
+    request: Request, oportunidade_id: str, force: bool = False
+) -> dict:
+    """Sincroniza UMA oportunidade com o Apollo.io (gatilho manual — consome créditos)."""
+    from services.apollo_crm_sync import sync_oportunidade
+
+    _require_authenticated(request)
+    sb = _supabase_client()
+    row = (
+        sb.table("oportunidades_prospeccao")
+        .select("*")
+        .eq("id", oportunidade_id)
+        .maybe_single()
+        .execute()
+    )
+    if not row or not row.data:
+        raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
+
+    result = sync_oportunidade(row.data, force=force)
+    if result.get("skipped"):
+        return {"ok": True, "skipped": True, "motivo": result.get("motivo")}
+
+    _persistir_sync_apollo(sb, oportunidade_id, result, row.data.get("apollo_enrichment_log"))
+    return {
+        "ok": result.get("ok", False),
+        "sync_status": result.get("sync_status"),
+        "apollo_person_id": result.get("apollo_person_id"),
+        "apollo_account_id": result.get("apollo_account_id"),
+        "erro": result.get("erro"),
+    }
+
+
+@app.post("/api/prospeccao/sync-apollo")
+def post_sync_apollo_pendentes(request: Request, limite: int = 20) -> dict:
+    """Sincroniza oportunidades pendentes com o Apollo.io em lote (gatilho manual)."""
+    from services.apollo_crm_sync import sync_oportunidade
+
+    _require_authenticated(request)
+    limite = max(1, min(limite, 50))
+    sb = _supabase_client()
+    rows = (
+        sb.table("oportunidades_prospeccao")
+        .select("*")
+        .eq("apollo_sync_status", "pending")
+        .order("updated_at", desc=True)
+        .limit(limite)
+        .execute()
+    )
+    pendentes = rows.data or []
+
+    synced, failed = 0, 0
+    erros = []
+    for opp in pendentes:
+        try:
+            result = sync_oportunidade(opp)
+            _persistir_sync_apollo(sb, opp["id"], result, opp.get("apollo_enrichment_log"))
+            if result.get("sync_status") == "synced":
+                synced += 1
+            else:
+                failed += 1
+                erros.append({"id": opp["id"], "erro": result.get("erro")})
+        except Exception as e:
+            failed += 1
+            erros.append({"id": opp.get("id"), "erro": str(e)})
+            logger.warning("Sync Apollo falhou para oportunidade %s: %s", opp.get("id"), e)
+
+    return {
+        "ok": True,
+        "total_pendentes": len(pendentes),
+        "sincronizados": synced,
+        "falhas": failed,
+        "erros": erros,
+    }
+
+
 @app.get("/api/relatorios/{relatorio_id}/pdf")
 def get_relatorio_pdf(relatorio_id: str, layout: str = "classic") -> Any:
     """PDF estruturado do relatório (ReportLab + gráficos)."""
