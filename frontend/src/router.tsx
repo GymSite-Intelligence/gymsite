@@ -38,6 +38,7 @@ import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
 import { LeadAccessPage } from '@/routes/LeadAccessPage'
 import { AssistentePage } from '@/routes/AssistentePage'
 import AdminParceirosPage from '@/routes/AdminParceirosPage'
+import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
 import type { Veredito } from '@/types/domain'
 
 // Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
@@ -291,6 +292,16 @@ const adminParceirosRoute = createRoute({
   component: AdminParceirosPage,
 })
 
+const execucaoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/execucao/$playbookId',
+  component: ProjetoExecucaoPage,
+  validateSearch: (s: Record<string, unknown>): { categoria?: string; etapa?: string } => ({
+    categoria: typeof s.categoria === 'string' ? s.categoria : undefined,
+    etapa: typeof s.etapa === 'string' ? s.etapa : undefined,
+  }),
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
@@ -311,6 +322,7 @@ const routeTree = rootRoute.addChildren([
   leadAccessRoute,
   assistenteRoute,
   adminParceirosRoute,
+  execucaoRoute,
 ])
 
 export const router = createRouter({ routeTree })

@@ -1,0 +1,192 @@
+/**
+ * ProjetoExecucaoPage — Plano de Abertura (/execucao/$playbookId).
+ *
+ * P-006: filtro de categoria e etapa aberta vivem nos query params —
+ * F5 mantém exatamente onde o usuário estava.
+ */
+import { useMemo } from 'react'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { CalendarDays, Wallet } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { notify } from '@/lib/notify'
+import { formatBRL } from '@/lib/format'
+import {
+  usePlaybook,
+  useAtualizarTarefa,
+  useMarcarChecklist,
+  type Tarefa,
+} from '@/hooks/usePlaybook'
+import { PlaybookKanban, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
+import { TarefaDrawer } from '@/components/execucao/TarefaDrawer'
+
+export function ProjetoExecucaoPage() {
+  const { playbookId } = useParams({ strict: false }) as { playbookId: string }
+  const search = useSearch({ strict: false }) as { categoria?: string; etapa?: string }
+  const navigate = useNavigate()
+
+  const { data: playbook, isLoading, error } = usePlaybook(playbookId)
+  const atualizar = useAtualizarTarefa(playbookId)
+  const marcarChecklist = useMarcarChecklist(playbookId)
+
+  const categoriaFiltro = search.categoria ?? 'todas'
+  const tarefaAbertaId = search.etapa ?? null
+
+  const tarefasFiltradas = useMemo(() => {
+    const todas = playbook?.tarefas ?? []
+    if (categoriaFiltro === 'todas') return todas
+    return todas.filter((t) => t.categoria === categoriaFiltro)
+  }, [playbook, categoriaFiltro])
+
+  const tarefaAberta = useMemo(
+    () => (playbook?.tarefas ?? []).find((t) => t.id === tarefaAbertaId) ?? null,
+    [playbook, tarefaAbertaId],
+  )
+
+  function setSearch(next: { categoria?: string; etapa?: string | null }) {
+    const categoria = next.categoria !== undefined ? next.categoria : categoriaFiltro
+    const etapa = next.etapa !== undefined ? next.etapa : tarefaAbertaId
+    navigate({
+      to: '.',
+      search: {
+        categoria: categoria && categoria !== 'todas' ? categoria : undefined,
+        etapa: etapa || undefined,
+      },
+      replace: true,
+    })
+  }
+
+  function moverTarefa(tarefaId: string, novoStatus: Tarefa['status'], custoReal: number | null = null) {
+    atualizar.mutate(
+      { tarefaId, status: novoStatus, custoReal },
+      {
+        onSuccess: (r) => {
+          if (novoStatus === 'CONCLUIDA') {
+            const liberadas = r.tarefas_liberadas?.length ?? 0
+            notify.success(
+              liberadas > 0
+                ? `Etapa concluída! ${liberadas} etapa(s) liberada(s) para começar.`
+                : 'Etapa concluída!',
+            )
+          }
+          setSearch({ etapa: null })
+        },
+        onError: (e: Error) => notify.error(e.message),
+      },
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 p-4 md:p-6">
+        <Skeleton className="h-10 w-72" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    )
+  }
+
+  if (error || !playbook) {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-muted-foreground">
+          {error instanceof Error ? error.message : 'Plano não encontrado.'}
+        </p>
+      </div>
+    )
+  }
+
+  const previsto = playbook.custo_planejado_total ?? 0
+  const gasto = playbook.custo_real_total ?? 0
+  const conclusao = playbook.data_prevista_conclusao
+    ? new Date(`${playbook.data_prevista_conclusao.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR')
+    : null
+  const categorias = Array.from(new Set((playbook.tarefas ?? []).map((t) => t.categoria)))
+
+  return (
+    <div className="flex h-full flex-col gap-4 p-4 md:p-6">
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-semibold">{playbook.nome}</h1>
+          {playbook.tarefas_atrasadas > 0 && (
+            <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">
+              {playbook.tarefas_atrasadas} etapa(s) atrasada(s)
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-36 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${playbook.percentual_concluido}%` }}
+              />
+            </div>
+            <span className="font-medium text-foreground">
+              {playbook.percentual_concluido}% concluído
+            </span>
+            <span>
+              ({playbook.tarefas_concluidas}/{playbook.total_tarefas} etapas)
+            </span>
+          </div>
+          {conclusao && (
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="h-4 w-4" /> Previsão de abertura: {conclusao}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1">
+            <Wallet className="h-4 w-4" />
+            Gasto {formatBRL(gasto / 100)} de {formatBRL(previsto / 100)} previstos
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Select
+            value={categoriaFiltro}
+            onValueChange={(v) => setSearch({ categoria: v })}
+          >
+            <SelectTrigger className="h-10 w-52">
+              <SelectValue placeholder="Todas as áreas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as áreas</SelectItem>
+              {categorias.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {CATEGORIA_LABEL[c] ?? c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </header>
+
+      <PlaybookKanban
+        tarefas={tarefasFiltradas}
+        onMover={(id, status) => moverTarefa(id, status)}
+        onAbrir={(id) => setSearch({ etapa: id })}
+      />
+
+      <TarefaDrawer
+        tarefa={tarefaAberta}
+        aberto={Boolean(tarefaAberta)}
+        onFechar={() => setSearch({ etapa: null })}
+        onMudarStatus={(status, custo) => tarefaAberta && moverTarefa(tarefaAberta.id, status, custo)}
+        onMarcarChecklist={(itemId, concluido) =>
+          marcarChecklist.mutate(
+            { itemId, concluido },
+            { onError: (e: Error) => notify.error(e.message) },
+          )
+        }
+        salvando={atualizar.isPending}
+      />
+    </div>
+  )
+}
