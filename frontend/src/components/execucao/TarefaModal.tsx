@@ -40,6 +40,7 @@ import {
   useEnviarAnexo,
   useExcluirAnexo,
   useNotasTarefa,
+  useRegistrarGasto,
   type Pessoa,
   type Tarefa,
 } from '@/hooks/usePlaybook'
@@ -99,11 +100,14 @@ export function TarefaModal({
   const excluirAnexo = useExcluirAnexo(tarefa?.id ?? null)
   const atribuirTarefa = useAtribuirResponsavelTarefa(playbookId)
   const atribuirPasso = useAtribuirResponsavelChecklist(playbookId)
+  const registrarGasto = useRegistrarGasto(playbookId)
+  const [gastoEdit, setGastoEdit] = useState<string | null>(null)
 
   useEffect(() => {
     setNovoStatus('')
     setGastoReais('')
     setNovaNota('')
+    setGastoEdit(null)
   }, [tarefa?.id])
 
   if (!tarefa) return null
@@ -115,6 +119,21 @@ export function TarefaModal({
   const mudou = Boolean(novoStatus) && novoStatus !== tarefa.status
 
   const variacao = tarefa.variacao_conclusao_dias
+
+  function salvarGasto() {
+    if (gastoEdit == null || !tarefa) return
+    const txt = gastoEdit.replace(/\./g, '').replace(',', '.').trim()
+    setGastoEdit(null)
+    if (!txt) return
+    const v = Number(txt)
+    if (Number.isNaN(v) || v < 0) return
+    const centavos = Math.round(v * 100)
+    if (centavos === (tarefa.custo_real ?? 0)) return
+    registrarGasto.mutate(
+      { tarefaId: tarefa.id, custoRealCentavos: centavos },
+      { onError: (e: Error) => notify.error(e.message) },
+    )
+  }
 
   function aoEscolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivo = e.target.files?.[0]
@@ -216,7 +235,19 @@ export function TarefaModal({
               {tarefa.custo_planejado != null ? formatBRL(tarefa.custo_planejado / 100) : '—'}
             </Campo>
             <Campo rotulo="Gasto até agora">
-              {tarefa.custo_real != null ? formatBRL(tarefa.custo_real / 100) : '—'}
+              <Input
+                inputMode="decimal"
+                placeholder="R$ 0,00"
+                className="h-8 w-full text-sm font-medium"
+                value={
+                  gastoEdit ??
+                  (tarefa.custo_real != null ? String(tarefa.custo_real / 100).replace('.', ',') : '')
+                }
+                onChange={(e) => setGastoEdit(e.target.value)}
+                onBlur={salvarGasto}
+                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                aria-label="Gasto até agora"
+              />
             </Campo>
           </div>
 

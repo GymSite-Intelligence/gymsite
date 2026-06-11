@@ -265,6 +265,21 @@ def remover_pessoa(pessoa_id: str, request: Request):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+class CustoRealRequest(BaseModel):
+    custo_real: int = Field(..., ge=0, description="Centavos")
+
+
+@router.patch("/tarefas/{tarefa_id}/custo")
+def registrar_custo(tarefa_id: str, data: CustoRealRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.registrar_custo_real(_sb(), tarefa_id, user_id, data.custo_real)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.patch("/tarefas/{tarefa_id}/responsavel")
 def atribuir_responsavel_tarefa(tarefa_id: str, data: AtribuirRequest, request: Request):
     user_id = _require_user(request)

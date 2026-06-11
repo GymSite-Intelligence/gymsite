@@ -365,6 +365,34 @@ def remover_pessoa(sb, pessoa_id: str, user_id: str) -> None:
     sb.table("tarefa_checklist").update({"responsavel_pessoa_id": None}).eq("responsavel_pessoa_id", pessoa_id).execute()
 
 
+def registrar_custo_real(sb, tarefa_id: str, user_id: str, custo_real: int) -> dict[str, Any]:
+    """Lança o gasto realizado da etapa em qualquer situação (sinal pago,
+    parcela da obra) — não só na conclusão. Centavos, sempre."""
+    if custo_real < 0:
+        raise ValueError("O gasto não pode ser negativo.")
+    tarefa = _tarefa_do_usuario(sb, tarefa_id, user_id)
+    res = (
+        sb.table("tarefas")
+        .update({"custo_real": int(custo_real), "updated_at": _agora_iso()})
+        .eq("id", tarefa["id"])
+        .execute()
+    )
+    _recalcular_contadores(sb, tarefa["playbook_id"])
+    try:
+        sb.table("auditoria_eventos").insert({
+            "user_id": user_id,
+            "projeto_id": tarefa.get("projeto_id"),
+            "entidade": "tarefa",
+            "entidade_id": tarefa_id,
+            "evento": "REGISTRAR_GASTO",
+            "snapshot_antes": {"custo_real": tarefa.get("custo_real")},
+            "snapshot_depois": {"custo_real": int(custo_real)},
+        }).execute()
+    except Exception:
+        logger.warning("auditoria REGISTRAR_GASTO falhou (não bloqueia)", exc_info=True)
+    return _enriquecer_tarefa(res.data[0]) if res.data else {}
+
+
 def atribuir_responsavel_tarefa(
     sb, tarefa_id: str, user_id: str, pessoa_id: Optional[str]
 ) -> dict[str, Any]:

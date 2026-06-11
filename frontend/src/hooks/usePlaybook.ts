@@ -310,6 +310,18 @@ export function useRemoverPessoa(playbookId: string) {
   })
 }
 
+export function useRegistrarGasto(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { tarefaId: string; custoRealCentavos: number }) =>
+      api<Tarefa>(`/api/execucao/tarefas/${vars.tarefaId}/custo`, {
+        method: 'PATCH',
+        body: JSON.stringify({ custo_real: vars.custoRealCentavos }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
 export function useAtribuirResponsavelTarefa(playbookId: string) {
   const qc = useQueryClient()
   return useMutation({
