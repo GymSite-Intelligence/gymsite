@@ -36,6 +36,7 @@ export async function resolveRelatorioUuid(id: string): Promise<string> {
       .from('relatorios')
       .select('id')
       .eq('adk_run_id', id)
+      .is('deleted_at', null)
       .maybeSingle()
     if (error) throw new Error(`Supabase: ${error.message}`)
     if (data?.id) return data.id as string

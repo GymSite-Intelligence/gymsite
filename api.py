@@ -1065,6 +1065,7 @@ def _assert_relatorio_access(request: Request, sb, rid: str, access_code: str | 
         sb.table("relatorios")
         .select("org_id")
         .eq("id", rid)
+        .is_("deleted_at", "null")
         .maybe_single()
         .execute()
     )
@@ -1185,6 +1186,7 @@ def get_status(relatorio_id: str) -> dict:
         sb.table("relatorios")
         .select("id, status, erro_mensagem, tempo_execucao_segundos, data_execucao")
         .eq("id", rid)
+        .is_("deleted_at", "null")
         .maybe_single()
         .execute()
     )
@@ -1196,7 +1198,12 @@ def get_status(relatorio_id: str) -> dict:
 def _fetch_relatorio_payload(sb: Any, rid: str) -> dict:
     """Detail completo: joins de todas as tabelas filhas."""
     header = (
-        sb.table("relatorios").select("*").eq("id", rid).maybe_single().execute()
+        sb.table("relatorios")
+        .select("*")
+        .eq("id", rid)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
     )
     if not header or not header.data:
         raise HTTPException(status_code=404, detail="relatório não encontrado")

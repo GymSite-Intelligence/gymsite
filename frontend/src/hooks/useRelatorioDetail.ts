@@ -882,7 +882,7 @@ async function fetchDetailFromSupabase(id: string): Promise<BackendPayload> {
     sensibilidade,
     bairrosAlt,
   ] = await Promise.all([
-    supabase.from('relatorios').select('*').eq('id', relatorioId).maybeSingle(),
+    supabase.from('relatorios').select('*').eq('id', relatorioId).is('deleted_at', null).maybeSingle(),
     supabase.from('relatorio_inputs').select('*').eq('relatorio_id', relatorioId).maybeSingle(),
     supabase.from('relatorio_outputs').select('*').eq('relatorio_id', relatorioId).maybeSingle(),
     supabase.from('candidatos').select('*').eq('relatorio_id', relatorioId).order('posicao', { ascending: true }),

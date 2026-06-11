@@ -1,10 +1,10 @@
 /**
- * hooks/useDeleteRelatorio.ts — Mutation pra deletar um relatório.
+ * hooks/useDeleteRelatorio.ts — Mutation pra excluir um relatório (soft delete).
  *
- * Usa Supabase JS direto. RLS (`relatorios CRUD on own org`) garante que só
- * deleta da própria org. Schema tem `on delete cascade` em todas as filhas
- * (inputs, outputs, candidatos, competidores, cenarios, sensibilidade,
- * bairros_alt), então uma única chamada limpa tudo.
+ * P-007: nada é apagado de verdade. Marca deleted_at; a view do dashboard e
+ * as listagens filtram. Tabelas filhas (outputs, candidatos, validações)
+ * permanecem intactas para auditoria. RLS (`relatorios CRUD on own org`)
+ * garante que só marca da própria org.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -23,7 +23,7 @@ export function useDeleteRelatorio() {
       const relatorioUuid = await resolveRelatorioUuid(relatorioId)
       const { error } = await supabase
         .from('relatorios')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', relatorioUuid)
       if (error) {
         throw new Error(`Supabase: ${error.message}`)

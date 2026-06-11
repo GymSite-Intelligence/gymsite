@@ -43,6 +43,7 @@ export function PipelineMonitor() {
         .from('relatorios')
         .select('id, status, erro_mensagem')
         .in('id', ids)
+        .is('deleted_at', null)
       if (error) throw new Error(error.message)
       return (data ?? []) as StatusRow[]
     },

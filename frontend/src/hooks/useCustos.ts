@@ -55,6 +55,7 @@ export function useCustosRelatorios(periodo: Periodo) {
         .select(
           'id, status, org_id, tempo_execucao_segundos, tokens_total, custo_brl, created_at, organizations(nome), relatorio_inputs(cidade, bairro)',
         )
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(500)
       if (since) q = q.gte('created_at', since)
