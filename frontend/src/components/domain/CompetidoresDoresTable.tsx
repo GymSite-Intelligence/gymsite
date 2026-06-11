@@ -106,6 +106,10 @@ export function CompetidoresDoresTable({
     )
   }
 
+  const algumPico = competidores.some(
+    (c) => (c.horarios_pico && Object.keys(c.horarios_pico).length > 0) || c.pico_semanal,
+  )
+
   return (
     <div className={cn('space-y-4', className)}>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -130,7 +134,9 @@ export function CompetidoresDoresTable({
                 <th className="text-left p-3 font-medium w-[148px]">Place ID</th>
                 <th className="text-left p-3 font-medium">Contato</th>
                 <th className="text-center p-3 font-medium w-20">Rating</th>
-                <th className="text-left p-3 font-medium w-[140px]">Pico (24h)</th>
+                {algumPico && (
+                  <th className="text-left p-3 font-medium w-[140px]">Pico (24h)</th>
+                )}
                 <th className="text-left p-3 font-medium">Dores citadas</th>
                 <th className="text-center p-3 font-medium w-16">Sinal</th>
               </tr>
@@ -199,12 +205,14 @@ export function CompetidoresDoresTable({
                         </div>
                       )}
                     </td>
-                    <td className="p-3">
-                      <SparklinePopularTimes
-                        horariosPico={c.horarios_pico}
-                        picoSemanal={c.pico_semanal}
-                      />
-                    </td>
+                    {algumPico && (
+                      <td className="p-3">
+                        <SparklinePopularTimes
+                          horariosPico={c.horarios_pico}
+                          picoSemanal={c.pico_semanal}
+                        />
+                      </td>
+                    )}
                     <td className="p-3">
                       {dores.length === 0 ? (
                         <span className="text-xs italic text-muted-foreground">
