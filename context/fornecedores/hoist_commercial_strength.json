@@ -1,0 +1,2333 @@
+{
+  "fornecedor": "HOIST Fitness Systems",
+  "segmento": "Commercial Strength Equipment",
+  "fonte": "https://www.hoistfitness.com/pages/commercial-strength",
+  "data_coleta": "2026-06-11",
+  "metodo": "Catálogo Shopify (products.json) + leitura dos diagramas OVERHEAD (vista superior) de cada produto",
+  "notas": {
+    "unidades": "Dimensões em centímetros (cm) e polegadas (pol). Área em m².",
+    "footprint": "comprimento_cm = LENGTH (eixo Y do diagrama); largura_cm = WIDTH (eixo X do diagrama).",
+    "espaco_layout": "Inclui buffer de circulação de 60 cm por lado (mínimo recomendado para área de passagem em academias). Ajustável conforme NR/ABNT e fluxo desejado.",
+    "sem_dimensao": "Bikes de cardio e acessórios/opcionais do MotionCage não possuem diagrama de footprint padrão."
+  },
+  "total_produtos": 124,
+  "produtos_com_footprint": 116,
+  "linhas_de_produto": [
+    {
+      "linha": "Club Line",
+      "quantidade": 14,
+      "produtos": [
+        {
+          "modelo": "CL-3102",
+          "nome": "Biceps Curl",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/cl-3102-biceps-curl",
+          "dimensoes": {
+            "comprimento_cm": 138,
+            "largura_cm": 111,
+            "comprimento_pol": 54.33,
+            "largura_pol": 43.7,
+            "area_ocupacao_m2": 1.53
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 258,
+            "largura_total_cm": 231,
+            "area_recomendada_m2": 5.96
+          }
+        },
+        {
+          "modelo": "CL-3103",
+          "nome": "Triceps Extension",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/cl-3103-triceps-extension",
+          "dimensoes": {
+            "comprimento_cm": 136,
+            "largura_cm": 104,
+            "comprimento_pol": 53.54,
+            "largura_pol": 40.94,
+            "area_ocupacao_m2": 1.41
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 256,
+            "largura_total_cm": 224,
+            "area_recomendada_m2": 5.73
+          }
+        },
+        {
+          "modelo": "CL-3201",
+          "nome": "Lat Pulldown",
+          "grupo_muscular": "Ombros",
+          "url": "https://www.hoistfitness.com/products/cl-3201-lat-pulldown",
+          "dimensoes": {
+            "comprimento_cm": 138,
+            "largura_cm": 140,
+            "comprimento_pol": 54.33,
+            "largura_pol": 55.12,
+            "area_ocupacao_m2": 1.93
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 258,
+            "largura_total_cm": 260,
+            "area_recomendada_m2": 6.71
+          }
+        },
+        {
+          "modelo": "CL-3203",
+          "nome": "Mid Row",
+          "grupo_muscular": "Costas",
+          "url": "https://www.hoistfitness.com/products/cl-3203-mid-row",
+          "dimensoes": {
+            "comprimento_cm": 144,
+            "largura_cm": 124,
+            "comprimento_pol": 56.69,
+            "largura_pol": 48.82,
+            "area_ocupacao_m2": 1.79
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 264,
+            "largura_total_cm": 244,
+            "area_recomendada_m2": 6.44
+          }
+        },
+        {
+          "modelo": "CL-3301",
+          "nome": "Chest Press",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cl-3301-chest-press",
+          "dimensoes": {
+            "comprimento_cm": 147,
+            "largura_cm": 137,
+            "comprimento_pol": 57.87,
+            "largura_pol": 53.94,
+            "area_ocupacao_m2": 2.01
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 267,
+            "largura_total_cm": 257,
+            "area_recomendada_m2": 6.86
+          }
+        },
+        {
+          "modelo": "CL-3309",
+          "nome": "Commercial Pec Fly / Rear Delt",
+          "grupo_muscular": "Costas, Peito",
+          "url": "https://www.hoistfitness.com/products/cl-3309-pec-fly-rear-delt",
+          "dimensoes": {
+            "comprimento_cm": 115,
+            "largura_cm": 162,
+            "comprimento_pol": 45.28,
+            "largura_pol": 63.78,
+            "area_ocupacao_m2": 1.86
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 235,
+            "largura_total_cm": 282,
+            "area_recomendada_m2": 6.63
+          }
+        },
+        {
+          "modelo": "CL-3401",
+          "nome": "Leg Extension",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cl-3401-leg-extension",
+          "dimensoes": {
+            "comprimento_cm": 156,
+            "largura_cm": 105,
+            "comprimento_pol": 61.42,
+            "largura_pol": 41.34,
+            "area_ocupacao_m2": 1.64
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 276,
+            "largura_total_cm": 225,
+            "area_recomendada_m2": 6.21
+          }
+        },
+        {
+          "modelo": "CL-3402",
+          "nome": "Leg Curl",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cl-3402-leg-curl",
+          "dimensoes": {
+            "comprimento_cm": 152,
+            "largura_cm": 105,
+            "comprimento_pol": 59.84,
+            "largura_pol": 41.34,
+            "area_ocupacao_m2": 1.6
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 272,
+            "largura_total_cm": 225,
+            "area_recomendada_m2": 6.12
+          }
+        },
+        {
+          "modelo": "CL-3403",
+          "nome": "Leg Press",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cl-3403-cl-3403-hs-leg-press",
+          "dimensoes": {
+            "comprimento_cm": 171,
+            "largura_cm": 112,
+            "comprimento_pol": 67.32,
+            "largura_pol": 44.09,
+            "area_ocupacao_m2": 1.92
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 291,
+            "largura_total_cm": 232,
+            "area_recomendada_m2": 6.75
+          }
+        },
+        {
+          "modelo": "CL-3408",
+          "nome": "Standing / Prone Leg Curl",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cl-3408-standing-prone-leg-curl",
+          "dimensoes": {
+            "comprimento_cm": 159,
+            "largura_cm": 109,
+            "comprimento_pol": 62.6,
+            "largura_pol": 42.91,
+            "area_ocupacao_m2": 1.73
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 279,
+            "largura_total_cm": 229,
+            "area_recomendada_m2": 6.39
+          }
+        },
+        {
+          "modelo": "CL-3501",
+          "nome": "Shoulder Press",
+          "grupo_muscular": "Ombros",
+          "url": "https://www.hoistfitness.com/products/cl-3501-shoulder-press",
+          "dimensoes": {
+            "comprimento_cm": 117,
+            "largura_cm": 135,
+            "comprimento_pol": 46.06,
+            "largura_pol": 53.15,
+            "area_ocupacao_m2": 1.58
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 237,
+            "largura_total_cm": 255,
+            "area_recomendada_m2": 6.04
+          }
+        },
+        {
+          "modelo": "CL-3502",
+          "nome": "Lateral Raise",
+          "grupo_muscular": "Ombros",
+          "url": "https://www.hoistfitness.com/products/cl-3502-lateral-raise",
+          "dimensoes": {
+            "comprimento_cm": 109,
+            "largura_cm": 141,
+            "comprimento_pol": 42.91,
+            "largura_pol": 55.51,
+            "area_ocupacao_m2": 1.54
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 229,
+            "largura_total_cm": 261,
+            "area_recomendada_m2": 5.98
+          }
+        },
+        {
+          "modelo": "CL-3601",
+          "nome": "Abdominals",
+          "grupo_muscular": "Core",
+          "url": "https://www.hoistfitness.com/products/cl-3601-abdominals",
+          "dimensoes": {
+            "comprimento_cm": 108,
+            "largura_cm": 126,
+            "comprimento_pol": 42.52,
+            "largura_pol": 49.61,
+            "area_ocupacao_m2": 1.36
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 228,
+            "largura_total_cm": 246,
+            "area_recomendada_m2": 5.61
+          }
+        },
+        {
+          "modelo": "CL-3800",
+          "nome": "Inner / Outer Thigh",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cl-3800-inner-outer-thigh",
+          "dimensoes": {
+            "comprimento_cm": 143,
+            "largura_cm": 159,
+            "comprimento_pol": 56.3,
+            "largura_pol": 62.6,
+            "area_ocupacao_m2": 2.27
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 263,
+            "largura_total_cm": 279,
+            "area_recomendada_m2": 7.34
+          }
+        }
+      ]
+    },
+    {
+      "linha": "Commercial Free Weights",
+      "quantidade": 41,
+      "produtos": [
+        {
+          "modelo": "CF-2179-B",
+          "nome": "Commercial 3-Way Olympic Bench",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cf-2179b-3-way-olympic-bench",
+          "dimensoes": {
+            "comprimento_cm": 239,
+            "largura_cm": 165,
+            "comprimento_pol": 94.09,
+            "largura_pol": 64.96,
+            "area_ocupacao_m2": 3.94
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 359,
+            "largura_total_cm": 285,
+            "area_recomendada_m2": 10.23
+          }
+        },
+        {
+          "modelo": "CF-3160",
+          "nome": "Commercial Flat/Incline Bench",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cf-3160-super-flat-incline-bench",
+          "dimensoes": {
+            "comprimento_cm": 134,
+            "largura_cm": 83,
+            "comprimento_pol": 52.76,
+            "largura_pol": 32.68,
+            "area_ocupacao_m2": 1.11
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 254,
+            "largura_total_cm": 203,
+            "area_recomendada_m2": 5.16
+          }
+        },
+        {
+          "modelo": "CF-3162",
+          "nome": "Super Flat/Decline Bench",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cf-3162-adjustable-flat-decline-bench",
+          "dimensoes": {
+            "comprimento_cm": 157,
+            "largura_cm": 83,
+            "comprimento_pol": 61.81,
+            "largura_pol": 32.68,
+            "area_ocupacao_m2": 1.3
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 277,
+            "largura_total_cm": 203,
+            "area_recomendada_m2": 5.62
+          }
+        },
+        {
+          "modelo": "CF-3163",
+          "nome": "Flat Bench",
+          "grupo_muscular": "Braços, Costas, Peito, Ombros",
+          "url": "https://www.hoistfitness.com/products/cf-3163-flat-bench",
+          "dimensoes": {
+            "comprimento_cm": 125,
+            "largura_cm": 83,
+            "comprimento_pol": 49.21,
+            "largura_pol": 32.68,
+            "area_ocupacao_m2": 1.04
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 245,
+            "largura_total_cm": 203,
+            "area_recomendada_m2": 4.97
+          }
+        },
+        {
+          "modelo": "CF-3165",
+          "nome": "Commercial Super Flat/Incline/Decline Bench",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cf-3165-super-flat-incline-decline-bench",
+          "dimensoes": {
+            "comprimento_cm": 154,
+            "largura_cm": 83,
+            "comprimento_pol": 60.63,
+            "largura_pol": 32.68,
+            "area_ocupacao_m2": 1.28
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 274,
+            "largura_total_cm": 203,
+            "area_recomendada_m2": 5.56
+          }
+        },
+        {
+          "modelo": "CF-3170-A",
+          "nome": "Commercial Olympic Flat Bench With Storage",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cf-3170-olympic-flat-bench",
+          "dimensoes": {
+            "comprimento_cm": 186,
+            "largura_cm": 170,
+            "comprimento_pol": 73.23,
+            "largura_pol": 66.93,
+            "area_ocupacao_m2": 3.16
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 306,
+            "largura_total_cm": 290,
+            "area_recomendada_m2": 8.87
+          }
+        },
+        {
+          "modelo": "CF-3172-A",
+          "nome": "Commercial Olympic Incline Bench With Storage",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cf-3172-olympic-incline-bench",
+          "dimensoes": {
+            "comprimento_cm": 163,
+            "largura_cm": 131,
+            "comprimento_pol": 64.17,
+            "largura_pol": 51.57,
+            "area_ocupacao_m2": 2.14
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 283,
+            "largura_total_cm": 251,
+            "area_recomendada_m2": 7.1
+          }
+        },
+        {
+          "modelo": "CF-3177-A",
+          "nome": "Olympic Decline Bench With Storage",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/cf-3177-olympic-decline-bench",
+          "dimensoes": {
+            "comprimento_cm": 218,
+            "largura_cm": 166,
+            "comprimento_pol": 85.83,
+            "largura_pol": 65.35,
+            "area_ocupacao_m2": 3.62
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 338,
+            "largura_total_cm": 286,
+            "area_recomendada_m2": 9.67
+          }
+        },
+        {
+          "modelo": "CF-3252-A",
+          "nome": "Commercial Vertical Knee Raise / Dip",
+          "grupo_muscular": "Peito, Core, Inferiores, Ombros",
+          "url": "https://www.hoistfitness.com/products/cf-3252-vertical-knee-raise-dip",
+          "dimensoes": {
+            "comprimento_cm": 138,
+            "largura_cm": 87,
+            "comprimento_pol": 54.33,
+            "largura_pol": 34.25,
+            "area_ocupacao_m2": 1.2
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 258,
+            "largura_total_cm": 207,
+            "area_recomendada_m2": 5.34
+          }
+        },
+        {
+          "modelo": "CF-3264",
+          "nome": "Commercial Adjustable Decline AB Bench",
+          "grupo_muscular": "Core",
+          "url": "https://www.hoistfitness.com/products/cf-3264-adjustable-decline-ab-bench",
+          "dimensoes": {
+            "comprimento_cm": 144,
+            "largura_cm": 76,
+            "comprimento_pol": 56.69,
+            "largura_pol": 29.92,
+            "area_ocupacao_m2": 1.09
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 264,
+            "largura_total_cm": 196,
+            "area_recomendada_m2": 5.17
+          }
+        },
+        {
+          "modelo": "CF-3355",
+          "nome": "Commercial Angled Linear Leg Press",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cf-3355-angled-linear-leg-press",
+          "dimensoes": {
+            "comprimento_cm": 236,
+            "largura_cm": 154,
+            "comprimento_pol": 92.91,
+            "largura_pol": 60.63,
+            "area_ocupacao_m2": 3.63
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 356,
+            "largura_total_cm": 274,
+            "area_recomendada_m2": 9.75
+          }
+        },
+        {
+          "modelo": "CF-3356",
+          "nome": "Commercial Hack Squat",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cf-3356-hack-squat",
+          "dimensoes": {
+            "comprimento_cm": 221,
+            "largura_cm": 154,
+            "comprimento_pol": 87.01,
+            "largura_pol": 60.63,
+            "area_ocupacao_m2": 3.4
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 341,
+            "largura_total_cm": 274,
+            "area_recomendada_m2": 9.34
+          }
+        },
+        {
+          "modelo": "CF-3359",
+          "nome": "Commercial Power Squat",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cf-3359-power-squat",
+          "dimensoes": {
+            "comprimento_cm": 166,
+            "largura_cm": 164,
+            "comprimento_pol": 65.35,
+            "largura_pol": 64.57,
+            "area_ocupacao_m2": 2.72
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 286,
+            "largura_total_cm": 284,
+            "area_recomendada_m2": 8.12
+          }
+        },
+        {
+          "modelo": "CF-3364-PL-1",
+          "nome": "Power Cage",
+          "grupo_muscular": "Braços, Costas, Inferiores, Ombros",
+          "url": "https://www.hoistfitness.com/products/cf-3364-power-cage-gsa",
+          "dimensoes": {
+            "comprimento_cm": 181,
+            "largura_cm": 163,
+            "comprimento_pol": 71.26,
+            "largura_pol": 64.17,
+            "area_ocupacao_m2": 2.95
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 301,
+            "largura_total_cm": 283,
+            "area_recomendada_m2": 8.52
+          }
+        },
+        {
+          "modelo": "CF-3365",
+          "nome": "Commercial Half Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3365-half-rack",
+          "dimensoes": {
+            "comprimento_cm": 169,
+            "largura_cm": 173,
+            "comprimento_pol": 66.54,
+            "largura_pol": 68.11,
+            "area_ocupacao_m2": 2.92
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 289,
+            "largura_total_cm": 293,
+            "area_recomendada_m2": 8.47
+          }
+        },
+        {
+          "modelo": "CF-3367-A-1",
+          "nome": "Commercial Squat Rack",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cf-3367-squat-rack",
+          "dimensoes": {
+            "comprimento_cm": 176,
+            "largura_cm": 167,
+            "comprimento_pol": 69.29,
+            "largura_pol": 65.75,
+            "area_ocupacao_m2": 2.94
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 296,
+            "largura_total_cm": 287,
+            "area_recomendada_m2": 8.5
+          }
+        },
+        {
+          "modelo": "CF-3160",
+          "nome": "Leg Extension",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/commercial-flat-incline-bench-copy",
+          "dimensoes": {
+            "comprimento_cm": 144,
+            "largura_cm": 135,
+            "comprimento_pol": 56.69,
+            "largura_pol": 53.15,
+            "area_ocupacao_m2": 1.94
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 264,
+            "largura_total_cm": 255,
+            "area_recomendada_m2": 6.73
+          }
+        },
+        {
+          "modelo": "CF-3411",
+          "nome": "Commercial Kneeling Leg Curl",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/cf-3411-kneeling-leg-press",
+          "dimensoes": {
+            "comprimento_cm": 126,
+            "largura_cm": 135,
+            "comprimento_pol": 49.61,
+            "largura_pol": 53.15,
+            "area_ocupacao_m2": 1.7
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 246,
+            "largura_total_cm": 255,
+            "area_recomendada_m2": 6.27
+          }
+        },
+        {
+          "modelo": "CF-3416",
+          "nome": "Commercial Glute Thrust",
+          "grupo_muscular": "Core",
+          "url": "https://www.hoistfitness.com/products/cf-3416-glute-thrust",
+          "dimensoes": {
+            "comprimento_cm": 169,
+            "largura_cm": 141,
+            "comprimento_pol": 66.54,
+            "largura_pol": 55.51,
+            "area_ocupacao_m2": 2.38
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 289,
+            "largura_total_cm": 261,
+            "area_recomendada_m2": 7.54
+          }
+        },
+        {
+          "modelo": "CF-3443-PL-1",
+          "nome": "Olympic Plate Tree",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3443-olympic-plate-tree",
+          "dimensoes": {
+            "comprimento_cm": 76,
+            "largura_cm": 85,
+            "comprimento_pol": 29.92,
+            "largura_pol": 33.46,
+            "area_ocupacao_m2": 0.65
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 196,
+            "largura_total_cm": 205,
+            "area_recomendada_m2": 4.02
+          }
+        },
+        {
+          "modelo": "CF-3444",
+          "nome": "4-Sided Olympic Plate Tree",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3444-4-sided-olympic-plate-tree",
+          "dimensoes": {
+            "comprimento_cm": 112,
+            "largura_cm": 111,
+            "comprimento_pol": 44.09,
+            "largura_pol": 43.7,
+            "area_ocupacao_m2": 1.24
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 232,
+            "largura_total_cm": 231,
+            "area_recomendada_m2": 5.36
+          }
+        },
+        {
+          "modelo": "CF-3461-1-PL-1",
+          "nome": "1-Tier Horizontal Dumbbell Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3461-1-1-tier-horizontal-dumbbell-rack",
+          "dimensoes": {
+            "comprimento_cm": 72,
+            "largura_cm": 250,
+            "comprimento_pol": 28.35,
+            "largura_pol": 98.43,
+            "area_ocupacao_m2": 1.8
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 192,
+            "largura_total_cm": 370,
+            "area_recomendada_m2": 7.1
+          }
+        },
+        {
+          "modelo": "CF-3461-2-PL-1",
+          "nome": "2-Tier Horizontal Dumbbell Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3461-2-2-tier-horizontal-dumbbell-rack",
+          "dimensoes": {
+            "comprimento_cm": 72,
+            "largura_cm": 250,
+            "comprimento_pol": 28.35,
+            "largura_pol": 98.43,
+            "area_ocupacao_m2": 1.8
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 192,
+            "largura_total_cm": 370,
+            "area_recomendada_m2": 7.1
+          }
+        },
+        {
+          "modelo": "CF-3461-3-PL-1",
+          "nome": "3-Tier Horizontal Dumbbell Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3461-3-3-tier-horizontal-dumbbell-rack",
+          "dimensoes": {
+            "comprimento_cm": 72,
+            "largura_cm": 250,
+            "comprimento_pol": 28.35,
+            "largura_pol": 98.43,
+            "area_ocupacao_m2": 1.8
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 192,
+            "largura_total_cm": 370,
+            "area_recomendada_m2": 7.1
+          }
+        },
+        {
+          "modelo": "CF-3462-2",
+          "nome": "2-Tier Horizontal Beauty Bell Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3462-2-2-tier-horizontal-beauty-bell-rack",
+          "dimensoes": {
+            "comprimento_cm": 66,
+            "largura_cm": 140,
+            "comprimento_pol": 25.98,
+            "largura_pol": 55.12,
+            "area_ocupacao_m2": 0.92
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 186,
+            "largura_total_cm": 260,
+            "area_recomendada_m2": 4.84
+          }
+        },
+        {
+          "modelo": "CF-3462-3",
+          "nome": "3-Tier Horizontal Beauty Bell Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3462-3-3-tier-horizontal-beauty-bell-rack",
+          "dimensoes": {
+            "comprimento_cm": 66,
+            "largura_cm": 140,
+            "comprimento_pol": 25.98,
+            "largura_pol": 55.12,
+            "area_ocupacao_m2": 0.92
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 186,
+            "largura_total_cm": 260,
+            "area_recomendada_m2": 4.84
+          }
+        },
+        {
+          "modelo": "CF-3465",
+          "nome": "Barbell Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3465-barbell-rack",
+          "dimensoes": {
+            "comprimento_cm": 89,
+            "largura_cm": 86,
+            "comprimento_pol": 35.04,
+            "largura_pol": 33.86,
+            "area_ocupacao_m2": 0.77
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 209,
+            "largura_total_cm": 206,
+            "area_recomendada_m2": 4.31
+          }
+        },
+        {
+          "modelo": "CF-3466",
+          "nome": "Commercial Accessory Rack",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3466-accessory-rack",
+          "dimensoes": {
+            "comprimento_cm": 61,
+            "largura_cm": 110,
+            "comprimento_pol": 24.02,
+            "largura_pol": 43.31,
+            "area_ocupacao_m2": 0.67
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 181,
+            "largura_total_cm": 230,
+            "area_recomendada_m2": 4.16
+          }
+        },
+        {
+          "modelo": "CF-3550",
+          "nome": "Commercial Preacher Curl",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/cf-3550-preacher-curl",
+          "dimensoes": {
+            "comprimento_cm": 119,
+            "largura_cm": 86,
+            "comprimento_pol": 46.85,
+            "largura_pol": 33.86,
+            "area_ocupacao_m2": 1.02
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 239,
+            "largura_total_cm": 206,
+            "area_recomendada_m2": 4.92
+          }
+        },
+        {
+          "modelo": "CF-3555",
+          "nome": "Commercial Standing Preacher Curl",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/cf-3555-standing-preacher-cur",
+          "dimensoes": {
+            "comprimento_cm": 111,
+            "largura_cm": 81,
+            "comprimento_pol": 43.7,
+            "largura_pol": 31.89,
+            "area_ocupacao_m2": 0.9
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 231,
+            "largura_total_cm": 201,
+            "area_recomendada_m2": 4.64
+          }
+        },
+        {
+          "modelo": "CF-3661-A",
+          "nome": "Commercial Incline Leverage Row",
+          "grupo_muscular": "Costas",
+          "url": "https://www.hoistfitness.com/products/cf-3661-incline-leverage-row",
+          "dimensoes": {
+            "comprimento_cm": 168,
+            "largura_cm": 108,
+            "comprimento_pol": 66.14,
+            "largura_pol": 42.52,
+            "area_ocupacao_m2": 1.81
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 288,
+            "largura_total_cm": 228,
+            "area_recomendada_m2": 6.57
+          }
+        },
+        {
+          "modelo": "CF-3663",
+          "nome": "Commercial Back Hyper",
+          "grupo_muscular": "Costas",
+          "url": "https://www.hoistfitness.com/products/cf-3663-back-hyper",
+          "dimensoes": {
+            "comprimento_cm": 136,
+            "largura_cm": 83,
+            "comprimento_pol": 53.54,
+            "largura_pol": 32.68,
+            "area_ocupacao_m2": 1.13
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 256,
+            "largura_total_cm": 203,
+            "area_recomendada_m2": 5.2
+          }
+        },
+        {
+          "modelo": "CF-3754",
+          "nome": "Dual Action Smith",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3754-dual-action-smith",
+          "dimensoes": {
+            "comprimento_cm": 243,
+            "largura_cm": 226,
+            "comprimento_pol": 95.67,
+            "largura_pol": 88.98,
+            "area_ocupacao_m2": 5.49
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 363,
+            "largura_total_cm": 346,
+            "area_recomendada_m2": 12.56
+          }
+        },
+        {
+          "modelo": "CF-3755",
+          "nome": "Dual Angle Smith",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3755-dual-angle-smith",
+          "dimensoes": {
+            "comprimento_cm": 131,
+            "largura_cm": 225,
+            "comprimento_pol": 51.57,
+            "largura_pol": 88.58,
+            "area_ocupacao_m2": 2.95
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 251,
+            "largura_total_cm": 345,
+            "area_recomendada_m2": 8.66
+          }
+        },
+        {
+          "modelo": "CF-3860",
+          "nome": "Commercial Military Press",
+          "grupo_muscular": "Costas, Ombros",
+          "url": "https://www.hoistfitness.com/products/cf-3860-military-press",
+          "dimensoes": {
+            "comprimento_cm": 151,
+            "largura_cm": 173,
+            "comprimento_pol": 59.45,
+            "largura_pol": 68.11,
+            "area_ocupacao_m2": 2.61
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 271,
+            "largura_total_cm": 293,
+            "area_recomendada_m2": 7.94
+          }
+        },
+        {
+          "modelo": "CF-3950",
+          "nome": "Commercial Utility Stool",
+          "grupo_muscular": "Braços, Peito, Ombros",
+          "url": "https://www.hoistfitness.com/products/cf-3950-utility-stool",
+          "dimensoes": {
+            "comprimento_cm": 71,
+            "largura_cm": 76,
+            "comprimento_pol": 27.95,
+            "largura_pol": 29.92,
+            "area_ocupacao_m2": 0.54
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 191,
+            "largura_total_cm": 196,
+            "area_recomendada_m2": 3.74
+          }
+        },
+        {
+          "modelo": "CF-3960",
+          "nome": "Utility Bench",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cf-3960-utility-bench",
+          "dimensoes": {
+            "comprimento_cm": 126,
+            "largura_cm": 76,
+            "comprimento_pol": 49.61,
+            "largura_pol": 29.92,
+            "area_ocupacao_m2": 0.96
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 246,
+            "largura_total_cm": 196,
+            "area_recomendada_m2": 4.82
+          }
+        },
+        {
+          "modelo": "CF-3962-A",
+          "nome": "Fitness Tree",
+          "grupo_muscular": "Braços, Costas, Peito, Core, Ombros",
+          "url": "https://www.hoistfitness.com/products/cf-3962-fitness-tree",
+          "dimensoes": {
+            "comprimento_cm": 138,
+            "largura_cm": 123,
+            "comprimento_pol": 54.33,
+            "largura_pol": 48.43,
+            "area_ocupacao_m2": 1.7
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 258,
+            "largura_total_cm": 243,
+            "area_recomendada_m2": 6.27
+          }
+        },
+        {
+          "modelo": null,
+          "nome": "4’ SOUND DAMPENING WOOD PLATFORM",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/4-sound-dampening-wood-platform",
+          "dimensoes": {
+            "comprimento_cm": 314,
+            "largura_cm": 245,
+            "comprimento_pol": 123.62,
+            "largura_pol": 96.46,
+            "area_ocupacao_m2": 7.69
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 434,
+            "largura_total_cm": 365,
+            "area_recomendada_m2": 15.84
+          }
+        },
+        {
+          "modelo": null,
+          "nome": "6’ SOUND DAMPENING WOOD PLATFORM",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/6-sound-dampening-wood-platform",
+          "dimensoes": {
+            "comprimento_cm": 375,
+            "largura_cm": 245,
+            "comprimento_pol": 147.64,
+            "largura_pol": 96.46,
+            "area_ocupacao_m2": 9.19
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 495,
+            "largura_total_cm": 365,
+            "area_recomendada_m2": 18.07
+          }
+        },
+        {
+          "modelo": null,
+          "nome": "6’ SOUND DAMPENING RUBBER PLATFORM",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/6-sound-dampening-rubber-platform",
+          "dimensoes": {
+            "comprimento_cm": 335,
+            "largura_cm": 244,
+            "comprimento_pol": 131.89,
+            "largura_pol": 96.06,
+            "area_ocupacao_m2": 8.17
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 455,
+            "largura_total_cm": 364,
+            "area_recomendada_m2": 16.56
+          }
+        }
+      ]
+    },
+    {
+      "linha": "Exercise Bikes",
+      "quantidade": 4,
+      "produtos": [
+        {
+          "modelo": "L-15300-A",
+          "nome": "REVMASTER PRO CYCLING BIKE",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/revmaster-pro-cycling-bike",
+          "dimensoes": null,
+          "espaco_layout": null
+        },
+        {
+          "modelo": "L-80900",
+          "nome": "HOIST Fitness Series RT Recumbent Trainer",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/hoist-lemond-series-rt-recumbent-trainer",
+          "dimensoes": null,
+          "espaco_layout": null
+        },
+        {
+          "modelo": "L-15900-TH",
+          "nome": "HOIST LeMond Series Elite Cycling Bike",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/hoist-lemond-series-elite-cycling-bike",
+          "dimensoes": null,
+          "espaco_layout": null
+        },
+        {
+          "modelo": "L-81100",
+          "nome": "HOIST LeMond Series UT Upright Trainer",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/hoist-lemond-series-ut-upright-trainer",
+          "dimensoes": null,
+          "espaco_layout": null
+        }
+      ]
+    },
+    {
+      "linha": "HD Dual Series",
+      "quantidade": 11,
+      "produtos": [
+        {
+          "modelo": "HD-3000",
+          "nome": "Dual Pulley Functional Trainer",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/hd-3000-dual-pulley-functional-trainer",
+          "dimensoes": {
+            "comprimento_cm": 130,
+            "largura_cm": 182,
+            "comprimento_pol": 51.18,
+            "largura_pol": 71.65,
+            "area_ocupacao_m2": 2.37
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 250,
+            "largura_total_cm": 302,
+            "area_recomendada_m2": 7.55
+          }
+        },
+        {
+          "modelo": "HD-3103",
+          "nome": "Preacher Curl/Triceps Extension",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/hd-3100-preacher-curl-triceps-extension",
+          "dimensoes": {
+            "comprimento_cm": 137,
+            "largura_cm": 124,
+            "comprimento_pol": 53.94,
+            "largura_pol": 48.82,
+            "area_ocupacao_m2": 1.7
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 257,
+            "largura_total_cm": 244,
+            "area_recomendada_m2": 6.27
+          }
+        },
+        {
+          "modelo": "HD-3203",
+          "nome": "Lat Pulldown/Mid Row",
+          "grupo_muscular": "Costas, Ombros",
+          "url": "https://www.hoistfitness.com/products/hd-3200-lat-pulldown-mid-row",
+          "dimensoes": {
+            "comprimento_cm": 166,
+            "largura_cm": 123,
+            "comprimento_pol": 65.35,
+            "largura_pol": 48.43,
+            "area_ocupacao_m2": 2.04
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 286,
+            "largura_total_cm": 243,
+            "area_recomendada_m2": 6.95
+          }
+        },
+        {
+          "modelo": "HD-3300",
+          "nome": "Chest/Shoulder Press",
+          "grupo_muscular": "Peito, Ombros",
+          "url": "https://www.hoistfitness.com/products/hd-3300-chest-shoulder-press",
+          "dimensoes": {
+            "comprimento_cm": 156,
+            "largura_cm": 147,
+            "comprimento_pol": 61.42,
+            "largura_pol": 57.87,
+            "area_ocupacao_m2": 2.29
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 276,
+            "largura_total_cm": 267,
+            "area_recomendada_m2": 7.37
+          }
+        },
+        {
+          "modelo": "HD-3400",
+          "nome": "Leg Extension/Leg Curl",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/hd-3400-leg-extension-leg-curl",
+          "dimensoes": {
+            "comprimento_cm": 154,
+            "largura_cm": 124,
+            "comprimento_pol": 60.63,
+            "largura_pol": 48.82,
+            "area_ocupacao_m2": 1.91
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 274,
+            "largura_total_cm": 244,
+            "area_recomendada_m2": 6.69
+          }
+        },
+        {
+          "modelo": "HD-3403",
+          "nome": "Leg Press/Calf Raise",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/hd-3403-leg-press-calf-raise",
+          "dimensoes": {
+            "comprimento_cm": 207,
+            "largura_cm": 121,
+            "comprimento_pol": 81.5,
+            "largura_pol": 47.64,
+            "area_ocupacao_m2": 2.5
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 327,
+            "largura_total_cm": 241,
+            "area_recomendada_m2": 7.88
+          }
+        },
+        {
+          "modelo": "HD-3600",
+          "nome": "Ab Crunch/Low Back",
+          "grupo_muscular": "Costas, Core",
+          "url": "https://www.hoistfitness.com/products/hd-3600-ab-crunch-low-back",
+          "dimensoes": {
+            "comprimento_cm": 122,
+            "largura_cm": 125,
+            "comprimento_pol": 48.03,
+            "largura_pol": 49.21,
+            "area_ocupacao_m2": 1.53
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 242,
+            "largura_total_cm": 245,
+            "area_recomendada_m2": 5.93
+          }
+        },
+        {
+          "modelo": "HD-3701",
+          "nome": "Chin/Dip Assist",
+          "grupo_muscular": "Braços, Costas, Peito, Ombros",
+          "url": "https://www.hoistfitness.com/products/hd-3700-chin-dip-assist",
+          "dimensoes": {
+            "comprimento_cm": 131,
+            "largura_cm": 121,
+            "comprimento_pol": 51.57,
+            "largura_pol": 47.64,
+            "area_ocupacao_m2": 1.59
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 251,
+            "largura_total_cm": 241,
+            "area_recomendada_m2": 6.05
+          }
+        },
+        {
+          "modelo": "HD-3800",
+          "nome": "Inner/Outer Thigh",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/hd-3800-inner-outer-thigh",
+          "dimensoes": {
+            "comprimento_cm": 177,
+            "largura_cm": 157,
+            "comprimento_pol": 69.69,
+            "largura_pol": 61.81,
+            "area_ocupacao_m2": 2.78
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 297,
+            "largura_total_cm": 277,
+            "area_recomendada_m2": 8.23
+          }
+        },
+        {
+          "modelo": "HD-3900",
+          "nome": "Pec Fly/Rear Delt",
+          "grupo_muscular": "Costas, Peito",
+          "url": "https://www.hoistfitness.com/products/hd-3900-pec-fly-rear-delt",
+          "dimensoes": {
+            "comprimento_cm": 169,
+            "largura_cm": 141,
+            "comprimento_pol": 66.54,
+            "largura_pol": 55.51,
+            "area_ocupacao_m2": 2.38
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 289,
+            "largura_total_cm": 261,
+            "area_recomendada_m2": 7.54
+          }
+        },
+        {
+          "modelo": "HD-4000",
+          "nome": "Simple Trainer",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/hd-4000-simple-trainer",
+          "dimensoes": {
+            "comprimento_cm": 109,
+            "largura_cm": 321,
+            "comprimento_pol": 42.91,
+            "largura_pol": 126.38,
+            "area_ocupacao_m2": 3.5
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 229,
+            "largura_total_cm": 441,
+            "area_recomendada_m2": 10.1
+          }
+        }
+      ]
+    },
+    {
+      "linha": "MotionCage",
+      "quantidade": 14,
+      "produtos": [
+        {
+          "modelo": "MC-7001",
+          "nome": "MotionCage Package 1",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mc-7001-motioncage-package-1",
+          "dimensoes": {
+            "comprimento_cm": 481,
+            "largura_cm": 391,
+            "comprimento_pol": 189.37,
+            "largura_pol": 153.94,
+            "area_ocupacao_m2": 18.81
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 601,
+            "largura_total_cm": 511,
+            "area_recomendada_m2": 30.71
+          }
+        },
+        {
+          "modelo": "MC-7002",
+          "nome": "MotionCage Package 2",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mc-7002-motioncage-package-2",
+          "dimensoes": {
+            "comprimento_cm": 481,
+            "largura_cm": 439,
+            "comprimento_pol": 189.37,
+            "largura_pol": 172.83,
+            "area_ocupacao_m2": 21.12
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 601,
+            "largura_total_cm": 559,
+            "area_recomendada_m2": 33.6
+          }
+        },
+        {
+          "modelo": "MC-7003",
+          "nome": "MotionCage Package 3",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mc-7003-motioncage-package-3",
+          "dimensoes": {
+            "comprimento_cm": 481,
+            "largura_cm": 422,
+            "comprimento_pol": 189.37,
+            "largura_pol": 166.14,
+            "area_ocupacao_m2": 20.3
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 601,
+            "largura_total_cm": 542,
+            "area_recomendada_m2": 32.57
+          }
+        },
+        {
+          "modelo": "MC-7004",
+          "nome": "MotionCage Package 4",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mc-7004-motioncage-package-4",
+          "dimensoes": {
+            "comprimento_cm": 481,
+            "largura_cm": 474,
+            "comprimento_pol": 189.37,
+            "largura_pol": 186.61,
+            "area_ocupacao_m2": 22.8
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 601,
+            "largura_total_cm": 594,
+            "area_recomendada_m2": 35.7
+          }
+        },
+        {
+          "modelo": "MC-7005",
+          "nome": "MotionCage Package 5",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mc-7005-motioncage-package-5",
+          "dimensoes": {
+            "comprimento_cm": 481,
+            "largura_cm": 477,
+            "comprimento_pol": 189.37,
+            "largura_pol": 187.8,
+            "area_ocupacao_m2": 22.94
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 601,
+            "largura_total_cm": 597,
+            "area_recomendada_m2": 35.88
+          }
+        },
+        {
+          "modelo": "MCS-8001",
+          "nome": "MotionCage Studio Package 1",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mcs-8001-motioncage-studio-package-1",
+          "dimensoes": {
+            "comprimento_cm": 211,
+            "largura_cm": 347,
+            "comprimento_pol": 83.07,
+            "largura_pol": 136.61,
+            "area_ocupacao_m2": 7.32
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 331,
+            "largura_total_cm": 467,
+            "area_recomendada_m2": 15.46
+          }
+        },
+        {
+          "modelo": "MCS-8002",
+          "nome": "MotionCage Studio Package 2",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mcs-8002-motioncage-studio-package-2",
+          "dimensoes": {
+            "comprimento_cm": 252,
+            "largura_cm": 347,
+            "comprimento_pol": 99.21,
+            "largura_pol": 136.61,
+            "area_ocupacao_m2": 8.74
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 372,
+            "largura_total_cm": 467,
+            "area_recomendada_m2": 17.37
+          }
+        },
+        {
+          "modelo": "MCS-8003",
+          "nome": "MotionCage Studio Package 3",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mcs-8003-motioncage-studio-package-3",
+          "dimensoes": {
+            "comprimento_cm": 252,
+            "largura_cm": 314,
+            "comprimento_pol": 99.21,
+            "largura_pol": 123.62,
+            "area_ocupacao_m2": 7.91
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 372,
+            "largura_total_cm": 434,
+            "area_recomendada_m2": 16.14
+          }
+        },
+        {
+          "modelo": "MCS-8004",
+          "nome": "MotionCage Studio Package 4",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mcs-8004-motioncage-studio-package-4",
+          "dimensoes": {
+            "comprimento_cm": 252,
+            "largura_cm": 307,
+            "comprimento_pol": 99.21,
+            "largura_pol": 120.87,
+            "area_ocupacao_m2": 7.74
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 372,
+            "largura_total_cm": 427,
+            "area_recomendada_m2": 15.88
+          }
+        },
+        {
+          "modelo": "MCS-8005",
+          "nome": "MotionCage Studio Package 5",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/mcs-8005-motioncage-studio-package-5",
+          "dimensoes": {
+            "comprimento_cm": 297,
+            "largura_cm": 295,
+            "comprimento_pol": 116.93,
+            "largura_pol": 116.14,
+            "area_ocupacao_m2": 8.76
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 417,
+            "largura_total_cm": 415,
+            "area_recomendada_m2": 17.31
+          }
+        },
+        {
+          "modelo": "MC-7028-OPT-01",
+          "nome": "Hi-Lo Cable 2:1 Ratio Kit OPTION",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/hi-lo-cable-2-1-ratio-kit-option",
+          "dimensoes": null,
+          "espaco_layout": null
+        },
+        {
+          "modelo": "MC-ROPE-KIT",
+          "nome": "Ropeflex Rope Pull Option",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/ropeflex-rope-pull-package",
+          "dimensoes": null,
+          "espaco_layout": null
+        },
+        {
+          "modelo": "MC-7035",
+          "nome": "Suspension Trainer Crossbar Station OPTION",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/suspension-trainer-crossbar-station",
+          "dimensoes": null,
+          "espaco_layout": null
+        },
+        {
+          "modelo": "MC-7037",
+          "nome": "5-Grip Chin-Up Short Station Option (93.14\")",
+          "grupo_muscular": "Full Body",
+          "url": "https://www.hoistfitness.com/products/short-chin-up",
+          "dimensoes": null,
+          "espaco_layout": null
+        }
+      ]
+    },
+    {
+      "linha": "Multi-Jungle Systems",
+      "quantidade": 6,
+      "produtos": [
+        {
+          "modelo": "CMD-6180",
+          "nome": "Commercial Cable Crossover",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cmd-6180-cable-crossover",
+          "dimensoes": {
+            "comprimento_cm": 101,
+            "largura_cm": 389,
+            "comprimento_pol": 39.76,
+            "largura_pol": 153.15,
+            "area_ocupacao_m2": 3.93
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 221,
+            "largura_total_cm": 509,
+            "area_recomendada_m2": 11.25
+          }
+        },
+        {
+          "modelo": "CMJ-6000-1",
+          "nome": "Commercial 4 Station - Single Pod",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cmj-6000-1-4-station-single-pod",
+          "dimensoes": {
+            "comprimento_cm": 362,
+            "largura_cm": 211,
+            "comprimento_pol": 142.52,
+            "largura_pol": 83.07,
+            "area_ocupacao_m2": 7.64
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 482,
+            "largura_total_cm": 331,
+            "area_recomendada_m2": 15.95
+          }
+        },
+        {
+          "modelo": "CMJ-6000-2",
+          "nome": "9 Station - Dual Pod",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cmj-6000-2-9-station-dual-pod",
+          "dimensoes": {
+            "comprimento_cm": 362,
+            "largura_cm": 601,
+            "comprimento_pol": 142.52,
+            "largura_pol": 236.61,
+            "area_ocupacao_m2": 21.76
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 482,
+            "largura_total_cm": 721,
+            "area_recomendada_m2": 34.75
+          }
+        },
+        {
+          "modelo": "CMJ-6000-3",
+          "nome": "14 Station - Tri Pod",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cmj-6000-3-14-station-tri-pod",
+          "dimensoes": {
+            "comprimento_cm": 363,
+            "largura_cm": 986,
+            "comprimento_pol": 142.91,
+            "largura_pol": 388.19,
+            "area_ocupacao_m2": 35.79
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 483,
+            "largura_total_cm": 1106,
+            "area_recomendada_m2": 53.42
+          }
+        },
+        {
+          "modelo": "CMJ-6600-S-1",
+          "nome": "6 Station - Single Pod",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cmj-6600-s-6-station-single-pod",
+          "dimensoes": {
+            "comprimento_cm": 362,
+            "largura_cm": 493,
+            "comprimento_pol": 142.52,
+            "largura_pol": 194.09,
+            "area_ocupacao_m2": 17.85
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 482,
+            "largura_total_cm": 613,
+            "area_recomendada_m2": 29.55
+          }
+        },
+        {
+          "modelo": "CMS-6175",
+          "nome": "Commercial Stand Alone Hi-Lo Pulley",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/cms-6175-stand-alone-hi-lo-pulley",
+          "dimensoes": {
+            "comprimento_cm": 90,
+            "largura_cm": 101,
+            "comprimento_pol": 35.43,
+            "largura_pol": 39.76,
+            "area_ocupacao_m2": 0.91
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 210,
+            "largura_total_cm": 221,
+            "area_recomendada_m2": 4.64
+          }
+        }
+      ]
+    },
+    {
+      "linha": "ROC-IT Plate Loaded",
+      "quantidade": 13,
+      "produtos": [
+        {
+          "modelo": "RPL-5101",
+          "nome": "Seated Dip",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/rpl-5101-seated-dip",
+          "dimensoes": {
+            "comprimento_cm": 184,
+            "largura_cm": 134,
+            "comprimento_pol": 72.44,
+            "largura_pol": 52.76,
+            "area_ocupacao_m2": 2.47
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 304,
+            "largura_total_cm": 254,
+            "area_recomendada_m2": 7.72
+          }
+        },
+        {
+          "modelo": "RPL-5102",
+          "nome": "Biceps Curl",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/rpl-5102-biceps-curl",
+          "dimensoes": {
+            "comprimento_cm": 150,
+            "largura_cm": 136,
+            "comprimento_pol": 59.06,
+            "largura_pol": 53.54,
+            "area_ocupacao_m2": 2.04
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 270,
+            "largura_total_cm": 256,
+            "area_recomendada_m2": 6.91
+          }
+        },
+        {
+          "modelo": "RPL-5201",
+          "nome": "Lat Pulldown",
+          "grupo_muscular": "Costas",
+          "url": "https://www.hoistfitness.com/products/rpl-5201-lat-pulldown",
+          "dimensoes": {
+            "comprimento_cm": 195,
+            "largura_cm": 134,
+            "comprimento_pol": 76.77,
+            "largura_pol": 52.76,
+            "area_ocupacao_m2": 2.61
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 315,
+            "largura_total_cm": 254,
+            "area_recomendada_m2": 8
+          }
+        },
+        {
+          "modelo": "RPL-5203",
+          "nome": "Mid Row",
+          "grupo_muscular": "Costas",
+          "url": "https://www.hoistfitness.com/products/rpl-5203-mid-row",
+          "dimensoes": {
+            "comprimento_cm": 172,
+            "largura_cm": 134,
+            "comprimento_pol": 67.72,
+            "largura_pol": 52.76,
+            "area_ocupacao_m2": 2.3
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 292,
+            "largura_total_cm": 254,
+            "area_recomendada_m2": 7.42
+          }
+        },
+        {
+          "modelo": "RPL-5301",
+          "nome": "Chest Press",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/rpl-5301-chest-press",
+          "dimensoes": {
+            "comprimento_cm": 210,
+            "largura_cm": 133,
+            "comprimento_pol": 82.68,
+            "largura_pol": 52.36,
+            "area_ocupacao_m2": 2.79
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 330,
+            "largura_total_cm": 253,
+            "area_recomendada_m2": 8.35
+          }
+        },
+        {
+          "modelo": "RPL-5303",
+          "nome": "Incline Chest Press",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/rpl-5303-incline-chest-press",
+          "dimensoes": {
+            "comprimento_cm": 230,
+            "largura_cm": 133,
+            "comprimento_pol": 90.55,
+            "largura_pol": 52.36,
+            "area_ocupacao_m2": 3.06
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 350,
+            "largura_total_cm": 253,
+            "area_recomendada_m2": 8.86
+          }
+        },
+        {
+          "modelo": "RPL-5305",
+          "nome": "Decline Chest Press",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/rpl-5305-decline-chest-press",
+          "dimensoes": {
+            "comprimento_cm": 211,
+            "largura_cm": 133,
+            "comprimento_pol": 83.07,
+            "largura_pol": 52.36,
+            "area_ocupacao_m2": 2.81
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 331,
+            "largura_total_cm": 253,
+            "area_recomendada_m2": 8.37
+          }
+        },
+        {
+          "modelo": "RPL-5356",
+          "nome": "Hack Squat/Dead Lift/Shrug",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/rpl-5356-hack-squat-dead-lift-shrug",
+          "dimensoes": {
+            "comprimento_cm": 236,
+            "largura_cm": 149,
+            "comprimento_pol": 92.91,
+            "largura_pol": 58.66,
+            "area_ocupacao_m2": 3.52
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 356,
+            "largura_total_cm": 269,
+            "area_recomendada_m2": 9.58
+          }
+        },
+        {
+          "modelo": "RPL-5363",
+          "nome": "Seated Calf Raise",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/rpl-5363-seated-calf-raise",
+          "dimensoes": {
+            "comprimento_cm": 159,
+            "largura_cm": 77,
+            "comprimento_pol": 62.6,
+            "largura_pol": 30.31,
+            "area_ocupacao_m2": 1.22
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 279,
+            "largura_total_cm": 197,
+            "area_recomendada_m2": 5.5
+          }
+        },
+        {
+          "modelo": "RPL-5403",
+          "nome": "Dual Action Leg Press",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/rpl-5403-dual-action-leg-press",
+          "dimensoes": {
+            "comprimento_cm": 297,
+            "largura_cm": 122,
+            "comprimento_pol": 116.93,
+            "largura_pol": 48.03,
+            "area_ocupacao_m2": 3.62
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 417,
+            "largura_total_cm": 242,
+            "area_recomendada_m2": 10.09
+          }
+        },
+        {
+          "modelo": "RPL-5405",
+          "nome": "Standing Calf Raise",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/rpl-5405-standing-calf-raise",
+          "dimensoes": {
+            "comprimento_cm": 147,
+            "largura_cm": 128,
+            "comprimento_pol": 57.87,
+            "largura_pol": 50.39,
+            "area_ocupacao_m2": 1.88
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 267,
+            "largura_total_cm": 248,
+            "area_recomendada_m2": 6.62
+          }
+        },
+        {
+          "modelo": "RPL-5501",
+          "nome": "Shoulder Press",
+          "grupo_muscular": "Ombros",
+          "url": "https://www.hoistfitness.com/products/rpl-5501-shoulder-press",
+          "dimensoes": {
+            "comprimento_cm": 209,
+            "largura_cm": 133,
+            "comprimento_pol": 82.28,
+            "largura_pol": 52.36,
+            "area_ocupacao_m2": 2.78
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 329,
+            "largura_total_cm": 253,
+            "area_recomendada_m2": 8.32
+          }
+        },
+        {
+          "modelo": "RPL-5601",
+          "nome": "Abdominals",
+          "grupo_muscular": "Core",
+          "url": "https://www.hoistfitness.com/products/rpl-5601-abdominals",
+          "dimensoes": {
+            "comprimento_cm": 108,
+            "largura_cm": 107,
+            "comprimento_pol": 42.52,
+            "largura_pol": 42.13,
+            "area_ocupacao_m2": 1.16
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 228,
+            "largura_total_cm": 227,
+            "area_recomendada_m2": 5.18
+          }
+        }
+      ]
+    },
+    {
+      "linha": "ROC-IT Selectorized",
+      "quantidade": 21,
+      "produtos": [
+        {
+          "modelo": "RS-1103",
+          "nome": "Triceps Extension",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/rs-1103-triceps-extension",
+          "dimensoes": {
+            "comprimento_cm": 165,
+            "largura_cm": 130,
+            "comprimento_pol": 64.96,
+            "largura_pol": 51.18,
+            "area_ocupacao_m2": 2.15
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 285,
+            "largura_total_cm": 250,
+            "area_recomendada_m2": 7.13
+          }
+        },
+        {
+          "modelo": "RS-1502",
+          "nome": "Lateral Raise",
+          "grupo_muscular": "Ombros",
+          "url": "https://www.hoistfitness.com/products/rs-1502-lateral-raise",
+          "dimensoes": {
+            "comprimento_cm": 143,
+            "largura_cm": 122,
+            "comprimento_pol": 56.3,
+            "largura_pol": 48.03,
+            "area_ocupacao_m2": 1.74
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 263,
+            "largura_total_cm": 242,
+            "area_recomendada_m2": 6.36
+          }
+        },
+        {
+          "modelo": "RS-2101",
+          "nome": "Seated Dip",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/seated-dip",
+          "dimensoes": {
+            "comprimento_cm": 153,
+            "largura_cm": 121,
+            "comprimento_pol": 60.24,
+            "largura_pol": 47.64,
+            "area_ocupacao_m2": 1.85
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 273,
+            "largura_total_cm": 241,
+            "area_recomendada_m2": 6.58
+          }
+        },
+        {
+          "modelo": "RS-2102",
+          "nome": "Biceps Curl",
+          "grupo_muscular": "Braços",
+          "url": "https://www.hoistfitness.com/products/biceps-curl",
+          "dimensoes": {
+            "comprimento_cm": 162,
+            "largura_cm": 147,
+            "comprimento_pol": 63.78,
+            "largura_pol": 57.87,
+            "area_ocupacao_m2": 2.38
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 282,
+            "largura_total_cm": 267,
+            "area_recomendada_m2": 7.53
+          }
+        },
+        {
+          "modelo": "RS-2201",
+          "nome": "Lat Pulldown",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2201-lat-pulldown",
+          "dimensoes": {
+            "comprimento_cm": 166,
+            "largura_cm": 144,
+            "comprimento_pol": 65.35,
+            "largura_pol": 56.69,
+            "area_ocupacao_m2": 2.39
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 286,
+            "largura_total_cm": 264,
+            "area_recomendada_m2": 7.55
+          }
+        },
+        {
+          "modelo": "RS-2203",
+          "nome": "Seated Mid Row",
+          "grupo_muscular": "Costas",
+          "url": "https://www.hoistfitness.com/products/seated-mid-row",
+          "dimensoes": {
+            "comprimento_cm": 171,
+            "largura_cm": 115,
+            "comprimento_pol": 67.32,
+            "largura_pol": 45.28,
+            "area_ocupacao_m2": 1.97
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 291,
+            "largura_total_cm": 235,
+            "area_recomendada_m2": 6.84
+          }
+        },
+        {
+          "modelo": "RS-2204",
+          "nome": "Low Back",
+          "grupo_muscular": "Costas",
+          "url": "https://www.hoistfitness.com/products/low-back",
+          "dimensoes": {
+            "comprimento_cm": 181,
+            "largura_cm": 142,
+            "comprimento_pol": 71.26,
+            "largura_pol": 55.91,
+            "area_ocupacao_m2": 2.57
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 301,
+            "largura_total_cm": 262,
+            "area_recomendada_m2": 7.89
+          }
+        },
+        {
+          "modelo": "RS-2301",
+          "nome": "Chest Press",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2301-chest-press",
+          "dimensoes": {
+            "comprimento_cm": 152,
+            "largura_cm": 148,
+            "comprimento_pol": 59.84,
+            "largura_pol": 58.27,
+            "area_ocupacao_m2": 2.25
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 272,
+            "largura_total_cm": 268,
+            "area_recomendada_m2": 7.29
+          }
+        },
+        {
+          "modelo": "RS-1302",
+          "nome": "Pec Fly",
+          "grupo_muscular": "Peito",
+          "url": "https://www.hoistfitness.com/products/pec-fly",
+          "dimensoes": {
+            "comprimento_cm": 180,
+            "largura_cm": 164,
+            "comprimento_pol": 70.87,
+            "largura_pol": 64.57,
+            "area_ocupacao_m2": 2.95
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 300,
+            "largura_total_cm": 284,
+            "area_recomendada_m2": 8.52
+          }
+        },
+        {
+          "modelo": "RS-2401",
+          "nome": "Leg Extension",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2401-leg-extension",
+          "dimensoes": {
+            "comprimento_cm": 131,
+            "largura_cm": 127,
+            "comprimento_pol": 51.57,
+            "largura_pol": 50,
+            "area_ocupacao_m2": 1.66
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 251,
+            "largura_total_cm": 247,
+            "area_recomendada_m2": 6.2
+          }
+        },
+        {
+          "modelo": "RS-2402",
+          "nome": "Leg Curl",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2402-leg-curl",
+          "dimensoes": {
+            "comprimento_cm": 133,
+            "largura_cm": 127,
+            "comprimento_pol": 52.36,
+            "largura_pol": 50,
+            "area_ocupacao_m2": 1.69
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 253,
+            "largura_total_cm": 247,
+            "area_recomendada_m2": 6.25
+          }
+        },
+        {
+          "modelo": "RS-2403",
+          "nome": "Leg Press",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2403-leg-press",
+          "dimensoes": {
+            "comprimento_cm": 217,
+            "largura_cm": 123,
+            "comprimento_pol": 85.43,
+            "largura_pol": 48.43,
+            "area_ocupacao_m2": 2.67
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 337,
+            "largura_total_cm": 243,
+            "area_recomendada_m2": 8.19
+          }
+        },
+        {
+          "modelo": "RS-2406",
+          "nome": "Inner Thigh",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/inner-thigh",
+          "dimensoes": {
+            "comprimento_cm": 175,
+            "largura_cm": 141,
+            "comprimento_pol": 68.9,
+            "largura_pol": 55.51,
+            "area_ocupacao_m2": 2.47
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 295,
+            "largura_total_cm": 261,
+            "area_recomendada_m2": 7.7
+          }
+        },
+        {
+          "modelo": "RS-2407",
+          "nome": "Outer Thigh",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/outer-thigh",
+          "dimensoes": {
+            "comprimento_cm": 174,
+            "largura_cm": 150,
+            "comprimento_pol": 68.5,
+            "largura_pol": 59.06,
+            "area_ocupacao_m2": 2.61
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 294,
+            "largura_total_cm": 270,
+            "area_recomendada_m2": 7.94
+          }
+        },
+        {
+          "modelo": "RS-2408",
+          "nome": "Prone Leg Curl",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2408-prone-leg-curl",
+          "dimensoes": {
+            "comprimento_cm": 144,
+            "largura_cm": 109,
+            "comprimento_pol": 56.69,
+            "largura_pol": 42.91,
+            "area_ocupacao_m2": 1.57
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 264,
+            "largura_total_cm": 229,
+            "area_recomendada_m2": 6.05
+          }
+        },
+        {
+          "modelo": "RS-1412",
+          "nome": "Glute Master",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/glute-master",
+          "dimensoes": {
+            "comprimento_cm": 167,
+            "largura_cm": 128,
+            "comprimento_pol": 65.75,
+            "largura_pol": 50.39,
+            "area_ocupacao_m2": 2.14
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 287,
+            "largura_total_cm": 248,
+            "area_recomendada_m2": 7.12
+          }
+        },
+        {
+          "modelo": "RS-1415",
+          "nome": "Rotary Calf",
+          "grupo_muscular": "Inferiores",
+          "url": "https://www.hoistfitness.com/products/rotary-calf",
+          "dimensoes": {
+            "comprimento_cm": 191,
+            "largura_cm": 118,
+            "comprimento_pol": 75.2,
+            "largura_pol": 46.46,
+            "area_ocupacao_m2": 2.25
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 311,
+            "largura_total_cm": 238,
+            "area_recomendada_m2": 7.4
+          }
+        },
+        {
+          "modelo": "RS-1501",
+          "nome": "Shoulder Press",
+          "grupo_muscular": "Ombros",
+          "url": "https://www.hoistfitness.com/products/shoulder-press",
+          "dimensoes": {
+            "comprimento_cm": 194,
+            "largura_cm": 123,
+            "comprimento_pol": 76.38,
+            "largura_pol": 48.43,
+            "area_ocupacao_m2": 2.39
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 314,
+            "largura_total_cm": 243,
+            "area_recomendada_m2": 7.63
+          }
+        },
+        {
+          "modelo": "RS-2601",
+          "nome": "Abdominals",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2601-abdominals",
+          "dimensoes": {
+            "comprimento_cm": 107,
+            "largura_cm": 156,
+            "comprimento_pol": 42.13,
+            "largura_pol": 61.42,
+            "area_ocupacao_m2": 1.67
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 227,
+            "largura_total_cm": 276,
+            "area_recomendada_m2": 6.27
+          }
+        },
+        {
+          "modelo": "RS-2602",
+          "nome": "Rotary Torso",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2602-rotary-torso",
+          "dimensoes": {
+            "comprimento_cm": 111,
+            "largura_cm": 111,
+            "comprimento_pol": 43.7,
+            "largura_pol": 43.7,
+            "area_ocupacao_m2": 1.23
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 231,
+            "largura_total_cm": 231,
+            "area_recomendada_m2": 5.34
+          }
+        },
+        {
+          "modelo": "RS-2700",
+          "nome": "Chin/Dip Assist",
+          "grupo_muscular": null,
+          "url": "https://www.hoistfitness.com/products/rs-2700-chin-dip-assist",
+          "dimensoes": {
+            "comprimento_cm": 125,
+            "largura_cm": 170,
+            "comprimento_pol": 49.21,
+            "largura_pol": 66.93,
+            "area_ocupacao_m2": 2.13
+          },
+          "espaco_layout": {
+            "buffer_circulacao_cm": 60,
+            "comprimento_total_cm": 245,
+            "largura_total_cm": 290,
+            "area_recomendada_m2": 7.11
+          }
+        }
+      ]
+    }
+  ]
+}
