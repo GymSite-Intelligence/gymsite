@@ -844,7 +844,6 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
       aluguel_max_m2_observado: out.aluguel_max_m2 ?? null,
       alertas_financeiros: out.alertas ?? [],
       top_3_candidatos: (p.candidatos ?? [])
-        .slice(0, 3)
         .map((c) => mapCandidatoRow(c as Record<string, unknown>)),
       competitors_set: (p.competidores ?? []).map((c) =>
         mapCompetidorRow(c as Record<string, unknown>),

@@ -384,27 +384,67 @@ function RelatorioViewerContent({
         />
       )}
 
-      {/* 5. Top 3 Candidatos */}
-      {out.top_3_candidatos && out.top_3_candidatos.length > 0 && (
-        <Section title="🏆 Top 3 Candidatos">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {out.top_3_candidatos.slice(0, 3).map((cand, i) => {
-              const scoreGeral =
-                cand.score_geoscout != null && scoreRegional != null
-                  ? (cand.score_geoscout + scoreRegional * 3) / 4
-                  : null
-              return (
-                <CandidatoCard
-                  key={cand.place_id ?? `${cand.nome}-${i}`}
-                  candidato={cand}
-                  posicao={i + 1}
-                  scoreGeral={scoreGeral}
-                />
-              )
-            })}
-          </div>
-        </Section>
-      )}
+      {/* 5. Candidatos (imóveis anunciados) × Âncoras e polos — blocos separados */}
+      {out.top_3_candidatos && out.top_3_candidatos.length > 0 && (() => {
+        const anunciados = out.top_3_candidatos.filter((c) => Boolean(c.listing_url))
+        const ancoras = out.top_3_candidatos.filter((c) => !c.listing_url)
+        return (
+          <>
+            {anunciados.length > 0 && (
+              <Section title="🏆 Top Candidatos — imóveis anunciados">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {anunciados.slice(0, 3).map((cand, i) => {
+                    const scoreGeral =
+                      cand.score_geoscout != null && scoreRegional != null
+                        ? (cand.score_geoscout + scoreRegional * 3) / 4
+                        : null
+                    return (
+                      <CandidatoCard
+                        key={cand.place_id ?? `${cand.nome}-${i}`}
+                        candidato={cand}
+                        posicao={i + 1}
+                        scoreGeral={scoreGeral}
+                      />
+                    )
+                  })}
+                </div>
+              </Section>
+            )}
+            {anunciados.length === 0 && (
+              <Section title="🏆 Top Candidatos — imóveis anunciados">
+                <p className="text-sm text-muted-foreground">
+                  Nenhum imóvel anunciado na faixa de área passou no filtro de qualidade.
+                  Use “Re-buscar pontos” no topo para uma nova varredura do mercado.
+                </p>
+              </Section>
+            )}
+            {ancoras.length > 0 && (
+              <Section title="🧲 Âncoras e polos de referência">
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Referências de fluxo e localização do bairro — não estão à locação.
+                  Imóvel próximo a estas âncoras herda o movimento delas.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {ancoras.slice(0, 3).map((cand, i) => {
+                    const scoreGeral =
+                      cand.score_geoscout != null && scoreRegional != null
+                        ? (cand.score_geoscout + scoreRegional * 3) / 4
+                        : null
+                    return (
+                      <CandidatoCard
+                        key={cand.place_id ?? `${cand.nome}-${i}`}
+                        candidato={cand}
+                        posicao={i + 1}
+                        scoreGeral={scoreGeral}
+                      />
+                    )
+                  })}
+                </div>
+              </Section>
+            )}
+          </>
+        )
+      })()}
 
       {/* 6. Viabilidade Financeira (collapsible) */}
       <Section

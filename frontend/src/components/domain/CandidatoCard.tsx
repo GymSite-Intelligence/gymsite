@@ -14,6 +14,7 @@ import { ScoreGauge } from './ScoreGauge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { API_BASE } from '@/lib/supabase'
 import { SHOW_WHATSAPP_UI } from '@/lib/feature-flags'
 import type { CandidatoJSON } from '@/hooks/useRelatorioDetail'
 
@@ -75,7 +76,11 @@ export function CandidatoCard({
       <div className="relative aspect-[16/10] bg-muted">
         {candidato.street_view_url && !imgError ? (
           <img
-            src={candidato.street_view_url}
+            src={
+              candidato.street_view_url.startsWith('/')
+                ? `${API_BASE}${candidato.street_view_url}`
+                : candidato.street_view_url
+            }
             alt={`Street view de ${candidato.nome}`}
             onError={() => setImgError(true)}
             loading="lazy"
@@ -133,7 +138,10 @@ export function CandidatoCard({
               {candidato.area_estimada_m2 && (
                 <>
                   {' · '}
-                  <span>~{candidato.area_estimada_m2} m²</span>
+                  <span>
+                    ~{candidato.area_estimada_m2} m²
+                    {isListing ? ' (anunciada — confira no anúncio)' : ''}
+                  </span>
                 </>
               )}
               {candidato.modalidade && candidato.modalidade !== 'incerto' && (
