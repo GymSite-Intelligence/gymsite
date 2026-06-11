@@ -35,7 +35,17 @@ export interface Tarefa {
   origem_relatorio_insight: string | null
   dias_atraso: number
   esta_atrasada: boolean
+  variacao_conclusao_dias: number | null
   checklist: ChecklistItem[]
+}
+
+export interface TarefaNota {
+  id: string
+  tarefa_id: string
+  autor_nome: string
+  origem: 'DONO' | 'EXTERNO' | 'IA'
+  texto: string
+  criado_em: string
 }
 
 export interface Dependencia {
@@ -86,6 +96,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export const playbookKeys = {
   all: ['playbooks'] as const,
   detail: (id: string) => ['playbooks', id] as const,
+  notas: (tarefaId: string) => ['playbooks', 'notas', tarefaId] as const,
 }
 
 export function usePlaybook(playbookId: string | undefined) {
@@ -130,6 +141,30 @@ export function useAtualizarTarefa(playbookId: string) {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) })
+    },
+  })
+}
+
+export function useNotasTarefa(tarefaId: string | null) {
+  return useQuery({
+    queryKey: playbookKeys.notas(tarefaId ?? ''),
+    enabled: Boolean(tarefaId),
+    queryFn: () => api<{ items: TarefaNota[] }>(`/api/execucao/tarefas/${tarefaId}/notas`),
+    select: (r) => r.items,
+    staleTime: 15_000,
+  })
+}
+
+export function useAdicionarNota(tarefaId: string | null) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (texto: string) =>
+      api<TarefaNota>(`/api/execucao/tarefas/${tarefaId}/notas`, {
+        method: 'POST',
+        body: JSON.stringify({ texto }),
+      }),
+    onSuccess: () => {
+      if (tarefaId) qc.invalidateQueries({ queryKey: playbookKeys.notas(tarefaId) })
     },
   })
 }

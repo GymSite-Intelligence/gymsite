@@ -56,6 +56,10 @@ class ChecklistRequest(BaseModel):
     concluido: bool
 
 
+class NotaRequest(BaseModel):
+    texto: str = Field(..., min_length=1, max_length=4000)
+
+
 @router.post("/playbooks/gerar", status_code=201)
 def gerar_playbook(data: GerarPlaybookRequest, request: Request):
     """Gera o Plano de Abertura a partir de um relatório concluído."""
@@ -106,6 +110,33 @@ def atualizar_tarefa(tarefa_id: str, data: AtualizarTarefaRequest, request: Requ
         return playbook_service.atualizar_status_tarefa(
             _sb(), tarefa_id, user_id, data.status, custo_real=data.custo_real
         )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/tarefas/{tarefa_id}/notas")
+def listar_notas(tarefa_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        return {"items": playbook_service.listar_notas(_sb(), tarefa_id, user_id)}
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/tarefas/{tarefa_id}/notas", status_code=201)
+def adicionar_nota(tarefa_id: str, data: NotaRequest, request: Request):
+    user_id = _require_user(request)
+    sb = _sb()
+    try:
+        user_res = sb.auth.get_user(request.headers.get("authorization", "").removeprefix("Bearer ").strip())
+        meta = (user_res.user.user_metadata or {}) if user_res and user_res.user else {}
+        autor = meta.get("full_name") or meta.get("name") or "Você"
+    except Exception:
+        autor = "Você"
+    try:
+        return playbook_service.adicionar_nota(sb, tarefa_id, user_id, data.texto, autor_nome=autor)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:

@@ -41,10 +41,26 @@ def _dias_atraso(tarefa: dict[str, Any]) -> int:
     return max(atraso, 0)
 
 
+def _variacao_conclusao_dias(tarefa: dict[str, Any]) -> Optional[int]:
+    """Concluída: dias entre previsto e real. Positivo = terminou atrasada,
+    negativo = adiantada. None quando não concluída ou sem datas."""
+    if tarefa.get("status") != "CONCLUIDA":
+        return None
+    prevista = tarefa.get("data_prevista_conclusao")
+    real = tarefa.get("data_conclusao")
+    if not prevista or not real:
+        return None
+    try:
+        return (date.fromisoformat(str(real)[:10]) - date.fromisoformat(str(prevista)[:10])).days
+    except ValueError:
+        return None
+
+
 def _enriquecer_tarefa(t: dict[str, Any]) -> dict[str, Any]:
     atraso = _dias_atraso(t)
     t["dias_atraso"] = atraso
     t["esta_atrasada"] = atraso > 0
+    t["variacao_conclusao_dias"] = _variacao_conclusao_dias(t)
     return t
 
 
@@ -238,6 +254,37 @@ def atualizar_status_tarefa(
             if not _predecessoras_pendentes(sb, dep["tarefa_id"]):
                 liberadas.append(dep["tarefa_id"])
     return {"tarefa": atualizada, "tarefas_liberadas": liberadas}
+
+
+def listar_notas(sb, tarefa_id: str, user_id: str) -> list[dict[str, Any]]:
+    _tarefa_do_usuario(sb, tarefa_id, user_id)
+    res = (
+        sb.table("tarefa_notas")
+        .select("id, tarefa_id, autor_nome, origem, texto, criado_em")
+        .eq("tarefa_id", tarefa_id)
+        .is_("deleted_at", "null")
+        .order("criado_em", desc=True)
+        .execute()
+    )
+    return res.data or []
+
+
+def adicionar_nota(
+    sb, tarefa_id: str, user_id: str, texto: str, *, autor_nome: str, origem: str = "DONO"
+) -> dict[str, Any]:
+    if not texto or not texto.strip():
+        raise ValueError("Escreva o que aconteceu antes de salvar a anotação.")
+    if origem not in ("DONO", "EXTERNO", "IA"):
+        raise ValueError("Origem inválida para a anotação.")
+    _tarefa_do_usuario(sb, tarefa_id, user_id)
+    res = sb.table("tarefa_notas").insert({
+        "tarefa_id": tarefa_id,
+        "autor_user_id": user_id,
+        "autor_nome": autor_nome or "Você",
+        "origem": origem,
+        "texto": texto.strip(),
+    }).execute()
+    return res.data[0] if res.data else {}
 
 
 def marcar_checklist_item(sb, item_id: str, user_id: str, concluido: bool) -> dict[str, Any]:

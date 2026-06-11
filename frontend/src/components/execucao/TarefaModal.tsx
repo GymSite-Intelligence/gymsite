@@ -8,7 +8,7 @@
  * (CST-003); nas demais o campo é opcional.
  */
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Sparkles } from 'lucide-react'
+import { AlertTriangle, Send, Sparkles } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -28,9 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { notify } from '@/lib/notify'
 import { formatBRL } from '@/lib/format'
 import { CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
-import type { Tarefa } from '@/hooks/usePlaybook'
+import { useAdicionarNota, useNotasTarefa, type Tarefa } from '@/hooks/usePlaybook'
 
 const STATUS_LABEL: Record<Tarefa['status'], string> = {
   A_FAZER: 'A fazer',
@@ -73,10 +74,15 @@ export function TarefaModal({
 }) {
   const [novoStatus, setNovoStatus] = useState<Tarefa['status'] | ''>('')
   const [gastoReais, setGastoReais] = useState('')
+  const [novaNota, setNovaNota] = useState('')
+
+  const { data: notas } = useNotasTarefa(tarefa?.id ?? null)
+  const adicionarNota = useAdicionarNota(tarefa?.id ?? null)
 
   useEffect(() => {
     setNovoStatus('')
     setGastoReais('')
+    setNovaNota('')
   }, [tarefa?.id])
 
   if (!tarefa) return null
@@ -86,6 +92,17 @@ export function TarefaModal({
   const custoAlto = (tarefa.custo_planejado ?? 0) > CUSTO_OBRIGATORIO_ACIMA_CENTAVOS
   const precisaGasto = concluindo && custoAlto && !gastoReais.trim()
   const mudou = Boolean(novoStatus) && novoStatus !== tarefa.status
+
+  const variacao = tarefa.variacao_conclusao_dias
+
+  function enviarNota() {
+    const texto = novaNota.trim()
+    if (!texto) return
+    adicionarNota.mutate(texto, {
+      onSuccess: () => setNovaNota(''),
+      onError: (e: Error) => notify.error(e.message),
+    })
+  }
 
   function salvar() {
     if (!mudou) return
@@ -118,6 +135,16 @@ export function TarefaModal({
             {tarefa.esta_atrasada && (
               <Badge variant="secondary" className="gap-1 rounded-full bg-red-50 px-3 font-normal text-red-700">
                 <AlertTriangle className="h-3 w-3" /> {tarefa.dias_atraso} dia(s) de atraso
+              </Badge>
+            )}
+            {variacao != null && variacao > 0 && (
+              <Badge variant="secondary" className="rounded-full bg-amber-50 px-3 font-normal text-amber-700">
+                Concluída {variacao} dia(s) depois do previsto
+              </Badge>
+            )}
+            {variacao != null && variacao < 0 && (
+              <Badge variant="secondary" className="rounded-full bg-emerald-50 px-3 font-normal text-emerald-700">
+                Concluída {Math.abs(variacao)} dia(s) antes do previsto
               </Badge>
             )}
           </div>
@@ -168,6 +195,43 @@ export function TarefaModal({
               </div>
             </div>
           )}
+
+          <div className="border-t pt-4">
+            <p className="mb-2 text-xs text-muted-foreground">Andamento</p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="O que aconteceu nesta etapa?"
+                value={novaNota}
+                onChange={(e) => setNovaNota(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && enviarNota()}
+                className="h-10"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                disabled={!novaNota.trim() || adicionarNota.isPending}
+                onClick={enviarNota}
+                aria-label="Salvar anotação"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+            {(notas ?? []).length > 0 && (
+              <div className="mt-3 flex max-h-48 flex-col gap-2 overflow-y-auto">
+                {(notas ?? []).map((n) => (
+                  <div key={n.id} className="rounded-md bg-muted/50 px-3 py-2">
+                    <p className="text-sm leading-relaxed">{n.texto}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {n.autor_nome} · {new Date(n.criado_em).toLocaleDateString('pt-BR')}{' '}
+                      {new Date(n.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      {n.origem === 'IA' ? ' · IA' : n.origem === 'EXTERNO' ? ' · externo' : ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="space-y-3 border-t pt-4">
             <div className="space-y-1.5">
