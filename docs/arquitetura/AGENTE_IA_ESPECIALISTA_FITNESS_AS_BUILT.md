@@ -1,7 +1,9 @@
 # Agente de IA Especialista em Fitness — Estado Atual (As-Built)
 
-> Documento de registro do que foi efetivamente implementado até 10/06/2026.  
+> Documento de registro do que foi efetivamente implementado até **12/06/2026**.  
 > Para a especificação original do fluxo conversacional, ver `AGENTE_CONSULTOR_CONVERSACIONAL.md`.
+> Revisão 12/06: fluxo de confirmação validado E2E (API + navegador), tabelas de chat
+> consolidadas com RLS, bugs 001–004 e 006–009 fechados.
 
 ---
 
@@ -66,18 +68,25 @@ O **Agente de IA Especialista em Fitness** é uma camada conversacional que subs
 ### P-001 — Linguagem do domínio, não do software
 A UI fala na linguagem que o usuário fala no dia-a-dia. O agente se apresenta como "Especialista em franquias de academia", não como "sistema de slot-filling".
 
-**Violação conhecida:** a mensagem de confirmação antes do pipeline usa linguagem de formulário:  
-> *"Resumo do que entendi: • Tipo: Academia • Tamanho: M (800–1500 m²)"*  
-Isso soa como pré-visualização de campos de banco de dados, não como consultoria. Ver BUG-001.
+**Estado 12/06:** a proposta de confirmação melhorou ("Antes de começar, deixa eu
+confirmar a configuração..." com valores assumidos marcados *(sugestão)*), mas
+ainda lista campos em bullets. Refino de copy fica para a fase do consultor.
 
 ### P-002 — Mobile-first
 O chat foi construído responsivo: touch targets amplos, drawer no mobile (`ChatSidebarMobile`), layout fluido, textarea auto-resize.
 
-### P-003 — Defaults inteligentes e auto-save
-Os defaults existem (`tamanho_preset: "m"`, `publico_alvo: "25-40"`, etc.), mas a **decisão consciente única** do usuário não está implementada. O agente aplica defaults silenciosamente e dispara o pipeline sem confirmação. Ver BUG-001.
+### P-003 — Defaults inteligentes e auto-save ✅ (corrigido 11/06)
+Defaults existem E a **decisão consciente única** está implementada: o agente nunca
+aplica default em silêncio. Slots que o usuário declara não saber entram em
+`slots._incertos`, não são re-perguntados, e a proposta final apresenta cada valor
+assumido como *(sugestão)* exigindo confirmação explícita antes do pipeline
+(estado `aguardando_confirmacao`). Validado E2E em 12/06 (API + navegador).
 
-### P-004 — Filtragem proativa
-Não implementado. O agente não oferece opções elegíveis antes de executar a ação pesada (pipeline A0–A9). Ele escolhe sozinho.
+### P-004 — Filtragem proativa (parcial)
+A proposta de confirmação oferece ajuste antes da ação pesada ("Se quiser ajustar
+qualquer item, é só me dizer") e a resposta classifica confirmar/ajustar/cancelar.
+Ainda não há oferta de opções elegíveis por slot (ex.: lista de tamanhos com
+custo típico) — fica para a fase de capabilities.
 
 ### P-005 — Validação no backend
 Requests passam por schemas Pydantic (`ConversarInput`, `ConversarOutput`). Regras de negócio re-validadas no `api.py`.
@@ -155,10 +164,19 @@ CREATE TABLE messages (
 CREATE INDEX idx_messages_session ON messages(session_id, timestamp DESC);
 ```
 
-### 6.3 Risco: duplicidade de tabelas
+### 6.3 Duplicidade de tabelas — ✅ RESOLVIDA (11/06)
 
-A migration `20260610_chat_sessions.sql` criou `chat_sessions`. A migration posterior `20260610_chat_messages.sql` renomeia `chat_sessions` → `sessions` via `DO $$ ... ALTER TABLE ... RENAME`.  
-Se ambas as migrations rodarem em ordem diferente ou se `chat_sessions` já tiver sido criado manualmente, pode haver conflito de schema. A tabela `sessions` é a fonte de verdade atual.
+O risco se materializou: `chat_sessions` e `sessions` coexistiram em produção
+(a CREATE rodou de novo após o rename) e o código gravava na antiga, enquanto
+`sessions`/`messages` tinham RLS ativa SEM policies — o INSERT do frontend em
+`messages` era bloqueado em silêncio.
+
+Consolidação aplicada (`20260610_fix_chat_consolidacao_rls.sql`): dados migrados,
+antiga aposentada como `chat_sessions_deprecated_20260610` (nada apagado, P-007),
+policies criadas — `sessions_own` (ALL, dono) e `messages_own_select/insert`
+(via posse da sessão). `chat_state.py` grava em `sessions`. A CHECK de status
+ganhou os estados do fluxo de confirmação (`20260611_sessions_status_confirmacao.sql`).
+Persistência de `messages` via frontend validada no navegador em 12/06.
 
 ---
 
@@ -201,8 +219,10 @@ Content-Type: application/json
 ```
 
 **Status possíveis:**
-- `coletando_slots` — faltam dados obrigatórios ou opcionais
-- `pronto_para_pipeline` — todos os slots preenchidos (o backend cria stub e enfileira)
+- `coletando_slots` — faltam dados obrigatórios ou opcionais não-incertos
+- `aguardando_confirmacao` — proposta apresentada com *(sugestão)* nos valores
+  assumidos; resposta do usuário é classificada em confirmar/ajustar/cancelar
+- `pronto_para_pipeline` — usuário CONFIRMOU (o backend cria stub e enfileira)
 - `pipeline_rodando` — stub criado, job enfileirado no RedisQueue
 - `encerrado` — usuário disse "tchau" ou equivalente
 
@@ -232,35 +252,45 @@ Usado quando a intenção classificada é `pergunta_simples` ou `status_relatori
                     │  clarificacao      │
                     └────────┬───────────┘
                              ▼
-                    ┌────────────────────┐
-                    │  extrair_slots     │
-                    │  (Gemini Flash)    │
-                    └────────┬───────────┘
+                    ┌─────────────────────────────┐
+                    │  extrair_slots              │
+                    │  (Gemini Flash, thinking=0) │
+                    │  + incerto[] declarado      │
+                    └────────┬────────────────────┘
                              ▼
-                    ┌────────────────────┐
-                    │  _aplicar_defaults  │
-                    │  (silencioso!)      │
-                    └────────┬───────────┘
-                             ▼
-                    ┌────────────────────┐
-                    │  _slots_a_perguntar │
-                    └────────┬───────────┘
+                    ┌─────────────────────────────┐
+                    │  _slots_a_perguntar         │
+                    │  (incertos NÃO re-perguntam)│
+                    └────────┬────────────────────┘
                              │
               ┌──────────────┴──────────────┐
               │                             │
               ▼                             ▼
-    ┌─────────────────┐           ┌─────────────────┐
-    │  Faltam slots   │           │  Todos ok       │
-    │  → gerar_pergunta│          │  → pronto_para_ │
-    │     _follow_up   │           │     pipeline    │
-    └─────────────────┘           └─────────────────┘
-                                          │
-                                          ▼
-                              ┌─────────────────────┐
-                              │  api.py cria stub   │
-                              │  + enqueue no Redis │
-                              │  → pipeline_rodando │
-                              └─────────────────────┘
+    ┌─────────────────┐        ┌───────────────────────────┐
+    │  Faltam slots   │        │  Nada mais a perguntar    │
+    │  → gerar_pergunta│       │  → _mensagem_proposta     │
+    │     _follow_up   │        │  valores assumidos com   │
+    └─────────────────┘        │  *(sugestão)*             │
+                               │  → aguardando_confirmacao │
+                               └────────────┬──────────────┘
+                                            ▼
+                               ┌─────────────────────────────┐
+                               │  _detectar_confirmacao      │
+                               │  confirmar/ajustar/cancelar │
+                               └──┬──────────┬──────────┬────┘
+                          ajustar │ confirmar│          │ cancelar
+                    (re-propõe) ◄─┘          ▼          └─► coletando_slots
+                               ┌──────────────────────────┐
+                               │ _aplicar_defaults (AGORA  │
+                               │ sim, com consentimento)   │
+                               │ → pronto_para_pipeline    │
+                               └────────────┬─────────────┘
+                                            ▼
+                               ┌─────────────────────┐
+                               │  api.py cria stub   │
+                               │  + enqueue no Redis │
+                               │  → pipeline_rodando │
+                               └─────────────────────┘
 ```
 
 ### 8.1 Slots Obrigatórios
@@ -357,21 +387,15 @@ Usado quando a intenção classificada é `pergunta_simples` ou `status_relatori
 
 **Correção aplicada:** em vez de trocar a policy global (arriscado — ADK depende do Selector), os scrapes rodam num `ProactorEventLoop` próprio em thread dedicada (`_gather_scrapes_em_proactor` + `asyncio.to_thread`), só no `win32`. Mesma estratégia já usada em `tools/playwright_enrichment.py`. Mecanismo validado: subprocess executa na thread Proactor enquanto o loop principal Selector reproduz o erro original. BUG-003 (`listing_tools: fonte falhou`) deve sumir junto — monitorar logs do próximo pipeline.
 
-### 🟡 BUG-003 — `listing_tools: fonte falhou`
-**Severidade:** Média. **Status:** Aberto.
+### ✅ BUG-003 — `listing_tools: fonte falhou` (RESOLVIDO 11/06, consequência do BUG-002)
+Era o Playwright morto no Windows. Após o fix do BUG-002, o run E2E de Parquelândia
+saiu com ZERO `fonte falhou` e os top 3 candidatos vieram de listings reais do
+ImovelWeb (`direto-listing`).
 
-**Comportamento:** logs repetidos de `listing_tools: fonte falhou —` durante execução do pipeline.
-
-**Causa raiz:** provavelmente A3 tentando buscar listings de academias e falhando (fonte indisponível, timeout, ou Playwright quebrado).
-
-**Correção:** resolver BUG-002 primeiro; se persistir, investigar robustez do scraper.
-
-### 🟡 BUG-004 — Duplicidade potencial de tabelas
-**Severidade:** Baixa. **Status:** Monitorado.
-
-**Causa raiz:** migration `20260610_chat_sessions.sql` criou `chat_sessions`; migration `20260610_chat_messages.sql` tenta renomear para `sessions`. Se `chat_sessions` foi criado fora da migration (manualmente), pode haver conflito.
-
-**Correção:** verificar em produção se existem ambas as tabelas. Se sim, migrar dados e dropar `chat_sessions`.
+### ✅ BUG-004 — Duplicidade de tabelas (RESOLVIDO 11/06)
+Materializou: `chat_sessions` e `sessions` coexistiam em produção. Consolidado —
+dados migrados, antiga aposentada como `chat_sessions_deprecated_20260610`,
+policies RLS criadas. Detalhes em §6.3.
 
 ### 🟡 BUG-005 — Vite não detecta novos arquivos sem reinício
 **Severidade:** Baixa. **Status:** Conhecido.
@@ -380,6 +404,28 @@ Usado quando a intenção classificada é `pergunta_simples` ou `status_relatori
 
 **Correção:** reiniciar o dev server após criar arquivos novos. Não afeta builds de produção.
 
+### ✅ BUG-006 — CHECK de `sessions` rejeitava `aguardando_confirmacao` (RESOLVIDO 11/06)
+O estado novo do fluxo de confirmação violava a CHECK original — o chat daria 500
+na primeira proposta. Migration `20260611_sessions_status_confirmacao.sql` aplicada
+antes de qualquer usuário ser atingido.
+
+### ✅ BUG-007 — A8 morto por `State` do ADK (RESOLVIDO 11/06)
+Desde ~29/05 o runner entrega `google.adk.sessions.State` em vez de dict;
+`dict(State)` caía no protocolo de sequência (`KeyError: 0`) e `validacoes` ficou
+2 semanas vazia em silêncio. Fix: `_state_to_dict` com fallbacks.
+
+### ✅ BUG-008 — INSERT de candidatos rejeitado por colunas ONR (RESOLVIDO 11/06)
+O writer enviava `tipo_imovel_codigo_onr/label`, `modalidade` e `cartorio` sem as
+colunas existirem — PostgREST rejeitava a linha inteira e o failsafe engolia: mapa
+sem pins em todo relatório de 29/05 a 10/06 (13 reclassificados como `failed`).
+Migration aditiva + backfill + espelho de erro do writer no log da app.
+
+### ✅ BUG-009 — JSON do extrator truncado por thinking (RESOLVIDO 12/06)
+No Gemini 2.5 os thought tokens consomem `max_output_tokens`; com thinking dinâmico
+o JSON de `extrair_slots` saía cortado e o agente re-perguntava o mesmo slot em
+loop (pego no E2E real). Fix: `thinking_budget=0` nas chamadas mecânicas do engine
++ piso de 1024 tokens. Fluxo de 3 turnos validado em produção após o fix.
+
 ---
 
 ## 12. Variáveis de Ambiente Críticas
@@ -387,8 +433,12 @@ Usado quando a intenção classificada é `pergunta_simples` ou `status_relatori
 | Variável | Descrição | Status |
 |----------|-----------|--------|
 | `TINKER_API_KEY` | Prefixo `tml-`, conta Thinking Machines | Inativa (sem billing) |
-| `GEMINI_API_KEY` / `GOOGLE_API_KEY` | Gemini via google-genai | Ativa |
-| `TINKER_FALLBACK_MODEL` | Modelo Gemini de fallback | `gemini-2.5-flash` |
+| `GOOGLE_GENAI_USE_VERTEXAI` | Gemini via Vertex AI (service account, projeto Navi Vectra) | `true` — caminho principal |
+| `GEMINI_API_KEY` | Fallback API key (projeto free tier — NÃO segura Pro/volume) | Reserva |
+| `TINKER_FALLBACK_MODEL` | Modelo Gemini do engine conversacional | `gemini-2.5-flash` (thinking=0) |
+| `GOOGLE_MAPS_API_KEY` | Chave SERVER (Places New/Geocoding/StreetView/DistanceMatrix) | Ativa — split 11/06 |
+| `GOOGLE_MAPS_BROWSER_KEY` | Chave BROWSER (só Maps JS, restrita por referrer) — `/api/config/maps-js` | Ativa — split 11/06 |
+| `ADMIN_EMAILS` | Allowlist do `require_admin` (parceiros) | Ativa |
 | `SUPABASE_URL` | Endpoint Supabase | Ativa |
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave de serviço Supabase | Ativa |
 
@@ -396,13 +446,23 @@ Usado quando a intenção classificada é `pergunta_simples` ou `status_relatori
 
 ## 13. Próximos Passos (Prioridade)
 
-1. ~~**Corrigir BUG-001 (slot-filling + incerteza)**~~ — ✅ feito 2026-06-10 (ver §11).
-2. ~~**Corrigir BUG-002 (Playwright no Windows)**~~ — ✅ feito 2026-06-10 via thread Proactor isolada (ver §11).
-3. **Remover campo `messages` JSONB legado** de `sessions` — usar apenas tabela `messages`.
-4. **Implementar extração de anexos** — conectar `ChatInput` uploads ao backend (Gemini Vision para imagens/PDFs).
-5. **Adicionar billing no Tinker** — para voltar a usar o modelo primário (Qwen3-8B) em vez de Gemini fallback.
-6. **Implementar `UserProject` com contexto acumulativo** — evoluir de sessão de chat para projeto com estados `EM_CONVERSA`, `PESQUISANDO`, etc.
-7. **Capabilities sob demanda** — desacoplar A0–A4 em ferramentas independentes acessíveis via function calling.
+1. ~~Corrigir BUG-001~~ ✅ 10/06 · ~~BUG-002~~ ✅ 10/06 · ~~BUG-003/004/006/007/008/009~~ ✅ 11–12/06 (ver §11).
+2. **Ponte `sessions` → `user_projects`** — o schema do UserProject JÁ está aplicado
+   em produção (migration de execução, 11/06); falta o engine gravar lá com os
+   estados `EM_CONVERSA`/`PESQUISANDO`/etc. É a Fase 1 da spec do consultor e o
+   degrau que conecta chat ao Playbook.
+3. **Capabilities sob demanda** — desacoplar A0–A4 em ferramentas via function
+   calling (pesquisa avulsa de concorrência/demografia sem rodar o pipeline
+   inteiro). Habilita o Free tier do modelo freemium.
+4. **Anexos: esconder o upload OU implementar extração** — hoje a UI aceita
+   PDF/foto e o backend ignora (ADR-005): expectativa quebrada. Decidir antes
+   de qualquer usuário externo tocar o chat.
+5. **Remover campo `messages` JSONB legado** de `sessions` — usar apenas a tabela
+   `messages` (o `adicionar_mensagem` ainda escreve no JSONB por compatibilidade).
+6. **Decidir destino do Tinker** — recomendação: aposentar a dependência (Gemini
+   Flash cobre; um caminho de inferência a menos). Alternativa: billing + fine-tune
+   de estilo quando houver 300+ conversas reais curadas (ver memória de fine-tuning).
+7. **Refino de copy da proposta** (P-001) — menos formulário, mais consultor.
 
 ---
 
@@ -411,3 +471,5 @@ Usado quando a intenção classificada é `pergunta_simples` ou `status_relatori
 | Data | Autor | Mudança |
 |------|-------|---------|
 | 2026-06-10 | Kimi Code CLI | Criação do documento as-built com registro do estado atual do Agente de IA Especialista em Fitness. |
+| 2026-06-11 | Claude Code | BUG-001/002 corrigidos; seção 11 atualizada. |
+| 2026-06-12 | Claude Code | Revisão pós-consolidação: fluxo de confirmação refletido em P-003/P-004, §7 (status `aguardando_confirmacao`), §8 (fluxograma novo); §6.3 duplicidade resolvida com RLS; BUG-003/004 fechados e BUG-006..009 registrados como corrigidos; §12 com split de chaves Maps e Vertex; §13 reordenado (ponte UserProject como próximo degrau). Validações E2E de 12/06 (API 3 turnos + navegador) referenciadas. |
