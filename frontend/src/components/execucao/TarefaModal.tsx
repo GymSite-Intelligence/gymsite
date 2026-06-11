@@ -8,7 +8,7 @@
  * (CST-003); nas demais o campo é opcional.
  */
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, FileText, Paperclip, Send, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, FileText, Paperclip, Pencil, Plus, Send, Sparkles, Trash2, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -33,12 +33,14 @@ import { formatBRL } from '@/lib/format'
 import { CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
 import {
   abrirAnexo,
+  useAdicionarChecklistItem,
   useAdicionarNota,
   useAnexosTarefa,
   useAtribuirResponsavelChecklist,
   useAtribuirResponsavelTarefa,
   useEnviarAnexo,
   useExcluirAnexo,
+  useExcluirChecklistItem,
   useNotasTarefa,
   useRegistrarGasto,
   type Pessoa,
@@ -78,6 +80,8 @@ export function TarefaModal({
   salvando,
   playbookId,
   pessoas,
+  onEditar,
+  onExcluir,
 }: {
   tarefa: Tarefa | null
   aberto: boolean
@@ -87,6 +91,8 @@ export function TarefaModal({
   salvando: boolean
   playbookId: string
   pessoas: Pessoa[]
+  onEditar: () => void
+  onExcluir: () => void
 }) {
   const [novoStatus, setNovoStatus] = useState<Tarefa['status'] | ''>('')
   const [gastoReais, setGastoReais] = useState('')
@@ -101,13 +107,17 @@ export function TarefaModal({
   const atribuirTarefa = useAtribuirResponsavelTarefa(playbookId)
   const atribuirPasso = useAtribuirResponsavelChecklist(playbookId)
   const registrarGasto = useRegistrarGasto(playbookId)
+  const adicionarPasso = useAdicionarChecklistItem(playbookId)
+  const excluirPasso = useExcluirChecklistItem(playbookId)
   const [gastoEdit, setGastoEdit] = useState<string | null>(null)
+  const [novoPasso, setNovoPasso] = useState('')
 
   useEffect(() => {
     setNovoStatus('')
     setGastoReais('')
     setNovaNota('')
     setGastoEdit(null)
+    setNovoPasso('')
   }, [tarefa?.id])
 
   if (!tarefa) return null
@@ -132,6 +142,18 @@ export function TarefaModal({
     registrarGasto.mutate(
       { tarefaId: tarefa.id, custoRealCentavos: centavos },
       { onError: (e: Error) => notify.error(e.message) },
+    )
+  }
+
+  function adicionarPassoNovo() {
+    const texto = novoPasso.trim()
+    if (!texto || !tarefa) return
+    adicionarPasso.mutate(
+      { tarefaId: tarefa.id, descricao: texto },
+      {
+        onSuccess: () => setNovoPasso(''),
+        onError: (e: Error) => notify.error(e.message),
+      },
     )
   }
 
@@ -265,50 +287,78 @@ export function TarefaModal({
             </div>
           )}
 
-          {tarefa.checklist.length > 0 && (
-            <div className="border-t pt-4">
-              <p className="mb-2 text-xs text-muted-foreground">Passo a passo</p>
-              <div className="flex flex-col gap-2">
-                {tarefa.checklist.map((item) => (
-                  <div key={item.id} className="flex items-start gap-2 text-sm">
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
-                      <Checkbox
-                        checked={item.concluido}
-                        onCheckedChange={(v) => onMarcarChecklist(item.id, v === true)}
-                        className="mt-0.5"
-                      />
-                      <span className={item.concluido ? 'text-muted-foreground line-through' : ''}>
-                        {item.descricao}
-                      </span>
-                    </label>
-                    {pessoas.length > 0 && (
-                      <Select
-                        value={item.responsavel_pessoa_id ?? 'ninguem'}
-                        onValueChange={(v) =>
-                          atribuirPasso.mutate(
-                            { itemId: item.id, pessoaId: v === 'ninguem' ? null : v },
-                            { onError: (e: Error) => notify.error(e.message) },
-                          )
-                        }
-                      >
-                        <SelectTrigger className="h-7 w-28 shrink-0 border-dashed text-xs text-muted-foreground">
-                          <SelectValue placeholder="quem faz?" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ninguem">quem faz?</SelectItem>
-                          {pessoas.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                ))}
+          <div className="border-t pt-4">
+            <p className="mb-2 text-xs text-muted-foreground">Passo a passo</p>
+            <div className="flex flex-col gap-2">
+              {tarefa.checklist.map((item) => (
+                <div key={item.id} className="group flex items-start gap-2 text-sm">
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                    <Checkbox
+                      checked={item.concluido}
+                      onCheckedChange={(v) => onMarcarChecklist(item.id, v === true)}
+                      className="mt-0.5"
+                    />
+                    <span className={item.concluido ? 'text-muted-foreground line-through' : ''}>
+                      {item.descricao}
+                    </span>
+                  </label>
+                  {pessoas.length > 0 && (
+                    <Select
+                      value={item.responsavel_pessoa_id ?? 'ninguem'}
+                      onValueChange={(v) =>
+                        atribuirPasso.mutate(
+                          { itemId: item.id, pessoaId: v === 'ninguem' ? null : v },
+                          { onError: (e: Error) => notify.error(e.message) },
+                        )
+                      }
+                    >
+                      <SelectTrigger className="h-7 w-28 shrink-0 border-dashed text-xs text-muted-foreground">
+                        <SelectValue placeholder="quem faz?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ninguem">quem faz?</SelectItem>
+                        {pessoas.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                    aria-label={`Remover passo ${item.descricao}`}
+                    onClick={() =>
+                      excluirPasso.mutate(item.id, { onError: (e: Error) => notify.error(e.message) })
+                    }
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Novo passo…"
+                  value={novoPasso}
+                  onChange={(e) => setNovoPasso(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && adicionarPassoNovo()}
+                  className="h-9"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  disabled={!novoPasso.trim() || adicionarPasso.isPending}
+                  onClick={adicionarPassoNovo}
+                  aria-label="Adicionar passo"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          )}
+          </div>
 
           <div className="border-t pt-4">
             <p className="mb-2 text-xs text-muted-foreground">Andamento</p>
@@ -436,7 +486,27 @@ export function TarefaModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 border-t px-6 py-4 sm:justify-end">
+        <DialogFooter className="gap-2 border-t px-6 py-4 sm:justify-between">
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-muted-foreground"
+              aria-label="Editar etapa"
+              onClick={onEditar}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-muted-foreground hover:text-red-600"
+              aria-label="Excluir etapa"
+              onClick={onExcluir}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
           <Button variant="outline" onClick={onFechar} className="h-10">
             Fechar
           </Button>

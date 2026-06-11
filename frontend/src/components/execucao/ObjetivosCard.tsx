@@ -7,11 +7,17 @@
  * KRs financeiros em REAIS (colunas DECIMAL legadas da tabela okrs).
  */
 import { useState } from 'react'
-import { Target } from 'lucide-react'
+import { Pencil, Plus, Target, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { notify } from '@/lib/notify'
-import { useAtualizarOkr, useGerarOkrs, type Okr } from '@/hooks/usePlaybook'
+import { MetaFormDialog } from '@/components/execucao/MetaFormDialog'
+import {
+  useAtualizarOkr,
+  useExcluirOkr,
+  useGerarOkrs,
+  type Okr,
+} from '@/hooks/usePlaybook'
 
 function KrLinha({
   descricao,
@@ -67,26 +73,49 @@ function KrLinha({
 export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: Okr[] }) {
   const gerar = useGerarOkrs(playbookId)
   const atualizar = useAtualizarOkr(playbookId)
+  const excluir = useExcluirOkr(playbookId)
+  const [formAberto, setFormAberto] = useState(false)
+  const [okrEditando, setOkrEditando] = useState<Okr | null>(null)
+
+  function abrirForm(okr: Okr | null) {
+    setOkrEditando(okr)
+    setFormAberto(true)
+  }
+
+  const dialog = (
+    <MetaFormDialog
+      aberto={formAberto}
+      onFechar={() => setFormAberto(false)}
+      playbookId={playbookId}
+      okr={okrEditando}
+    />
+  )
 
   if (okrs.length === 0) {
     return (
-      <Button
-        variant="outline"
-        className="h-10 w-fit"
-        disabled={gerar.isPending}
-        onClick={() =>
-          gerar.mutate(undefined, {
-            onSuccess: (r) =>
-              r.okrs_criados > 0
-                ? notify.success(`${r.okrs_criados} meta(s) criada(s) a partir da sua análise.`)
-                : notify.success('Este plano já tinha metas.'),
-            onError: (e: Error) => notify.error(e.message),
-          })
-        }
-      >
-        <Target className="mr-1.5 h-4 w-4" />
-        {gerar.isPending ? 'Criando metas…' : 'Criar metas da análise'}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          className="h-10 w-fit"
+          disabled={gerar.isPending}
+          onClick={() =>
+            gerar.mutate(undefined, {
+              onSuccess: (r) =>
+                r.okrs_criados > 0
+                  ? notify.success(`${r.okrs_criados} meta(s) criada(s) a partir da sua análise.`)
+                  : notify.success('Este plano já tinha metas.'),
+              onError: (e: Error) => notify.error(e.message),
+            })
+          }
+        >
+          <Target className="mr-1.5 h-4 w-4" />
+          {gerar.isPending ? 'Criando metas…' : 'Criar metas da análise'}
+        </Button>
+        <Button variant="outline" className="h-10 w-fit" onClick={() => abrirForm(null)}>
+          <Plus className="mr-1.5 h-4 w-4" /> Nova meta
+        </Button>
+        {dialog}
+      </div>
     )
   }
 
@@ -97,17 +126,50 @@ export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: 
     )
   }
 
+  function excluirMeta(okr: Okr) {
+    if (!window.confirm(`Excluir a meta "${okr.objetivo}"?`)) return
+    excluir.mutate(okr.id, { onError: (e: Error) => notify.error(e.message) })
+  }
+
   return (
     <div>
       <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
         <Target className="h-4 w-4 text-primary" />
         Metas da abertura
         <span className="font-normal text-muted-foreground">— vindas da sua análise</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto h-7 px-2 text-xs"
+          onClick={() => abrirForm(null)}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" /> Nova meta
+        </Button>
       </h2>
       <div className="grid gap-3 md:grid-cols-3">
         {okrs.map((okr) => (
-        <div key={okr.id} className="rounded-lg border bg-card px-4 py-3">
-          <p className="text-sm font-medium">{okr.objetivo}</p>
+        <div key={okr.id} className="group rounded-lg border bg-card px-4 py-3">
+          <div className="flex items-start gap-1">
+            <p className="min-w-0 flex-1 text-sm font-medium">{okr.objetivo}</p>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+              aria-label={`Editar meta ${okr.objetivo}`}
+              onClick={() => abrirForm(okr)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+              aria-label={`Excluir meta ${okr.objetivo}`}
+              onClick={() => excluirMeta(okr)}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
           <div className="mt-2.5 flex flex-col gap-2.5">
             {okr.kr1_descricao && okr.kr1_target != null && okr.kr1_target > 0 && (
               <KrLinha
@@ -137,6 +199,7 @@ export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: 
         </div>
         ))}
       </div>
+      {dialog}
     </div>
   )
 }

@@ -264,7 +264,7 @@ export function useGerarOkrs(playbookId: string) {
 export function useAtualizarOkr(playbookId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (vars: { okrId: string; kr1_atual?: number; kr2_atual?: number; kr3_atual?: number; status?: Okr['status'] }) => {
+    mutationFn: (vars: { okrId: string; kr1_atual?: number; kr2_atual?: number; kr3_atual?: number; status?: Okr['status'] } & Partial<NovaOkr>) => {
       const { okrId, ...campos } = vars
       return api<Okr>(`/api/execucao/okrs/${okrId}`, {
         method: 'PATCH',
@@ -306,6 +306,104 @@ export function useRemoverPessoa(playbookId: string) {
   return useMutation({
     mutationFn: (pessoaId: string) =>
       api<void>(`/api/execucao/pessoas/${pessoaId}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export interface NovaTarefa {
+  titulo: string
+  descricao?: string
+  categoria: string
+  custo_planejado?: number | null
+  data_inicio?: string
+  data_prevista_conclusao?: string
+  responsavel_nome?: string
+}
+
+export function useCriarTarefa(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: NovaTarefa) =>
+      api<Tarefa>(`/api/execucao/playbooks/${playbookId}/tarefas`, {
+        method: 'POST',
+        body: JSON.stringify(vars),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useEditarTarefa(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { tarefaId: string } & Partial<NovaTarefa>) => {
+      const { tarefaId, ...campos } = vars
+      return api<Tarefa>(`/api/execucao/tarefas/${tarefaId}/detalhes`, {
+        method: 'PATCH',
+        body: JSON.stringify(campos),
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useExcluirTarefa(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (tarefaId: string) =>
+      api<void>(`/api/execucao/tarefas/${tarefaId}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useAdicionarChecklistItem(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { tarefaId: string; descricao: string }) =>
+      api<ChecklistItem>(`/api/execucao/tarefas/${vars.tarefaId}/checklist`, {
+        method: 'POST',
+        body: JSON.stringify({ descricao: vars.descricao }),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useExcluirChecklistItem(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      api<void>(`/api/execucao/checklist/${itemId}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export interface NovaOkr {
+  objetivo: string
+  descricao?: string
+  kr1_descricao?: string
+  kr1_target?: number
+  kr2_descricao?: string
+  kr2_target?: number
+  kr3_descricao?: string
+  kr3_target?: number
+}
+
+export function useCriarOkr(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: NovaOkr) =>
+      api<Okr>(`/api/execucao/playbooks/${playbookId}/okrs`, {
+        method: 'POST',
+        body: JSON.stringify(vars),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useExcluirOkr(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (okrId: string) =>
+      api<void>(`/api/execucao/okrs/${okrId}`, { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
   })
 }

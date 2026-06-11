@@ -6,7 +6,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
-import { CalendarDays, Users, Wallet } from 'lucide-react'
+import { CalendarDays, Plus, Users, Wallet } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,9 +22,11 @@ import { formatBRL } from '@/lib/format'
 import {
   usePlaybook,
   useAtualizarTarefa,
+  useExcluirTarefa,
   useMarcarChecklist,
   type Tarefa,
 } from '@/hooks/usePlaybook'
+import { EtapaFormDialog } from '@/components/execucao/EtapaFormDialog'
 import { PlaybookKanban, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
 import { PlaybookLista } from '@/components/execucao/PlaybookLista'
 import { PlaybookTimeline } from '@/components/execucao/PlaybookTimeline'
@@ -49,7 +51,10 @@ export function ProjetoExecucaoPage() {
   const { data: playbook, isLoading, error } = usePlaybook(playbookId)
   const atualizar = useAtualizarTarefa(playbookId)
   const marcarChecklist = useMarcarChecklist(playbookId)
+  const excluirTarefa = useExcluirTarefa(playbookId)
   const [pessoasAberto, setPessoasAberto] = useState(false)
+  const [etapaFormAberto, setEtapaFormAberto] = useState(false)
+  const [etapaEditando, setEtapaEditando] = useState<Tarefa | null>(null)
 
   const categoriaFiltro = search.categoria ?? 'todas'
   const tarefaAbertaId = search.etapa ?? null
@@ -191,6 +196,15 @@ export function ProjetoExecucaoPage() {
               <span className="ml-1.5 text-muted-foreground">{playbook.pessoas.length}</span>
             )}
           </Button>
+          <Button
+            className="h-10"
+            onClick={() => {
+              setEtapaEditando(null)
+              setEtapaFormAberto(true)
+            }}
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Nova etapa
+          </Button>
           <div className="ml-auto flex rounded-lg border p-0.5">
             {VIEWS.map((v) => (
               <button
@@ -240,6 +254,28 @@ export function ProjetoExecucaoPage() {
         salvando={atualizar.isPending}
         playbookId={playbookId}
         pessoas={playbook.pessoas ?? []}
+        onEditar={() => {
+          setEtapaEditando(tarefaAberta)
+          setEtapaFormAberto(true)
+        }}
+        onExcluir={() => {
+          if (!tarefaAberta) return
+          if (!window.confirm(`Excluir a etapa "${tarefaAberta.titulo}" do plano?`)) return
+          excluirTarefa.mutate(tarefaAberta.id, {
+            onSuccess: () => {
+              notify.success('Etapa excluída do plano.')
+              setSearch({ etapa: null })
+            },
+            onError: (e: Error) => notify.error(e.message),
+          })
+        }}
+      />
+
+      <EtapaFormDialog
+        aberto={etapaFormAberto}
+        onFechar={() => setEtapaFormAberto(false)}
+        playbookId={playbookId}
+        tarefa={etapaEditando}
       />
 
       <PessoasDialog

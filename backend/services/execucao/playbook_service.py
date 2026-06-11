@@ -365,6 +365,232 @@ def remover_pessoa(sb, pessoa_id: str, user_id: str) -> None:
     sb.table("tarefa_checklist").update({"responsavel_pessoa_id": None}).eq("responsavel_pessoa_id", pessoa_id).execute()
 
 
+CATEGORIAS_VALIDAS = {
+    "IMOBILIARIO", "LEGAL", "OBRAS", "EQUIPAMENTOS", "TECNOLOGIA",
+    "RH", "MARKETING", "FINANCEIRO", "OPERACIONAL", "OUTRO",
+}
+
+
+def _playbook_do_usuario(sb, playbook_id: str, user_id: str) -> dict[str, Any]:
+    pb = (
+        sb.table("playbooks")
+        .select("id, projeto_id, user_id")
+        .eq("id", playbook_id)
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
+    )
+    if not pb or not pb.data:
+        raise LookupError("Plano não encontrado.")
+    return pb.data
+
+
+def criar_tarefa(sb, playbook_id: str, user_id: str, campos: dict[str, Any]) -> dict[str, Any]:
+    pb = _playbook_do_usuario(sb, playbook_id, user_id)
+    titulo = (campos.get("titulo") or "").strip()
+    if not titulo:
+        raise ValueError("Dê um nome para a etapa.")
+    categoria = campos.get("categoria") or "OUTRO"
+    if categoria not in CATEGORIAS_VALIDAS:
+        raise ValueError("Área inválida para a etapa.")
+
+    ultima = (
+        sb.table("tarefas")
+        .select("ordem")
+        .eq("playbook_id", playbook_id)
+        .order("ordem", desc=True)
+        .limit(1)
+        .execute()
+    )
+    ordem = ((ultima.data[0]["ordem"] if ultima.data else 0) or 0) + 10
+
+    row = {
+        "playbook_id": playbook_id,
+        "projeto_id": pb["projeto_id"],
+        "titulo": titulo,
+        "descricao": (campos.get("descricao") or "").strip() or None,
+        "categoria": categoria,
+        "status": "A_FAZER",
+        "ordem": ordem,
+        "custo_planejado": int(campos["custo_planejado"]) if campos.get("custo_planejado") is not None else None,
+        "data_inicio": campos.get("data_inicio"),
+        "data_prevista_conclusao": campos.get("data_prevista_conclusao"),
+        "responsavel_nome": (campos.get("responsavel_nome") or "").strip() or None,
+        "sugerida_pela_ia": False,
+        "aceita_pelo_usuario": True,
+    }
+    res = sb.table("tarefas").insert(row).execute()
+    _recalcular_contadores(sb, playbook_id)
+    try:
+        sb.table("auditoria_eventos").insert({
+            "user_id": user_id,
+            "projeto_id": pb["projeto_id"],
+            "entidade": "tarefa",
+            "entidade_id": res.data[0]["id"] if res.data else None,
+            "evento": "CRIAR_TAREFA",
+            "snapshot_depois": {"titulo": titulo, "categoria": categoria},
+        }).execute()
+    except Exception:
+        logger.warning("auditoria CRIAR_TAREFA falhou (não bloqueia)", exc_info=True)
+    return _enriquecer_tarefa(res.data[0]) if res.data else {}
+
+
+def editar_tarefa(sb, tarefa_id: str, user_id: str, campos: dict[str, Any]) -> dict[str, Any]:
+    tarefa = _tarefa_do_usuario(sb, tarefa_id, user_id)
+    permitidos = {
+        "titulo", "descricao", "categoria", "custo_planejado",
+        "data_inicio", "data_prevista_conclusao", "responsavel_nome",
+    }
+    update: dict[str, Any] = {}
+    for k, v in campos.items():
+        if k not in permitidos:
+            continue
+        if k == "titulo":
+            if not (v or "").strip():
+                raise ValueError("O nome da etapa não pode ficar vazio.")
+            update[k] = v.strip()
+        elif k == "categoria":
+            if v not in CATEGORIAS_VALIDAS:
+                raise ValueError("Área inválida para a etapa.")
+            update[k] = v
+        elif k == "custo_planejado":
+            update[k] = int(v) if v is not None else None
+        elif k in ("descricao", "responsavel_nome"):
+            update[k] = (v or "").strip() or None
+        else:
+            update[k] = v
+    if not update:
+        raise ValueError("Nada para atualizar.")
+    update["updated_at"] = _agora_iso()
+    res = sb.table("tarefas").update(update).eq("id", tarefa["id"]).execute()
+    _recalcular_contadores(sb, tarefa["playbook_id"])
+    try:
+        sb.table("auditoria_eventos").insert({
+            "user_id": user_id,
+            "projeto_id": tarefa.get("projeto_id"),
+            "entidade": "tarefa",
+            "entidade_id": tarefa_id,
+            "evento": "EDITAR_TAREFA",
+            "snapshot_antes": {k: tarefa.get(k) for k in update if k != "updated_at"},
+            "snapshot_depois": {k: v for k, v in update.items() if k != "updated_at"},
+        }).execute()
+    except Exception:
+        logger.warning("auditoria EDITAR_TAREFA falhou (não bloqueia)", exc_info=True)
+    return _enriquecer_tarefa(res.data[0]) if res.data else {}
+
+
+def excluir_tarefa(sb, tarefa_id: str, user_id: str) -> None:
+    """Soft delete (P-007). Dependências de quem dependia dela deixam de
+    travar a conclusão: _predecessoras_pendentes só olha tarefas vivas."""
+    tarefa = _tarefa_do_usuario(sb, tarefa_id, user_id)
+    sb.table("tarefas").update({"deleted_at": _agora_iso()}).eq("id", tarefa["id"]).execute()
+    _recalcular_contadores(sb, tarefa["playbook_id"])
+    try:
+        sb.table("auditoria_eventos").insert({
+            "user_id": user_id,
+            "projeto_id": tarefa.get("projeto_id"),
+            "entidade": "tarefa",
+            "entidade_id": tarefa_id,
+            "evento": "EXCLUIR_TAREFA",
+            "snapshot_antes": {"titulo": tarefa.get("titulo"), "status": tarefa.get("status")},
+        }).execute()
+    except Exception:
+        logger.warning("auditoria EXCLUIR_TAREFA falhou (não bloqueia)", exc_info=True)
+
+
+def adicionar_checklist_item(sb, tarefa_id: str, user_id: str, descricao: str) -> dict[str, Any]:
+    if not descricao or not descricao.strip():
+        raise ValueError("Escreva o passo antes de adicionar.")
+    _tarefa_do_usuario(sb, tarefa_id, user_id)
+    ultimo = (
+        sb.table("tarefa_checklist")
+        .select("ordem")
+        .eq("tarefa_id", tarefa_id)
+        .order("ordem", desc=True)
+        .limit(1)
+        .execute()
+    )
+    ordem = ((ultimo.data[0]["ordem"] if ultimo.data else 0) or 0) + 1
+    res = sb.table("tarefa_checklist").insert({
+        "tarefa_id": tarefa_id,
+        "descricao": descricao.strip(),
+        "ordem": ordem,
+    }).execute()
+    return res.data[0] if res.data else {}
+
+
+def excluir_checklist_item(sb, item_id: str, user_id: str) -> None:
+    item = (
+        sb.table("tarefa_checklist")
+        .select("id, tarefa_id")
+        .eq("id", item_id)
+        .maybe_single()
+        .execute()
+    )
+    if not item or not item.data:
+        raise LookupError("Item não encontrado.")
+    _tarefa_do_usuario(sb, item.data["tarefa_id"], user_id)
+    sb.table("tarefa_checklist").update({"deleted_at": _agora_iso()}).eq("id", item_id).execute()
+
+
+def criar_okr(sb, playbook_id: str, user_id: str, campos: dict[str, Any]) -> dict[str, Any]:
+    pb = _playbook_do_usuario(sb, playbook_id, user_id)
+    objetivo = (campos.get("objetivo") or "").strip()
+    if not objetivo:
+        raise ValueError("Dê um nome para a meta.")
+    row: dict[str, Any] = {
+        "playbook_id": playbook_id,
+        "projeto_id": pb["projeto_id"],
+        "objetivo": objetivo,
+        "descricao": (campos.get("descricao") or "").strip() or None,
+    }
+    for i in (1, 2, 3):
+        desc = (campos.get(f"kr{i}_descricao") or "").strip()
+        target = campos.get(f"kr{i}_target")
+        if desc and target is not None:
+            row[f"kr{i}_descricao"] = desc
+            row[f"kr{i}_target"] = float(target)
+            row[f"kr{i}_atual"] = float(campos.get(f"kr{i}_atual") or 0)
+    res = sb.table("okrs").insert(row).execute()
+    try:
+        sb.table("auditoria_eventos").insert({
+            "user_id": user_id,
+            "projeto_id": pb["projeto_id"],
+            "entidade": "okr",
+            "entidade_id": res.data[0]["id"] if res.data else None,
+            "evento": "CRIAR_OKR",
+            "snapshot_depois": {"objetivo": objetivo},
+        }).execute()
+    except Exception:
+        logger.warning("auditoria CRIAR_OKR falhou (não bloqueia)", exc_info=True)
+    return res.data[0] if res.data else {}
+
+
+def excluir_okr(sb, okr_id: str, user_id: str) -> None:
+    okr = (
+        sb.table("okrs")
+        .select("id, projeto_id, playbooks!inner(user_id)")
+        .eq("id", okr_id)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
+    )
+    if not okr or not okr.data or (okr.data.get("playbooks") or {}).get("user_id") != user_id:
+        raise LookupError("Meta não encontrada.")
+    sb.table("okrs").update({"deleted_at": _agora_iso()}).eq("id", okr_id).execute()
+    try:
+        sb.table("auditoria_eventos").insert({
+            "user_id": user_id,
+            "projeto_id": okr.data.get("projeto_id"),
+            "entidade": "okr",
+            "entidade_id": okr_id,
+            "evento": "EXCLUIR_OKR",
+        }).execute()
+    except Exception:
+        logger.warning("auditoria EXCLUIR_OKR falhou (não bloqueia)", exc_info=True)
+
+
 def registrar_custo_real(sb, tarefa_id: str, user_id: str, custo_real: int) -> dict[str, Any]:
     """Lança o gasto realizado da etapa em qualquer situação (sinal pago,
     parcela da obra) — não só na conclusão. Centavos, sempre."""
@@ -472,20 +698,32 @@ def atualizar_okr(sb, okr_id: str, user_id: str, campos: dict[str, Any]) -> dict
     if not okr or not okr.data or (okr.data.get("playbooks") or {}).get("user_id") != user_id:
         raise LookupError("Meta não encontrada.")
 
-    permitidos = {"kr1_atual", "kr2_atual", "kr3_atual", "status"}
+    numericos = {
+        "kr1_atual", "kr2_atual", "kr3_atual",
+        "kr1_target", "kr2_target", "kr3_target",
+    }
+    textos = {
+        "objetivo", "descricao",
+        "kr1_descricao", "kr2_descricao", "kr3_descricao",
+    }
     update: dict[str, Any] = {}
     for k, v in campos.items():
-        if k not in permitidos:
-            continue
         if k == "status":
             if v not in ("ATIVO", "CONCLUIDO", "ARQUIVADO"):
                 raise ValueError("Situação inválida para a meta.")
             update[k] = v
-        elif v is not None:
-            try:
-                update[k] = float(v)
-            except (TypeError, ValueError):
-                raise ValueError("Valor numérico inválido para a meta.")
+        elif k in numericos:
+            if v is None:
+                update[k] = None
+            else:
+                try:
+                    update[k] = float(v)
+                except (TypeError, ValueError):
+                    raise ValueError("Valor numérico inválido para a meta.")
+        elif k in textos:
+            if k == "objetivo" and not (v or "").strip():
+                raise ValueError("O nome da meta não pode ficar vazio.")
+            update[k] = (v or "").strip() or None
     if not update:
         raise ValueError("Nada para atualizar.")
     update["updated_at"] = _agora_iso()

@@ -84,10 +84,53 @@ class AtribuirRequest(BaseModel):
 
 
 class OkrPatchRequest(BaseModel):
+    objetivo: Optional[str] = Field(None, max_length=200)
+    descricao: Optional[str] = Field(None, max_length=500)
+    kr1_descricao: Optional[str] = Field(None, max_length=200)
+    kr2_descricao: Optional[str] = Field(None, max_length=200)
+    kr3_descricao: Optional[str] = Field(None, max_length=200)
+    kr1_target: Optional[float] = Field(None, ge=0)
+    kr2_target: Optional[float] = Field(None, ge=0)
+    kr3_target: Optional[float] = Field(None, ge=0)
     kr1_atual: Optional[float] = Field(None, ge=0)
     kr2_atual: Optional[float] = Field(None, ge=0)
     kr3_atual: Optional[float] = Field(None, ge=0)
     status: Optional[str] = None
+
+
+class OkrCreateRequest(BaseModel):
+    objetivo: str = Field(..., min_length=1, max_length=200)
+    descricao: Optional[str] = Field(None, max_length=500)
+    kr1_descricao: Optional[str] = Field(None, max_length=200)
+    kr1_target: Optional[float] = Field(None, ge=0)
+    kr2_descricao: Optional[str] = Field(None, max_length=200)
+    kr2_target: Optional[float] = Field(None, ge=0)
+    kr3_descricao: Optional[str] = Field(None, max_length=200)
+    kr3_target: Optional[float] = Field(None, ge=0)
+
+
+class TarefaCreateRequest(BaseModel):
+    titulo: str = Field(..., min_length=1, max_length=200)
+    descricao: Optional[str] = Field(None, max_length=2000)
+    categoria: str = "OUTRO"
+    custo_planejado: Optional[int] = Field(None, ge=0, description="Centavos")
+    data_inicio: Optional[str] = None
+    data_prevista_conclusao: Optional[str] = None
+    responsavel_nome: Optional[str] = Field(None, max_length=120)
+
+
+class TarefaEditRequest(BaseModel):
+    titulo: Optional[str] = Field(None, max_length=200)
+    descricao: Optional[str] = Field(None, max_length=2000)
+    categoria: Optional[str] = None
+    custo_planejado: Optional[int] = Field(None, ge=0, description="Centavos")
+    data_inicio: Optional[str] = None
+    data_prevista_conclusao: Optional[str] = None
+    responsavel_nome: Optional[str] = Field(None, max_length=120)
+
+
+class ChecklistCreateRequest(BaseModel):
+    descricao: str = Field(..., min_length=1, max_length=300)
 
 
 ANEXO_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -192,7 +235,86 @@ def marcar_checklist(item_id: str, data: ChecklistRequest, request: Request):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+# ── CRUD de etapas ─────────────────────────────────────────────────────────
+@router.post("/playbooks/{playbook_id}/tarefas", status_code=201)
+def criar_tarefa(playbook_id: str, data: TarefaCreateRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.criar_tarefa(
+            _sb(), playbook_id, user_id, data.model_dump(exclude_unset=True)
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/tarefas/{tarefa_id}/detalhes")
+def editar_tarefa(tarefa_id: str, data: TarefaEditRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.editar_tarefa(
+            _sb(), tarefa_id, user_id, data.model_dump(exclude_unset=True)
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/tarefas/{tarefa_id}", status_code=204)
+def excluir_tarefa(tarefa_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        playbook_service.excluir_tarefa(_sb(), tarefa_id, user_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/tarefas/{tarefa_id}/checklist", status_code=201)
+def adicionar_checklist(tarefa_id: str, data: ChecklistCreateRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.adicionar_checklist_item(_sb(), tarefa_id, user_id, data.descricao)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/checklist/{item_id}", status_code=204)
+def excluir_checklist(item_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        playbook_service.excluir_checklist_item(_sb(), item_id, user_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ── Metas (OKRs) ───────────────────────────────────────────────────────────
+@router.post("/playbooks/{playbook_id}/okrs", status_code=201)
+def criar_okr(playbook_id: str, data: OkrCreateRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.criar_okr(
+            _sb(), playbook_id, user_id, data.model_dump(exclude_unset=True)
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/okrs/{okr_id}", status_code=204)
+def excluir_okr(okr_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        playbook_service.excluir_okr(_sb(), okr_id, user_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+
 @router.post("/playbooks/{playbook_id}/okrs/gerar", status_code=201)
 def gerar_okrs(playbook_id: str, request: Request):
     """Semeia metas num plano existente (planos criados antes da F2)."""
