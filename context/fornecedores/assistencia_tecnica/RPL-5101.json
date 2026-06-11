@@ -1,0 +1,1087 @@
+{
+  "modelo": "RPL-5101",
+  "nome": "Seated Dip",
+  "linha": "ROC-IT Plate Loaded (CPL)",
+  "fornecedor": "HOIST Fitness",
+  "documento": "Owner's Manual - Part List",
+  "fonte_manual": "https://hoistfitnesscom.s3.amazonaws.com/Resources/OwnerManuals/RPL-5101-OM.pdf",
+  "data_coleta": "2026-06-11",
+  "metodo": "Extracao da camada de texto do PDF via pdf.js + classificacao por categoria/subcategoria para selecao de pecas em assistencia tecnica",
+  "uso": "Base de dados para assistencia tecnica: o tecnico seleciona a peca exata necessaria (ex.: garantia/reposicao) navegando por categoria e subcategoria",
+  "total_itens_part_list": 99,
+  "total_quantidade_pecas": 332,
+  "total_categorias": 11,
+  "notas": {
+    "itens_ausentes": "A numeracao da HOIST pula os itens 21, 32, 35, 44, 64 e 91 (nao existem no Part List deste modelo).",
+    "estrutura": "Cada categoria contem subcategorias; cada subcategoria contem as pecas com item, part_number, descricao e quantidade. Fixadores incluem atributos (bitola, comprimento_pol, acabamento, observacao)."
+  },
+  "categorias": [
+    {
+      "categoria": "Estrutura Soldada",
+      "total_itens": 16,
+      "total_quantidade": 19,
+      "subcategorias": [
+        {
+          "subcategoria": "Coluna (Upright)",
+          "pecas": [
+            {
+              "item": 2,
+              "part_number": "026-01X3294",
+              "descricao": "REAR UPRIGHT LEFT ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 3,
+              "part_number": "026-01X3377",
+              "descricao": "REAR UPRIGHT RIGHT ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 16,
+              "part_number": "026-01X5464",
+              "descricao": "CENTER UPRIGHT ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Braco / Alavanca",
+          "pecas": [
+            {
+              "item": 5,
+              "part_number": "026-01X2447",
+              "descricao": "HANDLE ASSEMBLY",
+              "quantidade": 2
+            },
+            {
+              "item": 9,
+              "part_number": "026-01X3275",
+              "descricao": "PRESS ARM ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Assento (Conjunto)",
+          "pecas": [
+            {
+              "item": 6,
+              "part_number": "026-01X2600",
+              "descricao": "SEAT ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Suporte / Chapa",
+          "pecas": [
+            {
+              "item": 8,
+              "part_number": "026-01X2975",
+              "descricao": "FOOT PLATE MOUNT ASSEMBLY",
+              "quantidade": 2
+            },
+            {
+              "item": 36,
+              "part_number": "026-01F0251",
+              "descricao": "BRACKET PLATE: 2 HOLES 7.00\" X 2.75\"",
+              "quantidade": 1
+            },
+            {
+              "item": 37,
+              "part_number": "026-01F0307",
+              "descricao": "FLANGE: 2 HOLES 6.25\" X 2.50\"",
+              "quantidade": 1
+            },
+            {
+              "item": 45,
+              "part_number": "026-01P2929",
+              "descricao": "BACK BRACKET MOUNT",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Conjunto Estrutural",
+          "pecas": [
+            {
+              "item": 10,
+              "part_number": "026-01X3292",
+              "descricao": "LIMITING STOP ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Quadro (Frame)",
+          "pecas": [
+            {
+              "item": 13,
+              "part_number": "026-01X5461",
+              "descricao": "LOAD FRAME ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 14,
+              "part_number": "026-01X5462",
+              "descricao": "BASE FRAME ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 15,
+              "part_number": "026-01X6507",
+              "descricao": "MAIN FRAME ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 18,
+              "part_number": "026-01X5466",
+              "descricao": "FRAME LINK ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Elo / Link",
+          "pecas": [
+            {
+              "item": 17,
+              "part_number": "026-01X5465",
+              "descricao": "LINK ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Eixos e Espacadores",
+      "total_itens": 6,
+      "total_quantidade": 9,
+      "subcategorias": [
+        {
+          "subcategoria": "Eixo",
+          "pecas": [
+            {
+              "item": 12,
+              "part_number": "026-01X3536",
+              "descricao": "SHAFT, ROCKING LINK",
+              "quantidade": 1
+            },
+            {
+              "item": 40,
+              "part_number": "026-01M2360",
+              "descricao": "SHAFT - 25mm X 4.71\" LG.",
+              "quantidade": 3
+            },
+            {
+              "item": 41,
+              "part_number": "026-01M2394",
+              "descricao": "SHAFT - .984 X 6.34 LG.",
+              "quantidade": 1
+            },
+            {
+              "item": 42,
+              "part_number": "026-01M2659",
+              "descricao": "SHAFT - 20mm X .52\" ID X 4.71 LG.",
+              "quantidade": 1
+            },
+            {
+              "item": 43,
+              "part_number": "026-01M2737",
+              "descricao": "SHAFT",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Anel de Aluminio",
+          "pecas": [
+            {
+              "item": 38,
+              "part_number": "026-01M0935",
+              "descricao": "ALUMINIUM RING: Ø1.50\" I.D.",
+              "quantidade": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Sistema de Peso",
+      "total_itens": 8,
+      "total_quantidade": 25,
+      "subcategorias": [
+        {
+          "subcategoria": "Pino Seletor",
+          "pecas": [
+            {
+              "item": 7,
+              "part_number": "026-01X2849",
+              "descricao": "RACHET PULL-PIN ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Suporte de Anilha (Weight Horn)",
+          "pecas": [
+            {
+              "item": 11,
+              "part_number": "026-01X6626",
+              "descricao": "RPL LIFT WEIGHT HORN",
+              "quantidade": 2
+            },
+            {
+              "item": 39,
+              "part_number": "026-01X6625",
+              "descricao": "RPL STORAGE WEIGHT HORN",
+              "quantidade": 4
+            }
+          ]
+        },
+        {
+          "subcategoria": "Borracha de Suporte de Anilha",
+          "pecas": [
+            {
+              "item": 47,
+              "part_number": "026-01PL0264",
+              "descricao": "WEIGHT HORN RUBBER DONUT",
+              "quantidade": 2
+            },
+            {
+              "item": 54,
+              "part_number": "026-01PL2533",
+              "descricao": "RUBBER DONUT FOR PLASTIC WEIGHT HORN",
+              "quantidade": 4
+            }
+          ]
+        },
+        {
+          "subcategoria": "Capa de Suporte de Anilha",
+          "pecas": [
+            {
+              "item": 100,
+              "part_number": "026-01PL2532",
+              "descricao": "LONG WEIGHT HORN COVER",
+              "quantidade": 4
+            },
+            {
+              "item": 103,
+              "part_number": "026-01PL2576",
+              "descricao": "9.25\" WEIGHT HORN COVER",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Tampa de Suporte de Anilha",
+          "pecas": [
+            {
+              "item": 101,
+              "part_number": "026-01PL2535",
+              "descricao": "WEIGHT HORN END CAP",
+              "quantidade": 6
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Rolamentos e Buchas",
+      "total_itens": 7,
+      "total_quantidade": 31,
+      "subcategorias": [
+        {
+          "subcategoria": "Bucha",
+          "pecas": [
+            {
+              "item": 24,
+              "part_number": "014-0011001",
+              "descricao": "NYLINER BUSHING: Ø 1.09\" O.D. X Ø 1.00\" I.D X 1.13\" LG.",
+              "quantidade": 2
+            },
+            {
+              "item": 25,
+              "part_number": "014-0011002",
+              "descricao": "BUSHING: Ø1.09\" O.D. X Ø1.00\" I.D. X 1.13\" LG.",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Rolamento",
+          "pecas": [
+            {
+              "item": 26,
+              "part_number": "014-0012014",
+              "descricao": "BEARING: FLANGELESS - 25mm I.D.",
+              "quantidade": 10
+            },
+            {
+              "item": 27,
+              "part_number": "014-0012015",
+              "descricao": "BEARING: FLANGELESS 1.65\" O.D. X .79\" I.D. X .47\" WIDE",
+              "quantidade": 4
+            }
+          ]
+        },
+        {
+          "subcategoria": "Anel de Retencao",
+          "pecas": [
+            {
+              "item": 28,
+              "part_number": "014-0012017",
+              "descricao": "SNAP RING - 20mm EXTERNAL",
+              "quantidade": 4
+            },
+            {
+              "item": 29,
+              "part_number": "014-0012018",
+              "descricao": "SNAP RING - 25mm EXTERNAL",
+              "quantidade": 8
+            }
+          ]
+        },
+        {
+          "subcategoria": "Colar Bipartido",
+          "pecas": [
+            {
+              "item": 30,
+              "part_number": "014-0019005-1",
+              "descricao": "T SPLIT COLLAR THREADED 1.00\" I.D. X 20mm",
+              "quantidade": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Fixadores - Parafusos",
+      "total_itens": 20,
+      "total_quantidade": 62,
+      "subcategorias": [
+        {
+          "subcategoria": "Parafuso Sem Cabeca (Set Screw)",
+          "pecas": [
+            {
+              "item": 22,
+              "part_number": "011-0411001",
+              "descricao": "SET SCREW: 1/4\"-28 X .25\" LG. (SS)",
+              "quantidade": 4,
+              "atributos": {
+                "bitola": "1/4\"",
+                "comprimento_pol": 0.25,
+                "acabamento": "Inox (SS)",
+                "observacao": null
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Parafuso SHCS",
+          "pecas": [
+            {
+              "item": 62,
+              "part_number": "011-0007097",
+              "descricao": "1/4\"-20UNC X .75\" SHCS (BZ)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "1/4\"-20UNC",
+                "comprimento_pol": 0.75,
+                "acabamento": "Zincado (BZ)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 73,
+              "part_number": "011-0116142",
+              "descricao": "3/8\"-16UNC X 1.00\" LOW HEAD SHCS (Ni)",
+              "quantidade": 1,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": 1,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            },
+            {
+              "item": 74,
+              "part_number": "011-0116107",
+              "descricao": "1/2\"-13UNC X 1.00\" LOW HEAD SHCS (Ni)",
+              "quantidade": 4,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": 1,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            },
+            {
+              "item": 75,
+              "part_number": "011-0116115",
+              "descricao": "1/2\"-13UNC X 3.00\" LOW HEAD SHCS (Ni)",
+              "quantidade": 3,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": 3,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            },
+            {
+              "item": 76,
+              "part_number": "011-0116119",
+              "descricao": "1/2\"-13UNC X 4.00\" LOW HEAD SHCS (Ni)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": 4,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            },
+            {
+              "item": 77,
+              "part_number": "011-0116120",
+              "descricao": "1/2\"-13UNC X 4.25\" LOW HEAD SHCS (Ni)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": 4.25,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            },
+            {
+              "item": 78,
+              "part_number": "011-0116124",
+              "descricao": "1/2\"-13UNC X 5.25\" LOW HEAD SHCS (Ni)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": 5.25,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            },
+            {
+              "item": 79,
+              "part_number": "011-0116126",
+              "descricao": "1/2\"-13UNC X 5.75\" LOW HEAD SHCS (Ni)",
+              "quantidade": 4,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": 5.75,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            },
+            {
+              "item": 80,
+              "part_number": "011-0116133",
+              "descricao": "1/2\"-13UNC X 7.50\" LOW HEAD SHCS (Ni)",
+              "quantidade": 1,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": 7.5,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Cabeca baixa (LOW HEAD)"
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Parafuso BHCS",
+          "pecas": [
+            {
+              "item": 63,
+              "part_number": "011-0701083",
+              "descricao": "1/4\"-20UNC X 2.50\" BHCS (Ni) w/ NYLON PATCH",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "1/4\"-20UNC",
+                "comprimento_pol": 2.5,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Com trava de nylon (NYLON PATCH)"
+              }
+            },
+            {
+              "item": 65,
+              "part_number": "011-0701003",
+              "descricao": "5/16\"-18UNC X 1.00\" BHCS (Ni)",
+              "quantidade": 4,
+              "atributos": {
+                "bitola": "5/16\"-18UNC",
+                "comprimento_pol": 1,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 66,
+              "part_number": "011-0701004",
+              "descricao": "5/16\"-18UNC X 1.25\" BHCS (Ni)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "5/16\"-18UNC",
+                "comprimento_pol": 1.25,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 69,
+              "part_number": "011-0701020",
+              "descricao": "3/8\"-16UNC X 1.00\" BHCS (Ni)",
+              "quantidade": 12,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": 1,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 70,
+              "part_number": "011-0401002",
+              "descricao": "3/8\"-16UNC X 1.25\" BHCS (SS)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": 1.25,
+                "acabamento": "Inox (SS)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 71,
+              "part_number": "011-0701028",
+              "descricao": "3/8\"-16UNC X 3.00\" BHCS (Ni)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": 3,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 72,
+              "part_number": "011-0701027",
+              "descricao": "3/8\"-16UNC X 2.75\" BHCS (Ni)",
+              "quantidade": 4,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": 2.75,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 102,
+              "part_number": "011-0701084",
+              "descricao": "3/8\"-16UNC X 1.25\" BHCS (Ni) W/ DRI-LOC PATCH",
+              "quantidade": 6,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": 1.25,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": "Com trava DRI-LOC"
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Parafuso Square Head",
+          "pecas": [
+            {
+              "item": 67,
+              "part_number": "011-0704001",
+              "descricao": "3/8-16UNC X .75\" SQUARE HEAD (Ni)",
+              "quantidade": 1,
+              "atributos": {
+                "bitola": "3/8-16UNC",
+                "comprimento_pol": 0.75,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Parafuso Ombro (SHB)",
+          "pecas": [
+            {
+              "item": 68,
+              "part_number": "011-0401003",
+              "descricao": "3/8\"-16UNC X .75 SHB (SS)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": null,
+                "acabamento": "Inox (SS)",
+                "observacao": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Fixadores - Porcas",
+      "total_itens": 3,
+      "total_quantidade": 32,
+      "subcategorias": [
+        {
+          "subcategoria": "Porca Flangeada",
+          "pecas": [
+            {
+              "item": 23,
+              "part_number": "012-0503001",
+              "descricao": "1/2\"-13 FLANGED NUT (Ni)",
+              "quantidade": 1,
+              "atributos": {
+                "bitola": "1/2\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Porca Nylock",
+          "pecas": [
+            {
+              "item": 81,
+              "part_number": "012-0504005",
+              "descricao": "3/8\"-16 UNC THIN NYLOCK NUT (Ni)",
+              "quantidade": 11,
+              "atributos": {
+                "bitola": "3/8\"-16UNC",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 82,
+              "part_number": "012-0504002",
+              "descricao": "1/2\"-13 UNC THIN NYLOCK NUT (Ni)",
+              "quantidade": 20,
+              "atributos": {
+                "bitola": "1/2\"-13UNC",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Fixadores - Arruelas",
+      "total_itens": 8,
+      "total_quantidade": 106,
+      "subcategorias": [
+        {
+          "subcategoria": "Arruela Lisa",
+          "pecas": [
+            {
+              "item": 55,
+              "part_number": "013-1002008",
+              "descricao": "1/4\" X 16mm SAE FLAT WASHER (Ni)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "1/4\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 56,
+              "part_number": "013-1002010",
+              "descricao": "5/16\" SAE FLAT WASHER (Ni)",
+              "quantidade": 6,
+              "atributos": {
+                "bitola": "5/16\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 57,
+              "part_number": "013-1002007",
+              "descricao": "3/8\" X 22mm FLAT WASHER (Ni)",
+              "quantidade": 36,
+              "atributos": {
+                "bitola": "3/8\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 58,
+              "part_number": "013-1002006",
+              "descricao": "1/2\" X 27mm SAE FLAT WASHER (Ni)",
+              "quantidade": 38,
+              "atributos": {
+                "bitola": "1/2\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Arruela de Pressao",
+          "pecas": [
+            {
+              "item": 59,
+              "part_number": "013-1006001",
+              "descricao": "1/4\" SPLIT LOCK WASHER (Ni)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "1/4\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 60,
+              "part_number": "013-1006003",
+              "descricao": "3/8\" SPLIT LOCK WASHER (Ni)",
+              "quantidade": 14,
+              "atributos": {
+                "bitola": "3/8\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            },
+            {
+              "item": 61,
+              "part_number": "013-0402011",
+              "descricao": "3/8\" SPLIT LOCK WASHER (SS)",
+              "quantidade": 2,
+              "atributos": {
+                "bitola": "3/8\"",
+                "comprimento_pol": null,
+                "acabamento": "Inox (SS)",
+                "observacao": null
+              }
+            }
+          ]
+        },
+        {
+          "subcategoria": "Arruela de Trava Interna",
+          "pecas": [
+            {
+              "item": 99,
+              "part_number": "013-1010003",
+              "descricao": "5/16\" INTERNAL LOCK WASHER (Ni)",
+              "quantidade": 6,
+              "atributos": {
+                "bitola": "5/16\"",
+                "comprimento_pol": null,
+                "acabamento": "Niquelado (Ni)",
+                "observacao": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Estofados",
+      "total_itens": 3,
+      "total_quantidade": 3,
+      "subcategorias": [
+        {
+          "subcategoria": "Almofada (Pad)",
+          "pecas": [
+            {
+              "item": 19,
+              "part_number": "022-01PD2054-A",
+              "descricao": "SEAT PAD ASSEMBLY",
+              "quantidade": 1
+            },
+            {
+              "item": 20,
+              "part_number": "022-01PD2114-A-M",
+              "descricao": "BACK PAD ASSEMBLY",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Suporte Plastico de Almofada",
+          "pecas": [
+            {
+              "item": 34,
+              "part_number": "026-01PL2511",
+              "descricao": "BACK PAD PLASTIC BACKING",
+              "quantidade": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Empunhaduras",
+      "total_itens": 1,
+      "total_quantidade": 2,
+      "subcategorias": [
+        {
+          "subcategoria": "Manopla (Grip)",
+          "pecas": [
+            {
+              "item": 33,
+              "part_number": "019-0002048",
+              "descricao": "OPEN END GRIP Ø1.50\" X 7.25\" LG.",
+              "quantidade": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Acabamentos Plasticos",
+      "total_itens": 12,
+      "total_quantidade": 23,
+      "subcategorias": [
+        {
+          "subcategoria": "Tampa Superior",
+          "pecas": [
+            {
+              "item": 1,
+              "part_number": "026-01PL2236",
+              "descricao": "TOP CAP W/INSERTS",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Pe / Base de Apoio",
+          "pecas": [
+            {
+              "item": 4,
+              "part_number": "026-01PL2124",
+              "descricao": "FOOTPLATE, MOLDED",
+              "quantidade": 2
+            },
+            {
+              "item": 48,
+              "part_number": "026-01PL2122",
+              "descricao": "OVAL-SHAPED RUBBER FOOT",
+              "quantidade": 1
+            },
+            {
+              "item": 49,
+              "part_number": "026-01PL2131",
+              "descricao": "D-SHAPED RUBBER FOOT",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Ponteira (End Cap)",
+          "pecas": [
+            {
+              "item": 31,
+              "part_number": "016-0001003",
+              "descricao": "END CAP 1.50\" X 2.50\" (BLACK)",
+              "quantidade": 1
+            },
+            {
+              "item": 104,
+              "part_number": "016-0201023",
+              "descricao": "END CAP 1.50\" (BLACK)",
+              "quantidade": 4
+            }
+          ]
+        },
+        {
+          "subcategoria": "Luva Plastica",
+          "pecas": [
+            {
+              "item": 46,
+              "part_number": "026-01PL2551",
+              "descricao": "PLASTIC SEAT SLEEVE 3mm",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Manipulo Plastico (Knob)",
+          "pecas": [
+            {
+              "item": 50,
+              "part_number": "026-01PL2158",
+              "descricao": "PLASTIC KNOB: Ø1.50\" - BASE",
+              "quantidade": 2
+            },
+            {
+              "item": 51,
+              "part_number": "026-01PL2159",
+              "descricao": "PLASTIC KNOB: Ø1.50\" - CAP",
+              "quantidade": 2
+            }
+          ]
+        },
+        {
+          "subcategoria": "Protetor (Guard)",
+          "pecas": [
+            {
+              "item": 52,
+              "part_number": "026-01PL2519",
+              "descricao": "PLASTIC SCUFF GUARD 11.05\" LG. WITH RIVETS",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Batente (Bumper)",
+          "pecas": [
+            {
+              "item": 53,
+              "part_number": "026-01PL2246",
+              "descricao": "DUAL HOLE BUMPER 2.05\" THICK",
+              "quantidade": 3
+            }
+          ]
+        },
+        {
+          "subcategoria": "Plug de Acabamento",
+          "pecas": [
+            {
+              "item": 105,
+              "part_number": "026-01PL0286",
+              "descricao": "1.25\" END PLUG",
+              "quantidade": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categoria": "Adesivos e Etiquetas",
+      "total_itens": 15,
+      "total_quantidade": 20,
+      "subcategorias": [
+        {
+          "subcategoria": "Adesivo (Decal)",
+          "pecas": [
+            {
+              "item": 83,
+              "part_number": "021-0003008",
+              "descricao": "DECAL COMMERCIAL MAINTENANCE 1.50 X 6.69",
+              "quantidade": 1
+            },
+            {
+              "item": 84,
+              "part_number": "021-0003093",
+              "descricao": "DECAL MOVING PARTS 1.20\" X 2.38\" (HOR)",
+              "quantidade": 1
+            },
+            {
+              "item": 85,
+              "part_number": "021-0003113",
+              "descricao": "DECAL PINCH POINT 1.63\" X 3.25\" (VERTICAL)",
+              "quantidade": 1
+            },
+            {
+              "item": 86,
+              "part_number": "021-0003135",
+              "descricao": "DECAL WARNING 1.50\" X 6.69\"",
+              "quantidade": 1
+            },
+            {
+              "item": 87,
+              "part_number": "021-0003230",
+              "descricao": "DECAL HOIST 1.625\" X 6.0613\"",
+              "quantidade": 1
+            },
+            {
+              "item": 88,
+              "part_number": "021-0003320",
+              "descricao": "DECAL 800 LB. WEIGHT RATING (1.63\" X 1.63\")",
+              "quantidade": 1
+            },
+            {
+              "item": 89,
+              "part_number": "021-0003334",
+              "descricao": "DECAL HOIST 3.88\" X 14.45\"",
+              "quantidade": 2
+            },
+            {
+              "item": 90,
+              "part_number": "021-0003341",
+              "descricao": "DECAL PINCH POINT 1.07\" X 2.13\" (HORIZONTAL)",
+              "quantidade": 2
+            },
+            {
+              "item": 92,
+              "part_number": "021-0003416",
+              "descricao": "DECAL WIDE",
+              "quantidade": 2
+            },
+            {
+              "item": 93,
+              "part_number": "021-0003417",
+              "descricao": "DECAL NARROW",
+              "quantidade": 2
+            },
+            {
+              "item": 94,
+              "part_number": "021-0003427",
+              "descricao": "DECAL ADJUST",
+              "quantidade": 2
+            },
+            {
+              "item": 95,
+              "part_number": "021-0003544",
+              "descricao": "DECAL ADJUST 1-5 VERTICAL TXT.",
+              "quantidade": 1
+            },
+            {
+              "item": 97,
+              "part_number": "021-0018022",
+              "descricao": "DECAL HOISTFITNESS.COM LOGO",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Placa (Placard)",
+          "pecas": [
+            {
+              "item": 96,
+              "part_number": "021-0003687",
+              "descricao": "RPL-5101 SEATED DIP PLACARD",
+              "quantidade": 1
+            }
+          ]
+        },
+        {
+          "subcategoria": "Adesivo de Numero de Serie",
+          "pecas": [
+            {
+              "item": 98,
+              "part_number": "SERIAL # DECAL",
+              "descricao": "DECAL HOIST SERIAL # 1.63\" X 2.63\"",
+              "quantidade": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
