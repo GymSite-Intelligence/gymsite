@@ -154,6 +154,21 @@ def obter_playbook_completo(sb, playbook_id: str, user_id: str) -> Optional[dict
         .execute()
     ).data or []
 
+    # KRs espelho do plano: derivados em runtime (C-02), não digitados.
+    # Casados pela descrição semeada pelo gerador.
+    concluidas_runtime = sum(1 for t in lista if t["status"] == "CONCLUIDA")
+    gasto_total_reais = sum(t.get("custo_real") or 0 for t in lista) / 100
+    KR_AUTO = {
+        "Etapas do plano concluídas": float(concluidas_runtime),
+        "Investimento total (R$, máximo)": round(gasto_total_reais, 2),
+    }
+    for okr in okrs:
+        for i in (1, 2, 3):
+            desc = okr.get(f"kr{i}_descricao")
+            if desc in KR_AUTO:
+                okr[f"kr{i}_atual"] = KR_AUTO[desc]
+                okr[f"kr{i}_auto"] = True
+
     out = dict(pb.data)
     concluidas = sum(1 for t in lista if t["status"] == "CONCLUIDA")
     contaveis = [t for t in lista if t["status"] != "CANCELADA"]

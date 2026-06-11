@@ -27,9 +27,10 @@ import {
   type Tarefa,
 } from '@/hooks/usePlaybook'
 import { EtapaFormDialog } from '@/components/execucao/EtapaFormDialog'
-import { PlaybookKanban, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
+import { PlaybookKanban, CATEGORIA_LABEL, COLUNAS } from '@/components/execucao/PlaybookKanban'
 import { PlaybookLista } from '@/components/execucao/PlaybookLista'
 import { PlaybookTimeline } from '@/components/execucao/PlaybookTimeline'
+import { PlaybookCustos } from '@/components/execucao/PlaybookCustos'
 import { TarefaModal } from '@/components/execucao/TarefaModal'
 import { PessoasDialog } from '@/components/execucao/PessoasDialog'
 import { ObjetivosCard } from '@/components/execucao/ObjetivosCard'
@@ -39,12 +40,18 @@ const VIEWS = [
   { id: 'kanban', rotulo: 'Etapas' },
   { id: 'lista', rotulo: 'Lista' },
   { id: 'timeline', rotulo: 'Linha do tempo' },
+  { id: 'custos', rotulo: 'Custos' },
 ] as const
 type ViewId = (typeof VIEWS)[number]['id']
 
 export function ProjetoExecucaoPage() {
   const { playbookId } = useParams({ strict: false }) as { playbookId: string }
-  const search = useSearch({ strict: false }) as { categoria?: string; etapa?: string; view?: string }
+  const search = useSearch({ strict: false }) as {
+    categoria?: string
+    etapa?: string
+    view?: string
+    situacao?: string
+  }
   const navigate = useNavigate()
   const isMobile = useIsMobile()
 
@@ -57,31 +64,40 @@ export function ProjetoExecucaoPage() {
   const [etapaEditando, setEtapaEditando] = useState<Tarefa | null>(null)
 
   const categoriaFiltro = search.categoria ?? 'todas'
+  const situacaoFiltro = search.situacao ?? 'todas'
   const tarefaAbertaId = search.etapa ?? null
   const viewPadrao: ViewId = isMobile ? 'lista' : 'kanban'
   const view: ViewId = (VIEWS.some((v) => v.id === search.view) ? search.view : viewPadrao) as ViewId
 
   const tarefasFiltradas = useMemo(() => {
-    const todas = playbook?.tarefas ?? []
-    if (categoriaFiltro === 'todas') return todas
-    return todas.filter((t) => t.categoria === categoriaFiltro)
-  }, [playbook, categoriaFiltro])
+    let todas = playbook?.tarefas ?? []
+    if (categoriaFiltro !== 'todas') todas = todas.filter((t) => t.categoria === categoriaFiltro)
+    if (situacaoFiltro !== 'todas') todas = todas.filter((t) => t.status === situacaoFiltro)
+    return todas
+  }, [playbook, categoriaFiltro, situacaoFiltro])
 
   const tarefaAberta = useMemo(
     () => (playbook?.tarefas ?? []).find((t) => t.id === tarefaAbertaId) ?? null,
     [playbook, tarefaAbertaId],
   )
 
-  function setSearch(next: { categoria?: string; etapa?: string | null; view?: string }) {
+  function setSearch(next: {
+    categoria?: string
+    etapa?: string | null
+    view?: string
+    situacao?: string
+  }) {
     const categoria = next.categoria !== undefined ? next.categoria : categoriaFiltro
     const etapa = next.etapa !== undefined ? next.etapa : tarefaAbertaId
     const v = next.view !== undefined ? next.view : search.view
+    const situacao = next.situacao !== undefined ? next.situacao : situacaoFiltro
     navigate({
       to: '.',
       search: {
         categoria: categoria && categoria !== 'todas' ? categoria : undefined,
         etapa: etapa || undefined,
         view: v && v !== viewPadrao ? v : undefined,
+        situacao: situacao && situacao !== 'todas' ? situacao : undefined,
       },
       replace: true,
     })
@@ -177,7 +193,7 @@ export function ProjetoExecucaoPage() {
             value={categoriaFiltro}
             onValueChange={(v) => setSearch({ categoria: v })}
           >
-            <SelectTrigger className="h-10 w-52">
+            <SelectTrigger className="h-10 w-44">
               <SelectValue placeholder="Todas as áreas" />
             </SelectTrigger>
             <SelectContent>
@@ -185,6 +201,19 @@ export function ProjetoExecucaoPage() {
               {categorias.map((c) => (
                 <SelectItem key={c} value={c}>
                   {CATEGORIA_LABEL[c] ?? c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={situacaoFiltro} onValueChange={(v) => setSearch({ situacao: v })}>
+            <SelectTrigger className="h-10 w-44">
+              <SelectValue placeholder="Todas as situações" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as situações</SelectItem>
+              {COLUNAS.map((c) => (
+                <SelectItem key={c.status} value={c.status}>
+                  {c.titulo}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -239,6 +268,7 @@ export function ProjetoExecucaoPage() {
       {view === 'timeline' && (
         <PlaybookTimeline tarefas={tarefasFiltradas} onAbrir={(id) => setSearch({ etapa: id })} />
       )}
+      {view === 'custos' && <PlaybookCustos tarefas={tarefasFiltradas} />}
 
       <TarefaModal
         tarefa={tarefaAberta}

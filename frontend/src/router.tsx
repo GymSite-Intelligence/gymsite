@@ -303,10 +303,13 @@ const execucaoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/execucao/$playbookId',
   component: ProjetoExecucaoPage,
-  validateSearch: (s: Record<string, unknown>): { categoria?: string; etapa?: string; view?: string } => ({
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { categoria?: string; etapa?: string; view?: string; situacao?: string } => ({
     categoria: typeof s.categoria === 'string' ? s.categoria : undefined,
     etapa: typeof s.etapa === 'string' ? s.etapa : undefined,
     view: typeof s.view === 'string' ? s.view : undefined,
+    situacao: typeof s.situacao === 'string' ? s.situacao : undefined,
   }),
 })
 

@@ -38,6 +38,9 @@ export interface Okr {
   kr3_descricao: string | null
   kr3_target: number | null
   kr3_atual: number | null
+  kr1_auto?: boolean
+  kr2_auto?: boolean
+  kr3_auto?: boolean
 }
 
 export interface Anexo {

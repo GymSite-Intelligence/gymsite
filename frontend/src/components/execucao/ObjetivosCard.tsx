@@ -23,11 +23,14 @@ function KrLinha({
   descricao,
   target,
   atual,
+  auto,
   onSalvar,
 }: {
   descricao: string
   target: number
   atual: number
+  /** Espelho do plano (etapas concluídas, gasto total) — calculado, não digitado. */
+  auto?: boolean
   onSalvar: (valor: number) => void
 }) {
   const [texto, setTexto] = useState<string | null>(null)
@@ -45,7 +48,10 @@ function KrLinha({
     <div className="flex items-center gap-2">
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="truncate text-xs text-muted-foreground">{descricao}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {descricao}
+            {auto && <span className="ml-1 text-[10px]">· automático</span>}
+          </p>
           <p className="shrink-0 text-xs font-medium">
             {atual.toLocaleString('pt-BR')} / {target.toLocaleString('pt-BR')}
           </p>
@@ -57,15 +63,17 @@ function KrLinha({
           />
         </div>
       </div>
-      <Input
-        inputMode="decimal"
-        className="h-7 w-20 shrink-0 text-right text-xs"
-        value={texto ?? String(atual)}
-        onChange={(e) => setTexto(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-        aria-label={`Atualizar: ${descricao}`}
-      />
+      {!auto && (
+        <Input
+          inputMode="decimal"
+          className="h-7 w-20 shrink-0 text-right text-xs"
+          value={texto ?? String(atual)}
+          onChange={(e) => setTexto(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          aria-label={`Atualizar: ${descricao}`}
+        />
+      )}
     </div>
   )
 }
@@ -176,6 +184,7 @@ export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: 
                 descricao={okr.kr1_descricao}
                 target={okr.kr1_target}
                 atual={okr.kr1_atual ?? 0}
+                auto={okr.kr1_auto}
                 onSalvar={(v) => salvar(okr.id, 1, v)}
               />
             )}
@@ -184,6 +193,7 @@ export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: 
                 descricao={okr.kr2_descricao}
                 target={okr.kr2_target}
                 atual={okr.kr2_atual ?? 0}
+                auto={okr.kr2_auto}
                 onSalvar={(v) => salvar(okr.id, 2, v)}
               />
             )}
@@ -192,6 +202,7 @@ export function ObjetivosCard({ playbookId, okrs }: { playbookId: string; okrs: 
                 descricao={okr.kr3_descricao}
                 target={okr.kr3_target}
                 atual={okr.kr3_atual ?? 0}
+                auto={okr.kr3_auto}
                 onSalvar={(v) => salvar(okr.id, 3, v)}
               />
             )}
