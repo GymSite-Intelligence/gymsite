@@ -135,10 +135,24 @@ def obter_playbook_completo(sb, playbook_id: str, user_id: str) -> Optional[dict
         .execute()
     ).data or []
 
+    okrs = (
+        sb.table("okrs")
+        .select("id, objetivo, descricao, status, "
+                "kr1_descricao, kr1_target, kr1_atual, "
+                "kr2_descricao, kr2_target, kr2_atual, "
+                "kr3_descricao, kr3_target, kr3_atual")
+        .eq("playbook_id", playbook_id)
+        .is_("deleted_at", "null")
+        .neq("status", "ARQUIVADO")
+        .order("created_at")
+        .execute()
+    ).data or []
+
     out = dict(pb.data)
     concluidas = sum(1 for t in lista if t["status"] == "CONCLUIDA")
     contaveis = [t for t in lista if t["status"] != "CANCELADA"]
     out["pessoas"] = pessoas
+    out["okrs"] = okrs
     out["tarefas"] = lista
     out["dependencias"] = deps
     out["total_tarefas"] = len(contaveis)
@@ -409,6 +423,39 @@ def adicionar_nota(
         "origem": origem,
         "texto": texto.strip(),
     }).execute()
+    return res.data[0] if res.data else {}
+
+
+def atualizar_okr(sb, okr_id: str, user_id: str, campos: dict[str, Any]) -> dict[str, Any]:
+    okr = (
+        sb.table("okrs")
+        .select("id, playbook_id, playbooks!inner(user_id)")
+        .eq("id", okr_id)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
+    )
+    if not okr or not okr.data or (okr.data.get("playbooks") or {}).get("user_id") != user_id:
+        raise LookupError("Meta não encontrada.")
+
+    permitidos = {"kr1_atual", "kr2_atual", "kr3_atual", "status"}
+    update: dict[str, Any] = {}
+    for k, v in campos.items():
+        if k not in permitidos:
+            continue
+        if k == "status":
+            if v not in ("ATIVO", "CONCLUIDO", "ARQUIVADO"):
+                raise ValueError("Situação inválida para a meta.")
+            update[k] = v
+        elif v is not None:
+            try:
+                update[k] = float(v)
+            except (TypeError, ValueError):
+                raise ValueError("Valor numérico inválido para a meta.")
+    if not update:
+        raise ValueError("Nada para atualizar.")
+    update["updated_at"] = _agora_iso()
+    res = sb.table("okrs").update(update).eq("id", okr_id).execute()
     return res.data[0] if res.data else {}
 
 

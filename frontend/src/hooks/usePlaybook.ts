@@ -24,6 +24,22 @@ export interface Pessoa {
   telefone: string | null
 }
 
+export interface Okr {
+  id: string
+  objetivo: string
+  descricao: string | null
+  status: 'ATIVO' | 'CONCLUIDO' | 'ARQUIVADO'
+  kr1_descricao: string | null
+  kr1_target: number | null
+  kr1_atual: number | null
+  kr2_descricao: string | null
+  kr2_target: number | null
+  kr2_atual: number | null
+  kr3_descricao: string | null
+  kr3_target: number | null
+  kr3_atual: number | null
+}
+
 export interface Anexo {
   id: string
   tarefa_id: string
@@ -91,6 +107,7 @@ export interface PlaybookCompleto {
   tarefas: Tarefa[]
   dependencias: Dependencia[]
   pessoas: Pessoa[]
+  okrs: Okr[]
 }
 
 async function authHeaders(): Promise<Record<string, string>> {
@@ -204,6 +221,31 @@ export function useAdicionarNota(tarefaId: string | null) {
     onSuccess: () => {
       if (tarefaId) qc.invalidateQueries({ queryKey: playbookKeys.notas(tarefaId) })
     },
+  })
+}
+
+export function useGerarOkrs(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api<{ okrs_criados: number }>(`/api/execucao/playbooks/${playbookId}/okrs/gerar`, {
+        method: 'POST',
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+export function useAtualizarOkr(playbookId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { okrId: string; kr1_atual?: number; kr2_atual?: number; kr3_atual?: number; status?: Okr['status'] }) => {
+      const { okrId, ...campos } = vars
+      return api<Okr>(`/api/execucao/okrs/${okrId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(campos),
+      })
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
   })
 }
 

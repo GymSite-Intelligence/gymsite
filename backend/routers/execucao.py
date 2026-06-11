@@ -15,7 +15,10 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 from supabase import create_client
 
-from backend.services.execucao.playbook_generator import gerar_playbook_para_relatorio
+from backend.services.execucao.playbook_generator import (
+    gerar_playbook_para_relatorio,
+    semear_okrs_para_playbook,
+)
 from backend.services.execucao import playbook_service
 
 router = APIRouter(prefix="/api/execucao", tags=["Execução — Playbook"])
@@ -78,6 +81,13 @@ class PessoaPatchRequest(BaseModel):
 
 class AtribuirRequest(BaseModel):
     pessoa_id: Optional[str] = None
+
+
+class OkrPatchRequest(BaseModel):
+    kr1_atual: Optional[float] = Field(None, ge=0)
+    kr2_atual: Optional[float] = Field(None, ge=0)
+    kr3_atual: Optional[float] = Field(None, ge=0)
+    status: Optional[str] = None
 
 
 ANEXO_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -180,6 +190,33 @@ def marcar_checklist(item_id: str, data: ChecklistRequest, request: Request):
         return playbook_service.marcar_checklist_item(_sb(), item_id, user_id, data.concluido)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+# ── Metas (OKRs) ───────────────────────────────────────────────────────────
+@router.post("/playbooks/{playbook_id}/okrs/gerar", status_code=201)
+def gerar_okrs(playbook_id: str, request: Request):
+    """Semeia metas num plano existente (planos criados antes da F2)."""
+    user_id = _require_user(request)
+    try:
+        criados = semear_okrs_para_playbook(_sb(), playbook_id, user_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"okrs_criados": criados}
+
+
+@router.patch("/okrs/{okr_id}")
+def atualizar_okr(okr_id: str, data: OkrPatchRequest, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.atualizar_okr(
+            _sb(), okr_id, user_id, data.model_dump(exclude_unset=True)
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Pessoas do projeto ─────────────────────────────────────────────────────

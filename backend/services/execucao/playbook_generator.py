@@ -152,22 +152,23 @@ def _garantir_user_project(sb, ctx: dict[str, Any]) -> str:
     return res.data[0]["id"]
 
 
+def _cenario_recomendado(ctx: dict[str, Any]) -> Optional[dict[str, Any]]:
+    outputs = ctx["outputs"]
+    modelo_rec = (outputs.get("modelo_recomendado") or "").strip().lower()
+    cenarios = ctx["cenarios"]
+    for c in cenarios:
+        if str(c.get("modelo") or "").strip().lower() == modelo_rec:
+            return c
+    return cenarios[0] if cenarios else None
+
+
 def _custos_personalizados(ctx: dict[str, Any]) -> dict[str, int]:
     """titulo → custo em centavos, derivado do cenário recomendado (CST-001).
 
     cenarios_financeiros é colunar: modelo ('Low Cost'|'Mid Market'|'Premium'),
     capex_equipamentos/obra_adaptacao/projeto_arquitetonico/alvara_e_taxas (v2)
     ou capex_estimado/capex_total (v1)."""
-    outputs = ctx["outputs"]
-    modelo_rec = (outputs.get("modelo_recomendado") or "").strip().lower()
-    cenarios = ctx["cenarios"]
-    alvo = None
-    for c in cenarios:
-        if str(c.get("modelo") or "").strip().lower() == modelo_rec:
-            alvo = c
-            break
-    if alvo is None and cenarios:
-        alvo = cenarios[0]
+    alvo = _cenario_recomendado(ctx)
     if not alvo:
         return {}
 
@@ -263,6 +264,126 @@ def _tarefas_de_gaps(ctx: dict[str, Any], ordem_base: int) -> list[dict[str, Any
             "origem_relatorio_insight": nome_gap[:300],
         })
     return extras
+
+
+def semear_okrs(sb, playbook_id: str, projeto_id: str, ctx: dict[str, Any]) -> int:
+    """Cria objetivos do plano a partir do cenário recomendado. Idempotente:
+    não duplica se o playbook já tem OKRs ativos. KRs financeiros em REAIS
+    (colunas DECIMAL legadas da tabela okrs — exceção documentada à regra
+    de centavos)."""
+    existentes = (
+        sb.table("okrs")
+        .select("id")
+        .eq("playbook_id", playbook_id)
+        .is_("deleted_at", "null")
+        .limit(1)
+        .execute()
+    )
+    if existentes.data:
+        return 0
+
+    cenario = _cenario_recomendado(ctx) or {}
+    pb = (
+        sb.table("playbooks")
+        .select("data_prevista_conclusao, total_tarefas, custo_planejado_total")
+        .eq("id", playbook_id)
+        .maybe_single()
+        .execute()
+    )
+    pb_data = (pb.data if pb else None) or {}
+
+    def _num(v) -> Optional[float]:
+        try:
+            f = float(v)
+            return f if f > 0 else None
+        except (TypeError, ValueError):
+            return None
+
+    rows: list[dict[str, Any]] = []
+
+    total_tarefas = pb_data.get("total_tarefas") or 0
+    investimento = _num(cenario.get("investimento_total")) or (
+        (pb_data.get("custo_planejado_total") or 0) / 100 or None
+    )
+    conclusao = pb_data.get("data_prevista_conclusao")
+    abrir = {
+        "playbook_id": playbook_id,
+        "projeto_id": projeto_id,
+        "objetivo": "Abrir a academia no prazo e dentro do orçamento",
+        "descricao": (f"Inauguração prevista para {str(conclusao)[:10]}." if conclusao else None),
+        "kr1_descricao": "Etapas do plano concluídas",
+        "kr1_target": float(total_tarefas) or None,
+        "kr1_atual": 0,
+    }
+    if investimento:
+        abrir["kr2_descricao"] = "Investimento total (R$, máximo)"
+        abrir["kr2_target"] = round(investimento, 2)
+        abrir["kr2_atual"] = 0
+    rows.append(abrir)
+
+    break_even = _num(cenario.get("alunos_break_even"))
+    receita_equilibrio = _num(cenario.get("custos_totais"))
+    payback = _num(cenario.get("payback_meses"))
+    if break_even:
+        equilibrar = {
+            "playbook_id": playbook_id,
+            "projeto_id": projeto_id,
+            "objetivo": "Alcançar o ponto de equilíbrio",
+            "descricao": "Alunos e receita necessários para a operação se pagar.",
+            "kr1_descricao": "Alunos matriculados",
+            "kr1_target": break_even,
+            "kr1_atual": 0,
+        }
+        if receita_equilibrio:
+            equilibrar["kr2_descricao"] = "Receita mensal (R$)"
+            equilibrar["kr2_target"] = round(receita_equilibrio, 2)
+            equilibrar["kr2_atual"] = 0
+        if payback:
+            equilibrar["kr3_descricao"] = "Payback do investimento (meses, máximo)"
+            equilibrar["kr3_target"] = payback
+            equilibrar["kr3_atual"] = 0
+        rows.append(equilibrar)
+
+    projetados = _num(cenario.get("alunos_projetados"))
+    ticket = _num(cenario.get("ticket_medio"))
+    if projetados:
+        crescer = {
+            "playbook_id": playbook_id,
+            "projeto_id": projeto_id,
+            "objetivo": "Encher a academia no primeiro ano",
+            "descricao": "Projeção realista do cenário recomendado da análise.",
+            "kr1_descricao": "Alunos matriculados",
+            "kr1_target": projetados,
+            "kr1_atual": 0,
+        }
+        if ticket:
+            crescer["kr2_descricao"] = "Mensalidade média (R$)"
+            crescer["kr2_target"] = round(ticket, 2)
+            crescer["kr2_atual"] = 0
+        rows.append(crescer)
+
+    if rows:
+        sb.table("okrs").insert(rows).execute()
+    return len(rows)
+
+
+def semear_okrs_para_playbook(sb, playbook_id: str, user_id: str) -> int:
+    """Semeia OKRs num playbook já existente (planos gerados antes da F2)."""
+    pb = (
+        sb.table("playbooks")
+        .select("id, projeto_id, relatorio_id, user_id")
+        .eq("id", playbook_id)
+        .eq("user_id", user_id)
+        .is_("deleted_at", "null")
+        .maybe_single()
+        .execute()
+    )
+    if not pb or not pb.data:
+        raise LookupError("Plano não encontrado.")
+    if not pb.data.get("relatorio_id"):
+        raise ValueError("Este plano não tem relatório de origem para extrair as metas.")
+    ctx = _fetch_contexto_relatorio(sb, pb.data["relatorio_id"])
+    return semear_okrs(sb, playbook_id, pb.data["projeto_id"], ctx)
 
 
 def gerar_playbook_para_relatorio(
@@ -427,6 +548,11 @@ def gerar_playbook_para_relatorio(
             })
     if rows_checklist:
         sb.table("tarefa_checklist").insert(rows_checklist).execute()
+
+    try:
+        semear_okrs(sb, playbook_id, projeto_id, ctx)
+    except Exception:
+        logger.warning("semear OKRs falhou (não bloqueia o plano)", exc_info=True)
 
     try:
         sb.table("auditoria_eventos").insert({

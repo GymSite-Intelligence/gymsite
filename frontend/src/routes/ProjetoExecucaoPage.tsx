@@ -28,6 +28,7 @@ import {
 import { PlaybookKanban, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
 import { TarefaModal } from '@/components/execucao/TarefaModal'
 import { PessoasDialog } from '@/components/execucao/PessoasDialog'
+import { ObjetivosCard } from '@/components/execucao/ObjetivosCard'
 
 export function ProjetoExecucaoPage() {
   const { playbookId } = useParams({ strict: false }) as { playbookId: string }
@@ -177,6 +178,8 @@ export function ProjetoExecucaoPage() {
           </Button>
         </div>
       </header>
+
+      <ObjetivosCard playbookId={playbookId} okrs={playbook.okrs ?? []} />
 
       <PlaybookKanban
         tarefas={tarefasFiltradas}
