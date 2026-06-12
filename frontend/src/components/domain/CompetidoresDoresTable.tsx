@@ -9,7 +9,7 @@
  * Os campos telefone/website/whatsapp_link vêm de Places API New (Fase 2).
  * Enquanto não popular, células mostram "—" sem quebrar layout.
  */
-import { ExternalLink, MessageCircle, Phone, Globe } from 'lucide-react'
+import { ExternalLink, MessageCircle, Phone, Globe, Instagram } from 'lucide-react'
 import { CategoriaDorBadge } from './CategoriaDorBadge'
 import { SparklinePopularTimes } from './SparklinePopularTimes'
 import { cn } from '@/lib/utils'
@@ -201,6 +201,7 @@ export function CompetidoresDoresTable({
                         telefone={c.telefone}
                         website={c.website}
                         whatsapp={SHOW_WHATSAPP_UI ? c.whatsapp_link : undefined}
+                        instagram={c.instagram_profile}
                       />
                     </td>
                     <td className="p-3 text-center font-mono text-sm tabular-nums">
@@ -281,16 +282,24 @@ export function CompetidoresDoresTable({
   )
 }
 
+function formatFollowers(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace('.', ',')}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace('.', ',')}k`
+  return String(n)
+}
+
 function ContatoCell({
   telefone,
   website,
   whatsapp,
+  instagram,
 }: {
   telefone?: string | null
   website?: string | null
   whatsapp?: string | null
+  instagram?: import('@/hooks/useRelatorioDetail').InstagramProfileJSON | null
 }) {
-  const temAlgo = telefone || website || whatsapp
+  const temAlgo = telefone || website || whatsapp || instagram?.username
   if (!temAlgo) {
     return <span className="text-[10px] italic text-muted-foreground">—</span>
   }
@@ -327,6 +336,23 @@ function ContatoCell({
             {website.replace(/^https?:\/\//, '')}
           </span>
           <ExternalLink size={9} />
+        </a>
+      )}
+      {instagram?.username && (
+        <a
+          href={`https://www.instagram.com/${instagram.username}/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-pink-600 dark:text-pink-400 hover:underline"
+          title={instagram.bio ?? undefined}
+        >
+          <Instagram size={11} />
+          <span className="font-mono">@{instagram.username}</span>
+          {instagram.followers != null && (
+            <span className="text-[10px] text-muted-foreground">
+              · {formatFollowers(instagram.followers)} seg.
+            </span>
+          )}
         </a>
       )}
     </div>

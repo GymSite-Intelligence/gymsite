@@ -402,6 +402,7 @@ def _rows_competidores(
             "horarios_pico": c.get("horarios_pico"),
             "pico_semanal": c.get("pico_semanal"),
             "planos_precos": c.get("planos_precos"),
+            "instagram_profile": c.get("instagram_profile"),
             "atividade_marketing": _merge_atividade_marketing(c),
             "origem_busca": c.get("origem_busca") or "nearby",
             # Sprint 2026-05-12: Places API contact data — antes ignorada pelo writer

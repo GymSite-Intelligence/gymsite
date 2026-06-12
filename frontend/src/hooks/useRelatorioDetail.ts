@@ -408,9 +408,21 @@ export interface PlanoPrecoJSON {
   fidelidade?: string
 }
 
+export interface InstagramProfileJSON {
+  username?: string
+  name?: string
+  bio?: string | null
+  followers?: number | null
+  following?: number | null
+  posts?: number | null
+  is_verified?: boolean
+  external_link?: string | null
+}
+
 export interface CompetidorJSON {
   nome: string
   planos_precos?: PlanoPrecoJSON[] | null
+  instagram_profile?: InstagramProfileJSON | null
   /** Google Place ID — cache SearchAPI / popular_times (Tier 0). */
   place_id?: string | null
   lat?: number | null
@@ -653,6 +665,10 @@ function mapCompetidorRow(row: Record<string, unknown>): CompetidorJSON {
     planos_precos: Array.isArray(row.planos_precos)
       ? (row.planos_precos as PlanoPrecoJSON[])
       : null,
+    instagram_profile:
+      row.instagram_profile && typeof row.instagram_profile === 'object'
+        ? (row.instagram_profile as InstagramProfileJSON)
+        : null,
     place_id: typeof row.place_id === 'string' ? row.place_id : null,
     lat: lat ?? null,
     lng: lng ?? null,

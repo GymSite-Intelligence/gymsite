@@ -1705,6 +1705,7 @@ def _slim_concorrente(c: dict) -> dict:
         "reviews": reviews_slim,
         "horarios_pico": c.get("horarios_pico"),
         "planos_precos": c.get("planos_precos"),
+        "instagram_profile": c.get("instagram_profile"),
         "servicos_oferecidos": (am.get("servicos_ofertados") or [])[:15] if isinstance(am, dict) else [],
         "reclamacoes_marketing": (am.get("principais_reclamacoes") or [])[:8] if isinstance(am, dict) else [],
         "is_independente": bool(c.get("is_independente")),
@@ -1868,6 +1869,25 @@ async def analisar_concorrentes_a3a_completo(
         except Exception as e:
             logger.warning(f"[A3a planos_precos] {nome}: {type(e).__name__}: {e}")
 
+        # Instagram público via SearchAPI (12/06): atividade de marketing REAL
+        # (followers/posts/bio) quando o "site" do concorrente é o próprio IG —
+        # padrão comum em academia independente. Substitui o scraping Playwright
+        # do A3c (que derrubava o processo). Best-effort.
+        instagram_profile: dict | None = None
+        try:
+            from tools.instagram_profile import (
+                extrair_username_instagram,
+                get_instagram_profile,
+            )
+
+            ig_user = extrair_username_instagram(c.get("website") or "")
+            if ig_user:
+                instagram_profile = await asyncio.to_thread(
+                    get_instagram_profile, ig_user
+                )
+        except Exception as e:
+            logger.warning(f"[A3a instagram] {nome}: {type(e).__name__}: {e}")
+
         maps_uri = (c.get("google_maps_uri") or "").strip() or None
         return {
             "place_id": place_id,
@@ -1888,6 +1908,7 @@ async def analisar_concorrentes_a3a_completo(
             "horarios_pico": horarios_pico_dict,
             "pico_semanal": pico_semanal_str,
             "planos_precos": planos_precos,
+            "instagram_profile": instagram_profile,
             "atributos_sobre": atributos_sobre if atributos_sobre and "erro" not in atributos_sobre else None,
             "atividade_marketing": enrichment.get("atividade_marketing"),
             "enrichment_search_grounding_text": enrichment.get("scraping_text"),
