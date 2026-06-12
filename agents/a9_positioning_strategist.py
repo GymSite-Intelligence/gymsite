@@ -427,6 +427,17 @@ GAP = serviço com penetração < 3 em TODOS os concorrentes.
 - Se dado ausente, indique "dado indisponível".
 - O campo markdown deve ser relatório executivo completo em português.
 - Foque em acionabilidade: o gestor deve saber EXATAMENTE o que fazer.
+
+## REGRAS DE COERÊNCIA FINANCEIRA (obrigatórias — caso Cocó 11/06)
+- Ao citar valor de aluguel ou custo por m², SEMPRE no formato completo:
+  "R$ X/m² para a faixa de Y–Z m² (≈ R$ W/mês)" — valor unitário solto
+  contradiz o quadro financeiro e destrói a credibilidade do relatório.
+- Use EXCLUSIVAMENTE o aluguel de analise_financeira (A4) como referência;
+  PROIBIDO recalcular ou citar outro R$/m² de memória.
+- Todo número financeiro do markdown deve bater com o JSON do A4 — se o A4
+  diz payback 35 meses, o texto não pode dizer outro número.
+- Entidades completas na primeira menção: "Smart Fit Papicu (Fortaleza/CE)",
+  nunca "ela"/"a unidade" sem antecedente claro.
 """,
     generate_content_config=_GENERATE_CONFIG,
     tools=[],
