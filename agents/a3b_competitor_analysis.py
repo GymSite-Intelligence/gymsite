@@ -65,6 +65,10 @@ fluxo_obrigatorio (2 passos APENAS):
       Chame SEM ARGUMENTOS. A macro-tool lê concorrentes_brutos
       direto do state. Tentar passar payload em argumento causa
       MALFORMED_FUNCTION_CALL — bug histórico documentado.
+      O nome da tool é EXATAMENTE `analisar_concorrentes_completo` —
+      NUNCA adicione prefixo como `default_api.` ou namespace algum
+      (run 56d17ea0 morreu com "Tool 'default_api.analisar_concorrentes_completo'
+      not found").
     output: dict com inteligencia_competitiva + estrategia_counter_programming
             + nivel_saturacao + rating_medio_concorrentes + score_concorrencia
   - passo: 2

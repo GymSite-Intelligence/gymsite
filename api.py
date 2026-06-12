@@ -472,7 +472,10 @@ class CanalProbeInput(BaseModel):
 # Pipeline runner — invoca ADK programaticamente em background
 # ════════════════════════════════════════════════════════════════════════════
 
-_RETRY_BACKOFFS_429 = [30, 60, 120]  # segundos entre tentativas
+# 90s mínimo (12/06): quota Vertex é por MINUTO — retry de 30s recaía dentro
+# da mesma janela e queimava a tentativa (round 7, 429 no A6). O retry refaz
+# o pipeline INTEIRO (caro), então melhor poucas tentativas bem espaçadas.
+_RETRY_BACKOFFS_429 = [90, 180, 300]  # segundos entre tentativas
 
 
 def _is_429_error(exc: BaseException) -> bool:
@@ -506,6 +509,22 @@ def _is_transient_network_error(exc: BaseException) -> bool:
         return True
     msg = str(exc).lower()
     return "server disconnected" in msg or "connection reset" in msg
+
+
+def _is_tool_hallucination_error(exc: BaseException) -> bool:
+    """LLM alucinou nome de tool inexistente e o ADK estourou ValueError.
+
+    Estocástico (rounds 6/7: 'default_api.analisar_concorrentes_completo',
+    'run_code') — re-rodar costuma resolver. Tratar como transitório evita
+    matar o run por um dado viciado; o fix de raiz é interceptor fino no
+    ADK respondendo ao modelo "tool inexistente, use a lista" (P1).
+    """
+    if isinstance(exc, BaseExceptionGroup):
+        return any(_is_tool_hallucination_error(sub) for sub in exc.exceptions)
+    if not isinstance(exc, ValueError):
+        return False
+    msg = str(exc)
+    return msg.startswith("Tool '") and "not found" in msg
 
 
 async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioInput) -> dict:
@@ -711,7 +730,11 @@ async def _run_pipeline_async_body(
             except asyncio.TimeoutError:
                 raise PipelineWallTimeoutError() from None
             except BaseException as e:
-                if _is_429_error(e) or _is_transient_network_error(e):
+                if (
+                    _is_429_error(e)
+                    or _is_transient_network_error(e)
+                    or _is_tool_hallucination_error(e)
+                ):
                     last_exc = e
                     continue  # tenta de novo após backoff
                 raise  # outros erros não fazem retry

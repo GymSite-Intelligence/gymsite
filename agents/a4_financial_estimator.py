@@ -12,14 +12,14 @@ from google.adk.agents import Agent
 from tools.financial_tools import analise_financeira_a4_completo
 
 
-# Pro→Flash 12/06 (AUDITORIA_CUSTO_LLM_PIPELINE.md): o "raciocínio complexo"
-# do A4 é aritmética estruturada sobre inputs prontos — o front até recalcula
-# os cenários em JS. Output Pro custa ~4x o Flash. Golden case: comparar
-# viabilidade_3_cenarios deste run vs o último run Pro do mesmo bairro;
-# divergência além de arredondamento → reverter pra Pro.
+# Flash REVERTIDO pra Pro 12/06 mesmo dia: no round 7 o A4-Flash alucinou
+# uma tool inexistente ("Tool 'run_code' not found") tentando executar código
+# pra aritmética que o Pro resolve direto — run inteiro morto. O corte de
+# custo (~R$ 200/mês) não paga pipeline instável. Re-tentar Flash só com
+# prompt anti-code-execution endurecido e teste isolado.
 financial_estimator_agent = Agent(
     name="FinancialEstimator",
-    model="gemini-2.5-flash",
+    model="gemini-2.5-pro",
     description=(
         "Calcula viabilidade financeira em 3 cenários (low/mid/premium) com aluguel "
         "real (mediana de 3 queries paralelas Search Grounding + fallback ACAD), "
