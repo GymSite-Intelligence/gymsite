@@ -378,11 +378,22 @@ export function CenarioFinanceiroTable({
     // ── Derivadas da folga (12/06) — crescimento, dinheiro e proteção ──
     {
       label: (
-        <TooltipLabel help="Quantas matrículas o ESPAÇO suporta antes do pico encostar na capacidade física (capacidade ACAD do modelo × 7 dias ÷ freq. × share de pico). Compare com o teto de mercado acima: quando o físico excede o mercado, o espaço NUNCA será seu gargalo — nem no cenário mais agressivo da indústria.">
-          Teto físico do espaço
+        <TooltipLabel help="GATE de dimensionamento, não meta: quantas matrículas o ESPAÇO suportaria sem lotar o pico (capacidade ACAD × 7 ÷ freq. × share). O teto OPERATIVO do negócio é sempre o de mercado (agressivo) acima — este número só responde 'o prédio aguenta o cenário máximo da indústria?'. Físico ≥ mercado = espaço nunca será gargalo; físico < mercado = imóvel subdimensionado, alerta grave.">
+          Espaço comporta o agressivo?
         </TooltipLabel>
       ),
-      values: (c) => formatInt(tetoMatriculas(c)),
+      values: (c) => {
+        const fisico = tetoMatriculas(c)
+        const mercado = c?.matriculas?.agressivo?.valor
+        if (fisico == null || !mercado) return '—'
+        const razao = fisico / mercado
+        const ok = razao >= 1
+        return (
+          <span className={ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-veredito-reprovado'}>
+            {ok ? '✓ sim' : '✗ NÃO'} ({razao.toFixed(1).replace('.', ',')}× o teto de mercado)
+          </span>
+        )
+      },
       emphasize: true,
     },
     {
