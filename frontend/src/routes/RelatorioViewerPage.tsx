@@ -536,6 +536,7 @@ function RelatorioViewerContent({
                 cenarios={cenariosAtivos}
                 modeloRecomendado={out.modelo_recomendado}
                 areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
+                competidores={out.competitors_set}
               />
               <FolgaPicoInsight
                 cenarios={cenariosAtivos}

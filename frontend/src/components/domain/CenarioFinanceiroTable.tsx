@@ -14,8 +14,74 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { CenarioJSON, SensibilidadeStress } from '@/hooks/useRelatorioDetail'
+import type { CenarioJSON, CompetidorJSON, SensibilidadeStress } from '@/hooks/useRelatorioDetail'
 import { formatBRL, formatInt, formatPct, INVIAVEL_PAYBACK_THRESHOLD } from '@/lib/format'
+
+// ── Derivadas da folga de capacidade (12/06) ────────────────────────────
+// Todas computadas dos campos já presentes no cenário; premissas iguais às
+// do A4 (share de pico 0,25; freq fallback 2,0 = benchmark IHRSA/ACAD).
+
+function _freq(c?: CenarioJSON): number {
+  return c?.frequencia_semanal_aluno || 2.0
+}
+
+function _cap(c?: CenarioJSON): number | null {
+  return c?.capacidade_simultanea_pico ?? c?.capacidade_maxima_alunos ?? null
+}
+
+function _share(c?: CenarioJSON): number {
+  return c?.pico_share || 0.25
+}
+
+/** Teto de matrículas que o espaço atual suporta (pico = capacidade). */
+function tetoMatriculas(c?: CenarioJSON): number | null {
+  const cap = _cap(c)
+  if (!cap) return null
+  return Math.floor((cap * 7) / (_freq(c) * _share(c)))
+}
+
+function matriculasRealista(c?: CenarioJSON): number | null {
+  return c?.matriculas?.realista?.valor ?? c?.alunos_projetados ?? null
+}
+
+/** Concentração de pico medida nas curvas dos concorrentes: maior janela de
+ *  2h consecutivas ÷ movimento total do dia, média entre concorrentes e dias
+ *  úteis. Comparável ao share 0,25 assumido nos cenários (mesma semântica:
+ *  fração do fluxo diário presente na janela de pico). */
+function sharePicoMedido(competidores?: CompetidorJSON[] | null): {
+  share: number
+  nConcorrentes: number
+} | null {
+  const DIAS_UTEIS = ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
+  const shares: number[] = []
+  let nComCurva = 0
+  for (const comp of competidores ?? []) {
+    const curvas = comp.horarios_pico as Record<string, Record<string, number>> | null | undefined
+    if (!curvas) continue
+    let usou = false
+    for (const dia of DIAS_UTEIS) {
+      const horas = curvas[dia]
+      if (!horas) continue
+      const valores = Object.keys(horas)
+        .sort()
+        .map((h) => Number(horas[h]) || 0)
+      const total = valores.reduce((s, v) => s + v, 0)
+      if (total <= 0) continue
+      let melhorJanela = 0
+      for (let i = 0; i < valores.length - 1; i++) {
+        melhorJanela = Math.max(melhorJanela, valores[i] + valores[i + 1])
+      }
+      shares.push(melhorJanela / total)
+      usou = true
+    }
+    if (usou) nComCurva++
+  }
+  if (!shares.length) return null
+  return {
+    share: shares.reduce((s, v) => s + v, 0) / shares.length,
+    nConcorrentes: nComCurva,
+  }
+}
 
 /**
  * TooltipLabel — texto com underline tracejado que abre tooltip ao hover.
@@ -46,6 +112,8 @@ export interface CenarioFinanceiroTableProps {
   modeloRecomendado?: string | null
   /** Área alvo (m²) do imóvel — usada pra calcular densidade máxima teórica. */
   areaM2?: number | null
+  /** Concorrentes do relatório — alimentam a concentração de pico MEDIDA do bairro. */
+  competidores?: CompetidorJSON[] | null
   className?: string
 }
 
@@ -203,6 +271,7 @@ export function CenarioFinanceiroTable({
   cenarios,
   modeloRecomendado,
   areaM2,
+  competidores,
   className,
 }: CenarioFinanceiroTableProps) {
   if (!cenarios) {
@@ -266,6 +335,90 @@ export function CenarioFinanceiroTable({
         c?.frequencia_semanal_aluno
           ? `${c.frequencia_semanal_aluno}x`
           : '2,0–2,5x (benchmark setor)',
+    },
+    // ── Derivadas da folga (12/06) — crescimento, dinheiro e proteção ──
+    {
+      label: (
+        <TooltipLabel help="Quantas matrículas o espaço atual suporta antes do pico encostar na capacidade física. Fórmula: capacidade × 7 dias ÷ (freq. semanal × share de pico). Crescer além disso exige obra ou gestão ativa de horários.">
+          Teto de matrículas sem obra
+        </TooltipLabel>
+      ),
+      values: (c) => formatInt(tetoMatriculas(c)),
+      emphasize: true,
+    },
+    {
+      label: (
+        <TooltipLabel help="Receita mensal extra se a base crescer do cenário realista até o teto físico, ao ticket realizado atual. É o upside destravável só com marketing — sem CAPEX novo.">
+          Receita destravável na folga
+        </TooltipLabel>
+      ),
+      values: (c) => {
+        const teto = tetoMatriculas(c)
+        const base = matriculasRealista(c)
+        const ticket = c?.ticket_realizado_estimado ?? c?.ticket_medio
+        if (teto == null || base == null || !ticket) return '—'
+        const extra = Math.max(0, teto - base) * Number(ticket)
+        return `+${formatBRL(extra)}/mês`
+      },
+    },
+    {
+      label: (
+        <TooltipLabel help="Quantas matrículas a mais cabem antes da ocupação de pico atingir 85% — limiar onde nascem as reclamações de lotação (calibrado pelos reviews dos concorrentes do próprio relatório). É o colchão que protege o NPS.">
+          Colchão até reclamação (85%)
+        </TooltipLabel>
+      ),
+      values: (c) => {
+        const teto = tetoMatriculas(c)
+        const base = matriculasRealista(c)
+        if (teto == null || base == null) return '—'
+        const colchao = Math.floor(teto * 0.85) - base
+        return colchao >= 0 ? `+${formatInt(colchao)} matrículas` : (
+          <span className="text-veredito-reprovado">acima do limiar</span>
+        )
+      },
+    },
+    {
+      label: (
+        <TooltipLabel help="Fração do potencial físico necessária pra pagar as contas (break-even ÷ teto de matrículas). Quanto menor, mais defensável: sobra margem de erro entre 'não perder dinheiro' e 'lotar'.">
+          Break-even ÷ teto físico
+        </TooltipLabel>
+      ),
+      values: (c) => {
+        const teto = tetoMatriculas(c)
+        const be = c?.alunos_break_even
+        if (teto == null || be == null) return '—'
+        return formatPct((be / teto) * 100)
+      },
+    },
+    {
+      label: (
+        <TooltipLabel help="Concentração de pico MEDIDA nas curvas de movimento dos concorrentes deste relatório (maior janela de 2h ÷ movimento do dia, média dos dias úteis). Compare com os 25% assumidos nos cenários: medição menor = premissa conservadora = folga real ainda maior.">
+          Share de pico medido no bairro
+        </TooltipLabel>
+      ),
+      values: () => {
+        const medido = sharePicoMedido(competidores)
+        if (!medido) return '—'
+        return `${Math.round(medido.share * 100)}% (${medido.nConcorrentes} concorrentes) vs 25% assumido`
+      },
+    },
+    {
+      label: (
+        <TooltipLabel help="Espaço físico por pessoa no horário de pico (70% da área útil destinada a treino ÷ pico simultâneo). Conforto de referência do setor: ≥ 4 m²/pessoa. Abaixo de 2,5 m² o treino vira fila.">
+          m² por pessoa no pico
+        </TooltipLabel>
+      ),
+      values: (c) => {
+        const pico = c?.alunos_pico_calculado
+        if (!areaM2 || !pico) return '—'
+        const m2 = (areaM2 * 0.7) / pico
+        const ok = m2 >= 4
+        return (
+          <span className={ok ? 'text-emerald-600 dark:text-emerald-400' : undefined}>
+            {m2.toFixed(1).replace('.', ',')} m² {ok ? '(confortável)' : ''}
+          </span>
+        )
+      },
     },
   ]
 
