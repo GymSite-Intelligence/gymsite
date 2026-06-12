@@ -1636,14 +1636,27 @@ def _slim_concorrente(c: dict) -> dict:
     """
     if not isinstance(c, dict):
         return {}
-    # Filtro de recência: dores citadas só de reviews com até 1 ano.
-    # Reviews mais antigas refletem operação que mudou e poluem o sinal.
-    reviews_raw = [
-        r for r in (c.get("reviews") or [])
-        if isinstance(r, dict) and _review_recente_1ano(r.get("data_relativa"))
+    # Seleção de reviews pro A3b/writer (12/06): baixa nota PRIMEIRO.
+    # O corte antigo (só recentes, cap 5) descartava as reviews de menor
+    # nota do SearchAPI — as dores reais — porque costumam ser antigas
+    # (round 8: banco ficou sem nenhuma review rica). Prioridade:
+    # baixa nota recente > baixa nota antiga > recentes, cap 8.
+    todas = [r for r in (c.get("reviews") or []) if isinstance(r, dict)]
+    baixa_recente = [
+        r for r in todas
+        if (r.get("rating") or 5) <= 3 and _review_recente_1ano(r.get("data_relativa"))
     ]
+    baixa_antiga = [
+        r for r in todas
+        if (r.get("rating") or 5) <= 3 and not _review_recente_1ano(r.get("data_relativa"))
+    ]
+    recentes_ok = [
+        r for r in todas
+        if (r.get("rating") or 5) > 3 and _review_recente_1ano(r.get("data_relativa"))
+    ]
+    reviews_raw = (baixa_recente + baixa_antiga + recentes_ok)[:8]
     reviews_slim = []
-    for r in reviews_raw[:5]:
+    for r in reviews_raw:
         if isinstance(r, dict):
             reviews_slim.append({
                 "rating": r.get("rating"),
@@ -1842,7 +1855,7 @@ async def analisar_concorrentes_a3a_completo(
                     ]
                     reviews = reviews[:15]
             except Exception as e:
-                print(f"[A3a reviews_baixa_nota] {nome}: {type(e).__name__}: {e}")
+                logger.warning(f"[A3a reviews_baixa_nota] {nome}: {type(e).__name__}: {e}")
 
         # Planos × preços públicos via grounding (cache 7d por academia).
         # Metodologia analise_mercado_fitness: comparativo plano/preço/oferta
@@ -1853,7 +1866,7 @@ async def analisar_concorrentes_a3a_completo(
                 nome, c.get("bairro_concorrente") or bairro, cidade
             )
         except Exception as e:
-            print(f"[A3a planos_precos] {nome}: {type(e).__name__}: {e}")
+            logger.warning(f"[A3a planos_precos] {nome}: {type(e).__name__}: {e}")
 
         maps_uri = (c.get("google_maps_uri") or "").strip() or None
         return {
