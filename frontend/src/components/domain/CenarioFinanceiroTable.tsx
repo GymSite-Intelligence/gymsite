@@ -513,14 +513,25 @@ export function CenarioFinanceiroTable({
 
   // ── (b) RECEITA & CUSTOS ──
   const rowsCustos: SubTableRow[] = [
-    { label: 'Ticket nominal', values: (c) => formatBRL(c?.ticket_medio) },
     {
-      label: 'Ticket realizado (pós-inadimpl.)',
+      label: (
+        <TooltipLabel help="Mensalidade de tabela por modelo. Referência ACAD/Sebrae 2024: low R$ 89,90 · mid R$ 149,90 · premium R$ 299,90 — quando o valor difere, o A4 ajustou ao mercado LOCAL. Confira contra os planos públicos dos concorrentes no quadro 'Planos e preços da concorrência' deste relatório.">
+          Ticket nominal
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.ticket_medio),
+    },
+    {
+      label: (
+        <TooltipLabel help="Ticket que entra de fato no caixa: nominal × (1 − inadimplência). É a base da receita e do break-even.">
+          Ticket realizado (pós-inadimpl.)
+        </TooltipLabel>
+      ),
       values: (c) => formatBRL(c?.ticket_realizado_estimado),
     },
     {
       label: (
-        <TooltipLabel help="% de matrículas que não pagam mensalidade. Panorama Setorial Fitness Brasil 2025: com débito recorrente ~4-8% (varia por modelo); sem recorrência (boleto/Pix manual) chega a 15-25%. Aplicada como redutor sobre ticket nominal pra estimar receita realizada.">
+        <TooltipLabel help="% de matrículas que não pagam mensalidade. Referência ACAD por modelo: low 6% · mid 4% · premium 2,5% (débito recorrente). Sem recorrência (boleto/Pix manual) o setor vê 15-25%. Aplicada como redutor sobre o ticket nominal.">
           Inadimplência
         </TooltipLabel>
       ),
@@ -528,28 +539,85 @@ export function CenarioFinanceiroTable({
         c?.taxa_inadimplencia != null ? `${(c.taxa_inadimplencia * 100).toFixed(1)}%` : '—',
     },
     {
-      label: 'Receita mensal',
+      label: (
+        <TooltipLabel help="Matrículas realista × ticket realizado — verificável nas duas linhas acima e no quadro Demanda.">
+          Receita mensal
+        </TooltipLabel>
+      ),
       values: (c) => formatBRL(c?.receita_mensal),
       emphasize: true,
     },
-    { label: 'Aluguel', values: (c) => formatBRL(c?.custos_detalhados?.aluguel) },
-    { label: 'Condomínio', values: (c) => formatBRL(c?.custos_detalhados?.condominio) },
+    {
+      label: (
+        <TooltipLabel help="Mesmo imóvel nas 3 colunas — por isso o valor é idêntico. Mediana de mercado pra faixa de área; veja a reconciliação com o preço do candidato real anunciado logo acima dos cenários.">
+          Aluguel
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.aluguel),
+    },
+    {
+      label: (
+        <TooltipLabel help="Premissa: 15% do aluguel — padrão de imóvel comercial de grande porte.">
+          Condomínio
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.condominio),
+    },
     { label: 'IPTU', values: (c) => formatBRL(c?.custos_detalhados?.iptu) },
-    { label: 'Energia', values: (c) => formatBRL(c?.custos_detalhados?.energia) },
-    { label: 'Água', values: (c) => formatBRL(c?.custos_detalhados?.agua) },
+    {
+      label: (
+        <TooltipLabel help="Premium estima +50% de energia (climatização integral, sauna, equipamentos de recovery). Low e mid compartilham a base da faixa de área.">
+          Energia
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.energia),
+    },
+    {
+      label: (
+        <TooltipLabel help="⚠️ Premissa FIXA nas 3 colunas — leitura conservadora pro premium e otimista pro low-cost (3-4× mais visitas = mais chuveiro). Refinamento previsto: escalar com visitas projetadas.">
+          Água
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.agua),
+    },
     { label: 'Internet', values: (c) => formatBRL(c?.custos_detalhados?.internet) },
-    { label: 'Folha de pagamento', values: (c) => formatBRL(c?.custos_detalhados?.folha) },
-    { label: 'Manutenção', values: (c) => formatBRL(c?.custos_detalhados?.manutencao) },
+    {
+      label: (
+        <TooltipLabel help="Escala com o modelo: low opera com equipe enxuta (recepção + instrutores mínimos); premium soma personal trainers, atendimento e operação de serviços (spa/recovery).">
+          Folha de pagamento
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.folha),
+    },
+    {
+      label: (
+        <TooltipLabel help="0,5% ao mês do CAPEX do modelo — equipamento mais caro = manutenção proporcionalmente maior. Verificável: divida o valor por 0,005 e compare com o CAPEX no quadro Investimento.">
+          Manutenção
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.manutencao),
+    },
     { label: 'Contabilidade', values: (c) => formatBRL(c?.custos_detalhados?.contabilidade) },
     { label: 'Sistema de gestão', values: (c) => formatBRL(c?.custos_detalhados?.sistema_gestao) },
-    { label: 'Seguro', values: (c) => formatBRL(c?.custos_detalhados?.seguro) },
+    {
+      label: (
+        <TooltipLabel help="0,2% ao mês do CAPEX do modelo — mesmo racional da manutenção, auditável contra o quadro Investimento.">
+          Seguro
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.seguro),
+    },
     { label: 'Outros (2% receita)', values: (c) => formatBRL(c?.custos_detalhados?.outros) },
     {
       label: 'Custos fixos total',
       values: (c) => formatBRL(c?.custos_fixos_total ?? c?.custos_fixos),
     },
     {
-      label: `Marketing`,
+      label: (
+        <TooltipLabel help="% da receita por modelo (low ~6% · mid ~8% · premium ~12%): premium investe proporcionalmente mais porque vende posicionamento e experiência, não preço — CAC maior por aluno, compensado pelo ticket.">
+          Marketing
+        </TooltipLabel>
+      ),
       values: (c) => {
         const m = c?.marketing_mensal
         const pct = c?.marketing_pct_faturamento
@@ -577,15 +645,23 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="Lucro líquido ÷ receita bruta. Saudável: 15-25%. Abaixo de 10% indica modelo sob pressão.">
+        <TooltipLabel help="Lucro líquido ÷ receita bruta. Critério ACAD: 15-25% saudável (verde); abaixo de 10% modelo sob pressão (vermelho) — sem espaço pra imprevisto, churn acima do esperado já vira prejuízo.">
           Margem
         </TooltipLabel>
       ),
-      values: (c) => formatPct(c?.margem_percentual),
+      values: (c) => {
+        const m = c?.margem_percentual
+        if (m == null) return '—'
+        const cor =
+          m < 10 ? 'text-veredito-reprovado font-semibold'
+          : m >= 15 && m <= 25 ? 'text-emerald-600 dark:text-emerald-400'
+          : undefined
+        return <span className={cor}>{formatPct(m)}</span>
+      },
     },
     {
       label: (
-        <TooltipLabel help="Quantidade mínima de alunos pagantes pra cobrir todos os custos fixos + variáveis. Acima disso, qualquer matrícula extra é lucro.">
+        <TooltipLabel help="Custos totais do cenário ÷ ticket realizado — alunos mínimos pra zerar o mês. Leitura CONSERVADORA: trata marketing e 'outros' (que são % da receita) como fixos; o break-even real é levemente menor. Compare com o teto de mercado no quadro Demanda: BE acima de 60% do teto = modelo exige execução quase perfeita.">
           Break-even (alunos)
         </TooltipLabel>
       ),
