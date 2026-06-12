@@ -385,10 +385,13 @@ function RelatorioViewerContent({
         />
       )}
 
-      {/* 5. Candidatos (imóveis anunciados) × Âncoras e polos — blocos separados */}
-      {out.top_3_candidatos && out.top_3_candidatos.length > 0 && (() => {
-        const anunciados = out.top_3_candidatos.filter((c) => Boolean(c.listing_url))
-        const ancoras = out.top_3_candidatos.filter((c) => !c.listing_url)
+      {/* 5. Candidatos (imóveis anunciados) × Âncoras e polos — blocos separados.
+          Sem guard de length: com 0 candidatos o empty state com CTA de
+          re-busca PRECISA aparecer (run sem listing é cenário real). */}
+      {(() => {
+        const todosCandidatos = out.top_3_candidatos ?? []
+        const anunciados = todosCandidatos.filter((c) => Boolean(c.listing_url))
+        const ancoras = todosCandidatos.filter((c) => !c.listing_url)
         return (
           <>
             {anunciados.length > 0 && (
