@@ -294,6 +294,21 @@ export function CenarioFinanceiroTable({
   // Detecta se é schema v2 (tem matriculas em pelo menos 1 cenário)
   const isV2 = MODELOS.some((m) => cenarios[m]?.matriculas != null)
 
+  // Área de referência usada pelo A4 — derivada do próprio dado (realista ÷
+  // densidade realista), exibida no header pra deixar explícito que as 3
+  // colunas compartilham o MESMO espaço (a variável tamanho é o input do
+  // relatório, não o modelo).
+  const areaRefLabel = (() => {
+    for (const m of MODELOS) {
+      const r = cenarios[m]?.matriculas?.realista
+      if (r?.valor && r?.matr_por_m2) {
+        const area = Math.round(r.valor / r.matr_por_m2)
+        return `área de referência ~${area.toLocaleString('pt-BR')} m²`
+      }
+    }
+    return areaM2 ? `área-alvo ${areaM2.toLocaleString('pt-BR')} m²` : ''
+  })()
+
   // ── (a) DEMANDA — só v2 ──
   // Matrículas = densidade ACAD/Sebrae 2024 (matr/m² por modelo e cenário)
   // × área de referência. A densidade vem no próprio dado do A4
@@ -350,7 +365,11 @@ export function CenarioFinanceiroTable({
       values: (c) => fmtMatriculas(c?.matriculas?.agressivo, c),
     },
     {
-      label: 'Capacidade física simultânea',
+      label: (
+        <TooltipLabel help="Pessoas treinando AO MESMO TEMPO que o espaço comporta com conforto — densidade de LAYOUT do benchmark ACAD por modelo (low 0,55 · mid 0,40 · premium 0,25 pessoas/m²) × a MESMA área-alvo. Varia entre colunas porque cada modelo ocupa o espaço diferente (low empilha equipamento; premium gasta m² com studio e circulação), não porque o imóvel muda.">
+          Capacidade física simultânea
+        </TooltipLabel>
+      ),
       values: (c) => formatInt(c?.capacidade_simultanea_pico),
     },
     {
@@ -641,7 +660,12 @@ export function CenarioFinanceiroTable({
         <SubTable
           title="Demanda — Matrículas vs. Capacidade Física"
           emoji="📊"
-          description="Matrículas em 3 calibrações (ACAD/Smart Fit/Bodytech). Pico simultâneo = capacidade física no horário cheio."
+          description={
+            `Mesma área-alvo nas 3 colunas${areaRefLabel ? ` (${areaRefLabel})` : ''} — ` +
+            'Low/Mid/Premium não é só preço: é pacote operacional ACAD completo. ' +
+            'Cada modelo usa o MESMO espaço com layout diferente (low 0,55 · mid 0,40 · ' +
+            'premium 0,25 pessoas/m² no pico), daí capacidades distintas pra mesma metragem.'
+          }
           rows={rowsDemanda}
           cenarios={cenarios}
           modeloRecomendado={modeloRecomendado}
