@@ -110,6 +110,17 @@ def build_contexto_chat(user_id: str, pergunta: str, relatorio_id: str | None = 
     partes.append(_BENCHMARKS_SETOR)
     partes.append("")
 
+    # RAG kb_chunks (franquias, mercado): top-k por similaridade; falha → segue sem
+    try:
+        from services.kb_rag import buscar_kb, formatar_contexto_kb
+
+        bloco_kb = formatar_contexto_kb(buscar_kb(pergunta))
+        if bloco_kb:
+            partes.append(bloco_kb)
+            partes.append("")
+    except Exception:
+        pass
+
     if relatorio_id:
         rel = buscar_relatorio_por_id(relatorio_id)
         if rel:
