@@ -1,6 +1,11 @@
 # tools/maps_tools.py
+import hashlib
+import json as _json_cache
 import logging
 import math
+import time as _time_cache
+from pathlib import Path
+
 import httpx
 from typing import Optional
 
@@ -11,6 +16,37 @@ logger = logging.getLogger(__name__)
 PLACES_BASE = "https://places.googleapis.com/v1/places"
 GEOCODING_BASE = "https://maps.googleapis.com/maps/api/geocode/json"
 STREET_VIEW_BASE = "https://maps.googleapis.com/maps/api/streetview"
+
+# Cache disk das buscas Places (12/06): re-run do mesmo bairro pagava as
+# mesmas buscas de novo (Bessa rodou 3x num dia). TTL 12h equilibra custo
+# vs frescor de listing/âncora.
+_PLACES_CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "places_search_cache"
+_PLACES_CACHE_TTL_SEC = 12 * 3600
+
+
+def _places_cache_get(chave: str) -> list | None:
+    try:
+        h = hashlib.sha1(chave.encode("utf-8")).hexdigest()[:24]
+        p = _PLACES_CACHE_DIR / f"{h}.json"
+        if not p.exists():
+            return None
+        if _time_cache.time() - p.stat().st_mtime > _PLACES_CACHE_TTL_SEC:
+            return None
+        data = _json_cache.loads(p.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else None
+    except Exception:
+        return None
+
+
+def _places_cache_set(chave: str, valor: list) -> None:
+    try:
+        _PLACES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        h = hashlib.sha1(chave.encode("utf-8")).hexdigest()[:24]
+        (_PLACES_CACHE_DIR / f"{h}.json").write_text(
+            _json_cache.dumps(valor, ensure_ascii=False), encoding="utf-8"
+        )
+    except Exception:
+        pass
 
 
 def _google_maps_error_denied(result: dict) -> bool:
@@ -113,6 +149,10 @@ def _extrair_lugar(p: dict) -> dict:
 def buscar_pontos_comerciais(latitude: float, longitude: float,
                               raio_metros: int = 5000) -> list[dict]:
     """Nearby Search por espaços comerciais candidatos."""
+    cache_key = f"pontos:{latitude:.4f}:{longitude:.4f}:{raio_metros}"
+    cached = _places_cache_get(cache_key)
+    if cached is not None:
+        return cached
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": get_google_maps_api_key(),
@@ -120,9 +160,10 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.businessStatus,"
             "places.rating,places.userRatingCount,"
-            # Contact Data — adicionado pra A5 ContactHunter ter telefone
-            # real do candidato em vez de "N/A". Sobe SKU pricing Places.
-            "places.nationalPhoneNumber,places.websiteUri,places.regularOpeningHours,"
+            # SEM contact data (phone/website/hours): esta busca traz ÂNCORAS/
+            # polos (supermercado, shopping) — ninguém liga pro Carrefour pra
+            # alugar ponto. Contact fica só em buscar_imoveis_texto (candidato
+            # real, contato de imobiliária importa). Corta SKU Enterprise.
             "places.googleMapsUri"
         ),
     }
@@ -142,7 +183,9 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
             data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
 
     if resp.status_code == 200 and data.get("places"):
-        return [_extrair_lugar(p) for p in data.get("places", [])]
+        out = [_extrair_lugar(p) for p in data.get("places", [])]
+        _places_cache_set(cache_key, out)
+        return out
 
     if resp.status_code != 200:
         logger.warning(
@@ -155,6 +198,10 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
 def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
                           raio_metros: int = 5000) -> list[dict]:
     """Text Search para imóveis comerciais: 'galpão para alugar', etc."""
+    cache_key = f"imoveis:{query.strip().lower()}:{latitude:.4f}:{longitude:.4f}:{raio_metros}"
+    cached = _places_cache_get(cache_key)
+    if cached is not None:
+        return cached
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": get_google_maps_api_key(),
@@ -162,7 +209,9 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.businessStatus,"
             "places.rating,places.userRatingCount,"
-            "places.nationalPhoneNumber,places.websiteUri,places.regularOpeningHours,"
+            # Contact mantido (telefone de imobiliária = lead do candidato);
+            # regularOpeningHours cortado — imóvel vago não tem horário.
+            "places.nationalPhoneNumber,places.websiteUri,"
             "places.googleMapsUri"
         ),
     }
@@ -182,7 +231,9 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
             data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
 
     if resp.status_code == 200 and data.get("places"):
-        return [_extrair_lugar(p) for p in data.get("places", [])]
+        out = [_extrair_lugar(p) for p in data.get("places", [])]
+        _places_cache_set(cache_key, out)
+        return out
 
     if resp.status_code != 200:
         logger.warning("Places Text Search falhou HTTP %s para: %s", resp.status_code, query[:80])

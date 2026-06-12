@@ -390,9 +390,11 @@ def buscar_academias(
             "Content-Type": "application/json",
             "X-Goog-Api-Key": api_key,
             "X-Goog-FieldMask": (
+                # priceLevel cortado (sem sinal pra gym); hours/contact ficam —
+                # tem_24h e a coluna de contato dos concorrentes dependem deles.
                 "places.id,places.displayName,places.formattedAddress,"
                 "places.location,places.rating,places.userRatingCount,"
-                "places.priceLevel,places.businessStatus,places.types,"
+                "places.businessStatus,places.types,"
                 "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
             ),
         }
@@ -1206,10 +1208,12 @@ def _buscar_rede_geofenced(
         "Content-Type": "application/json",
         "X-Goog-Api-Key": get_google_maps_api_key(),
         "X-Goog-FieldMask": (
+            # Validação de presença da rede no raio: só identidade + posição.
+            # Contact/hours/priceLevel cortados — quem usa o dado completo é
+            # a busca principal de concorrentes, não este check booleano.
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.rating,places.userRatingCount,"
-            "places.priceLevel,places.businessStatus,places.types,"
-            "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
+            "places.businessStatus,places.types"
         ),
     }
     body = {
