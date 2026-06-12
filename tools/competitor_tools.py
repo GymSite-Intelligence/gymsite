@@ -1870,17 +1870,22 @@ async def analisar_concorrentes_a3a_completo(
             logger.warning(f"[A3a planos_precos] {nome}: {type(e).__name__}: {e}")
 
         # Instagram público via SearchAPI (12/06): atividade de marketing REAL
-        # (followers/posts/bio) quando o "site" do concorrente é o próprio IG —
-        # padrão comum em academia independente. Substitui o scraping Playwright
-        # do A3c (que derrubava o processo). Best-effort.
+        # (followers/posts/bio). Site e IG são COMPLEMENTARES — duas rotas de
+        # descoberta auditáveis: (a) o "website" já é instagram.com/<user>;
+        # (b) o site oficial linka o IG no HTML (rodapé/header). Nunca chuta
+        # username por nome. Substitui o scraping Playwright do A3c.
         instagram_profile: dict | None = None
         try:
             from tools.instagram_profile import (
+                descobrir_instagram_no_site,
                 extrair_username_instagram,
                 get_instagram_profile,
             )
 
-            ig_user = extrair_username_instagram(c.get("website") or "")
+            site = c.get("website") or ""
+            ig_user = extrair_username_instagram(site)
+            if not ig_user and site:
+                ig_user = await asyncio.to_thread(descobrir_instagram_no_site, site)
             if ig_user:
                 instagram_profile = await asyncio.to_thread(
                     get_instagram_profile, ig_user

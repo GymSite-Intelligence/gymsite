@@ -17,7 +17,11 @@ load_dotenv(override=True)
 
 from supabase import create_client
 
-from tools.instagram_profile import extrair_username_instagram, get_instagram_profile
+from tools.instagram_profile import (
+    descobrir_instagram_no_site,
+    extrair_username_instagram,
+    get_instagram_profile,
+)
 
 sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
 
@@ -32,9 +36,12 @@ for rid in sys.argv[1:]:
     for c in rows:
         if c.get("instagram_profile"):
             continue
-        user = extrair_username_instagram(c.get("website") or "")
+        site = c.get("website") or ""
+        user = extrair_username_instagram(site)
+        if not user and site:
+            user = descobrir_instagram_no_site(site)
         if not user:
-            print(f"  - {c['nome']}: site nao e IG")
+            print(f"  - {c['nome']}: IG nao descoberto (site: {site[:40] or 'nenhum'})")
             continue
         p = get_instagram_profile(user)
         if not p:

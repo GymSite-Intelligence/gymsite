@@ -315,6 +315,23 @@ def fetch_cartao_cnpj(
             except Exception as e:
                 print(f"[Apollo Enrichment Error] {e}")
 
+    # Instagram do sócio administrador (12/06): descoberta em camadas com
+    # confiança marcada (bio do IG da academia = alta; busca Google com
+    # nome validado no perfil = media). Mesmo gate do Apollo — roda só no
+    # botão Enriquecer da UI; nunca chuta username por slug do nome.
+    if do_apollo and os.getenv("SEARCHAPI_KEY") and socio_adm and socio_adm.get("nome"):
+        try:
+            from tools.instagram_profile import descobrir_instagram_do_socio
+
+            ig_socio = descobrir_instagram_do_socio(
+                socio_adm["nome"],
+                payload.get("nome_fantasia") or payload.get("razao_social") or "",
+            )
+            if ig_socio:
+                socio_adm["instagram"] = ig_socio
+        except Exception as e:
+            print(f"[Instagram Socio Error] {e}")
+
     _cache_put(cnpj, payload)
     return payload
 
