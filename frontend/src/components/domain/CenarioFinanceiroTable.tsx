@@ -306,12 +306,11 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="Densidade máxima teórica considerando 3 pessoas por m² — referência de ocupação extrema (auditório/show). Academias operam muito abaixo disso por causa de equipamentos e zonas de circulação. Use como teto absoluto.">
-          Densidade máxima (3/m²)
+        <TooltipLabel help="Máximo de matrículas que o MERCADO sustenta nesta área, pelo benchmark ACAD/Sebrae 2024 de matrículas por m² no cenário agressivo de cada modelo (low 3,0 · mid 1,8 · premium 0,9 matr/m²). É o teto de CAPTAÇÃO da indústria — diferente do teto físico do espaço, logo abaixo.">
+          Teto de mercado (benchmark ACAD)
         </TooltipLabel>
       ),
-      // Independente do cenário — depende só da área. Mesmo valor em todas as colunas.
-      values: () => (areaM2 ? formatInt(Math.floor(areaM2 * 3)) : '—'),
+      values: (c) => formatInt(c?.matriculas?.agressivo?.valor),
     },
     {
       label: 'Pico calculado (real × freq × 0,25)',
@@ -339,8 +338,8 @@ export function CenarioFinanceiroTable({
     // ── Derivadas da folga (12/06) — crescimento, dinheiro e proteção ──
     {
       label: (
-        <TooltipLabel help="Quantas matrículas o espaço atual suporta antes do pico encostar na capacidade física. Fórmula: capacidade × 7 dias ÷ (freq. semanal × share de pico). Crescer além disso exige obra ou gestão ativa de horários.">
-          Teto de matrículas sem obra
+        <TooltipLabel help="Quantas matrículas o ESPAÇO suporta antes do pico encostar na capacidade física (capacidade ACAD do modelo × 7 dias ÷ freq. × share de pico). Compare com o teto de mercado acima: quando o físico excede o mercado, o espaço NUNCA será seu gargalo — nem no cenário mais agressivo da indústria.">
+          Teto físico do espaço
         </TooltipLabel>
       ),
       values: (c) => formatInt(tetoMatriculas(c)),
@@ -348,16 +347,16 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="Receita mensal extra se a base crescer do cenário realista até o teto físico, ao ticket realizado atual. É o upside destravável só com marketing — sem CAPEX novo.">
-          Receita destravável na folga
+        <TooltipLabel help="Receita mensal extra se a base crescer do realista até o teto de MERCADO (benchmark ACAD agressivo), ao ticket realizado. Upside captável com marketing, sem CAPEX — limitado pelo que a indústria comprovadamente capta, não pela fantasia do espaço vazio.">
+          Receita destravável até o teto ACAD
         </TooltipLabel>
       ),
       values: (c) => {
-        const teto = tetoMatriculas(c)
+        const tetoMercado = c?.matriculas?.agressivo?.valor
         const base = matriculasRealista(c)
         const ticket = c?.ticket_realizado_estimado ?? c?.ticket_medio
-        if (teto == null || base == null || !ticket) return '—'
-        const extra = Math.max(0, teto - base) * Number(ticket)
+        if (tetoMercado == null || base == null || !ticket) return '—'
+        const extra = Math.max(0, tetoMercado - base) * Number(ticket)
         return `+${formatBRL(extra)}/mês`
       },
     },
@@ -379,15 +378,20 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="Fração do potencial físico necessária pra pagar as contas (break-even ÷ teto de matrículas). Quanto menor, mais defensável: sobra margem de erro entre 'não perder dinheiro' e 'lotar'.">
-          Break-even ÷ teto físico
+        <TooltipLabel help="Fração do teto de MERCADO (benchmark ACAD agressivo) necessária só pra pagar as contas. Quanto menor, mais defensável: sobra distância entre 'não perder dinheiro' e o máximo que a indústria capta. Acima de ~60% o modelo exige execução quase perfeita.">
+          Break-even ÷ teto de mercado
         </TooltipLabel>
       ),
       values: (c) => {
-        const teto = tetoMatriculas(c)
+        const tetoMercado = c?.matriculas?.agressivo?.valor
         const be = c?.alunos_break_even
-        if (teto == null || be == null) return '—'
-        return formatPct((be / teto) * 100)
+        if (tetoMercado == null || be == null) return '—'
+        const pct = (be / tetoMercado) * 100
+        return (
+          <span className={pct > 60 ? 'text-veredito-reprovado' : undefined}>
+            {formatPct(pct)}
+          </span>
+        )
       },
     },
     {
