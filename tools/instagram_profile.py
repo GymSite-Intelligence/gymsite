@@ -1,4 +1,4 @@
-"""Instagram Profile via SearchAPI.io (engine=instagram_profile).
+"""Instagram Profile via SearchAPI.io (engine=instagram_profile) + utils.
 
 Dados públicos de perfil: nome, bio, seguidores, posts, links. Uso no
 GymSite: atividade de marketing REAL dos concorrentes (followers + bio +

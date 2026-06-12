@@ -61,6 +61,7 @@ import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable
 import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
 import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
 import { PlanosConcorrenciaTable } from '@/components/domain/PlanosConcorrenciaTable'
+import { FolgaPicoInsight } from '@/components/domain/FolgaPicoInsight'
 import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairrosTable'
 import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativosTable'
 import { TextoSecao } from '@/components/domain/TextoSecao'
@@ -535,6 +536,11 @@ function RelatorioViewerContent({
                 cenarios={cenariosAtivos}
                 modeloRecomendado={out.modelo_recomendado}
                 areaM2={data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min}
+              />
+              <FolgaPicoInsight
+                cenarios={cenariosAtivos}
+                competidores={out.competitors_set}
+                className="mt-4"
               />
               <ConsorcioCard key={cenariosAtivos?.mid?.capex_total ?? cenariosAtivos?.mid?.capex_estimado ?? 'sem-capex'} capexMid={cenariosAtivos?.mid?.capex_total ?? cenariosAtivos?.mid?.capex_estimado ?? null} className="mt-4" />
             </>

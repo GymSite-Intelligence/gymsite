@@ -1571,9 +1571,15 @@ def _reviews_baixa_nota_searchapi(place_id: str, max_reviews: int = 10) -> list[
         r.raise_for_status()
     except Exception:
         return []
+    import re as _re_html
+
     out: list[dict] = []
     for rev in (r.json().get("reviews") or [])[:max_reviews]:
         texto = (rev.get("text") or rev.get("snippet") or "").strip()
+        # SearchAPI devolve <br> e tags HTML cruas dentro do texto da review
+        texto = _re_html.sub(r"<br\s*/?>", " ", texto, flags=_re_html.IGNORECASE)
+        texto = _re_html.sub(r"<[^>]+>", "", texto)
+        texto = _re_html.sub(r"\s+", " ", texto).strip()
         if not texto:
             continue
         try:

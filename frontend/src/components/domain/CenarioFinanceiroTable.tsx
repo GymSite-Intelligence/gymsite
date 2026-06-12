@@ -250,7 +250,7 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="Diferença entre capacidade física máxima e pico calculado. Alta folga = espaço pra crescer matrículas; folga negativa = pico simultâneo já excede conforto, risco de churn.">
+        <TooltipLabel help="Quanto da academia SOBRA no horário mais cheio. Fórmula: matrículas × freq./semana ÷ 7 dias × 25% (share do pico, benchmark setor) = pessoas simultâneas no pico; folga = 1 − pico/capacidade física. 40–70% é o sweet spot: abaixo, fila e churn; muito acima, aluguel pago por espaço ocioso. Veja o cruzamento com o pico REAL do bairro no quadro abaixo.">
           Folga capacidade
         </TooltipLabel>
       ),
