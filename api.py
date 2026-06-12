@@ -1222,7 +1222,10 @@ def get_status(relatorio_id: str) -> dict:
     _recover_done_empty_reports(sb, relatorio_id=rid)
     res = (
         sb.table("relatorios")
-        .select("id, status, erro_mensagem, tempo_execucao_segundos, data_execucao")
+        .select(
+            "id, status, erro_mensagem, tempo_execucao_segundos, data_execucao, "
+            "etapa_atual, etapas_concluidas"
+        )
         .eq("id", rid)
         .is_("deleted_at", "null")
         .maybe_single()

@@ -16,7 +16,7 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, AlertTriangle, Clock } from 'lucide-react'
+import { Loader2, AlertTriangle, Clock, CheckCircle2, Circle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { DeleteRelatorioButton } from '@/components/domain/DeleteRelatorioButton'
@@ -24,6 +24,13 @@ import { API_BASE } from '@/lib/supabase'
 import { useRerunPipeline } from '@/hooks/useRerunPipeline'
 import { trackPipeline, untrackPipeline } from '@/lib/pipeline-tracker'
 import { pipelineEtaWaitingLine } from '@/lib/pipeline-eta'
+import { cn } from '@/lib/utils'
+
+interface EtapaConcluida {
+  agente: string
+  fim?: string
+  duracao_s?: number | null
+}
 
 interface StatusResponse {
   id: string
@@ -31,23 +38,100 @@ interface StatusResponse {
   erro_mensagem: string | null
   tempo_execucao_segundos: number | null
   data_execucao: string | null
+  etapa_atual?: string | null
+  etapas_concluidas?: EtapaConcluida[] | null
 }
 
 const STATUS_LABEL: Record<StatusResponse['status'], string> = {
-  queued: 'Na fila — preparando ambiente do pipeline',
-  running: 'Rodando pipeline (A0 → A6) — coletando dados e gerando análise',
+  queued: 'Na fila — preparando a análise',
+  running: 'Coletando dados oficiais e gerando a análise',
   done: 'Pronto — redirecionando para o relatório',
   failed: 'Pipeline falhou',
   cancelled: 'Cancelado',
 }
 
-const PIPELINE_STEPS = [
-  'A0 ContextBuilder — Deep Research de mercado',
-  'A1 GeoScout — Pontos comerciais via Maps',
-  'A2/A3/A4 paralelo — Demografia, concorrentes, viabilidade',
-  'A5 ContactHunter — Decisor e script',
-  'A6 ReportConsolidator — Relatório final',
+/**
+ * Etapas do stepper — copy por FONTE (P-001: o usuário vê de onde vem o
+ * dado, não o codinome do agente). Pesos = duração média real de cada
+ * fase; a barra de progresso pondera por eles, não por contagem.
+ */
+const ETAPAS_PIPELINE: {
+  agentes: string[]
+  peso: number
+  titulo: string
+  fontes: string
+}[] = [
+  {
+    agentes: ['ContextBuilder'],
+    peso: 5,
+    titulo: 'Contexto de mercado',
+    fontes: 'IBGE · Receita Federal (CNPJ/CNO) · portais de aluguel',
+  },
+  {
+    agentes: ['GeoScout'],
+    peso: 15,
+    titulo: 'Imóveis e âncoras do bairro',
+    fontes: 'Google Maps · OLX / ImovelWeb',
+  },
+  {
+    agentes: [
+      'DemoAnalyst',
+      'CompetitorSearch',
+      'CompetitorAnalysis',
+      'CompetitorMapper',
+      'FinancialEstimator',
+    ],
+    peso: 45,
+    titulo: 'Demografia, concorrência e viabilidade (em paralelo)',
+    fontes: 'Censo/IBGE · Places + reviews reais + planos públicos · 3 cenários financeiros (benchmark CVM)',
+  },
+  {
+    agentes: ['ContactHunter'],
+    peso: 10,
+    titulo: 'Contato dos decisores',
+    fontes: 'Receita Federal (QSA) · Apollo',
+  },
+  {
+    agentes: ['ReportConsolidator'],
+    peso: 15,
+    titulo: 'Consolidação do relatório',
+    fontes: 'síntese auditável de todas as fontes',
+  },
+  {
+    agentes: ['PositioningStrategist'],
+    peso: 10,
+    titulo: 'Posicionamento estratégico (ERRC)',
+    fontes: 'gaps de serviço × dores dos concorrentes',
+  },
 ]
+
+type EstadoEtapa = 'concluida' | 'ativa' | 'pendente'
+
+function estadosEtapas(
+  etapaAtual: string | null | undefined,
+  concluidas: EtapaConcluida[] | null | undefined,
+): { estados: EstadoEtapa[]; progressoPct: number } {
+  const done = new Set((concluidas ?? []).map((e) => e.agente))
+  const estados: EstadoEtapa[] = ETAPAS_PIPELINE.map((etapa) => {
+    if (etapa.agentes.every((a) => done.has(a))) return 'concluida'
+    if (
+      (etapaAtual && etapa.agentes.includes(etapaAtual)) ||
+      etapa.agentes.some((a) => done.has(a))
+    )
+      return 'ativa'
+    return 'pendente'
+  })
+  let pct = 0
+  ETAPAS_PIPELINE.forEach((etapa, i) => {
+    if (estados[i] === 'concluida') pct += etapa.peso
+    else if (estados[i] === 'ativa') {
+      // fração da etapa ativa = agentes do grupo já concluídos + meia-vida do atual
+      const feitos = etapa.agentes.filter((a) => done.has(a)).length
+      pct += etapa.peso * Math.min(0.9, (feitos + 0.5) / etapa.agentes.length)
+    }
+  })
+  return { estados, progressoPct: Math.min(99, Math.round(pct)) }
+}
 
 // Regex UUID v4 (formato Postgres). Rejeita "510dafe6..." reticências e similares.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -143,37 +227,93 @@ export function RelatorioAguardandoPage() {
         </p>
       </header>
 
-      {isLoading && (
-        <div className="rounded-lg border border-border bg-card p-8 space-y-6">
-          <div className="flex items-center justify-center">
-            <Loader2 size={40} className="animate-spin text-primary" />
+      {isLoading && (() => {
+        const { estados, progressoPct } = estadosEtapas(
+          data?.etapa_atual,
+          data?.etapas_concluidas,
+        )
+        const duracoes = new Map(
+          (data?.etapas_concluidas ?? []).map((e) => [e.agente, e.duracao_s]),
+        )
+        return (
+          <div className="rounded-lg border border-border bg-card p-8 space-y-6">
+            <div className="space-y-1 text-center">
+              <p className="text-sm font-medium">{STATUS_LABEL[status]}</p>
+              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+                <Clock size={12} />
+                {pipelineEtaWaitingLine()}
+              </p>
+            </div>
+
+            {/* Barra ponderada por duração média de cada fase */}
+            <div className="space-y-1">
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-700"
+                  style={{ width: `${Math.max(3, progressoPct)}%` }}
+                />
+              </div>
+              <p className="text-right text-[10px] font-mono text-muted-foreground">
+                {progressoPct}%
+              </p>
+            </div>
+
+            <ol className="space-y-2.5">
+              {ETAPAS_PIPELINE.map((etapa, i) => {
+                const estado = estados[i]
+                const durTotal = etapa.agentes
+                  .map((a) => duracoes.get(a))
+                  .filter((d): d is number => typeof d === 'number')
+                  .reduce((s, d) => s + d, 0)
+                return (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 shrink-0">
+                      {estado === 'concluida' ? (
+                        <CheckCircle2 size={15} className="text-emerald-600" />
+                      ) : estado === 'ativa' ? (
+                        <Loader2 size={15} className="animate-spin text-primary" />
+                      ) : (
+                        <Circle size={15} className="text-muted-foreground/30" />
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <p
+                        className={cn(
+                          'text-xs font-medium leading-tight',
+                          estado === 'pendente' && 'text-muted-foreground/60',
+                          estado === 'ativa' && 'text-primary',
+                        )}
+                      >
+                        {etapa.titulo}
+                        {estado === 'concluida' && durTotal > 0 && (
+                          <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">
+                            {Math.round(durTotal)}s
+                          </span>
+                        )}
+                      </p>
+                      <p
+                        className={cn(
+                          'text-[10px] text-muted-foreground leading-tight',
+                          estado === 'pendente' && 'opacity-50',
+                        )}
+                      >
+                        {etapa.fontes}
+                      </p>
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+
+            <div className="flex justify-center pt-2 border-t border-border">
+              <DeleteRelatorioButton
+                relatorioId={relatorioId}
+                onDeleted={() => navigate({ to: '/relatorios' })}
+              />
+            </div>
           </div>
-          <div className="space-y-1 text-center">
-            <p className="text-sm font-medium">{STATUS_LABEL[status]}</p>
-            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
-              <Clock size={12} />
-              {pipelineEtaWaitingLine()}
-            </p>
-          </div>
-          <ol className="space-y-1.5 text-xs font-mono">
-            {PIPELINE_STEPS.map((step, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2 text-muted-foreground"
-              >
-                <span className="text-foreground/40">{String(i + 1).padStart(2, '0')}</span>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-          <div className="flex justify-center pt-2 border-t border-border">
-            <DeleteRelatorioButton
-              relatorioId={relatorioId}
-              onDeleted={() => navigate({ to: '/relatorios' })}
-            />
-          </div>
-        </div>
-      )}
+        )
+      })()}
 
       {status === 'done' && (
         <Alert variant="success">

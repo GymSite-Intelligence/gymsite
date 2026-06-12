@@ -37,6 +37,11 @@ from tools.token_telemetry import (
 from tools.state_diagnostics import after_agent_state_dump as _state_dump
 # OpenTelemetry spans por agente (A0–A6)
 from tools.agent_telemetry import before_agent_callback as _otel_before, after_agent_callback as _otel_after
+# Progresso do pipeline no banco (stepper do front) — fail-safe absoluto.
+from tools.pipeline_progress import (
+    progress_before_agent as _progress_before,
+    progress_after_agent as _progress_after,
+)
 
 
 def _chain_callbacks(existing, new):
@@ -68,6 +73,13 @@ def _attach_telemetry(*agents):
             # State dump vai depois do otel_after para manter ordem
             ag.after_agent_callback = _chain_callbacks(
                 ag.after_agent_callback, _state_dump
+            )
+            # Progresso visual (etapa_atual/etapas_concluidas no banco)
+            ag.before_agent_callback = _chain_callbacks(
+                ag.before_agent_callback, _progress_before
+            )
+            ag.after_agent_callback = _chain_callbacks(
+                ag.after_agent_callback, _progress_after
             )
         except Exception:
             pass  # falha silenciosa — telemetria não bloqueia
