@@ -33,10 +33,19 @@ function _share(c?: CenarioJSON): number {
   return c?.pico_share || 0.25
 }
 
-/** Teto de matrículas que o espaço atual suporta (pico = capacidade). */
+/** Teto de matrículas que o espaço atual suporta (pico = capacidade).
+ *  Frame correto (12/06): o gargalo é PESSOAS NO PICO — converte capacidade
+ *  em matrículas pelo fator de presença no pico derivado do próprio cenário
+ *  (pico_calculado ÷ matrículas realista). Frequência média só entra como
+ *  fallback quando o A4 não emitiu o pico. */
 function tetoMatriculas(c?: CenarioJSON): number | null {
   const cap = _cap(c)
   if (!cap) return null
+  const picoBase = c?.alunos_pico_calculado
+  const matricBase = c?.matriculas?.realista?.valor ?? c?.alunos_projetados
+  if (picoBase && matricBase) {
+    return Math.floor(cap / (picoBase / matricBase))
+  }
   return Math.floor((cap * 7) / (_freq(c) * _share(c)))
 }
 
@@ -378,19 +387,25 @@ export function CenarioFinanceiroTable({
     // ── Derivadas da folga (12/06) — crescimento, dinheiro e proteção ──
     {
       label: (
-        <TooltipLabel help="GATE de dimensionamento, não meta: quantas matrículas o ESPAÇO suportaria sem lotar o pico (capacidade ACAD × 7 ÷ freq. × share). O teto OPERATIVO do negócio é sempre o de mercado (agressivo) acima — este número só responde 'o prédio aguenta o cenário máximo da indústria?'. Físico ≥ mercado = espaço nunca será gargalo; físico < mercado = imóvel subdimensionado, alerta grave.">
-          Espaço comporta o agressivo?
+        <TooltipLabel help="GATE de dimensionamento expresso onde o gargalo acontece: PESSOAS SIMULTÂNEAS no pico, não matrículas. Pico do agressivo = matrículas agressivas × fator de presença no pico (pico÷base do próprio cenário A4, ~7% — a frequência é insumo dessa premissa, não a métrica da análise). Verde = capacidade comporta o pico do cenário máximo da indústria; vermelho = o prédio lota antes do mercado esgotar.">
+          Pico no agressivo × capacidade
         </TooltipLabel>
       ),
       values: (c) => {
-        const fisico = tetoMatriculas(c)
+        const cap = _cap(c)
         const mercado = c?.matriculas?.agressivo?.valor
-        if (fisico == null || !mercado) return '—'
-        const razao = fisico / mercado
-        const ok = razao >= 1
+        const picoBase = c?.alunos_pico_calculado
+        const matricBase = matriculasRealista(c)
+        if (!cap || !mercado || !picoBase || !matricBase) return '—'
+        // Fator de presença no pico derivado do próprio cenário (sem premissa nova)
+        const presenca = picoBase / matricBase
+        const picoAgressivo = Math.round(mercado * presenca)
+        const ok = picoAgressivo <= cap
+        const razao = cap / picoAgressivo
         return (
           <span className={ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-veredito-reprovado'}>
-            {ok ? '✓ sim' : '✗ NÃO'} ({razao.toFixed(1).replace('.', ',')}× o teto de mercado)
+            {formatInt(picoAgressivo)} pessoas vs {formatInt(cap)} de capacidade{' '}
+            {ok ? `(✓ ${razao.toFixed(1).replace('.', ',')}× de folga)` : '(✗ LOTA antes do mercado)'}
           </span>
         )
       },
@@ -413,7 +428,7 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="Quantas matrículas a mais cabem antes da ocupação de pico atingir 85% — limiar onde nascem as reclamações de lotação (calibrado pelos reviews dos concorrentes do próprio relatório). É o colchão que protege o NPS.">
+        <TooltipLabel help="Quantas matrículas a mais cabem antes da ocupação no PICO atingir 85% da capacidade — limiar onde nascem as reclamações de lotação (visto nos reviews dos concorrentes deste relatório). Conversão pelo fator de presença no pico do próprio cenário (~7% da base simultânea), mesmo frame do gate acima.">
           Colchão até reclamação (85%)
         </TooltipLabel>
       ),
