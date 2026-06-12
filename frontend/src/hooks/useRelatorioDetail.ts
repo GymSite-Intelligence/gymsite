@@ -762,8 +762,15 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
         viabilidade: s.viabilidade,
       }))
 
-    // Reagrupa as 12 colunas custo_* em custos_detalhados
-    const custos_detalhados = {
+    // Reagrupa as 12 colunas custo_* em custos_detalhados.
+    // Runs antigos (Bessa 11/06) gravaram só agregados — colunas custo_*/
+    // capex_* NULL. Converter NULL→0 aqui fazia o KPI mostrar "aluguel R$ 0"
+    // e o recálculo do kit fabricar capex/payback irreais a partir dos zeros.
+    // Breakdown ausente → undefined: KPI cai pro aluguel_mensal do output e
+    // o recálculo preserva os agregados originais do A4.
+    const temBreakdownCustos = c.custo_aluguel != null || c.custo_folha != null
+    const temBreakdownCapex = c.capex_equipamentos != null || c.capex_obra_adaptacao != null
+    const custos_detalhados = !temBreakdownCustos ? undefined : {
       aluguel:         _num(c.custo_aluguel),
       condominio:      _num(c.custo_condominio),
       iptu:            _num(c.custo_iptu),
@@ -779,7 +786,7 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
     }
 
     // Reagrupa as 6 colunas capex_* em capex_detalhado
-    const capex_detalhado = {
+    const capex_detalhado = !temBreakdownCapex ? undefined : {
       equipamentos:           _num(c.capex_equipamentos),
       obra_adaptacao:         _num(c.capex_obra_adaptacao),
       projeto_arquitetonico:  _num(c.capex_projeto_arquitetonico),

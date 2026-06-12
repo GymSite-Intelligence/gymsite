@@ -251,8 +251,15 @@ export function CenarioFinanceiroTable({
       values: (c) => formatPct(c?.folga_capacidade_pct),
     },
     {
-      label: 'Freq. semanal aluno',
-      values: (c) => (c?.frequencia_semanal_aluno ? `${c.frequencia_semanal_aluno}x` : '—'),
+      label: (
+        <TooltipLabel help="Frequência média de treino por aluno/semana. Quando o run não calculou, exibimos o benchmark do setor (IHRSA / ACAD Brasil: 2,0–2,5x) usado nas projeções de pico.">
+          Freq. semanal aluno
+        </TooltipLabel>
+      ),
+      values: (c) =>
+        c?.frequencia_semanal_aluno
+          ? `${c.frequencia_semanal_aluno}x`
+          : '2,0–2,5x (benchmark setor)',
     },
   ]
 
