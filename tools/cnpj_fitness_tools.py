@@ -149,6 +149,46 @@ def _row_to_entrante(
     }
 
 
+_CIDADES_CANONICAS_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _slug_cidade(nome: str) -> str:
+    import unicodedata
+
+    s = unicodedata.normalize("NFKD", (nome or "").strip().lower())
+    return "".join(c for c in s if not unicodedata.combining(c))
+
+
+def _cidade_canonica(sb, cidade: str, uf: str) -> str:
+    """Resolve o nome de cidade como gravado no banco, tolerando acento/caixa.
+
+    O A0 (LLM) às vezes chama a tool com "Joao Pessoa" enquanto a carga RFB
+    gravou "João Pessoa" — o `.eq()` exato devolvia parque 0 numa cidade com
+    639 unidades. Lista as cidades distintas da UF (1 query, cacheada por
+    processo) e casa por slug sem acento."""
+    cidade = (cidade or "").strip()
+    if not cidade or sb is None:
+        return cidade
+    uf_key = (uf or "")[:2].upper()
+    try:
+        if uf_key not in _CIDADES_CANONICAS_CACHE:
+            res = (
+                sb.table("cnpj_fitness_estabelecimentos")
+                .select("cidade")
+                .eq("uf", uf_key)
+                .execute()
+            )
+            mapa: dict[str, str] = {}
+            for r in res.data or []:
+                nome = (r.get("cidade") or "").strip()
+                if nome:
+                    mapa.setdefault(_slug_cidade(nome), nome)
+            _CIDADES_CANONICAS_CACHE[uf_key] = mapa
+        return _CIDADES_CANONICAS_CACHE[uf_key].get(_slug_cidade(cidade), cidade)
+    except Exception:
+        return cidade
+
+
 def _fetch_estabelecimentos_paginado(
     sb,
     *,
@@ -157,6 +197,7 @@ def _fetch_estabelecimentos_paginado(
     fields: str,
     page_size: int = 1000,
 ) -> list[dict]:
+    cidade = _cidade_canonica(sb, cidade, uf)
     offset = 0
     all_rows: list[dict] = []
     while True:
@@ -343,6 +384,7 @@ def listar_entrantes_cnpj_fitness(
             "entrantes": [],
         }
 
+    cidade = _cidade_canonica(sb, cidade, uf)
     fields_base = (
         "cnpj, nome_fantasia, razao_social, bairro, email, telefone, "
         "data_inicio_atividade, cep, logradouro, numero, complemento, "
@@ -449,6 +491,7 @@ def _count_cnpj_fitness_ativas_impl(cidade: str, uf: str = "") -> int | None:
     if sb is None:
         return None
     try:
+        cidade = _cidade_canonica(sb, cidade, uf)
         q = sb.table("cnpj_fitness_estabelecimentos").select("cnpj", count="exact")
         if cidade:
             q = q.eq("cidade", cidade)
