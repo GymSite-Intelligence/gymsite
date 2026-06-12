@@ -401,6 +401,7 @@ def _rows_competidores(
             "reviews": c.get("reviews_traduzidas") or c.get("reviews") or [],
             "horarios_pico": c.get("horarios_pico"),
             "pico_semanal": c.get("pico_semanal"),
+            "planos_precos": c.get("planos_precos"),
             "atividade_marketing": _merge_atividade_marketing(c),
             "origem_busca": c.get("origem_busca") or "nearby",
             # Sprint 2026-05-12: Places API contact data — antes ignorada pelo writer
@@ -445,6 +446,22 @@ def _rows_cenarios(rel: dict, relatorio_id: str) -> list[dict]:
         # CAPEX detalhado (v2; fallback do total v1)
         capex_d = c.get("capex_detalhado") or {}
         capex_total = c.get("capex_total") or c.get("capex_estimado")
+
+        # Gate A4 (caso Bessa 11/06): cenário sem breakdown gravava NULLs que
+        # o front convertia em zeros — KPI "aluguel R$ 0" e payback fake.
+        # Consistência mínima: aluguel do output cobre custo_aluguel ausente;
+        # warning ruidoso pro run ficar visível no log (não derruba o write —
+        # agregados ainda têm valor; o viewer degrada com elegância).
+        if not custos.get("aluguel"):
+            aluguel_out = _safe_get(rel, "output_consolidado", "aluguel_mensal", default=None)
+            if aluguel_out:
+                custos = {**custos, "aluguel": aluguel_out}
+            _log(
+                "warning",
+                f"A4 sem breakdown de custos no cenário {modelo} "
+                f"(relatorio {relatorio_id}) — custo_aluguel "
+                f"{'preenchido' if aluguel_out else 'AUSENTE'} via aluguel_mensal do output",
+            )
 
         rows.append({
             "relatorio_id": relatorio_id,

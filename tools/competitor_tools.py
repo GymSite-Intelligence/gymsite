@@ -1538,6 +1538,90 @@ def _review_recente_1ano(data_relativa: str | None) -> bool:
     return True
 
 
+def _reviews_baixa_nota_searchapi(place_id: str, max_reviews: int = 10) -> list[dict]:
+    """As 10 reviews de MENOR NOTA via SearchAPI (engine google_maps_reviews).
+
+    Promovido do scripts/backfill_reviews_dores.py (12/06) pro pipeline:
+    relatório nasce com dores reais em vez das 5 reviews-elogio da Places.
+    Sem SEARCHAPI_KEY ou falha → [] (best-effort, nunca bloqueia)."""
+    import os as _os
+
+    import requests as _requests
+
+    key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
+    if not key or not place_id:
+        return []
+    try:
+        r = _requests.get(
+            "https://www.searchapi.io/api/v1/search",
+            params={
+                "engine": "google_maps_reviews",
+                "place_id": place_id,
+                "sort_by": "lowest_rating",
+                "hl": "pt-br",
+                "gl": "br",
+                "api_key": key,
+            },
+            timeout=45,
+        )
+        r.raise_for_status()
+    except Exception:
+        return []
+    out: list[dict] = []
+    for rev in (r.json().get("reviews") or [])[:max_reviews]:
+        texto = (rev.get("text") or rev.get("snippet") or "").strip()
+        if not texto:
+            continue
+        try:
+            rating = int(float(rev.get("rating") or 3))
+        except (TypeError, ValueError):
+            rating = 3
+        out.append({
+            "autor": (rev.get("user") or {}).get("name") or "anônimo",
+            "rating": rating,
+            "quote_curta": texto[:280],
+            "data_relativa": rev.get("date") or "",
+        })
+    return out
+
+
+async def _planos_precos_grounding(nome: str, bairro: str, cidade: str) -> list | None:
+    """Planos × preços públicos da academia via Gemini Search Grounding.
+
+    Promovido do scripts/backfill_planos_concorrentes.py (12/06). Cache 7d
+    por academia (na tool de grounding). Sem preço confiável → None — nada
+    inventado (P-004)."""
+    import json as _json
+
+    from tools.gemini_search_grounding import pesquisar_no_google_grounding
+
+    query = (
+        f"Quais são os planos e preços de mensalidade da academia '{nome}' "
+        f"({bairro or cidade}, {cidade})? Pesquise o site oficial e fontes recentes. "
+        "Responda APENAS um JSON array (sem markdown), até 4 planos, no formato: "
+        '[{"plano": "nome do plano", "preco_mensal": "R$ 99,90", '
+        '"inclui": ["item1", "item2"], "fidelidade": "12 meses ou sem fidelidade"}]. '
+        "Se não encontrar preços confiáveis, responda []."
+    )
+    cache_key = f"planos:{cidade.lower()}:{nome.lower()[:40]}"
+    texto = await pesquisar_no_google_grounding(query, cache_key=cache_key)
+    if not texto:
+        return None
+    # raw_decode a partir do primeiro '[': para no fim do PRIMEIRO JSON
+    # válido — grounding costuma anexar fontes depois do array e um regex
+    # guloso até o último ']' quebrava o parse ("Extra data").
+    inicio = texto.find("[")
+    if inicio < 0:
+        return None
+    try:
+        data, _fim = _json.JSONDecoder().raw_decode(texto[inicio:])
+    except _json.JSONDecodeError:
+        return None
+    if not isinstance(data, list) or not data:
+        return None
+    return [p for p in data[:4] if isinstance(p, dict)] or None
+
+
 # ── Macro-tool consolidadora para A3b (VEC-380) ─────────────────────
 def _slim_concorrente(c: dict) -> dict:
     """
@@ -1603,6 +1687,7 @@ def _slim_concorrente(c: dict) -> dict:
         "website": website_raw[:200] if website_raw else None,
         "reviews": reviews_slim,
         "horarios_pico": c.get("horarios_pico"),
+        "planos_precos": c.get("planos_precos"),
         "servicos_oferecidos": (am.get("servicos_ofertados") or [])[:15] if isinstance(am, dict) else [],
         "reclamacoes_marketing": (am.get("principais_reclamacoes") or [])[:8] if isinstance(am, dict) else [],
         "is_independente": bool(c.get("is_independente")),
@@ -1736,6 +1821,36 @@ async def analisar_concorrentes_a3a_completo(
         if horarios_pico_dict is None:
             horarios_pico_dict = enrichment.get("horarios_pico")
 
+        # Reviews de MENOR NOTA via SearchAPI — Places Details devolve só 5
+        # "mais relevantes" enviesadas pro elogio (Smart Fit 1.329 aval sem
+        # nenhuma ≤3★). As dores reais moram nas piores; merge dedup.
+        if place_id:
+            try:
+                piores = _reviews_baixa_nota_searchapi(place_id)
+                if piores:
+                    vistos = {
+                        ((r.get("autor") or ""), (r.get("quote_curta") or "")[:60])
+                        for r in reviews
+                    }
+                    reviews = piores + [
+                        r for r in reviews
+                        if ((r.get("autor") or ""), (r.get("quote_curta") or "")[:60]) not in vistos
+                    ]
+                    reviews = reviews[:15]
+            except Exception as e:
+                print(f"[A3a reviews_baixa_nota] {nome}: {type(e).__name__}: {e}")
+
+        # Planos × preços públicos via grounding (cache 7d por academia).
+        # Metodologia analise_mercado_fitness: comparativo plano/preço/oferta
+        # é decisão de posicionamento — sem preço confiável, fica None.
+        planos_precos: list | None = None
+        try:
+            planos_precos = await _planos_precos_grounding(
+                nome, c.get("bairro_concorrente") or bairro, cidade
+            )
+        except Exception as e:
+            print(f"[A3a planos_precos] {nome}: {type(e).__name__}: {e}")
+
         maps_uri = (c.get("google_maps_uri") or "").strip() or None
         return {
             "place_id": place_id,
@@ -1755,6 +1870,7 @@ async def analisar_concorrentes_a3a_completo(
             "reviews": reviews,
             "horarios_pico": horarios_pico_dict,
             "pico_semanal": pico_semanal_str,
+            "planos_precos": planos_precos,
             "atributos_sobre": atributos_sobre if atributos_sobre and "erro" not in atributos_sobre else None,
             "atividade_marketing": enrichment.get("atividade_marketing"),
             "enrichment_search_grounding_text": enrichment.get("scraping_text"),

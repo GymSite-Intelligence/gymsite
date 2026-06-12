@@ -2163,6 +2163,17 @@ async def assistente_chat(request: Request, payload: AssistenteChatInput) -> Ass
         raise HTTPException(status_code=503, detail="Serviço de assistente indisponível. Tinker SDK não instalado.")
 
     try:
+        # Guardrail: esta rota não passa pelo conversational_engine — sem o
+        # porteiro, pedido de conselho financeiro/cripto chegava direto no LLM.
+        from services.conversational_engine import (
+            _RESPOSTA_FORA_DE_ESCOPO,
+            classificar_intencao,
+        )
+
+        intencao, _conf = classificar_intencao(payload.pergunta)
+        if intencao == "fora_de_escopo":
+            return AssistenteChatOutput(resposta=_RESPOSTA_FORA_DE_ESCOPO)
+
         contexto = build_contexto_chat(
             user_id=user_id,
             pergunta=payload.pergunta,
