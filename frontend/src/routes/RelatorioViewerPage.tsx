@@ -464,6 +464,26 @@ function RelatorioViewerContent({
       >
         {(() => {
           const cenariosAtivos = cenariosRecalc ?? out.viabilidade_3_cenarios
+
+          // Reconciliação aluguel de referência × candidato anunciado.
+          // Cenários usam a mediana de mercado da faixa de área (conservador);
+          // quando o candidato real anuncia preço >25% distante, o leitor
+          // precisa da ponte — senão os dois números parecem contradição.
+          const aluguelRef = Number(out.aluguel_mensal) || null
+          const candidatoComPreco = (out.top_3_candidatos ?? [])
+            .filter((c) => c.listing_url && c.price_raw)
+            .map((c) => {
+              const digits = (c.price_raw ?? '').replace(/[^\d]/g, '')
+              return { nome: c.nome, preco: digits ? Number(digits) : 0 }
+            })
+            .find((c) => c.preco >= 2000 && c.preco < 1_000_000)
+          const ticketRealizado = cenariosAtivos?.mid?.ticket_realizado_estimado
+            ?? cenariosAtivos?.mid?.ticket_medio
+          const mostraReconciliacao =
+            aluguelRef != null &&
+            candidatoComPreco != null &&
+            Math.abs(aluguelRef - candidatoComPreco.preco) / aluguelRef > 0.25
+
           return (
             <>
               <FinanceiroKpiStrip
@@ -472,6 +492,38 @@ function RelatorioViewerContent({
                 aluguelMensal={out.aluguel_mensal}
                 cenarioMid={cenariosAtivos?.mid}
               />
+              {mostraReconciliacao && (
+                <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
+                  <p className="font-medium text-emerald-700 dark:text-emerald-400">
+                    💡 Os cenários acima usam o aluguel de referência de mercado
+                    ({Number(aluguelRef).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}/mês
+                    para a faixa de área) — premissa conservadora.
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    O imóvel anunciado custa{' '}
+                    <strong>{candidatoComPreco.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}/mês</strong>
+                    {candidatoComPreco.preco < aluguelRef ? (
+                      <>
+                        {' '}({Math.round((1 - candidatoComPreco.preco / aluguelRef) * 100)}% abaixo da referência).
+                        {ticketRealizado ? (
+                          <>
+                            {' '}Com esse aluguel, o break-even cai
+                            ~{Math.round((aluguelRef - candidatoComPreco.preco) / Number(ticketRealizado))} alunos
+                            — todos os cenários melhoram a partir daqui.
+                          </>
+                        ) : (
+                          <> — todos os cenários melhoram a partir daqui.</>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {' '}({Math.round((candidatoComPreco.preco / aluguelRef - 1) * 100)}% acima da referência)
+                        — negocie ou avalie os bairros alternativos.
+                      </>
+                    )}
+                  </p>
+                </div>
+              )}
               <CapexBreakdownChart
                 cenarios={cenariosAtivos}
                 className="mt-4"
