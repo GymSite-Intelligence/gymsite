@@ -286,19 +286,59 @@ export function CenarioFinanceiroTable({
   const isV2 = MODELOS.some((m) => cenarios[m]?.matriculas != null)
 
   // ── (a) DEMANDA — só v2 ──
+  // Matrículas = densidade ACAD/Sebrae 2024 (matr/m² por modelo e cenário)
+  // × área de referência. A densidade vem no próprio dado do A4
+  // (matriculas.X.matr_por_m2) e é exibida pra trilha de auditoria.
+  const fmtMatriculas = (
+    item?: { valor?: number | null; matr_por_m2?: number | null } | null,
+    cenario?: CenarioJSON,
+  ) => {
+    if (item?.valor == null) return '—'
+    // O banco só persiste matr_por_m2 do REALISTA; densidade dos outros
+    // cenários é derivada por proporção exata (mesma área de referência):
+    // dens_x = valor_x ÷ (valor_realista ÷ dens_realista).
+    const realista = cenario?.matriculas?.realista
+    let dens: number | null = null
+    if (realista?.valor && realista?.matr_por_m2) {
+      const areaRef = realista.valor / realista.matr_por_m2
+      dens = Math.round((item.valor / areaRef) * 10) / 10
+    }
+    return (
+      <>
+        {formatInt(item.valor)}
+        {dens != null && (
+          <span className="ml-1 text-[10px] text-muted-foreground">
+            ({String(dens).replace('.', ',')}/m²)
+          </span>
+        )}
+      </>
+    )
+  }
   const rowsDemanda: SubTableRow[] = [
     {
-      label: 'Matrículas conservador',
-      values: (c) => formatInt(c?.matriculas?.conservador.valor),
+      label: (
+        <TooltipLabel help="Piso de captação: densidade conservadora ACAD/Sebrae 2024 (low 1,5 · mid 1,0 · premium 0,4 matrículas por m²) × área de referência. Cenário de praça difícil ou execução mediana — se a conta fecha aqui, o risco é baixo.">
+          Matrículas conservador
+        </TooltipLabel>
+      ),
+      values: (c) => fmtMatriculas(c?.matriculas?.conservador, c),
     },
     {
-      label: 'Matrículas realista (base)',
-      values: (c) => formatInt(c?.matriculas?.realista.valor),
+      label: (
+        <TooltipLabel help="Base das projeções de receita: densidade realista ACAD/Sebrae 2024 (low 2,2 · mid 1,4 · premium 0,6 matr/m²) × área de referência. Benchmark NACIONAL — a calibração com a demanda local (Censo por setor censitário) entra na próxima versão do motor.">
+          Matrículas realista (base)
+        </TooltipLabel>
+      ),
+      values: (c) => fmtMatriculas(c?.matriculas?.realista, c),
       emphasize: true,
     },
     {
-      label: 'Matrículas agressivo',
-      values: (c) => formatInt(c?.matriculas?.agressivo.valor),
+      label: (
+        <TooltipLabel help="Teto de captação da indústria: densidade agressiva ACAD/Sebrae 2024 (low 3,0 · mid 1,8 · premium 0,9 matr/m²). Âncora de realidade: a Smart Fit (listada, CVM) opera em média ~2,5 mil matrículas por clube — o agressivo low-cost é território de rede com marca consolidada, não de estreante.">
+          Matrículas agressivo
+        </TooltipLabel>
+      ),
+      values: (c) => fmtMatriculas(c?.matriculas?.agressivo, c),
     },
     {
       label: 'Capacidade física simultânea',
