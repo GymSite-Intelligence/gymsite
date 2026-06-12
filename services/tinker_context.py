@@ -73,6 +73,28 @@ def _fmt_outputs(row: dict) -> dict:
     return outputs
 
 
+# Benchmarks setoriais fixos — fontes públicas do setor. Permite responder
+# perguntas genéricas ("freq. semanal por modelo?") sem depender de relatório.
+_BENCHMARKS_SETOR = """--- BENCHMARKS DO SETOR (referência geral, fontes públicas) ---
+Frequência semanal por aluno (IHRSA / ACAD Brasil):
+- Low cost / high volume: 1,8–2,2x por semana
+- Mid market: 2,0–2,5x por semana
+- Premium / boutique: 2,5–3,0x por semana
+Ticket mensal típico Brasil (CVM SMFT3 + planos públicos das redes):
+- Low cost: R$ 90–160 (ARPU Smart Fit ~R$ 140, CVM)
+- Mid market: R$ 150–280
+- Premium: R$ 300–700
+Churn mensal típico: 5–8% (low cost no teto, premium no piso).
+Cite a fonte ao usar esses números."""
+
+
+def _v(d: dict, chave: str) -> str:
+    """`.get(chave, 'N/A')` não cobre valor None vindo do banco — None virava
+    o literal "None" no prompt e o modelo ecoava pro usuário."""
+    valor = d.get(chave)
+    return str(valor) if valor not in (None, "") else "N/A"
+
+
 def build_contexto_chat(user_id: str, pergunta: str, relatorio_id: str | None = None) -> str:
     """Monta o contexto em texto para injetar no prompt do Tinker Bot.
 
@@ -85,6 +107,8 @@ def build_contexto_chat(user_id: str, pergunta: str, relatorio_id: str | None = 
     partes.append("Você é o GymSite Assistant, um especialista em viabilidade de franquias de academia no Brasil.")
     partes.append("Responda de forma clara, objetiva e em português.")
     partes.append("")
+    partes.append(_BENCHMARKS_SETOR)
+    partes.append("")
 
     if relatorio_id:
         rel = buscar_relatorio_por_id(relatorio_id)
@@ -92,10 +116,10 @@ def build_contexto_chat(user_id: str, pergunta: str, relatorio_id: str | None = 
             inputs = _fmt_inputs(rel)
             outputs = _fmt_outputs(rel)
             partes.append("--- RELATÓRIO EM FOCO ---")
-            partes.append(f"Cidade: {inputs.get('cidade', 'N/A')}")
-            partes.append(f"Bairro: {inputs.get('bairro', 'N/A')}")
-            partes.append(f"Veredito: {outputs.get('veredito', 'N/A')}")
-            partes.append(f"Resumo: {outputs.get('resumo_executivo', 'N/A')}")
+            partes.append(f"Cidade: {_v(inputs, 'cidade')}")
+            partes.append(f"Bairro: {_v(inputs, 'bairro')}")
+            partes.append(f"Veredito: {_v(outputs, 'veredito')}")
+            partes.append(f"Resumo: {_v(outputs, 'resumo_executivo')}")
             partes.append("")
     else:
         relatorios = buscar_relatorios_usuario(user_id, limit=3)
@@ -105,14 +129,20 @@ def build_contexto_chat(user_id: str, pergunta: str, relatorio_id: str | None = 
                 inputs = _fmt_inputs(r)
                 outputs = _fmt_outputs(r)
                 partes.append(
-                    f"- {inputs.get('cidade', 'N/A')}/{inputs.get('bairro', 'N/A')} | "
-                    f"Veredito: {outputs.get('veredito', 'N/A')} | Status: {r.get('status', 'N/A')}"
+                    f"- {_v(inputs, 'cidade')}/{_v(inputs, 'bairro')} | "
+                    f"Veredito: {_v(outputs, 'veredito')} | Status: {_v(r, 'status')}"
                 )
             partes.append("")
 
     partes.append("--- PERGUNTA DO USUÁRIO ---")
     partes.append(pergunta)
     partes.append("")
-    partes.append("Responda com base nos dados disponíveis. Se não souber, diga que precisa de mais informações.")
+    partes.append(
+        "Regras de resposta: NUNCA repita os rótulos/estrutura do contexto acima "
+        "(o usuário não vê este texto). Pergunta geral do setor → responda com os "
+        "benchmarks acima, citando fonte. Pergunta sobre relatório → use os dados "
+        "do relatório. Campo N/A → simplesmente não o mencione. Sem o dado → diga "
+        "o que falta em linguagem natural, sem citar nomes de campos."
+    )
 
     return "\n".join(partes)

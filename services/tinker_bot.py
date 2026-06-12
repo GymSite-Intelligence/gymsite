@@ -43,7 +43,11 @@ def _get_tokenizer():
 
 
 def _gemini_chat(prompt_text: str, max_tokens: int = 1024, temperature: float = 0.7) -> str:
-    """Fallback — usa Gemini (google-genai) quando o Tinker falha."""
+    """Fallback — usa Gemini (google-genai) quando o Tinker falha.
+
+    thinking_budget limitado + piso de 2048 tokens: no Gemini 2.5 os thought
+    tokens CONSOMEM max_output_tokens (BUG-009) — sem teto, respostas do chat
+    saíam truncadas no meio da frase ("...ex: Smart Fit," e cortava)."""
     from tools._genai_client import build_genai_client, generate_content_resilient
     from google.genai import types as genai_types
 
@@ -55,8 +59,9 @@ def _gemini_chat(prompt_text: str, max_tokens: int = 1024, temperature: float = 
         model=model,
         contents=prompt_text,
         config=genai_types.GenerateContentConfig(
-            max_output_tokens=max_tokens,
+            max_output_tokens=max(max_tokens, 2048),
             temperature=temperature,
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=256),  # pyright: ignore[reportCallIssue]
         ),
     )
     return response.text or ""
