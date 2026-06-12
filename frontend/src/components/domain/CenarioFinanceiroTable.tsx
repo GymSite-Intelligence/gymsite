@@ -108,6 +108,12 @@ function SubTable({
   description?: string
 }) {
   if (!cenarios) return null
+  // P-004: linha sem dado em NENHUM modelo não renderiza (runs antigos sem
+  // breakdown viravam 14 linhas de travessão). '—' em só alguns modelos fica.
+  const rowsComDado = rows.filter((row) =>
+    MODELOS.some((m) => row.values(cenarios[m]) !== '—'),
+  )
+  if (rowsComDado.length === 0) return null
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
       <header className="px-4 py-3 border-b border-border bg-muted/30">
@@ -148,7 +154,7 @@ function SubTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {rowsComDado.map((row, i) => (
               <tr
                 key={i}
                 className={cn(
