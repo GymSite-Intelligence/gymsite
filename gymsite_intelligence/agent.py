@@ -99,11 +99,15 @@ _attach_telemetry(
 # JÁ oferece antes de recomendar diferenciais.
 competitor_subpipeline = SequentialAgent(
     name="CompetitorPipeline",
-    description="A3a busca → A3b análise reviews → A3c oferta real (modo shadow).",
+    description="A3a busca → A3b análise reviews.",
     sub_agents=[
         competitor_search_agent,      # A3a
         competitor_analysis_agent,    # A3b
-        competitor_mapper_agent,      # A3c (shadow — GymSite #127)
+        # A3c DESLIGADO 12/06: suspeito do crash duro do processo (Playwright
+        # sync dentro do loop async no Windows — backend morreu sem traceback
+        # durante o A3c no run 9213f40d). É modo shadow (A6 não consome,
+        # GymSite #127) — religar só após sandbox em subprocesso.
+        # competitor_mapper_agent,    # A3c
     ],
 )
 _attach_telemetry(competitor_subpipeline)
