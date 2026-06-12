@@ -258,6 +258,18 @@ def rodar_kimi_research(
     """
     global _last_kimi_tier
 
+    # Guardrail duro — mesmo bloqueio do rodar_deep_research (modo estrito).
+    from tools.market_bundle import must_not_call_deep_research
+
+    if must_not_call_deep_research():
+        _last_kimi_tier = "bloqueado_modo_estrito"
+        return (
+            f"<!-- kimi_research status=bloqueado cidade={cidade} bairro={bairro} -->\n\n"
+            "Pesquisa Kimi desativada (A0_CONTEXT_SOURCE=ckan_bundle). "
+            "Use exclusivamente o market_bundle e as tools CNPJ/CNO; campos sem "
+            "dado ficam como dados_nao_disponiveis."
+        )
+
     cache = _cache_path(cidade, bairro)
     if not force_refresh and _cache_valido(cache):
         tier_cached = _parse_cache_tier(cache.read_text(encoding="utf-8")[:500])

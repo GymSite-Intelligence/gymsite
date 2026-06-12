@@ -366,6 +366,20 @@ def rodar_deep_research(cidade: str, bairro: str) -> str:
     """
     global _last_execution_tier
 
+    # Guardrail duro: modo estrito (A0_CONTEXT_SOURCE=ckan_bundle) bloqueia a
+    # tool NA EXECUÇÃO — instrução de prompt não é garantia, o LLM pode chamar
+    # mesmo assim. Aqui não há rede nem custo: retorna vazio rotulado.
+    from tools.market_bundle import must_not_call_deep_research
+
+    if must_not_call_deep_research():
+        _last_execution_tier = "bloqueado_modo_estrito"
+        return (
+            f"<!-- deep_research status=bloqueado cidade={cidade} bairro={bairro} -->\n\n"
+            "Deep Research desativado (A0_CONTEXT_SOURCE=ckan_bundle). "
+            "Use exclusivamente o market_bundle e as tools CNPJ/CNO; campos sem "
+            "dado ficam como dados_nao_disponiveis."
+        )
+
     try:
         from tools.enrichment_cache import get_pipeline_enrichment_context
 
