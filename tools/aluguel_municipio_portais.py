@@ -206,6 +206,101 @@ def build_portal_search_urls(
     return {"zap": zap, "viva": viva, "olx": olx}
 
 
+# ── Tier 1b: índice do Google via SearchAPI (12/06) ────────────────────────
+# Os portais bloqueiam scraping de LISTAGEM (Akamai/JS), mas o Google já
+# indexou os anúncios — e os títulos trazem preço+área no padrão do portal
+# ("Galpão para alugar, 1200m² por R$ 25.000"). Consultamos o índice via
+# SearchAPI (engine=google, site:portal) e extraímos do título/snippet.
+# Mesma auditoria (URL real do anúncio), mesmo gate comercial, custo já
+# pago no plano full.
+_PRECO_RE = re.compile(r"R\$\s?([\d.]{3,12})(?:/m[eê]s|\s|,|$)", re.IGNORECASE)
+_AREA_RE = re.compile(r"(\d{2,5})\s?m[²2]\b", re.IGNORECASE)
+
+_SEARCHAPI_PORTAIS = (
+    ("zapimoveis.com.br/aluguel", "zap(google)"),
+    ("vivareal.com.br/aluguel", "viva(google)"),
+    ("olx.com.br", "olx(google)"),
+    ("imovelweb.com.br", "imovelweb(google)"),
+)
+_TERMOS_COMERCIAIS = ("galpão para alugar", "loja para alugar", "salão comercial alugar")
+
+
+def _amostras_via_searchapi_google(
+    cidade: str,
+    uf: str,
+    area_m2_min: int,
+    area_m2_max: int,
+    max_queries: int = 8,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Colhe amostras de aluguel comercial do índice Google (SearchAPI).
+
+    Retorna (amostras, erros). Best-effort: sem SEARCHAPI_KEY → ([], [...]).
+    """
+    import requests as _rq
+
+    key = (os.getenv("SEARCHAPI_KEY") or "").strip()
+    if not key:
+        return [], ["searchapi: SEARCHAPI_KEY ausente"]
+
+    amostras: list[dict[str, Any]] = []
+    erros: list[str] = []
+    vistos: set[str] = set()
+    queries_feitas = 0
+
+    for dominio, portal in _SEARCHAPI_PORTAIS:
+        for termo in _TERMOS_COMERCIAIS:
+            if queries_feitas >= max_queries:
+                break
+            q = f"site:{dominio} {termo} {cidade}"
+            queries_feitas += 1
+            try:
+                # google_light: mesmos organic_results (title/link/snippet) da
+                # spec, mais rápida/barata — suficiente pra busca site:.
+                # Paginação por `page` (a spec NÃO tem `num`).
+                r = _rq.get(
+                    "https://www.searchapi.io/api/v1/search",
+                    headers={"Authorization": f"Bearer {key}"},
+                    params={
+                        "engine": "google_light",
+                        "q": q,
+                        "gl": "br",
+                        "hl": "pt-br",
+                        "page": 1,
+                    },
+                    timeout=30,
+                )
+                r.raise_for_status()
+                organicos = r.json().get("organic_results") or []
+            except Exception as e:
+                erros.append(f"searchapi {portal} '{termo}': {type(e).__name__}")
+                continue
+
+            for res in organicos:
+                url = str(res.get("link") or "")
+                if not url or url in vistos:
+                    continue
+                vistos.add(url)
+                texto = f"{res.get('title') or ''} {res.get('snippet') or ''}"
+                m_preco = _PRECO_RE.search(texto)
+                m_area = _AREA_RE.search(texto)
+                if not m_preco or not m_area:
+                    continue
+                try:
+                    preco = float(m_preco.group(1).replace(".", ""))
+                    area = float(m_area.group(1))
+                except ValueError:
+                    continue
+                s = _sample_from_price_area(
+                    preco, area, url, portal, area_m2_min, area_m2_max
+                )
+                if s:
+                    amostras.append(s)
+        if queries_feitas >= max_queries:
+            break
+
+    return amostras, erros
+
+
 # Gate comercial (12/06): as URLs de busca SÃO de categorias comerciais, mas
 # o OLX injeta "anúncios relacionados" RESIDENCIAIS quando a categoria tem
 # poucos resultados — apartamentos contaminaram a mediana do Bessa e o proxy
@@ -213,21 +308,31 @@ def build_portal_search_urls(
 # interna: proxy R$ 48-58/m² vs candidatos comerciais reais R$ 15-18/m²).
 # Validação POR ANÚNCIO via slug da URL; na dúvida (sem termo nenhum), passa.
 _RESIDENCIAL_RE = re.compile(
-    r"apartamento|apto\b|casa-|/casa\b|kitnet|kitinete|quitinete|flat\b|"
-    r"cobertura|sobrado|condominio-residencial|quarto[s]?-|residencial",
+    r"apartamento|partamento|apto\b|casa-|/casa\b|kitnet|kitinete|quitinete|"
+    r"flat\b|cobertura|sobrado|condominio-residencial|quarto[s]?-|residencial|"
+    r"mobiliad[oa]",
     re.IGNORECASE,
 )
 _COMERCIAL_RE = re.compile(
     r"galp[aã]o|loja|sala[s]?-comerc|ponto-comercial|comercial|predio|"
-    r"pr[eé]dio|deposito|armaz[eé]m|escritorio|terreno-comercial",
+    r"pr[eé]dio|deposito|armaz[eé]m|escritorio|terreno-comercial|"
+    r"im[oó]vel-comercial|salao\b|sal[aã]o-",
     re.IGNORECASE,
 )
 
 
 def _eh_anuncio_residencial(url: str) -> bool:
-    """True quando a URL do anúncio indica imóvel residencial SEM sinal comercial."""
+    """True quando o anúncio NÃO pode entrar na mediana comercial.
+
+    Gate v2 (12/06): exige sinal COMERCIAL EXPLÍCITO na URL. A regra antiga
+    'na dúvida passa' deixou apartamento sem slug ('aluguel-anual-locacao')
+    e typo de anunciante ('partamento') contaminarem a mediana. Com o Tier
+    1b (índice Google) garantindo volume comercial, precision > recall.
+    """
     u = url or ""
-    return bool(_RESIDENCIAL_RE.search(u)) and not bool(_COMERCIAL_RE.search(u))
+    if _COMERCIAL_RE.search(u):
+        return False  # sinal comercial explícito — entra (mesmo dual-use)
+    return True  # residencial declarado OU neutro — fora da mediana comercial
 
 
 def _sample_from_price_area(
@@ -766,6 +871,22 @@ async def pesquisar_aluguel_municipio(
         cidade=cidade,
         uf=uf,
     )
+
+    # Tier 1b (12/06): índice Google via SearchAPI — colhe anúncios que o
+    # scrape direto perde (Akamai/JS nas listagens). Merge com dedup por URL.
+    try:
+        from tools.api_cost_tracker import track_api_call
+
+        amostras_idx, erros_idx = await asyncio.to_thread(
+            _amostras_via_searchapi_google, cidade, uf, parse_lo, parse_hi
+        )
+        with track_api_call("aluguel_tier1b", "searchapi_google_light", 8):
+            pass
+        urls_existentes = {s.get("url") for s in samples}
+        samples += [s for s in amostras_idx if s.get("url") not in urls_existentes]
+        erros += erros_idx
+    except Exception as e:
+        erros.append(f"tier1b searchapi: {type(e).__name__}")
 
     # GATE COMERCIAL (12/06): anúncio residencial NUNCA entra na mediana —
     # superestima o aluguel comercial grande em ~2-3x. Descartes ficam

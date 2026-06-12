@@ -46,6 +46,13 @@ def _build_demografia(cidade: str, bairro: str, uf: str) -> dict:
     return enrich_demografia_bairro(base, cidade, bairro, uf)
 
 
+from dotenv import load_dotenv
+
+# Env do projeto (12/06): o Tier 1b de aluguel usa SEARCHAPI_KEY — sem o
+# load aqui o build rodava com 'SEARCHAPI_KEY ausente' e perdia o índice.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
+
 def _load_or_build_enrichment(
     cidade: str,
     bairro: str,
