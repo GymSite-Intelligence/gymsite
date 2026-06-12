@@ -141,6 +141,42 @@ def _row_inputs(rel: dict, relatorio_id: str) -> dict:
     }
 
 
+def _aluguel_auditoria(rel: dict) -> dict:
+    """Amostras de aluguel do market_bundle → colunas de auditoria (12/06).
+
+    Copiadas direto do bundle local (NUNCA passam pelo LLM): cada anúncio
+    com preço, m², R$/m², portal e URL clicável — a fonte 'Portais (N=33)'
+    vira expansível e auditável na UI. Best-effort: sem bundle → vazio."""
+    try:
+        inp = rel.get("input_canonico") or {}
+        cidade = inp.get("cidade") or ""
+        bairro = inp.get("bairro") or ""
+        uf = inp.get("uf") or ""
+        if not cidade:
+            return {}
+        from tools.market_bundle import load_market_bundle
+
+        bundle = load_market_bundle(cidade, bairro, uf) or {}
+        alug = bundle.get("aluguel_portais") or {}
+        amostras = alug.get("amostras") or []
+        if not amostras:
+            return {}
+        return {
+            "aluguel_amostras": amostras[:30],
+            "aluguel_fonte_meta": {
+                "fonte": alug.get("fonte"),
+                "n_validos": alug.get("n_validos"),
+                "confianca": alug.get("confianca"),
+                "categoria_gate": alug.get("categoria_gate"),
+                "descartadas_residenciais": alug.get("descartadas_residenciais"),
+                "faixa_rs_m2": alug.get("faixa_rs_m2"),
+                "coletado_em": bundle.get("gerado_em"),
+            },
+        }
+    except Exception:
+        return {}
+
+
 def _row_outputs(rel: dict, relatorio_id: str) -> dict:
     out = rel.get("output_consolidado") or {}
     sr = out.get("scores_regionais") or {}
@@ -162,6 +198,7 @@ def _row_outputs(rel: dict, relatorio_id: str) -> dict:
         "aluguel_min_m2": out.get("aluguel_min_m2_observado"),
         "aluguel_max_m2": out.get("aluguel_max_m2_observado"),
         "aluguel_mediana_m2": out.get("aluguel_mediana_m2_observado"),
+        **_aluguel_auditoria(rel),
         "queries_aluguel_com_dados": _safe_get(
             out, "contato_decisor", "aluguel_pesquisa_detalhes", "queries_com_dados",
             default=0,

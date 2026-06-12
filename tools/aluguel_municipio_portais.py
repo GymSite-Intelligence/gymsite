@@ -206,6 +206,30 @@ def build_portal_search_urls(
     return {"zap": zap, "viva": viva, "olx": olx}
 
 
+# Gate comercial (12/06): as URLs de busca SÃO de categorias comerciais, mas
+# o OLX injeta "anúncios relacionados" RESIDENCIAIS quando a categoria tem
+# poucos resultados — apartamentos contaminaram a mediana do Bessa e o proxy
+# residencial superestima o aluguel comercial grande em ~2-3x (evidência
+# interna: proxy R$ 48-58/m² vs candidatos comerciais reais R$ 15-18/m²).
+# Validação POR ANÚNCIO via slug da URL; na dúvida (sem termo nenhum), passa.
+_RESIDENCIAL_RE = re.compile(
+    r"apartamento|apto\b|casa-|/casa\b|kitnet|kitinete|quitinete|flat\b|"
+    r"cobertura|sobrado|condominio-residencial|quarto[s]?-|residencial",
+    re.IGNORECASE,
+)
+_COMERCIAL_RE = re.compile(
+    r"galp[aã]o|loja|sala[s]?-comerc|ponto-comercial|comercial|predio|"
+    r"pr[eé]dio|deposito|armaz[eé]m|escritorio|terreno-comercial",
+    re.IGNORECASE,
+)
+
+
+def _eh_anuncio_residencial(url: str) -> bool:
+    """True quando a URL do anúncio indica imóvel residencial SEM sinal comercial."""
+    u = url or ""
+    return bool(_RESIDENCIAL_RE.search(u)) and not bool(_COMERCIAL_RE.search(u))
+
+
 def _sample_from_price_area(
     price: float,
     area: float,
@@ -227,6 +251,8 @@ def _sample_from_price_area(
         "r_m2": r_m2,
         "url": url,
         "portal": portal,
+        # marcada aqui, filtrada com contagem em pesquisar_aluguel_municipio
+        "categoria": "residencial" if _eh_anuncio_residencial(url) else "comercial",
     }
 
 
@@ -740,6 +766,14 @@ async def pesquisar_aluguel_municipio(
         cidade=cidade,
         uf=uf,
     )
+
+    # GATE COMERCIAL (12/06): anúncio residencial NUNCA entra na mediana —
+    # superestima o aluguel comercial grande em ~2-3x. Descartes ficam
+    # contados e auditáveis; sem amostras comerciais, o caller cai pro
+    # Tier 2 (grounding) em vez de usar proxy residencial silencioso.
+    descartadas_residenciais = [s for s in samples if s.get("categoria") == "residencial"]
+    samples = [s for s in samples if s.get("categoria") != "residencial"]
+
     agg = aggregate_municipio(samples, cidade=cidade, uf=uf)
     faixa = agg["faixa_rs_m2"]
     tier1_suficiente = agg["n_validos"] >= MIN_SAMPLES_ALTA
@@ -747,6 +781,8 @@ async def pesquisar_aluguel_municipio(
     return {
         "tier": 1,
         "tier1_suficiente": tier1_suficiente,
+        "categoria_gate": "comercial",
+        "descartadas_residenciais": len(descartadas_residenciais),
         "mediana_r_m2": faixa["mediana"],
         "min_r_m2": faixa["p25"],
         "max_r_m2": faixa["p75"],

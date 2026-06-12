@@ -65,6 +65,9 @@ export interface OutputConsolidado {
   aluguel_min_m2_observado?: number | null
   aluguel_max_m2_observado?: number | null
   fonte_aluguel?: string | null
+  /** Auditoria da fonte de aluguel (12/06): amostras com URL + meta do gate comercial. */
+  aluguel_amostras?: import('@/components/domain/AluguelFonteAuditavel').AluguelAmostra[] | null
+  aluguel_fonte_meta?: import('@/components/domain/AluguelFonteAuditavel').AluguelFonteMeta | null
   posicionamento_recomendado?: string | null
   /** Schema v1.8: output A9 PositioningStrategist (ERRC / oceano azul) */
   posicionamento_estrategico?: PosicionamentoEstrategicoJSON | null
@@ -874,6 +877,8 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
       scores_regionais: scoresRegionais,
       // Alias nomes esperados pelo viewer (que vinham do JSON canônico)
       aluguel_mediana_m2_observado: out.aluguel_mediana_m2 ?? null,
+      aluguel_amostras: out.aluguel_amostras ?? null,
+      aluguel_fonte_meta: out.aluguel_fonte_meta ?? null,
       aluguel_min_m2_observado: out.aluguel_min_m2 ?? null,
       aluguel_max_m2_observado: out.aluguel_max_m2 ?? null,
       alertas_financeiros: out.alertas ?? [],

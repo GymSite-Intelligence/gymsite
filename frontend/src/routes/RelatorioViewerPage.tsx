@@ -62,6 +62,7 @@ import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
 import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
 import { PlanosConcorrenciaTable } from '@/components/domain/PlanosConcorrenciaTable'
 import { FolgaPicoInsight } from '@/components/domain/FolgaPicoInsight'
+import { AluguelFonteAuditavel } from '@/components/domain/AluguelFonteAuditavel'
 import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairrosTable'
 import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativosTable'
 import { TextoSecao } from '@/components/domain/TextoSecao'
@@ -456,14 +457,12 @@ function RelatorioViewerContent({
         title="💰 Viabilidade Financeira — 3 Cenários"
         collapsible
         suffix={
-          out.fonte_aluguel ? (
-            <p className="text-[10px] text-muted-foreground font-mono">
-              fonte aluguel: {out.fonte_aluguel}
-              {out.aluguel_mediana_m2_observado != null && (
-                <> {' · '} R$ {out.aluguel_mediana_m2_observado.toFixed(2)}/m²</>
-              )}
-            </p>
-          ) : null
+          <AluguelFonteAuditavel
+            fonte={out.fonte_aluguel}
+            medianaM2={out.aluguel_mediana_m2_observado}
+            amostras={out.aluguel_amostras}
+            meta={out.aluguel_fonte_meta}
+          />
         }
       >
         {(() => {
