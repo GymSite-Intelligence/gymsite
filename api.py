@@ -62,6 +62,15 @@ load_dotenv(_ROOT / ".env")
 load_dotenv(_ROOT / "frontend" / ".env", override=False)
 load_dotenv(_ROOT / "gymsite_intelligence" / ".env", override=False)
 
+# Guard de rota LLM (12/06): com Vertex ligado, NENHUMA API key Gemini pode
+# sobrar no processo — o SDK/ADK prefere key quando presente e o pipeline
+# inteiro caía no free-tier do AI Studio (5 runs mortos com 429 disfarçado
+# de "pico do Vertex"). Vertex usa SA via GOOGLE_APPLICATION_CREDENTIALS.
+if (os.getenv("GOOGLE_GENAI_USE_VERTEXAI") or "").strip().lower() in ("1", "true", "yes"):
+    for _k in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
+        if os.environ.pop(_k, None) is not None:
+            print(f"[llm-route] {_k} removida do processo — modo Vertex estrito")
+
 logger = setup_json_logging(os.getenv("LOG_LEVEL", "INFO"))
 
 from tools.google_maps_key import warn_if_missing_maps_key
