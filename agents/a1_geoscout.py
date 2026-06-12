@@ -28,6 +28,21 @@ _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=0),  # pyright: ignore[reportCallIssue]
 )
 
+
+def _persistir_macro_no_state(tool, args, tool_context, tool_response):
+    """Grava o output bruto da macro-tool em `candidatos_geoscout_pronto`.
+
+    Incidente 12/06 (run b5b0e627): a macro retornou 14 candidatos, mas o
+    LLM truncou o array ao copiar o JSON pro output_key — `top_3_candidatos`
+    chegou vazio no A6 e a tabela `candidatos` ficou zerada. O state bypassa
+    o LLM: A6 lê esta chave primeiro e só cai no output_key como fallback.
+    """
+    if getattr(tool, "name", "") == "analisar_pontos_comerciais_completo" and isinstance(
+        tool_response, dict
+    ):
+        tool_context.state["candidatos_geoscout_pronto"] = tool_response
+    return None
+
 geoscout_agent = Agent(
     name="GeoScout",
     model="gemini-2.5-flash",
@@ -103,5 +118,6 @@ A5 ContactHunter usa esses campos:
     tools=[
         analisar_pontos_comerciais_completo,
     ],
+    after_tool_callback=_persistir_macro_no_state,
     output_key="candidatos_geoscout",
 )

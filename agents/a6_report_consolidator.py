@@ -1733,7 +1733,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     nivel_saturacao = comp.get("nivel_saturacao") or ""
 
     # ── Output: candidatos GeoScout (A1) ──
-    geo_raw = _parse_market_context(state.get("candidatos_geoscout"))
+    # Preferir o snapshot determinístico do after_tool_callback do A1: o LLM
+    # truncava o array `candidatos` ao copiar o JSON (run b5b0e627, 14→0).
+    geo_raw = state.get("candidatos_geoscout_pronto")
+    if not (isinstance(geo_raw, dict) and geo_raw.get("candidatos")):
+        geo_raw = _parse_market_context(state.get("candidatos_geoscout"))
     if not isinstance(geo_raw, dict):
         geo_raw = {}
     candidatos = _lista_candidatos_geoscout(geo_raw)
