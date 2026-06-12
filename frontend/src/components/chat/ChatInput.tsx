@@ -2,6 +2,9 @@ import { useRef, useEffect, useState, useCallback } from 'react'
 import { Send, Loader2, Paperclip, X, FileText, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+// Flag local até a extração de anexos existir no backend (ADR-005).
+const SHOW_ATTACHMENTS_UI = false
+
 export interface ChatAttachment {
   file: File
   id: string
@@ -124,24 +127,31 @@ export function ChatInput({
       )}
 
       <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border bg-muted/50 p-2 focus-within:ring-1 focus-within:ring-primary/30">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          disabled={disabled || isLoading}
-          className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Paperclip className="h-4 w-4" />
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
+        {/* Upload oculto até a extração de anexos existir (ADR-005): aceitar
+            arquivo que o backend ignora cria expectativa quebrada. Reativar
+            junto com Gemini Vision (gates T05.1-T05.5). */}
+        {SHOW_ATTACHMENTS_UI && (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={disabled || isLoading}
+              className="h-9 w-9 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+          </>
+        )}
 
         <textarea
           ref={textareaRef}

@@ -119,8 +119,28 @@ Categorias:
 - "ajuda": pedido de ajuda ou listagem de capacidades (ex: "o que você faz", "me ajuda", "como funciona")
 - "clarificacao": resposta a uma pergunta direta do agente (ex: usuário responde "Fortaleza" quando perguntamos a cidade)
 - "encerrar": usuário quer encerrar conversa (ex: "tchau", "obrigado", "é só isso")
+- "fora_de_escopo": pedido de conselho de investimento financeiro, criptomoedas, ações,
+  consultoria jurídica/tributária/médica, ou qualquer tema sem relação com abertura,
+  expansão ou operação de academias (ex: "qual cripto compro", "como declaro imposto",
+  "me indica uma ação", "dieta para emagrecer")
 - "indefinido": não encaixa em nenhuma categoria
+
+Na dúvida entre "fora_de_escopo" e outra categoria, escolha "fora_de_escopo" apenas
+quando o pedido claramente NÃO é sobre o negócio de academias.
 """
+
+# Recusa determinística — nunca passa por LLM (guardrail vídeo 01 / T01.1).
+_RESPOSTA_FORA_DE_ESCOPO = (
+    "Esse assunto está fora do meu campo — meu trabalho é viabilidade e expansão "
+    "de academias: análise de bairro, concorrência, preços e plano de abertura.\n\n"
+    "Quer que eu analise a viabilidade de uma academia em algum bairro?"
+)
+
+# Aviso legal — exibido UMA vez por sessão (T01.3).
+_DISCLAIMER = (
+    "\n\n---\n*Análise informativa baseada em dados públicos — não constitui "
+    "recomendação de investimento.*"
+)
 
 
 def classificar_intencao(mensagem: str) -> tuple[str, float]:
@@ -196,6 +216,14 @@ Contexto:
 - Se faltar vários dados, faça uma pergunta por vez, priorizando cidade e bairro primeiro.
 - NUNCA peça área em m² diretamente — pergunte o tamanho do negócio (pequeno, médio, grande).
 - NUNCA use termos técnicos como "slots" ou "parâmetros".
+
+Regras de confiança (obrigatórias):
+- NUNCA cite números de mercado (população, renda, preço) de memória — você não tem
+  esses dados nesta conversa; eles virão no relatório, com fonte.
+- Se mencionar característica de cidade/bairro, mantenha-se em afirmações qualitativas
+  gerais, sem inventar estatísticas.
+- Nomeie entidades por completo na primeira menção ("o bairro Bessa, em João Pessoa"),
+  nunca "lá"/"a região" sem antecedente claro.
 
 Slots já coletados: {{slots}}
 Slots faltando: {{faltando}}
@@ -356,6 +384,17 @@ def _mensagem_confirmacao(slots: dict[str, Any]) -> str:
 
 # ── Processar mensagem ────────────────────────────────────────────────────
 
+_DISCLAIMER_KEY = "_disclaimer_mostrado"
+
+
+def _com_disclaimer(sessao: Any, retorno: dict[str, Any]) -> dict[str, Any]:
+    """Anexa o aviso legal à PRIMEIRA resposta da sessão (T01.3) e marca a
+    flag em slot interno (prefixo `_` fica fora de `_slots_reais`)."""
+    if retorno.get("resposta") and not (sessao.slots or {}).get(_DISCLAIMER_KEY):
+        retorno["resposta"] = retorno["resposta"] + _DISCLAIMER
+        atualizar_sessao(sessao.id, slots={**sessao.slots, _DISCLAIMER_KEY: True})
+    return retorno
+
 
 def processar_mensagem(
     user_id: str,
@@ -381,6 +420,19 @@ def processar_mensagem(
     # 2. Classificar intenção
     intencao, confianca = classificar_intencao(mensagem)
 
+    # Guardrail (vídeo 01): fora de escopo recusa SEM herdar intenção da sessão
+    # e sem tocar slots — recusa determinística, pipeline jamais dispara daqui.
+    if intencao == "fora_de_escopo":
+        return _com_disclaimer(sessao, {
+            "session_id": sessao.id,
+            "intencao": "fora_de_escopo",
+            "slots": _slots_reais(sessao.slots),
+            "slots_faltando": [],
+            "resposta": _RESPOSTA_FORA_DE_ESCOPO,
+            "relatorio_id": None,
+            "status": sessao.status,
+        })
+
     # Se a sessão já tinha intenção definida e o usuário respondeu algo vago,
     # tratamos como clarificacao para continuar o slot-filling
     if sessao.intencao and intencao in ("indefinido", "clarificacao"):
@@ -404,22 +456,24 @@ def processar_mensagem(
         }
 
     if intencao == "ajuda":
-        return {
+        return _com_disclaimer(sessao, {
             "session_id": sessao.id,
             "intencao": "ajuda",
             "slots": sessao.slots,
             "slots_faltando": [],
             "resposta": (
-                "Sou um Agente de IA especialista em expansão de franquias de academia no Brasil. "
-                "Posso ajudar você com:\n\n"
-                "1. **Análise de viabilidade** — informe cidade e bairro que preparo um relatório completo\n"
-                "2. **Consulta de relatórios** — tire dúvidas sobre análises já feitas\n"
-                "3. **Dados de mercado** — concorrência, demografia, custos e oportunidades\n\n"
-                "Como posso ajudar hoje?"
+                "Sou o especialista em expansão de academias. O que eu faço:\n\n"
+                "1. **Análise de viabilidade** — concorrência, preços, demografia e imóveis "
+                "disponíveis em qualquer bairro do Brasil\n"
+                "2. **Comparação de bairros** — alternativas ranqueadas quando o bairro está saturado\n"
+                "3. **Plano de abertura** — cronograma e fornecedores a partir do relatório\n\n"
+                "O que eu **não** faço: recomendação de investimento financeiro.\n\n"
+                'Exemplos: *"academia média no Bessa, João Pessoa"* · '
+                '*"compare Cocó e Aldeota em Fortaleza"*'
             ),
             "relatorio_id": None,
             "status": sessao.status,
-        }
+        })
 
     if intencao in ("pergunta_simples", "status_relatorio"):
         # Usa o chat Q&A existente (tinker_bot) — delegamos para o endpoint /chat
@@ -440,7 +494,7 @@ def processar_mensagem(
         if decisao == "confirmar":
             slots_finais = _aplicar_defaults(sessao.slots)
             sessao = atualizar_sessao(sessao.id, slots=slots_finais)
-            return {
+            return _com_disclaimer(sessao, {
                 "session_id": sessao.id,
                 "intencao": intencao,
                 "slots": slots_finais,
@@ -448,7 +502,7 @@ def processar_mensagem(
                 "resposta": _mensagem_confirmacao(slots_finais),
                 "relatorio_id": None,  # Será preenchido pelo caller após criar stub
                 "status": "pronto_para_pipeline",
-            }
+            })
 
         if decisao == "cancelar":
             sessao = atualizar_sessao(sessao.id, status="coletando_slots")
@@ -480,7 +534,7 @@ def processar_mensagem(
         pergunta = gerar_pergunta_followup(_slots_reais(slots_merged), faltando)
         if sessao.status == "aguardando_confirmacao":
             sessao = atualizar_sessao(sessao.id, status="coletando_slots")
-        return {
+        return _com_disclaimer(sessao, {
             "session_id": sessao.id,
             "intencao": intencao,
             "slots": _slots_reais(slots_merged),
@@ -488,12 +542,12 @@ def processar_mensagem(
             "resposta": pergunta,
             "relatorio_id": None,
             "status": "coletando_slots",
-        }
+        })
 
     # 8. Nada mais a perguntar → propor configuração e aguardar confirmação
     #    explícita. O pipeline NUNCA dispara sem o usuário aceitar a proposta.
     sessao = atualizar_sessao(sessao.id, status="aguardando_confirmacao")
-    return {
+    return _com_disclaimer(sessao, {
         "session_id": sessao.id,
         "intencao": intencao,
         "slots": _slots_reais(slots_merged),
@@ -501,4 +555,4 @@ def processar_mensagem(
         "resposta": _mensagem_proposta(slots_merged),
         "relatorio_id": None,
         "status": "aguardando_confirmacao",
-    }
+    })
