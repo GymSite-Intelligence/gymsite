@@ -43,6 +43,52 @@ def buscar_relatorios_usuario(user_id: str, limit: int = 5) -> list[dict[str, An
     return res.data or []
 
 
+def buscar_competidores_relatorio(relatorio_id: str) -> list[dict[str, Any]]:
+    """Retorna os competidores individuais de um relatório, ordenados por rating."""
+    sb = _supabase()
+    res = (
+        sb.table("competidores")
+        .select(
+            "nome, bairro_concorrente, rating_oficial, num_avaliacoes, "
+            "tem_24h, distancia_km, pico_semanal, planos_precos"
+        )
+        .eq("relatorio_id", relatorio_id)
+        .order("rating_oficial", desc=True)
+        .execute()
+    )
+    return res.data or []
+
+
+def _fmt_competidores_tabela(competidores: list[dict]) -> str:
+    """Markdown table dos competidores para injetar no contexto."""
+    if not competidores:
+        return ""
+    linhas = ["| # | Academia | Bairro | Rating | Avaliações | 24h | Pico semanal |"]
+    linhas.append("|---|----------|--------|--------|------------|-----|--------------|")
+    for i, c in enumerate(competidores, 1):
+        rating = c.get("rating_oficial") or "—"
+        avals = c.get("num_avaliacoes") or "—"
+        h24 = "Sim" if c.get("tem_24h") else "Não"
+        pico = c.get("pico_semanal") or "—"
+        bairro = c.get("bairro_concorrente") or "—"
+        linhas.append(
+            f"| {i} | {c.get('nome', '?')} | {bairro} | {rating} | {avals} | {h24} | {pico} |"
+        )
+    # Tabela de preços dos que têm dados
+    precos = [(c.get("nome", "?"), c.get("planos_precos")) for c in competidores if c.get("planos_precos")]
+    if precos:
+        linhas.append("")
+        linhas.append("**Planos de preço mapeados:**")
+        for nome, planos in precos[:3]:
+            linhas.append(f"\n*{nome}*")
+            for p in planos:
+                linhas.append(
+                    f"- {p.get('plano', '?')}: {p.get('preco_mensal', '?')} "
+                    f"(fidelidade: {p.get('fidelidade', '?')})"
+                )
+    return "\n".join(linhas)
+
+
 def buscar_relatorio_por_id(relatorio_id: str) -> dict[str, Any] | None:
     """Retorna o detalhe completo de um relatório (com inputs e outputs)."""
     sb = _supabase()
@@ -183,6 +229,16 @@ def build_contexto_chat(
             if entrantes_txt:
                 partes.append(f"Aberturas recentes (CNPJ): {entrantes_txt}")
             partes.append(f"Resumo: {_v(outputs, 'resumo_executivo')}")
+            # Competidores individuais — necessários para formatação em tabela
+            try:
+                competidores = buscar_competidores_relatorio(relatorio_id)
+                tabela = _fmt_competidores_tabela(competidores)
+                if tabela:
+                    partes.append("")
+                    partes.append("**Competidores mapeados (tabela):**")
+                    partes.append(tabela)
+            except Exception:
+                pass
             partes.append("")
 
     # Demais relatórios SEMPRE entram (resumidos): sessão presa num relatório
@@ -190,6 +246,28 @@ def build_contexto_chat(
     # relatório do Bessa pronto no banco (monitoramento 12/06, rodada 4).
     relatorios = buscar_relatorios_usuario(user_id, limit=3)
     outros = [r for r in relatorios if r.get("id") != relatorio_id]
+
+    # Quando sem relatório em foco, carrega competidores do mais recente
+    # para o LLM poder formatar tabela se pedido ("concorrência local").
+    if not relatorio_id and relatorios:
+        mais_recente_id = relatorios[0].get("id")
+        if mais_recente_id:
+            try:
+                competidores_mr = buscar_competidores_relatorio(mais_recente_id)
+                tabela_mr = _fmt_competidores_tabela(competidores_mr)
+                if tabela_mr:
+                    inputs_mr = _fmt_inputs(relatorios[0])
+                    outputs_mr = _fmt_outputs(relatorios[0])
+                    partes.append("--- RELATÓRIO MAIS RECENTE (sem foco na sessão) ---")
+                    partes.append(
+                        f"Cidade: {_v(inputs_mr, 'cidade')} | Bairro: {_v(inputs_mr, 'bairro')} | "
+                        f"Veredito: {_v(outputs_mr, 'veredito')}"
+                    )
+                    partes.append("**Competidores mapeados (tabela):**")
+                    partes.append(tabela_mr)
+                    partes.append("")
+            except Exception:
+                pass
     if outros:
         partes.append("--- OUTROS RELATÓRIOS DO USUÁRIO (use se a pergunta citar a praça) ---")
         for r in outros:
@@ -219,7 +297,10 @@ def build_contexto_chat(
         "o que falta em linguagem natural, sem citar nomes de campos. "
         "Saudação ou small talk (oi, boa noite, tudo bem) → cumprimente em 1-2 "
         "frases e pergunte como pode ajudar; NÃO despeje vereditos, dados de "
-        "relatórios nem benchmarks que não foram pedidos."
+        "relatórios nem benchmarks que não foram pedidos. "
+        "Quando o usuário pedir tabela de concorrência/competidores: reproduza a "
+        "tabela markdown dos competidores do contexto EXATAMENTE como fornecida, "
+        "adicionando um breve comentário analítico antes da tabela (1-2 frases)."
     )
 
     return "\n".join(partes)
