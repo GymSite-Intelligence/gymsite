@@ -51,8 +51,9 @@ def embed_texto(texto: str, *, task_type: str = "RETRIEVAL_QUERY") -> list[float
         return None
 
 
-def buscar_kb(pergunta: str, *, top_k: int = 4, min_similarity: float = 0.62) -> list[dict[str, Any]]:
-    # 0.62 calibrado no teste de 12/06: on-topic fica 0.66-0.79, off-topic 0.58.
+def buscar_kb(pergunta: str, *, top_k: int = 4, min_similarity: float = 0.65) -> list[dict[str, Any]]:
+    # 0.65 calibrado em produção 12/06: on-topic fica 0.66-0.79; off-topic 0.58;
+    # saudação ("Boa noite") raspou 0.6216 no antigo 0.62 e poluiu o contexto.
     """Top-k chunks relevantes. Lista vazia em qualquer falha — chat degrada sem RAG."""
     emb = embed_texto(pergunta, task_type="RETRIEVAL_QUERY")
     if not emb:

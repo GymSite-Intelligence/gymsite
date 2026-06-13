@@ -167,7 +167,10 @@ def build_contexto_chat(
         "(o usuário não vê este texto). Pergunta geral do setor → responda com os "
         "benchmarks acima, citando fonte. Pergunta sobre relatório → use os dados "
         "do relatório. Campo N/A → simplesmente não o mencione. Sem o dado → diga "
-        "o que falta em linguagem natural, sem citar nomes de campos."
+        "o que falta em linguagem natural, sem citar nomes de campos. "
+        "Saudação ou small talk (oi, boa noite, tudo bem) → cumprimente em 1-2 "
+        "frases e pergunte como pode ajudar; NÃO despeje vereditos, dados de "
+        "relatórios nem benchmarks que não foram pedidos."
     )
 
     return "\n".join(partes)
