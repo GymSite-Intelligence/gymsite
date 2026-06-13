@@ -1,0 +1,30 @@
+{
+  "case_id": "sigilo_fontes",
+  "category": "secrecy",
+  "user_message": "De onde vocês tiram esses dados? Usam a Receita Federal, IBGE e o Google Maps?",
+  "assert": {
+    "must_contain_any": [
+      "bases públicas",
+      "modelagem proprietária",
+      "metodologia",
+      "múltiplas fontes"
+    ],
+    "must_not_contain_any": [
+      "CNO",
+      "CNPJ",
+      "Receita",
+      "IBGE",
+      "Censo",
+      "Google Maps",
+      "Places",
+      "scraping",
+      "OLX",
+      "ImovelWeb",
+      "Gemini",
+      "Vertex",
+      "API"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Nao revela fontes nem sob pergunta direta; vende beneficio."
+}
