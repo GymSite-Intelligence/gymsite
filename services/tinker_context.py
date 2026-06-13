@@ -33,7 +33,7 @@ def buscar_relatorios_usuario(user_id: str, limit: int = 5) -> list[dict[str, An
             "relatorio_outputs(veredito, resumo_executivo, "
             "total_concorrentes_analisados, rating_medio_concorrentes, "
             "nivel_saturacao, aluguel_mensal, fonte_aluguel, score_bairro, "
-            "modelo_recomendado)"
+            "modelo_recomendado, entrantes_cnpj_90d)"
         )
         .eq("user_id", user_id)
         .order("created_at", desc=True)
@@ -54,7 +54,7 @@ def buscar_relatorio_por_id(relatorio_id: str) -> dict[str, Any] | None:
             "relatorio_outputs(veredito, resumo_executivo, "
             "total_concorrentes_analisados, rating_medio_concorrentes, "
             "nivel_saturacao, aluguel_mensal, fonte_aluguel, score_bairro, "
-            "modelo_recomendado)"
+            "modelo_recomendado, entrantes_cnpj_90d)"
         )
         .eq("id", relatorio_id)
         .maybe_single()
@@ -92,6 +92,30 @@ Ticket mensal típico Brasil (CVM SMFT3 + planos públicos das redes):
 - Premium: R$ 300–700
 Churn mensal típico: 5–8% (low cost no teto, premium no piso).
 Cite a fonte ao usar esses números."""
+
+
+def _fmt_entrantes(outputs: dict, bairro: str | None = None) -> str | None:
+    """Resumo das aberturas fitness recentes (CNPJ/RFB) — sem despejar a lista."""
+    ent = outputs.get("entrantes_cnpj_90d")
+    if not isinstance(ent, dict) or ent.get("status") != "ok" or not ent.get("total"):
+        return None
+    base = (
+        f"{ent['total']} aberturas fitness em {ent.get('cidade', '?')} nos últimos "
+        f"{ent.get('dias', 90)} dias (fonte: {ent.get('fonte', 'CNPJ/RFB')})"
+    )
+    if bairro:
+        no_bairro = [
+            e for e in (ent.get("entrantes") or [])
+            if isinstance(e, dict) and (e.get("bairro") or "").strip().lower() == bairro.strip().lower()
+        ]
+        if no_bairro:
+            nomes = ", ".join(
+                (e.get("nome") or e.get("razao_social") or "?") for e in no_bairro[:5]
+            )
+            base += f"; {len(no_bairro)} no bairro {bairro}: {nomes}"
+        else:
+            base += f"; nenhuma com endereço registrado no bairro {bairro} (CEP pode apontar bairro vizinho)"
+    return base
 
 
 def _v(d: dict, chave: str) -> str:
@@ -155,6 +179,9 @@ def build_contexto_chat(
             partes.append(f"Nível de saturação: {_v(outputs, 'nivel_saturacao')}")
             partes.append(f"Aluguel mensal estimado: {_v(outputs, 'aluguel_mensal')} ({_v(outputs, 'fonte_aluguel')})")
             partes.append(f"Modelo recomendado: {_v(outputs, 'modelo_recomendado')}")
+            entrantes_txt = _fmt_entrantes(outputs, inputs.get("bairro"))
+            if entrantes_txt:
+                partes.append(f"Aberturas recentes (CNPJ): {entrantes_txt}")
             partes.append(f"Resumo: {_v(outputs, 'resumo_executivo')}")
             partes.append("")
     else:
@@ -164,6 +191,7 @@ def build_contexto_chat(
             for r in relatorios:
                 inputs = _fmt_inputs(r)
                 outputs = _fmt_outputs(r)
+                entrantes_txt = _fmt_entrantes(outputs, inputs.get("bairro"))
                 partes.append(
                     f"- {_v(inputs, 'cidade')}/{_v(inputs, 'bairro')} | "
                     f"Veredito: {_v(outputs, 'veredito')} | Status: {_v(r, 'status')} | "
@@ -172,6 +200,7 @@ def build_contexto_chat(
                     f"saturação {_v(outputs, 'nivel_saturacao')}) | "
                     f"Aluguel: {_v(outputs, 'aluguel_mensal')} | "
                     f"Modelo: {_v(outputs, 'modelo_recomendado')}"
+                    + (f" | Aberturas recentes: {entrantes_txt}" if entrantes_txt else "")
                 )
             partes.append("")
 
