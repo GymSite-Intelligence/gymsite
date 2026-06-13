@@ -15,7 +15,7 @@ Manter o dominio do produto registrado, apontado corretamente e servido com hosp
 - Criacao: 13/06/2026 | Expiracao: 13/06/2028
 - Titular: pessoa fisica (dados pessoais omitidos por privacidade)
 - Servidores DNS apontados: ns1080.hostgator.com.br e ns1081.hostgator.com.br
-- Conclusao: o DNS autoritativo e a HostGator (nao a Cloudflare).
+- Conclusao: o DNS autoritativo e a HostGator (NAO a Cloudflare). Confirmado tambem pelo lado Cloudflare: gymsite.com.br nao e uma zona na conta Cloudflare.
 
 ## Hospedagem (HostGator) - verificado
 
@@ -42,12 +42,20 @@ Registros relevantes da zona gymsite.com.br (27 registros no total; segredos com
 
 Tambem existem os subdominios padrao do cPanel (cpanel, webmail, webdisk, ftp, autodiscover, cpcontacts, cpcalendars, whm) apontando para 69.49.241.85, e registros SRV/TXT de caldav/carddav/autodiscover.
 
-## CDN / Edge (Cloudflare Pages) - verificado (via DNS)
+## CDN / Edge (Cloudflare Pages) - VERIFICADO no painel Cloudflare em 2026-06-13
 
-- O frontend e servido via Cloudflare Pages: www.gymsite.com.br -> CNAME gymsite-3p0.pages.dev.
-- O apex (gymsite.com.br) aponta para a HostGator (A 69.49.241.85).
-- Arquitetura de entrega: apex na HostGator, www no Cloudflare Pages. Convem padronizar para evitar divergencia entre apex e www.
-- (a confirmar no painel Cloudflare) estado da conta/projeto Pages, dominio customizado verificado e configuracao de redirect apex->www (ou vice-versa).
+- Conta Cloudflare: marcelo.rosas@vectracargo.com.br.
+- Projeto Pages que serve o site: nome **gymsite** (subdominio padrao gymsite-3p0.pages.dev).
+- Dominio customizado anexado ao projeto: **www.gymsite.com.br** (confirmado na lista de domains do projeto).
+- Branch de producao: main.
+- Ultimo deploy de producao: 2026-06-13, estagio 'deploy' com status SUCCESS (build OK).
+- Observacao: existe um segundo projeto Pages chamado 'gymsite-3p0' (gymsite-3p0-2jr.pages.dev) sem dominio customizado — NAO e o que serve o site; o site e servido pelo projeto 'gymsite'.
+
+## Arquitetura de entrega (resolvido)
+
+- apex gymsite.com.br -> A 69.49.241.85 (HostGator).
+- www.gymsite.com.br -> CNAME gymsite-3p0.pages.dev (projeto Pages 'gymsite').
+- NAO ha zona/redirect no Cloudflare (gymsite.com.br nao e zona Cloudflare). Logo, qualquer redirect apex<->www teria de ser feito no HostGator (ou trocando o apex para o Pages). Hoje apex e www sao servidos por sistemas diferentes.
 
 ## E-mail - verificado (via DNS)
 
@@ -56,15 +64,15 @@ Tambem existem os subdominios padrao do cPanel (cpanel, webmail, webdisk, ftp, a
 
 ## Riscos / pontos de atencao
 
-1. Apex (HostGator) e www (Cloudflare Pages) servem por caminhos diferentes — definir redirect canonico e garantir TLS em ambos.
+1. Apex (HostGator) e www (Cloudflare Pages) servem por caminhos diferentes — definir redirect canonico no HostGator e garantir TLS em ambos.
 2. E-mail do dominio (Titan) e e-mail de prospeccao (Apollo/vectracargo) sao distintos — manter SPF/DKIM/DMARC de cada dominio separados.
 3. DMARC: nao foi observado registro _dmarc na zona — recomendado adicionar politica DMARC para gymsite.com.br.
 4. Renovacoes: dominio (13/06/2028) e hospedagem (13/12/2026) tem datas diferentes — monitorar.
 
 ## Pendencias / proximos passos
 
-1. Confirmar no painel Cloudflare o estado do projeto Pages (gymsite-3p0) e o dominio customizado.
-2. Padronizar entrega do frontend (redirect apex<->www) e validar certificado em ambos.
+1. Configurar redirect canonico apex<->www no HostGator (decidir qual e o host canonico).
+2. Validar certificado TLS no apex e no www.
 3. Avaliar adicao de registro DMARC para gymsite.com.br.
 4. Registrar credenciais/acessos em cofre proprio do usuario (nao neste repo).
 
