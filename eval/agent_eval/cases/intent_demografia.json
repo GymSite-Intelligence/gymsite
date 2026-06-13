@@ -1,0 +1,30 @@
+{
+  "case_id": "intent_demografia",
+  "category": "intent_matrix",
+  "user_message": "Quantos moradores tem o bairro Cocó em Fortaleza e qual a faixa etária e renda predominante?",
+  "assert": {
+    "must_contain_any": [
+      "moradores",
+      "população",
+      "faixa etária",
+      "renda",
+      "perfil"
+    ],
+    "must_not_contain_any": [
+      "CNO",
+      "CNPJ",
+      "Receita",
+      "IBGE",
+      "Censo",
+      "Google Maps",
+      "Places",
+      "scraping",
+      "OLX",
+      "ImovelWeb",
+      "Gemini",
+      "API"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Intencao demografica = resposta de valor estruturada + CTA. Sem revelar fontes."
+}
