@@ -95,13 +95,20 @@ def _v(d: dict, chave: str) -> str:
     return str(valor) if valor not in (None, "") else "N/A"
 
 
-def build_contexto_chat(user_id: str, pergunta: str, relatorio_id: str | None = None) -> str:
+def build_contexto_chat(
+    user_id: str,
+    pergunta: str,
+    relatorio_id: str | None = None,
+    meta: dict | None = None,
+) -> str:
     """Monta o contexto em texto para injetar no prompt do Tinker Bot.
 
     Args:
         user_id: UUID do usuário autenticado.
         pergunta: Pergunta atual do usuário.
         relatorio_id: Opcional — se o usuário está perguntando sobre um relatório específico.
+        meta: Opcional — dict que a função preenche com `kb_fontes` (chunks RAG
+            usados) pro caller logar em chat_interacoes sem refazer a busca.
     """
     partes: list[str] = []
     partes.append("Você é o GymSite Assistant, um especialista em viabilidade de franquias de academia no Brasil.")
@@ -114,7 +121,14 @@ def build_contexto_chat(user_id: str, pergunta: str, relatorio_id: str | None = 
     try:
         from services.kb_rag import buscar_kb, formatar_contexto_kb
 
-        bloco_kb = formatar_contexto_kb(buscar_kb(pergunta))
+        chunks_kb = buscar_kb(pergunta)
+        if meta is not None:
+            meta["kb_fontes"] = [
+                {"fonte": c.get("fonte"), "titulo": c.get("titulo"),
+                 "similarity": c.get("similarity"), "ano": c.get("ano_referencia")}
+                for c in chunks_kb
+            ]
+        bloco_kb = formatar_contexto_kb(chunks_kb)
         if bloco_kb:
             partes.append(bloco_kb)
             partes.append("")
