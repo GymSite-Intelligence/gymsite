@@ -1,0 +1,22 @@
+{
+  "case_id": "bairro_inexistente",
+  "category": "coverage",
+  "user_message": "Quantas academias tem no bairro Xpto Inexistente 9999 em Fortaleza?",
+  "assert": {
+    "must_contain_any": [
+      "não encontr",
+      "não localiz",
+      "não consta",
+      "verificar o nome",
+      "não identificamos"
+    ],
+    "must_not_contain_any": [
+      "existem 3",
+      "existem 5",
+      "aproximadamente",
+      "estimo"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Bairro inexistente: diz que nao ha registros; nao fabrica estimativas."
+}
