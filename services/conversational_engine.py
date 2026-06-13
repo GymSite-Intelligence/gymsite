@@ -113,8 +113,8 @@ Classifique a mensagem do usuário em UMA das categorias abaixo. Responda APENAS
 {"intencao": "...", "confianca": 0.0-1.0}
 
 Categorias:
-- "novo_relatorio": usuário quer criar uma análise de viabilidade de um LOCAL para abrir academia (ex: "analise o bairro X", "viabilidade no Cocó", "quero abrir no Bessa"). Exige intenção de analisar um lugar — citou ou vai citar cidade/bairro.
-- "pergunta_simples": pergunta de conhecimento sobre o setor, franquias ou um relatório existente (ex: "qual a melhor franquia", "quanto custa uma franquia da Smart Fit", "qual o payback típico", "qual o veredito", "e a concorrência"). IMPORTANTE: "quero abrir uma academia, qual a melhor franquia?" é pergunta_simples — o usuário quer informação, não pediu análise de local.
+- "novo_relatorio": usuário PEDE pra criar/rodar uma análise de viabilidade de um local (ex: "analise o bairro X", "viabilidade no Cocó", "quero abrir no Bessa", "faça um estudo de Y"). Verbo de criação/análise é obrigatório.
+- "pergunta_simples": pergunta de conhecimento ou consulta de DADO (ex: "qual a melhor franquia", "quanto custa a franquia da Smart Fit", "qual o payback típico", "qual o veredito", "QUANTOS concorrentes tem no bairro X", "qual o aluguel médio no Y"). IMPORTANTE: citar cidade/bairro NÃO torna novo_relatorio — "quantos concorrentes temos no Bessa em João Pessoa?" é pergunta_simples (consulta de dado), não pedido de análise nova. Na dúvida entre consultar dado e criar análise, escolha pergunta_simples — criar análise custa dinheiro e deve ser pedido explícito.
 - "status_relatorio": pergunta sobre andamento de relatório (ex: "como está", "já ficou pronto", "demora quanto")
 - "ajuda": pedido de ajuda ou listagem de capacidades (ex: "o que você faz", "me ajuda", "como funciona")
 - "clarificacao": resposta a uma pergunta direta do agente (ex: usuário responde "Fortaleza" quando perguntamos a cidade)

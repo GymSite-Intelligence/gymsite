@@ -30,7 +30,10 @@ def buscar_relatorios_usuario(user_id: str, limit: int = 5) -> list[dict[str, An
         .select(
             "id, status, created_at, "
             "relatorio_inputs(cidade, bairro), "
-            "relatorio_outputs(veredito, resumo_executivo)"
+            "relatorio_outputs(veredito, resumo_executivo, "
+            "total_concorrentes_analisados, rating_medio_concorrentes, "
+            "nivel_saturacao, aluguel_mensal, fonte_aluguel, score_bairro, "
+            "modelo_recomendado)"
         )
         .eq("user_id", user_id)
         .order("created_at", desc=True)
@@ -48,7 +51,10 @@ def buscar_relatorio_por_id(relatorio_id: str) -> dict[str, Any] | None:
         .select(
             "*, "
             "relatorio_inputs(cidade, bairro), "
-            "relatorio_outputs(veredito, resumo_executivo)"
+            "relatorio_outputs(veredito, resumo_executivo, "
+            "total_concorrentes_analisados, rating_medio_concorrentes, "
+            "nivel_saturacao, aluguel_mensal, fonte_aluguel, score_bairro, "
+            "modelo_recomendado)"
         )
         .eq("id", relatorio_id)
         .maybe_single()
@@ -144,6 +150,11 @@ def build_contexto_chat(
             partes.append(f"Cidade: {_v(inputs, 'cidade')}")
             partes.append(f"Bairro: {_v(inputs, 'bairro')}")
             partes.append(f"Veredito: {_v(outputs, 'veredito')}")
+            partes.append(f"Concorrentes analisados: {_v(outputs, 'total_concorrentes_analisados')}")
+            partes.append(f"Rating médio dos concorrentes: {_v(outputs, 'rating_medio_concorrentes')}")
+            partes.append(f"Nível de saturação: {_v(outputs, 'nivel_saturacao')}")
+            partes.append(f"Aluguel mensal estimado: {_v(outputs, 'aluguel_mensal')} ({_v(outputs, 'fonte_aluguel')})")
+            partes.append(f"Modelo recomendado: {_v(outputs, 'modelo_recomendado')}")
             partes.append(f"Resumo: {_v(outputs, 'resumo_executivo')}")
             partes.append("")
     else:
@@ -155,7 +166,12 @@ def build_contexto_chat(
                 outputs = _fmt_outputs(r)
                 partes.append(
                     f"- {_v(inputs, 'cidade')}/{_v(inputs, 'bairro')} | "
-                    f"Veredito: {_v(outputs, 'veredito')} | Status: {_v(r, 'status')}"
+                    f"Veredito: {_v(outputs, 'veredito')} | Status: {_v(r, 'status')} | "
+                    f"Concorrentes analisados: {_v(outputs, 'total_concorrentes_analisados')} "
+                    f"(rating médio {_v(outputs, 'rating_medio_concorrentes')}, "
+                    f"saturação {_v(outputs, 'nivel_saturacao')}) | "
+                    f"Aluguel: {_v(outputs, 'aluguel_mensal')} | "
+                    f"Modelo: {_v(outputs, 'modelo_recomendado')}"
                 )
             partes.append("")
 
