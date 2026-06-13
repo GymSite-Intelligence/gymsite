@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Bot, User, Copy, Check, RotateCcw, FileText } from 'lucide-react'
+import { Bot, User, Copy, Check, RotateCcw, FileText, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 export interface ChatMessageData {
   id: string
@@ -11,11 +12,15 @@ export interface ChatMessageData {
   content: string
   timestamp: Date
   attachments?: { id: string; file: File; preview?: string }[]
+  /** id em chat_interacoes — presente só em respostas Q&A logadas */
+  interacaoId?: string
 }
 
 interface ChatMessageProps {
   msg: ChatMessageData
   onRegenerate?: () => void
+  /** Avaliação admin → dataset de fine-tuning. Retorna true se gravou. */
+  onFeedback?: (interacaoId: string, rating: 1 | -1) => Promise<boolean>
 }
 
 function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -39,14 +44,25 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
   )
 }
 
-export function ChatMessage({ msg, onRegenerate }: ChatMessageProps) {
+export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps) {
   const isUser = msg.role === 'user'
+  const isAdmin = useIsAdmin()
   const [copied, setCopied] = useState(false)
+  const [rated, setRated] = useState<1 | -1 | null>(null)
+  const [rating, setRating] = useState(false)
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(msg.content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleFeedback = async (value: 1 | -1) => {
+    if (!onFeedback || !msg.interacaoId || rating || rated !== null) return
+    setRating(true)
+    const ok = await onFeedback(msg.interacaoId, value)
+    if (ok) setRated(value)
+    setRating(false)
   }
 
   return (
@@ -148,6 +164,44 @@ export function ChatMessage({ msg, onRegenerate }: ChatMessageProps) {
                 <RotateCcw className="h-3 w-3" />
                 Regenerar
               </Button>
+            )}
+            {/* Avaliação admin → alimenta dataset de fine-tuning (chat_interacoes) */}
+            {isAdmin && onFeedback && msg.interacaoId && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={rating || rated !== null}
+                  className={`h-7 gap-1 text-xs ${
+                    rated === 1
+                      ? 'text-emerald-600'
+                      : 'text-muted-foreground hover:text-emerald-600'
+                  }`}
+                  onClick={() => handleFeedback(1)}
+                  title="Resposta boa — entra no dataset de treino"
+                >
+                  <ThumbsUp className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={rating || rated !== null}
+                  className={`h-7 gap-1 text-xs ${
+                    rated === -1
+                      ? 'text-red-600'
+                      : 'text-muted-foreground hover:text-red-600'
+                  }`}
+                  onClick={() => handleFeedback(-1)}
+                  title="Resposta ruim"
+                >
+                  <ThumbsDown className="h-3 w-3" />
+                </Button>
+                {rated !== null && (
+                  <span className="self-center text-[10px] text-muted-foreground">
+                    avaliado
+                  </span>
+                )}
+              </>
             )}
           </div>
         )}

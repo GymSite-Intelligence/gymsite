@@ -2281,6 +2281,7 @@ class ConversarOutput(BaseModel):
     resposta: str
     relatorio_id: str | None = None
     status: str
+    interacao_id: str | None = None  # referência pro feedback admin (FT dataset)
 
 
 @app.post("/api/assistente/conversar", response_model=ConversarOutput)
@@ -2323,7 +2324,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
             resultado["resposta"] = resposta_qa
             from services.chat_log import registrar_interacao
 
-            registrar_interacao(
+            resultado["interacao_id"] = registrar_interacao(
                 user_id=user_id,
                 endpoint="conversar",
                 pergunta=payload.mensagem,
@@ -2390,6 +2391,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
         resposta=resultado.get("resposta", ""),
         relatorio_id=resultado.get("relatorio_id"),
         status=resultado.get("status", "coletando_slots"),
+        interacao_id=resultado.get("interacao_id"),
     )
 
 
