@@ -11,14 +11,15 @@ Entregar a aplicacao que gera relatorios de viabilidade para pontos comerciais (
 
 - Frontend: Vite + React.
 - Backend/dados: Supabase (multi-tenant). (a confirmar) detalhes de schema.
-- Pipeline de agentes A0-A7 (Google ADK / Gemini) para enriquecimento e execucao. (a confirmar) estado de integracao.
-- Deploy alvo: Cloudflare Pages (a confirmar) vs HostGator — ver PLAN_INFRA_HOSTING.
+- Pipeline de agentes A0-A7 (Google ADK) para enriquecimento e execucao. (a confirmar) estado de integracao.
+- Deploy do frontend: Cloudflare Pages - VERIFICADO via DNS (www.gymsite.com.br -> CNAME gymsite-3p0.pages.dev). O apex aponta para HostGator. Ver PLAN_INFRA_HOSTING.
 
 ## Estado atual (verificado parcialmente)
 
 - App rodando em desenvolvimento em http://localhost:5174 (origem fora das permissoes desta sessao; conteudo nao lido).
 - Rota observada: /execucao/<id>?etapa=<id> — indica fluxo de execucao por etapas de um relatorio.
-- (a confirmar) telas de formulario, listagem, e render final do relatorio.
+- Producao: servida via Cloudflare Pages (projeto gymsite-3p0) no host www.gymsite.com.br.
+- (a confirmar) telas de formulario, listagem, e render final do relatorio (nao lidas: localhost fora das permissoes).
 
 ## Formulario de producao (campos canonicos)
 
@@ -29,7 +30,7 @@ O schema canonico de input do formulario esta documentado em docs/EVAL_GUIDE.md 
 1. Confirmar e documentar as telas do app (formulario -> execucao -> relatorio).
 2. Integrar o agente do site (isca) ao fluxo de captura/lead do app. Ver PLAN_AGENTE.
 3. Definir o backend de cobertura (allowlist de municipios/UF, contagem canonica, rate-limit) — tambem citado no eval do agente.
-4. Padronizar o deploy (ver PLAN_INFRA_HOSTING).
+4. Padronizar o deploy e o redirect apex<->www (ver PLAN_INFRA_HOSTING).
 5. Garantir que o app nunca exponha as fontes de dados (sigilo) nem dados pessoais (LGPD).
 
 ## Constraints
@@ -37,4 +38,3 @@ O schema canonico de input do formulario esta documentado em docs/EVAL_GUIDE.md 
 - Sigilo de fontes na UI e nos textos do produto.
 - LGPD na coleta e exibicao de dados.
 - Fase 0: sem precos fixos no fluxo.
-
