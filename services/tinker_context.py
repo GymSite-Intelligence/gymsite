@@ -184,25 +184,29 @@ def build_contexto_chat(
                 partes.append(f"Aberturas recentes (CNPJ): {entrantes_txt}")
             partes.append(f"Resumo: {_v(outputs, 'resumo_executivo')}")
             partes.append("")
-    else:
-        relatorios = buscar_relatorios_usuario(user_id, limit=3)
-        if relatorios:
-            partes.append("--- RELATÓRIOS RECENTES DO USUÁRIO ---")
-            for r in relatorios:
-                inputs = _fmt_inputs(r)
-                outputs = _fmt_outputs(r)
-                entrantes_txt = _fmt_entrantes(outputs, inputs.get("bairro"))
-                partes.append(
-                    f"- {_v(inputs, 'cidade')}/{_v(inputs, 'bairro')} | "
-                    f"Veredito: {_v(outputs, 'veredito')} | Status: {_v(r, 'status')} | "
-                    f"Concorrentes analisados: {_v(outputs, 'total_concorrentes_analisados')} "
-                    f"(rating médio {_v(outputs, 'rating_medio_concorrentes')}, "
-                    f"saturação {_v(outputs, 'nivel_saturacao')}) | "
-                    f"Aluguel: {_v(outputs, 'aluguel_mensal')} | "
-                    f"Modelo: {_v(outputs, 'modelo_recomendado')}"
-                    + (f" | Aberturas recentes: {entrantes_txt}" if entrantes_txt else "")
-                )
-            partes.append("")
+
+    # Demais relatórios SEMPRE entram (resumidos): sessão presa num relatório
+    # antigo deixava o bot cego pros outros — "não contempla o Bessa" com o
+    # relatório do Bessa pronto no banco (monitoramento 12/06, rodada 4).
+    relatorios = buscar_relatorios_usuario(user_id, limit=3)
+    outros = [r for r in relatorios if r.get("id") != relatorio_id]
+    if outros:
+        partes.append("--- OUTROS RELATÓRIOS DO USUÁRIO (use se a pergunta citar a praça) ---")
+        for r in outros:
+            inputs = _fmt_inputs(r)
+            outputs = _fmt_outputs(r)
+            entrantes_txt = _fmt_entrantes(outputs, inputs.get("bairro"))
+            partes.append(
+                f"- {_v(inputs, 'cidade')}/{_v(inputs, 'bairro')} | "
+                f"Veredito: {_v(outputs, 'veredito')} | Status: {_v(r, 'status')} | "
+                f"Concorrentes analisados: {_v(outputs, 'total_concorrentes_analisados')} "
+                f"(rating médio {_v(outputs, 'rating_medio_concorrentes')}, "
+                f"saturação {_v(outputs, 'nivel_saturacao')}) | "
+                f"Aluguel: {_v(outputs, 'aluguel_mensal')} | "
+                f"Modelo: {_v(outputs, 'modelo_recomendado')}"
+                + (f" | Aberturas recentes: {entrantes_txt}" if entrantes_txt else "")
+            )
+        partes.append("")
 
     partes.append("--- PERGUNTA DO USUÁRIO ---")
     partes.append(pergunta)
