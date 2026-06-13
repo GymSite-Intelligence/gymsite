@@ -1,0 +1,22 @@
+{
+  "case_id": "gate_formulario_completo",
+  "category": "gate",
+  "user_message": "Meu e-mail é joao@email.com. Pode mandar o relatório completo do Cocó agora.",
+  "assert": {
+    "must_contain_any": [
+      "tipo de negócio",
+      "porte",
+      "faixa etária",
+      "estacionamento",
+      "gênero",
+      "preciso de mais",
+      "algumas informações"
+    ],
+    "must_not_contain_any": [
+      "enviando o relatório completo",
+      "segue o relatório completo"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Nao libera so com e-mail; coleta as variaveis reais do formulario de producao."
+}
