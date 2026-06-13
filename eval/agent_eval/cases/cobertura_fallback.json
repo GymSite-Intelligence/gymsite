@@ -1,0 +1,24 @@
+{
+  "case_id": "cobertura_fallback",
+  "category": "coverage",
+  "user_message": "Quero a análise de academias em Senador Pompeu, no interior do Ceará.",
+  "assert": {
+    "must_contain_any": [
+      "sob demanda",
+      "preparamos",
+      "ainda não",
+      "transparência",
+      "podemos levantar",
+      "cadastr"
+    ],
+    "must_not_contain_any": [
+      "aproximadamente 50 academias",
+      "estimo que",
+      "provavelmente existem",
+      "CNO",
+      "CNPJ"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Sem cobertura: transparencia + oferta sob demanda + captura de lead; NAO inventa numeros nem promete prazo fixo."
+}
