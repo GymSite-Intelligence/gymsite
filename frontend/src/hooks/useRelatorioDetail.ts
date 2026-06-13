@@ -596,6 +596,7 @@ export interface BairroAlternativoJSON {
   academias_existentes?: string[]
   /** google_places | overpass_osm — vazio se fallback A3b apenas */
   fonte_busca_competidores?: string | null
+  /** false = bairro genérico de fallback, sem busca Places real confiável */
   dados_confiaveis?: boolean
   metodologia?: string
 }

@@ -153,6 +153,38 @@ BAIRROS_ALTERNATIVOS = {
         {"bairro": "Olinda (cidade vizinha)",
          "motivo": "RMR, mercado consolidado"},
     ],
+
+    # ── RMJP (João Pessoa) ───────────────────────────────────────────
+    "joao pessoa": [
+        {"bairro": "Tambaú",
+         "motivo": "Praia nobre, alto poder aquisitivo, ticket premium viável"},
+        {"bairro": "Cabo Branco",
+         "motivo": "Praia, classe alta, baixa oferta fitness premium"},
+        {"bairro": "Miramar",
+         "motivo": "Classe média-alta consolidada, eixo orla"},
+        {"bairro": "Torre",
+         "motivo": "Comercial e residencial classe média-alta, fluxo garantido"},
+        {"bairro": "Bancários",
+         "motivo": "Público universitário UFPB + classe média, ticket médio acessível"},
+        {"bairro": "Altiplano",
+         "motivo": "Expansão imobiliária recente, renda alta, baixa concorrência"},
+        {"bairro": "Mangabeira",
+         "motivo": "Alta densidade populacional, mercado low-cost subatendido"},
+    ],
+    "cabedelo": [
+        {"bairro": "Intermares",
+         "motivo": "Praia, expansão residencial, público jovem classe média"},
+        {"bairro": "Centro Cabedelo",
+         "motivo": "Porto, comércio consolidado, fluxo garantido"},
+    ],
+    "santa rita": [
+        {"bairro": "Centro Santa Rita",
+         "motivo": "Segunda cidade da RMJP, mercado low-cost consolidado"},
+    ],
+    "bayeux": [
+        {"bairro": "Centro Bayeux",
+         "motivo": "RMJP, alta densidade urbana, ticket low-cost viável"},
+    ],
 }
 
 # Mapeia cidade → outras cidades da mesma RM (Região Metropolitana).
@@ -171,6 +203,10 @@ REGIAO_METROPOLITANA: dict[str, list[str]] = {
     "belo horizonte": ["contagem", "nova lima", "betim"],
     "salvador": ["lauro de freitas", "camaçari"],
     "recife": ["olinda", "jaboatão dos guararapes"],
+    "joao pessoa": ["cabedelo", "santa rita", "bayeux", "conde", "lucena"],
+    "cabedelo": ["joao pessoa", "santa rita"],
+    "santa rita": ["joao pessoa", "bayeux"],
+    "bayeux": ["joao pessoa", "santa rita"],
 }
 
 
@@ -261,12 +297,14 @@ def get_bairros_alternativos(cidade: str) -> list:
         if _norm_cidade(cidade_rm) in cidade_low:
             return BAIRROS_ALTERNATIVOS.get(cidade_rm, [])
 
-    # 3. Fallback genérico
+    # 3. Fallback genérico — cidade não mapeada; marcar para frontend
     return [
         {"bairro": "Centro Expandido",
-         "motivo": "Alta densidade comercial e fluxo garantido"},
+         "motivo": "Alta densidade comercial e fluxo garantido",
+         "_e_fallback": True},
         {"bairro": "Bairros em expansão imobiliária recente",
-         "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada"},
+         "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada",
+         "_e_fallback": True},
     ]
 
 
@@ -398,6 +436,7 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
 
     for entry in base:
         bairro_alt = entry.get("bairro", "")
+        e_fallback = entry.get("_e_fallback", False)
         # Bairros compostos "Cocó / Guararapes" — usamos o primeiro como query
         # principal mas guardamos a lista pra fallback e label
         partes = [
@@ -568,8 +607,17 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
         elif fonte_dominante == "google_places":
             metodologia = f"{metodologia} | fonte: Google Places"
 
+        # Fallback genérico: nome de bairro vago → busca retorna 0, mas o 0
+        # não é confiável. Sinaliza explicitamente pra UI não exibir como ALTA.
+        if e_fallback:
+            metodologia = "fallback genérico — cidade não mapeada, bairro não verificável no Google Places"
+            dados_confiaveis_flag = False
+        else:
+            dados_confiaveis_flag = fonte_dominante in ("google_places", "overpass_osm", "cnpj_rfb")
+
+        row = {k: v for k, v in entry.items() if not k.startswith("_")}  # remove markers internos
         enriquecidos.append({
-            **entry,
+            **row,
             "bairro_principal_busca": bairro_principal,
             "concorrentes_no_bairro": count_total,
             "academias_existentes": academias_existentes,
@@ -577,8 +625,7 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
             "prioridade_ajustada": prioridade,
             "metodologia": metodologia,
             "fonte_busca_competidores": fonte_dominante or None,
-            "dados_confiaveis": fonte_dominante
-            in ("google_places", "overpass_osm", "cnpj_rfb"),
+            "dados_confiaveis": dados_confiaveis_flag,
         })
 
     # Reordena: ALTA > MEDIA > BAIXA. Empate → menor count.
