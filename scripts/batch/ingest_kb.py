@@ -4,6 +4,7 @@ Ingestão da base de conhecimento RAG (kb_chunks).
 
 Fontes:
   --pdf docs/mapeamento_franquias_academia_brasil.pdf  (chunk por página)
+  --md docs/arquitetura/arquivo.md  (chunk por seção `## `; repetível)
   --json <arquivo.json>  lista de {fonte, titulo, url, ano_referencia, conteudo}
 
 Re-ingestão é idempotente por fonte: deleta chunks da fonte antes de inserir.
@@ -65,6 +66,38 @@ def _rows_do_pdf(caminho: Path) -> list[dict]:
     return rows
 
 
+def _rows_do_md(caminho: Path, ano: int = 2026) -> list[dict]:
+    """Chunk por seção `## ` — markdown limpo chunca melhor que PDF extraído."""
+    texto = caminho.read_text(encoding="utf-8")
+    fonte = f"md:{caminho.stem}"
+    titulo_doc = caminho.stem.replace("_", " ").title()
+    secoes: list[tuple[str, str]] = []
+    atual_titulo, atual_linhas = titulo_doc, []
+    for linha in texto.splitlines():
+        if linha.startswith("## "):
+            if atual_linhas:
+                secoes.append((atual_titulo, "\n".join(atual_linhas)))
+            atual_titulo = linha.lstrip("# ").strip()
+            atual_linhas = []
+        else:
+            atual_linhas.append(linha)
+    if atual_linhas:
+        secoes.append((atual_titulo, "\n".join(atual_linhas)))
+
+    rows = []
+    for sec_titulo, sec_texto in secoes:
+        for j, chunk in enumerate(_chunk_texto(sec_texto)):
+            rows.append({
+                "fonte": fonte,
+                "titulo": f"{titulo_doc} — {sec_titulo}"[:200],
+                "url": None,
+                "ano_referencia": ano,
+                "conteudo": chunk,
+                "metadados": {"secao": sec_titulo, "sub_chunk": j},
+            })
+    return rows
+
+
 def _rows_do_json(caminho: Path) -> list[dict]:
     docs = json.loads(caminho.read_text(encoding="utf-8"))
     rows = []
@@ -84,6 +117,7 @@ def _rows_do_json(caminho: Path) -> list[dict]:
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--pdf", type=Path)
+    p.add_argument("--md", type=Path, action="append", default=[])
     p.add_argument("--json", type=Path)
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
@@ -91,6 +125,8 @@ def main() -> int:
     rows: list[dict] = []
     if args.pdf:
         rows += _rows_do_pdf(args.pdf)
+    for md in args.md:
+        rows += _rows_do_md(md)
     if args.json:
         rows += _rows_do_json(args.json)
     if not rows:

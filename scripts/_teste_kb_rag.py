@@ -13,7 +13,7 @@ for pergunta in [
     "Quanto custa abrir uma franquia da Panobianco?",
     "Qual o payback tipico de uma academia franqueada?",
     "Quem e o decisor de expansao da Smart Fit?",
-    "Qual a melhor pizzaria de Fortaleza?",
+    "Qual a melhor pizzaria de Fortaleza?", "Quem e o maior concorrente do GymSite e qual nossa vantagem?", "Por que modelo de assinatura ilimitada e melhor que pay-per-use?",
 ]:
     chunks = buscar_kb(pergunta, top_k=2)
     print(f"Q: {pergunta}")
