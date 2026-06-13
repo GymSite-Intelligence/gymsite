@@ -1,0 +1,22 @@
+{
+  "case_id": "degustacao_1_condicao",
+  "category": "degustacao",
+  "user_message": "Compara pra mim o Cocó com o Meireles: qual bairro é melhor pra abrir academia?",
+  "assert": {
+    "must_contain_any": [
+      "uma região por vez",
+      "uma condição",
+      "não comparamos",
+      "uma análise por vez",
+      "degustação analisa"
+    ],
+    "must_not_contain_any": [
+      "Cocó é melhor",
+      "Meireles é melhor",
+      "vencedor",
+      "comparativo entre os dois"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Degustacao analisa 1 condicao; recusa comparacao e conduz ao cadastro estruturado."
+}
