@@ -26,13 +26,16 @@ def _supabase_rows(cidade: str, uf: str, limit: int = 5000) -> list[dict] | None
         from tools.supabase_client import load_create_client
 
         cli = load_create_client()(os.environ["SUPABASE_URL"], key)
-        res = (cli.table("cnpj_fitness_estabelecimentos")
-               .select("cnpj,razao_social,nome_fantasia,logradouro,numero,cep,bairro,"
-                       "telefone,email,segmento_operacao,situacao_cadastral,cidade,uf")
-               .eq("uf", (uf or "")[:2].upper())
-               .ilike("cidade", (cidade or "").strip())
-               .eq("situacao_cadastral", 2)
-               .limit(limit).execute())
+        q = (cli.table("cnpj_fitness_estabelecimentos")
+             .select("cnpj,razao_social,nome_fantasia,logradouro,numero,cep,bairro,"
+                     "telefone,email,segmento_operacao,situacao_cadastral,cidade,uf")
+             .ilike("cidade", (cidade or "").strip())
+             .eq("situacao_cadastral", 2))
+        # uf é opcional: nem todo chamador thread-a a uf (ex.: buscar_academias).
+        # cidade+bairro+ativos já é específico; só estreita por uf quando vier.
+        if (uf or "").strip():
+            q = q.eq("uf", uf.strip()[:2].upper())
+        res = q.limit(limit).execute()
         return getattr(res, "data", None) or []
     except Exception as e:
         print(f"[concorrentes_parque] leitura falhou ({cidade}/{uf}): {type(e).__name__}: {e}")

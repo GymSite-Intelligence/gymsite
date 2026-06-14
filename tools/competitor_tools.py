@@ -4,6 +4,7 @@
 import logging
 import math
 import json
+import os
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -297,6 +298,96 @@ def _buscar_academias_cnpj_bairro(
         return [], {"status": "erro", "motivo": str(exc)}
 
 
+def _places_match_por_texto(nome: str, endereco: str, cidade: str, uf: str) -> dict | None:
+    """Places searchText p/ casar UM estabelecimento do parque a um place_id real.
+
+    Registro-primeiro: a descoberta é o parque CNPJ (quem existe no bairro); o Places
+    só enriquece (place_id/rating/geo/horário) cada um. Devolve o melhor place ou None.
+    """
+    api_key = get_google_maps_api_key()
+    if not api_key:
+        return None
+    q = ", ".join(p for p in (nome, endereco, cidade, uf) if p and p.strip())
+    if not q.strip():
+        return None
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": (
+            "places.id,places.displayName,places.formattedAddress,places.location,"
+            "places.rating,places.userRatingCount,places.businessStatus,places.types,"
+            "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber,"
+            "places.googleMapsUri"
+        ),
+    }
+    body = {"textQuery": q, "maxResultCount": 1, "languageCode": "pt-BR", "regionCode": "BR"}
+    try:
+        with httpx.Client(timeout=12) as c:
+            data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
+    except Exception as exc:
+        logger.debug("places searchText parque (%s): %s", nome, exc)
+        return None
+    places = data.get("places") or []
+    return places[0] if places else None
+
+
+def _concorrentes_parque_enriquecidos(
+    bairro: str, cidade: str, uf: str, lat_centro: float, lng_centro: float, *, limit: int = 30,
+) -> tuple[list[dict], dict]:
+    """Base registro-primeiro: parque CNPJ fitness do BAIRRO + Places enriquece.
+
+    Resolve o anchoring município/raio (a Nearby 3km puxava bairros adjacentes).
+    Devolve concorrentes no MESMO shape do buscar_academias (place_id/rating/geo reais
+    quando há match Places; senão lista mesmo assim, bairro-âncora, sem reviews).
+    """
+    from tools.concorrentes_parque_tools import listar_concorrentes_parque
+
+    bloco = listar_concorrentes_parque(cidade, uf, bairro)
+    if bloco.get("status") != "ok" or not bloco.get("concorrentes"):
+        return [], bloco
+
+    out: list[dict] = []
+    for c in bloco["concorrentes"][:limit]:
+        nome = c.get("nome") or c.get("razao_social") or ""
+        endereco = c.get("endereco") or ""
+        p = _places_match_por_texto(nome, endereco, cidade, uf)
+        if p:
+            loc = p.get("location") or {}
+            plat, plng = loc.get("latitude", 0.0), loc.get("longitude", 0.0)
+            periodos = (p.get("regularOpeningHours") or {}).get("weekdayDescriptions", [])
+            out.append({
+                "place_id": p.get("id", ""),
+                "nome": (p.get("displayName") or {}).get("text") or nome,
+                "endereco": p.get("formattedAddress") or endereco,
+                "lat": plat, "lng": plng,
+                "distancia_km": round(calcular_distancia_km(lat_centro, lng_centro, plat, plng), 2) if plat else 0.0,
+                "rating": p.get("rating"),
+                "num_avaliacoes": p.get("userRatingCount", 0),
+                "nivel_preco": "",
+                "status": p.get("businessStatus", ""),
+                "tipos": p.get("types", []),
+                "telefone": p.get("nationalPhoneNumber") or c.get("telefone") or "",
+                "website": p.get("websiteUri", ""),
+                "google_maps_uri": p.get("googleMapsUri", ""),
+                "tem_24h": any("24" in h for h in periodos) if periodos else False,
+                "horarios": periodos[:3],
+                "cnpj": c.get("cnpj"),
+                "fonte_busca": "cnpj_parque+places",
+            })
+        else:
+            out.append({
+                "place_id": f"cnpj/{c.get('cnpj', '')}",
+                "nome": nome, "endereco": endereco,
+                "lat": 0.0, "lng": 0.0, "distancia_km": 0.0,
+                "rating": None, "num_avaliacoes": 0, "nivel_preco": "",
+                "status": "CNPJ_ATIVO", "tipos": ["gym", "cnpj_fitness"],
+                "telefone": c.get("telefone") or "", "website": "",
+                "tem_24h": False, "horarios": [],
+                "cnpj": c.get("cnpj"), "fonte_busca": "cnpj_parque_sem_places",
+            })
+    return out, bloco
+
+
 def _buscar_academias_overpass(
     lat: float,
     lng: float,
@@ -415,6 +506,33 @@ def buscar_academias(
         except Exception as e:
             places_ok = False
             data = {"error": str(e)}
+
+    # ── Registro-primeiro (flag CONCORRENTES_SOURCE=parque) ──────────────────
+    # Parque CNPJ fitness do BAIRRO vira a base; Places enriquece cada um (place_id/
+    # rating/geo reais). Resolve o anchoring município/raio: a Nearby 3km puxava
+    # academias de bairros adjacentes (ex.: AYO Guararapes, Smart Fit Papicu num
+    # relatório de Cocó). `agregados` (densidade 3km) fica como contexto regional.
+    # 3km vira fallback quando o parque está vazio/indisponível.
+    if os.getenv("CONCORRENTES_SOURCE", "").strip().lower() == "parque" and bairro.strip():
+        base_parque, _meta_pq = _concorrentes_parque_enriquecidos(bairro, cidade, uf, lat, lng)
+        if base_parque:
+            base_parque.sort(key=lambda x: (x.get("distancia_km") or 0.0))
+            _cnt = agregados.get("count_total") if isinstance(agregados, dict) else None
+            return {
+                "bairro": bairro, "cidade": cidade, "raio_metros": raio_metros,
+                "lat_centro": lat, "lng_centro": lng,
+                "fonte_geocode": fonte_geocode,
+                "total_encontrados": len(base_parque),
+                "total_encontrados_nearby": len(base_parque),
+                "total_encontrados_agregado": int(_cnt) if isinstance(_cnt, (int, float)) else None,
+                "agregados_competicao_places": agregados if isinstance(agregados, dict) else {},
+                "fonte_busca_competidores": "cnpj_parque+places",
+                "redes_detectadas_osm": [],
+                "concorrentes": base_parque,
+                "nota_fonte": ("Registro-primeiro: parque CNPJ fitness do bairro; Places "
+                               "enriquece (sem busca ampla 3km). Densidade 3km = contexto regional."),
+            }
+        # parque vazio → segue no fluxo Places 3km (fallback)
 
     concorrentes: list[dict] = []
     fonte_busca = "google_places"
