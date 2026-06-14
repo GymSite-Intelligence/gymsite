@@ -16,7 +16,10 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 from typing import Any, Callable
+
+import httpx
 
 _AMENIDADE_FITNESS = ("academia", "fitness", "espaço fitness", "espaco fitness",
                       "wellness", "sala de ginástica", "sala de ginastica")
@@ -88,8 +91,10 @@ def _grounding_lancamento(query: str) -> dict:
         "(b) o INSTAGRAM oficial (instagram.com/...). Cruze as duas.\n"
         "1) Escreva 1-2 frases com o que encontrou, citando as fontes.\n"
         "2) Depois, AO FINAL, um bloco JSON exatamente neste formato:\n"
+        "Procure também o BOOK/MEMORIAL/FICHA TÉCNICA em PDF do empreendimento (link direto .pdf).\n"
         "{\n"
         '  "empreendimento": "<nome>", "construtora": "<nome>", "instagram": "<url|null>",\n'
+        '  "pdf_url": "<link direto do book/memorial/ficha em PDF|null>",\n'
         '  "torres": <int|null>, "andares": <int|null>, "unidades": <int total|null>,\n'
         '  "tipologia": "<studio|1-2 dorm|3+ dorm|comercial|misto|null>",\n'
         '  "amenidades": ["..."],\n'
@@ -191,10 +196,89 @@ def _tem_site_oficial(fontes: list[dict]) -> bool:
     return any(not _eh_portal(f) and not _eh_instagram(f) for f in fontes)
 
 
+# ── Refino v2: PDF do empreendimento (book/memorial) = fonte OURO ──────────────
+# Construtora entrega o documento do empreendimento; Gemini multimodal LÊ o PDF
+# (não raspa HTML) → extração de alta fidelidade da fonte primária.
+
+def _baixar_pdf(url: str, *, max_mb: int = 15) -> bytes | None:
+    """Baixa um PDF público com guardas (scheme, content-type, tamanho). None se inválido."""
+    if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
+        return None
+    try:
+        with httpx.Client(timeout=30.0, follow_redirects=True) as c:
+            r = c.get(url, headers={"User-Agent": "gymsite-intelligence/1.0"})
+        if r.status_code != 200:
+            return None
+        ct = (r.headers.get("content-type") or "").lower()
+        if "pdf" not in ct and not url.lower().endswith(".pdf"):
+            return None
+        if len(r.content) > max_mb * 1024 * 1024 or len(r.content) < 1000:
+            return None
+        return r.content
+    except (httpx.HTTPError, OSError):
+        return None
+
+
+def _extrair_do_pdf(pdf_bytes: bytes) -> dict | None:
+    """Gemini multimodal lê o PDF do empreendimento → JSON estruturado (fonte primária)."""
+    from google.genai import types
+    from tools._genai_client import build_genai_client, generate_content_resilient
+
+    client = build_genai_client()
+    prompt = (
+        "Este PDF é o material oficial de um empreendimento imobiliário. Extraia em JSON puro:\n"
+        "{\n"
+        '  "empreendimento": "<nome>", "construtora": "<nome>",\n'
+        '  "torres": <int|null>, "andares": <int|null>, "unidades": <int total|null>,\n'
+        '  "tipologia": "<studio|1-2 dorm|3+ dorm|comercial|misto|null>",\n'
+        '  "amenidades": ["..."],\n'
+        '  "endereco": {"cep": "<digits|null>", "numero": "<str|null>", "bairro": "<str|null>"}\n'
+        "}\nUse SÓ o que está no documento. NÃO invente."
+    )
+    part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
+    resp = generate_content_resilient(
+        client, model="gemini-2.5-flash", contents=[part, prompt], max_retries=2, base_delay=3.0)
+    return _extrair_lancamento((resp.text or "").strip())
+
+
+def extrair_empreendimento_de_pdf_local(caminho_pdf: str) -> dict | None:
+    """Caminho MANUAL (estilo NotebookLM): analista fornece o PDF do empreendimento
+    (book/memorial gated, material de vendas) → Gemini multimodal lê → extração
+    estruturada auditada. Para leads de alto valor (Fase C) onde a descoberta
+    automática do PDF não passa (download gated). None se falhar."""
+    try:
+        data = Path(caminho_pdf).read_bytes()
+    except OSError:
+        return None
+    if len(data) < 1000:
+        return None
+    try:
+        return _extrair_do_pdf(data)
+    except Exception as e:
+        print(f"[refino_pdf_local] falha: {type(e).__name__}: {e}")
+        return None
+
+
+def _refino_via_pdf(pdf_url: str, obra: dict) -> dict | None:
+    """Baixa o PDF do empreendimento e extrai via multimodal. None se falhar."""
+    pdf = _baixar_pdf(pdf_url)
+    if not pdf:
+        return None
+    try:
+        ext = _extrair_do_pdf(pdf)
+        if ext and _unidades_do_extraido(ext):
+            ext["_pdf_url"] = pdf_url
+            return ext
+    except Exception as e:
+        print(f"[refino_pdf] falha extração: {type(e).__name__}: {e}")
+    return None
+
+
 def refinar_demanda_via_lancamento(
     obra: dict,
     *,
     _grounding_fn: Callable[[str], dict] | None = None,
+    _pdf_fn: Callable[[str, dict], dict | None] | None = None,
 ) -> dict:
     """Refina uma obra via site da construtora/incorporadora. AUDITÁVEL: usa as CITAÇÕES
     reais do grounding (não o url auto-reportado). Só ALTA (match + fonte) sobrescreve proxy.
@@ -204,7 +288,7 @@ def refinar_demanda_via_lancamento(
     """
     base = {"unidades_exatas": None, "andares": None, "tipologia": None,
             "amenidade_fitness": False, "fonte_url": None, "instagram_url": None,
-            "fontes": [], "cruzado": False, "confianca": "baixa",
+            "fontes": [], "cruzado": False, "confianca": "baixa", "fonte_tipo": None,
             "metodo_match": "sem_match", "empreendimento": None, "auditado": False}
     try:
         gfn = _grounding_fn or _grounding_lancamento
@@ -213,6 +297,29 @@ def refinar_demanda_via_lancamento(
         ext = _extrair_lancamento(texto)
         if not ext:
             return base
+
+        # OURO: PDF do empreendimento (book/memorial) lido por multimodal → fonte primária.
+        pdf_url = ext.get("pdf_url")
+        if pdf_url:
+            pdf_fn = _pdf_fn or _refino_via_pdf
+            pdf_ext = pdf_fn(pdf_url, obra)
+            if pdf_ext and _unidades_do_extraido(pdf_ext):
+                return {
+                    "unidades_exatas": _unidades_do_extraido(pdf_ext),
+                    "andares": pdf_ext.get("andares"),
+                    "tipologia": pdf_ext.get("tipologia"),
+                    "amenidade_fitness": _tem_amenidade_fitness(pdf_ext),
+                    "fonte_url": pdf_ext.get("_pdf_url") or pdf_url,
+                    "instagram_url": _instagram_url(fontes, ext),
+                    "fontes": fontes,
+                    "cruzado": True,
+                    "confianca": "alta",
+                    "fonte_tipo": "pdf_empreendimento",
+                    "metodo_match": "pdf_documento",
+                    "empreendimento": pdf_ext.get("empreendimento") or ext.get("empreendimento"),
+                    "auditado": True,
+                }
+
         match, metodo = _validar_match(obra, ext)
         tem_fonte = bool(fontes)
         emp = ext.get("empreendimento")
@@ -241,6 +348,7 @@ def refinar_demanda_via_lancamento(
             "fontes": fontes,
             "cruzado": cruzado,
             "confianca": confianca,
+            "fonte_tipo": ("site_instagram" if oficial else None),
             "metodo_match": metodo,
             "empreendimento": ext.get("empreendimento"),
             "auditado": tem_fonte,

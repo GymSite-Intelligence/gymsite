@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 
 from tools.refino_lancamento_tools import (
+    _baixar_pdf,
     _extrair_lancamento,
     _fonte_preferida,
     _validar_match,
@@ -116,6 +117,43 @@ def test_refino_baixa_confianca_mantem_proxy():
     r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload))
     assert r["confianca"] == "baixa"
     assert r["unidades_exatas"] is None
+
+
+def test_baixar_pdf_guarda_scheme():
+    assert _baixar_pdf("ftp://x/y.pdf") is None
+    assert _baixar_pdf(None) is None
+    assert _baixar_pdf("") is None
+
+
+def test_pdf_local_inexistente_retorna_none():
+    from tools.refino_lancamento_tools import extrair_empreendimento_de_pdf_local
+    assert extrair_empreendimento_de_pdf_local("__nao_existe__.pdf") is None
+
+
+def test_pdf_aciona_fonte_ouro_alta():
+    payload = {"empreendimento": "Tower X", "construtora": "Diagonal",
+               "pdf_url": "https://construtoradiagonal.com.br/book.pdf"}
+    pdf_ext = {"empreendimento": "Tower X (book)", "andares": 25, "torres": 2,
+               "unidades": 300, "tipologia": "3+ dorm",
+               "amenidades": ["academia"], "_pdf_url": "https://construtoradiagonal.com.br/book.pdf"}
+    r = refinar_demanda_via_lancamento(
+        _OBRA, _grounding_fn=_mock(payload), _pdf_fn=lambda url, o: pdf_ext)
+    assert r["fonte_tipo"] == "pdf_empreendimento"
+    assert r["confianca"] == "alta"
+    assert r["unidades_exatas"] == 300.0
+    assert r["andares"] == 25
+    assert r["amenidade_fitness"] is True
+    assert r["fonte_url"].endswith("book.pdf")
+
+
+def test_pdf_falha_cai_no_site():
+    payload = {"empreendimento": "Tower X", "construtora": "Diagonal",
+               "pdf_url": "https://x/book.pdf", "unidades": 240,
+               "endereco": {"bairro": "Aldeota"}}
+    r = refinar_demanda_via_lancamento(
+        _OBRA, _grounding_fn=_mock(payload), _pdf_fn=lambda url, o: None)  # PDF falhou
+    assert r["fonte_tipo"] == "site_instagram"        # caiu no fallback
+    assert r["confianca"] in ("media", "baixa")
 
 
 def test_refino_grounding_quebrado_nao_crasha():
