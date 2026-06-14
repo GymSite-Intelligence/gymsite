@@ -221,6 +221,7 @@ def _row_outputs(rel: dict, relatorio_id: str) -> dict:
         "entrantes_cnpj_90d": out.get("entrantes_cnpj_90d") or {},
         "obras_cno_em_curso": out.get("obras_cno_em_curso") or {},
         "demanda_futura": out.get("demanda_futura") or {},
+        "aneis_competitivos": out.get("aneis_competitivos") or {},
         "alertas": out.get("alertas_financeiros") or [],
         # embedding fica NULL — gerado depois por job de RAG
     }

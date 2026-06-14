@@ -1884,6 +1884,35 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # Só dispara se A3b E A3a (fallback) estiverem vazios — evita falso
     # INVESTIGAR MAIS quando concorrentes_brutos existe no state.
     concorrentes_detalhados = comp.get("concorrentes_detalhados") or []
+    # Anéis competitivos (Apêndice D) — enriquece cada concorrente com anel/porte/
+    # multiesporte e calcula score PONDERADO (NO_BAIRRO 1.0 / FRONTEIRA 0.5 / REGIONAL
+    # 0.2). Corrige score puxado pelo vizinho. Centroide = média dos candidatos geocodados.
+    aneis_competitivos_resumo: dict = {}
+    try:
+        from tools.aneis_competitivos_tools import (
+            enriquecer_competidores_aneis,
+            resumo_aneis,
+        )
+
+        _xy = [
+            (_safe_float(c.get("lat")), _safe_float(c.get("lng")))
+            for c in candidatos
+            if isinstance(c, dict) and c.get("lat") and c.get("lng")
+        ]
+        _xy = [(a, b) for a, b in _xy if a is not None and b is not None]
+        _clat = sum(a for a, _ in _xy) / len(_xy) if _xy else None
+        _clng = sum(b for _, b in _xy) / len(_xy) if _xy else None
+        concorrentes_detalhados = enriquecer_competidores_aneis(
+            concorrentes_detalhados, bairro, _clat, _clng
+        )
+        aneis_competitivos_resumo = resumo_aneis(concorrentes_detalhados)
+    except Exception:
+        logger.warning(
+            "A6 anéis competitivos falhou — segue sem ponderação",
+            exc_info=True,
+            extra={"agent": "A6", "context": "aneis_competitivos"},
+        )
+
     total_concorrentes = (
         comp.get("total_concorrentes_analisados")
         or len(concorrentes_detalhados)
@@ -2052,6 +2081,9 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             # Schema v1.11 — demanda futura datada (obras residenciais no raio →
             # moradores → pool/captura fitness em T+24). Refino A4 nas top obras.
             "demanda_futura": demanda_futura_block,
+            # Schema v1.12 — anéis competitivos (Apêndice D): score PONDERADO por
+            # proximidade (NO_BAIRRO/FRONTEIRA/REGIONAL) — não infla pela força do vizinho.
+            "aneis_competitivos": aneis_competitivos_resumo,
         },
         "metadata_execucao": {
             # Schema v1.2: mantém só infos de execução. Dados ricos do
