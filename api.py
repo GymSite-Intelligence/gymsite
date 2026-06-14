@@ -351,6 +351,28 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Startup stale recovery skip: %s", e)
 
+    # Sweep periódico: reconciliação de boot só pega órfãos quando o processo
+    # reinicia. Um pipeline que trava num processo VIVO (ex.: retry em loop) fica
+    # running indefinidamente. Este loop varre a cada PIPELINE_RECOVERY_SWEEP_MINUTES
+    # e marca como failed os running/queued sem heartbeat há > PIPELINE_ORPHAN_MINUTES.
+    async def _periodic_stale_recovery() -> None:
+        interval = max(1, int(os.getenv("PIPELINE_RECOVERY_SWEEP_MINUTES", "10"))) * 60
+        while True:
+            try:
+                await asyncio.sleep(interval)
+                n = await asyncio.to_thread(
+                    _recover_stale_running_reports, _supabase_client()
+                )
+                if n:
+                    logger.warning("Sweep periódico: %d relatório(s) órfão(s) recuperado(s)", n)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.debug("Sweep periódico stale recovery skip: %s", e)
+
+    sweep_task = asyncio.create_task(_periodic_stale_recovery())
+    _shutdown_mgr.register(sweep_task)
+
     try:
         from tools.token_telemetry import prune_tokens_csv
 
