@@ -1,0 +1,56 @@
+# Batch MENSAL de dumps da Receita (ritmo ≠ semanal) → Supabase.
+# Fontes nacionais que atualizam mensalmente. Custo: GitHub Actions free + BQ free tier.
+# Ver docs/arquitetura/COMPILADO_FONTES_DADOS.md §7.
+
+name: Monthly Receita Batch
+
+on:
+  schedule:
+    # 1º domingo do mês, 05:00 UTC (~02:00 BRT). 1-7 + dom = 1º domingo.
+    - cron: "0 5 1-7 * 0"
+  workflow_dispatch:
+
+jobs:
+  monthly-batch:
+    name: CNO (BigQuery basedosdados) → Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Write GCP service-account key (BigQuery)
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: printf '%s' "$GCP_SA_KEY" > "$RUNNER_TEMP/gcp-sa.json"
+
+      - name: Mine CNO fitness (national) → Supabase
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
+          GOOGLE_CLOUD_PROJECT: gen-lang-client-0106729343
+          BQ_BILLING_PROJECT: gen-lang-client-0106729343
+          BQ_MAX_BYTES_BILLED: "5368709120" # 5 GiB cap (guarda de custo)
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python -m tools.cno_bigquery_loader
+          python -m tools.cno_bigquery_loader --grande-porte
+
+      # NOTA: este job (basedosdados BQ) traz CNO HISTÓRICO (≤2021) — bom p/ estrutura,
+      # NÃO p/ demanda futura. O CNO FRESCO vem de tools/rfb_cno_loader (dadosabertos.rfb
+      # .gov.br/CNO), que GEO-BLOQUEIA IP não-BR → NÃO roda em runner US do GitHub Actions.
+      # Rodar de BR: máquina do usuário OU Cloud Run job em southamerica-east1.
+      #   python -m tools.rfb_cno_loader        # auto-descobre zip + upsert fitness+grande_porte
+      # TODO (fase 2): recarga CNPJ (rfb_cnpj_fitness_loader) + join CNAE 9313100.
