@@ -37,13 +37,22 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt
 
+      - name: Write Vertex service-account key
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: printf '%s' "$GCP_SA_KEY" > "$RUNNER_TEMP/gcp-sa.json"
+
       - name: Run weekly batch
         env:
           MARKET_BUNDLE_SUPABASE: "1"
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Gemini via Vertex AI (ADC / service account) — NÃO API key.
+          GOOGLE_GENAI_USE_VERTEXAI: "true"
+          GOOGLE_CLOUD_PROJECT: gen-lang-client-0106729343
+          GOOGLE_CLOUD_LOCATION: global
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
+          # Opcionais com --skip-enrichment (competição/aluguel não são buscados):
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           SEARCHAPI_KEY: ${{ secrets.SEARCHAPI_KEY }}
         run: |
