@@ -100,7 +100,8 @@ bundle pré-computado e o relatório sai em **3–8 min com 40k–120k tokens**.
 | Batch semanal (cron/DAG escritos) | ❌ nunca agendado |
 | Catálogo CKAN das cidades-alvo | ❌ vazio |
 | Bundles gerados | ❌ nenhum |
-| CNO indexado no Supabase | ❌ extract local apenas |
+| CNO indexado no Supabase | ❌ extract local apenas — **rota decidida: BQ basedosdados** (seção 7), falta construir loader+tabela+cron |
+| Rota BQ-basedosdados (fontes nacionais) | ⏳ decidida 2026-06-14 (seção 7); CNO = 1º caso; falta `bigquery.jobUser` na SA |
 | Recarga mensal CNPJ automatizada | ❌ manual |
 
 ## 5. Os 4 passos para ligar o motor
@@ -109,7 +110,10 @@ bundle pré-computado e o relatório sai em **3–8 min com 40k–120k tokens**.
    João Pessoa...) — popular `data/ckan_catalog/`.
 2. Agendar `run_weekly_market_batch` (GitHub Actions ou cron na VM) — inclui recarga
    CNPJ mensal e refresh CVM.
-3. Indexar CNO de Fortaleza (município 1389) em tabela Supabase `cno_obras_fitness`.
+3. **CNO via BigQuery basedosdados** (não download de zip) → filtra fitness NACIONAL →
+   indexa em `cno_obras_fitness` (Supabase). Sem lista de município; consulta por
+   município no read. Detalhe: seção 7.2. (Antes: "indexar só Fortaleza 1389" —
+   superado pela rota BQ nacional.)
 4. `A0_CONTEXT_SOURCE=auto` em produção + medir antes/depois em 1 relatório
    (gates de `MARKET_DATA_TEST_GATES.md` validam).
 
@@ -160,3 +164,78 @@ Index, INSE-SP (só SP): sem ligação com decisão de ponto fitness.
    geometria serve aos dois.
 4. Custo BQ: tabelas BD são públicas (billing no nosso projeto, ~centavos
    por query com partição/cluster) — sempre filtrar por sigla_uf/id_municipio.
+
+---
+
+## 7. Decisão (2026-06-14): BQ-basedosdados como ROTA CANÔNICA das fontes nacionais
+
+Volume em GB é razão **PRÓ** BigQuery, não contra: o basedosdados é particionado/
+clusterizado, então a query **escaneia só a fatia** (UF/município) — nunca baixa os
+GB. Quanto maior o dataset nacional, mais o BQ ganha (download+parse de GB no CI vs
+query de MB). Free tier **1 TiB/mês** + filtro = **~US$0**.
+
+### 7.1 Discriminador — quando BQ, quando não
+
+| Fonte é… | Rota | Por quê |
+|---|---|---|
+| Nacional + padronizada + no basedosdados (CNO, Censo, RAIS, CAGED, PIB, frota) | ✅ **BQ** | tratado, escaneia fatia, grátis, sem baixar GB |
+| Municipal / portal-específico (IPTU, zoneamento, áreas edificadas — base do Motor v2) | ❌ CKAN/prefeitura | cada cidade publica o seu; **não existe** no basedosdados |
+| REST API pequena point-query (IBGE/SIDRA município, BCB Olinda) | ❌ API nativa | já barato/grátis; BQ só adiciona dependência |
+| Já temos path local grátis (CNPJ parque webdav, CVM parser) | ⚠️ BQ = só **verificação** | BQ não substitui o parquet local |
+
+**Ressalva (Motor v2):** BQ cobre contexto demográfico/econômico (Censo/RAIS mata
+`renda_media_bairro`), mas **NÃO** a base territorial (IPTU/zoneamento) do registro-
+primeiro — essa fica em CKAN/portal municipal. BQ é peça grande, não a história toda.
+
+### 7.2 CNO — 1º caso concreto (resolve o bloqueador de download)
+
+CNO **não** precisa de download de zip da Receita (sem URL estável, manual). Já está
+tratado no basedosdados, verificado via `bq`:
+
+| Item | Valor |
+|---|---|
+| Dataset | `basedosdados.br_me_cno` |
+| Tabelas | `microdados` (obras), `microdados_vinculo` (CNPJ responsável), `microdados_cnae`, `dicionario` |
+| Volume | **848.256 obras** nacionais; **345** com keyword fitness; 534k na faixa de área |
+| Custo | query escaneou **~0 bytes** (5s) — anos dentro do free tier 1 TiB/mês |
+
+**Schema (contrato CNO coberto):** `id_cno`, `area` (FLOAT m²), `cep`/`tipo_logradouro`/
+`logradouro`/`numero_logradouro`/`bairro`, `sigla_uf`/`id_municipio`/`id_municipio_rf`,
+`situacao`, `data_inicio`/`data_situacao` (tempo de obra), `ni_responsavel`/
+`nome_empresarial`/`nome_responsavel` (filtro fitness + cruzamento CNAE 9313100).
+
+**Carga NACIONAL, sem lista de município** (lista = perda de capacidade): filtra fitness
+no Brasil inteiro (`_eh_obra_fitness`: keyword + área [80,8000] + cruzamento CNPJ CNAE
+9313100 do parque) → upsert no Supabase → pipeline consulta por município no read
+(espelha a Trilha 3 CNPJ). De-hardcodar `1389` em `cno_fitness_tools.py`/`ibge_tools.py`.
+
+### 7.3 Componentes a construir
+
+```
+tools/basedosdados_loader.py   # client BQ genérico (query + guarda de custo)
+tools/cno_bigquery_loader.py   # CNO: microdados+vinculo → _eh_obra_fitness → upsert
+db/migrations/*_cno_obras_fitness.sql   # tabela destino (id_cno PK, área, endereço,
+                                        # município, situacao, datas, ni_responsavel,
+                                        # metodo_classificacao, JSONB cruzamento)
+.github/workflows/monthly-receita-batch.yml  # cron MENSAL (1º domingo): CNO (BQ) +
+                                              # recarga CNPJ (webdav). Ritmo ≠ semanal.
+```
+
+`consultar_municipio_cnpj_cno()` passa a ler de `public.cno_obras_fitness` (Supabase),
+não do extract local.
+
+### 7.4 Pré-requisitos e guardas de custo
+
+- **IAM:** service account `gymsite-pipeline@gen-lang-client-0106729343` hoje só tem
+  `roles/aiplatform.user`. Precisa de `roles/bigquery.jobUser` (rodar query; grátis,
+  reversível) — datasets públicos do basedosdados são lidos por qualquer projeto que
+  rode job.
+- **Guarda de custo (obrigatória):** toda query com `WHERE sigla_uf=`/`id_municipio=`
+  quando aplicável + flag `--maximum_bytes_billed` (cap contra scan acidental >1 TiB).
+- **Cadência:** mensal (basedosdados re-ingere dumps da Receita periodicamente).
+
+### 7.5 Esteira de expansão (depois do CNO)
+
+`basedosdados_loader.py` vira template. Próximos pela mesma rota (Tier A da seção 6):
+Censo 2022 setor censitário (renda-bairro forte), RAIS/CAGED (mercado empregador
+fitness), PIB municipal. Todos: query fatia → bundle/tabela → pipeline lê do banco.

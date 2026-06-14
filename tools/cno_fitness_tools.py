@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import os
 import re
 import statistics
 from datetime import date, datetime, timedelta
@@ -211,6 +212,11 @@ def _load_obras_fitness_municipio(
     cnpj_cnae_por_cnpj: dict[str, str] | None = None,
     **kwargs: Any,
 ) -> list[dict]:
+    # Prod: lê do banco (minerado do BigQuery) quando CNO_SOURCE=supabase.
+    if _cno_supabase_enabled():
+        obras = _supabase_obras_fitness_municipio(municipio, **kwargs)
+        if obras is not None:  # None = erro → fallback CSV; [] = município sem obras (ok)
+            return obras
     idx = cnpj_cnae_por_cnpj if cnpj_cnae_por_cnpj is not None else _fitness_cnpj_cnae_index(cidade, uf)
     return _load_fortaleza_cno(cno_dir, municipio, cnpj_cnae_por_cnpj=idx, **kwargs)
 
@@ -293,6 +299,32 @@ def _resolve_municipio_codigo_cno(
                 return mapped
     except Exception:
         pass
+
+    # Supabase: resolve o código RFB pela própria tabela (IBGE→RF) — cobre cidades
+    # fora do mapa estático sem precisar do extract local.
+    if _cno_supabase_enabled():
+        try:
+            from tools.ibge_tools import buscar_municipio
+
+            mun = buscar_municipio(cidade, uf)
+            ibge = str(mun.get("codigo")) if mun and mun.get("codigo") else None
+            if ibge:
+                res = (
+                    _cno_client()
+                    .table("cno_obras_fitness")
+                    .select("id_municipio_rf")
+                    .eq("id_municipio", ibge)
+                    .limit(1)
+                    .execute()
+                )
+                data = getattr(res, "data", None) or []
+                # RF code se a cidade tem obras; senão o próprio IBGE (cidade coberta,
+                # 0 obras → loader casa id_municipio e devolve ok+vazio, não indisponivel).
+                code = str(data[0]["id_municipio_rf"]) if (data and data[0].get("id_municipio_rf")) else ibge
+                _municipio_cno_cache[cache_key] = code
+                return code
+        except Exception:
+            pass
 
     if cno_dir is not None:
         try:
@@ -662,6 +694,113 @@ def _load_fortaleza_cno(
     return obras
 
 
+# ── Leitura via Supabase (public.cno_obras_fitness) ────────────────────────────
+# Prod lê do banco (minerado do BigQuery basedosdados) em vez do extract local.
+# Gate: CNO_SOURCE=supabase. Default (local/teste) = extract CSV. Fallback: se a
+# query falhar, cai pro CSV. Ver docs/arquitetura/COMPILADO_FONTES_DADOS.md §7.
+
+_cno_supabase_client: Any = None
+
+
+def _cno_supabase_enabled() -> bool:
+    if (os.environ.get("CNO_SOURCE") or "").strip().lower() != "supabase":
+        return False
+    key = (
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_SERVICE_KEY")
+        or os.environ.get("SUPABASE_KEY")
+    )
+    return bool(os.environ.get("SUPABASE_URL") and key)
+
+
+def _cno_client():
+    global _cno_supabase_client
+    if _cno_supabase_client is not None:
+        return _cno_supabase_client
+    from tools.supabase_client import load_create_client
+
+    create_client = load_create_client()
+    key = (
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_SERVICE_KEY")
+        or os.environ.get("SUPABASE_KEY")
+    )
+    _cno_supabase_client = create_client(os.environ["SUPABASE_URL"], key)
+    return _cno_supabase_client
+
+
+def _obra_supabase_to_dict(r: dict, *, incluir_projecao: bool = True) -> dict:
+    """Mapeia linha de cno_obras_fitness pro mesmo shape de _load_fortaleza_cno."""
+    nome = r.get("nome") or r.get("nome_empresarial") or r.get("nome_responsavel") or ""
+    area = float(r.get("area_m2") or 0)
+    situacao_cod = (r.get("situacao") or "").strip().zfill(2) if r.get("situacao") else ""
+    situacao = _situacao_label(situacao_cod)
+    faixa = _inferir_faixa_ticket(nome)
+    proj = projecao_demanda_receita_obra(area, faixa) if incluir_projecao else None
+    data_situacao_s = r.get("data_situacao")
+    return {
+        "cno": r.get("id_cno"),
+        "cnpj_responsavel": _digits(r.get("ni_responsavel") or ""),
+        "cep": _digits(r.get("cep") or ""),
+        "nome_obra": nome,
+        "area_m2": area,
+        "situacao_codigo": situacao_cod or None,
+        "situacao_obra": situacao,
+        "faixa_ticket_inferida": faixa,
+        "faixa_porte_m2": _faixa_porte_m2(area),
+        "logradouro": r.get("logradouro"),
+        "numero": r.get("numero_logradouro"),
+        "bairro": r.get("bairro"),
+        "bairro_chave": normalizar_bairro(r.get("bairro") or ""),
+        "bairro_label": formatar_bairro_exibicao(r.get("bairro") or ""),
+        "data_inicio": r.get("data_inicio") or None,
+        "data_situacao": data_situacao_s or None,
+        "data_fim_cadastral": (data_situacao_s if situacao == "encerrada" and data_situacao_s else None),
+        "metodo_classificacao": r.get("metodo_classificacao"),
+        "cnaes_obra": [],
+        "capacidade_matriculas_estimada": _capacidade_por_m2(area, faixa),
+        "projecao_receita": proj if proj and proj.get("status") == "ok" else None,
+    }
+
+
+def _supabase_obras_fitness_municipio(
+    municipio: str,
+    *,
+    somente_em_curso: bool | None = None,
+    situacao_filtro: Literal["em_curso", "encerrada", "todas"] | None = None,
+    incluir_projecao: bool = True,
+    **_ignored: Any,
+) -> list[dict] | None:
+    """Obras fitness do município (id_municipio_rf) no Supabase. None em erro → fallback CSV."""
+    try:
+        res = (
+            _cno_client()
+            .table("cno_obras_fitness")
+            .select("*")
+            .or_(f"id_municipio_rf.eq.{municipio},id_municipio.eq.{municipio}")
+            .execute()
+        )
+        linhas = getattr(res, "data", None) or []
+    except Exception as e:
+        print(f"[cno] leitura Supabase falhou ({municipio}): {type(e).__name__}: {e}")
+        return None
+
+    obras: list[dict] = []
+    for r in linhas:
+        o = _obra_supabase_to_dict(r, incluir_projecao=incluir_projecao)
+        sit = o["situacao_obra"]
+        if situacao_filtro == "em_curso" and sit != "em_curso":
+            continue
+        if situacao_filtro == "encerrada" and sit != "encerrada":
+            continue
+        if somente_em_curso is True and sit != "em_curso":
+            continue
+        if somente_em_curso is False and sit == "em_curso":
+            continue
+        obras.append(o)
+    return obras
+
+
 def calcular_benchmark_tempo_obra_cno(
     *,
     cno_dir: str | Path,
@@ -1007,8 +1146,13 @@ def cruzar_entrantes_obras_cno(
         obras_municipio = []
         obras_ftz = []
     else:
+        # obras_municipio = TODAS as obras (match endereço/CEP) — só extract local
+        # (tabela Supabase guarda só fitness). Em CNO_SOURCE=supabase degrada p/ [].
         obras_municipio = _load_cno_obras_municipio(cno_path, municipio, area_min=50.0)
-        obras_ftz = _load_fortaleza_cno(cno_path, municipio, cnpj_cnae_por_cnpj=cnpj_idx)
+        # obras_ftz = obras fitness — roteado pelo chokepoint (Supabase em prod).
+        obras_ftz = _load_obras_fitness_municipio(
+            cno_path, municipio, cidade, uf, cnpj_cnae_por_cnpj=cnpj_idx
+        )
 
     cruzamentos: list[dict] = []
     stats: dict[str, int] = {
