@@ -36,33 +36,56 @@
 
 **Decisão:** **widget de chat nativo (React)** servido na landing, conversando com o **backend próprio** do projeto (motor conversacional em `services/`, exposto pela `api.py`). **Não** usar iframe direto do Agent Studio na página pública.
 
-**Por quê (resumo):**
-- O projeto **já tem** um motor conversacional próprio (`services/conversational_engine.py`, `chat_state.py`, slot-filling + guardrails P0) e uma chat UI — reaproveitar evita duplicar lógica e mantém os guardrails de sigilo/LGPD num único lugar.
-- Front e backend já se conversam via **Cloudflare** (ver `CLOUDFLARED_CORS_SETUP.md` / `CLOUDFLARE_PAGES.md`): o widget React (Cloudflare Pages) chama o endpoint do backend através do túnel já existente.
-- O **Agent Studio** (DRAFT) fica como ambiente de **prompt/eval** do agente, não como camada pública — assim não expomos projeto GCP, modelo ou ferramentas ao visitante.
+### Estado atual do chat (verificado no código)
+
+- **Rota:** `POST /api/assistente/chat` (`api.py`); modelos `AssistenteChatInput` / `AssistenteChatOutput`.
+- **Motor:** `services/tinker_bot.chat_async` + `services/tinker_context.build_contexto_chat`; guardrail de fora-de-escopo (`_RESPOSTA_FORA_DE_ESCOPO`).
+- **Autenticação:** a API exige **JWT válido** (`_require_authenticated` → `(user_id, org_id)`), ou seja, é **multi-tenant e logada**. Hoje o chat é uma feature **interna do app autenticado**, não um endpoint público.
+- **CORS:** `allow_origins = _cors_origins` (configurável — não é `*`).
+
+### O problema: feature logada × landing pública
+
+O visitante da landing é **anônimo** (não tem conta nem org). A rota atual do chat **exige login**, então **não dá para apontar o widget público direto para ela**. É preciso uma camada pública separada — senão, ou a gente expõe a rota autenticada (risco), ou o visitante esbarra num login antes de ver valor (mata a conversão).
+
+### Como materializa no frontend do site (recomendado)
+
+**Criar uma "porta pública" do chat, isolada da rota logada:**
+
+1. **Endpoint público dedicado** (ex.: `POST /api/public/isca/chat`) — *separado* de `/api/assistente/chat`. Reaproveita o **mesmo motor** (`tinker_bot` + guardrails), mas:
+   - **Sessão anônima/efêmera** (token de sessão emitido no 1º contato; sem login).
+   - **Tenant "público"** dedicado (org_id reservado p/ leads), nunca um tenant de cliente real.
+   - **Escopo reduzido:** só "modo isca" (amostra de valor) — não acessa dados de relatórios pagos nem ferramentas internas.
+   - **Rate-limit + anti-abuso** (por IP/sessão) e **timeout de sessão** curto.
+2. **Widget React na landing** (Cloudflare Pages): bolha de chat no canto inferior direito; os CTAs (Hero, passo 1, CTA final) abrem o widget. O widget só fala com o endpoint público.
+3. **Gate de lead:** após demonstrar valor, o agente coleta os **campos canônicos** (UF/município/bairro, tipo de negócio, porte, público-alvo, contato) e **só então** cria o lead. Esse é o ponto em que pedimos consentimento LGPD.
+4. **Hand-off para o app autenticado:** o lead capturado entra no fluxo de produção (área logada). Se o usuário virar cliente, aí sim usa o chat completo `/api/assistente/chat` (com JWT).
+
+### Por que não reusar a rota logada direto
+
+- Apontar o front público para `/api/assistente/chat` exigiria distribuir credenciais/JWT no bundle do site → **vazaria acesso ao app inteiro** (multi-tenant). **Inaceitável.**
+- Pôr login antes do chat **mata a isca** (o objetivo é justamente capturar quem ainda não tem conta).
+- Logo: **mesma engine, porta diferente** — endpoint público com sessão anônima e escopo "isca".
 
 **Arquitetura (alvo):**
 ```
 [Landing Vite/React — Cloudflare Pages]
-        │  (widget de chat embutido na página)
+        │  widget de chat (sessão anônima)
         ▼
-[POST /chat — api.py]  ──►  [services/ motor conversacional + guardrails]
-        │                         │
-        │                         └─► slot-filling → gate → formulário de produção
+[POST /api/public/isca/chat]  ──►  [services/ tinker_bot + guardrails | escopo "isca"]
+        │  (rate-limit, tenant público, sem JWT de cliente)
         ▼
-[Cloudflare tunnel/CORS já configurado]  ──►  [lead → fluxo do app → relatório]
+  gate → coleta contato → cria LEAD ──►  [app autenticado /api/assistente/chat (JWT) p/ clientes]
 ```
 
-**Requisitos do embed:**
-- **Mesma origem visual:** widget no canto inferior direito + botão que dispara a abertura a partir dos CTAs (Hero, seção 3 e CTA final).
-- **Sigilo:** o widget nunca expõe nomes de fontes, ferramentas, modelo ou projeto; respostas passam pelos guardrails do backend.
-- **LGPD:** aviso curto de privacidade no início do chat e consentimento antes do gate (coleta de contato).
-- **CORS:** restringir `allow_origins` ao domínio do site (ex.: `https://getgymsite.com.br`), **não** usar `*`.
-- **Sem segredos no front:** nenhuma API key/token no bundle React; o backend é quem fala com o modelo.
-- **Fallback:** se o backend estiver fora do ar, o CTA cai para o formulário curto (seção 9) como plano B.
+**Requisitos / guardrails:**
+- **CORS:** `allow_origins` do endpoint público travado no domínio do site (ex.: `https://getgymsite.com.br`).
+- **Sem segredos no front:** nenhum JWT/API key no bundle; o backend fala com o modelo.
+- **Sigilo:** nunca expor fontes, ferramentas, modelo ou projeto; respostas passam pelos guardrails.
+- **LGPD:** aviso curto no início do chat + consentimento antes do gate de contato.
+- **Fallback:** backend fora do ar → CTA cai para o formulário curto (seção 9).
 
 **Pendências do embed (a confirmar):**
-- (a confirmar) endpoint/rota exata do chat na `api.py` e formato do payload.
+- (a confirmar) criar o endpoint público `/api/public/isca/chat` (hoje só existe a rota logada).
 - (a confirmar) host público do backend (subdomínio via Cloudflare, ex.: `api.getgymsite.com.br`).
 - (a confirmar) se o widget é componente interno do app ou pacote isolado para a landing.
 
@@ -199,9 +222,10 @@
 ## 10. Notas de implementação (técnico / interno)
 
 - Stack: Vite + React; deploy em Cloudflare Pages (alinhar com `PLAN_APP_FRONTEND.md`).
-- **Conversão = agente "isca" via widget React nativo** (ver seção 0.2), chamando `POST /chat` (`api.py` → motor em `services/`). Iframe do Agent Studio **não** é usado na página pública.
+- **Conversão = agente "isca" via widget React nativo** (ver seção 0.2).
+- **Chat hoje é logado** (`POST /api/assistente/chat`, JWT multi-tenant). Para a landing pública: **criar endpoint público** `/api/public/isca/chat` com sessão anônima, tenant público, escopo "isca", rate-limit — **reusando o mesmo motor** (`services/tinker_bot`).
 - Backend alcançado pelo **túnel/CORS Cloudflare já existente** (`CLOUDFLARED_CORS_SETUP.md`); `allow_origins` travado no domínio do site.
-- Sem segredos no bundle do front; o backend é quem fala com o modelo.
+- Sem segredos no bundle do front; o backend é quem fala com o modelo. Nunca distribuir JWT/API key no site.
 - Agent Studio permanece como ambiente de prompt/eval (hoje em DRAFT, ver `PLAN_AGENTE.md`); nada vai a público sem Deploy autorizado.
 - SEO: foco em termos do setor fitness + intenção local (a confirmar palavras-chave).
 - Sem expor nomes de fontes, ferramentas, modelo ou projeto em qualquer copy pública nem nas respostas do agente.
@@ -209,4 +233,4 @@
 
 ---
 
-_Status: rascunho v3 — estrutura + copy + decisão de embed (widget React → backend próprio). Próximo: confirmar rota/host do backend, depoimentos reais e destino do formulário._
+_Status: rascunho v4 — embed detalhado: chat hoje é logado (JWT); landing exige endpoint público "isca" com sessão anônima reusando o mesmo motor. Próximo: especificar o endpoint público + onde fica o gate de contato._
