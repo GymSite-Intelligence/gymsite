@@ -21,7 +21,7 @@ export function PrivacidadePage() {
             to="/login"
             className="flex items-center gap-2 font-semibold tracking-tight"
           >
-            <span aria-hidden className="text-xl">🏋️</span>
+            <span aria-hidden className="text-xl"></span>
             <span>GymSite Intelligence</span>
           </Link>
         </div>
