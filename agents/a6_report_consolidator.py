@@ -1784,6 +1784,9 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             )
             entrantes_block = {}
 
+    # Demanda futura datada (CNO grande porte + refino A4) — injetada no state pelo api.py.
+    demanda_futura_block = state.get("demanda_futura") or {}
+
     obras_cno_block = state.get("obras_cno_pronto") or {}
     if not isinstance(obras_cno_block, dict) or obras_cno_block.get("status") not in (
         "ok",
@@ -2046,6 +2049,9 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "entrantes_cnpj_90d": entrantes_block,
             # Schema v1.10 — obras fitness em andamento (CNO RFB)
             "obras_cno_em_curso": obras_cno_block,
+            # Schema v1.11 — demanda futura datada (obras residenciais no raio →
+            # moradores → pool/captura fitness em T+24). Refino A4 nas top obras.
+            "demanda_futura": demanda_futura_block,
         },
         "metadata_execucao": {
             # Schema v1.2: mantém só infos de execução. Dados ricos do

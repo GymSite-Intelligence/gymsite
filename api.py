@@ -567,6 +567,17 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
                 uf,
                 enrichment_ctx,
             )
+            # Demanda futura datada (CNO grande porte + refino A4 das top obras).
+            # Guardado: nunca quebra o pipeline; ausência → ignora no relatório.
+            try:
+                from tools.demanda_futura_tools import demanda_futura_detalhada
+
+                enrichment_ctx["demanda_futura"] = demanda_futura_detalhada(
+                    payload.cidade, uf, bairro=payload.bairro, top_n=3,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("demanda_futura falhou (segue sem): %s", exc)
+
             enrichment_cv_token = set_pipeline_enrichment_context(enrichment_ctx)
             if enrichment_ctx.get("skip_tools"):
                 logger.info(
@@ -607,6 +618,7 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
                 "market_bundle_briefing_md",
                 "skip_deep_research",
                 "market_bundle_partial",
+                "demanda_futura",
             ):
                 if key in enrichment_ctx:
                     session_state[key] = enrichment_ctx[key]
