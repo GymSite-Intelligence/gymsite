@@ -22,9 +22,7 @@
 
 ## 0.1 Integração com o agente "isca" (conversão central)
 
-> O CTA da landing **não leva a um formulário estático** — ele abre o agente conversacional já criado (ver `PLAN_AGENTE.md` e `PLAN_APP_FRONTEND.md`).
-
-**Agente:** "GymSite — Consultor de Viabilidade" (Google Agent Platform / Studio).
+> O CTA da landing **não leva a um formulário estático** — ele abre o agente conversacional já existente no projeto.
 
 **Fluxo de conversão:**
 1. Visitante clica no CTA → **abre o agente "isca"** (widget de chat na própria landing).
@@ -32,10 +30,41 @@
 3. Quando há interesse, o agente faz o **gate**: conduz para o **formulário de produção** (campos canônicos do app: UF, município, bairro, tipo de negócio, porte, público-alvo, contato).
 4. Lead capturado entra no fluxo do app → geração do relatório de viabilidade.
 
-**Notas técnicas:**
-- O formulário curto da seção 9 é o **gate** ao final da conversa, não a porta de entrada.
-- (a confirmar) forma de embed do agente na landing (widget/iframe/SDK) — alinhar com `PLAN_APP_FRONTEND.md`.
-- Sem expor nomes de fontes, ferramentas ou modelos em qualquer copy ou resposta do agente.
+---
+
+## 0.2 Embed do agente — DECISÃO
+
+**Decisão:** **widget de chat nativo (React)** servido na landing, conversando com o **backend próprio** do projeto (motor conversacional em `services/`, exposto pela `api.py`). **Não** usar iframe direto do Agent Studio na página pública.
+
+**Por quê (resumo):**
+- O projeto **já tem** um motor conversacional próprio (`services/conversational_engine.py`, `chat_state.py`, slot-filling + guardrails P0) e uma chat UI — reaproveitar evita duplicar lógica e mantém os guardrails de sigilo/LGPD num único lugar.
+- Front e backend já se conversam via **Cloudflare** (ver `CLOUDFLARED_CORS_SETUP.md` / `CLOUDFLARE_PAGES.md`): o widget React (Cloudflare Pages) chama o endpoint do backend através do túnel já existente.
+- O **Agent Studio** (DRAFT) fica como ambiente de **prompt/eval** do agente, não como camada pública — assim não expomos projeto GCP, modelo ou ferramentas ao visitante.
+
+**Arquitetura (alvo):**
+```
+[Landing Vite/React — Cloudflare Pages]
+        │  (widget de chat embutido na página)
+        ▼
+[POST /chat — api.py]  ──►  [services/ motor conversacional + guardrails]
+        │                         │
+        │                         └─► slot-filling → gate → formulário de produção
+        ▼
+[Cloudflare tunnel/CORS já configurado]  ──►  [lead → fluxo do app → relatório]
+```
+
+**Requisitos do embed:**
+- **Mesma origem visual:** widget no canto inferior direito + botão que dispara a abertura a partir dos CTAs (Hero, seção 3 e CTA final).
+- **Sigilo:** o widget nunca expõe nomes de fontes, ferramentas, modelo ou projeto; respostas passam pelos guardrails do backend.
+- **LGPD:** aviso curto de privacidade no início do chat e consentimento antes do gate (coleta de contato).
+- **CORS:** restringir `allow_origins` ao domínio do site (ex.: `https://getgymsite.com.br`), **não** usar `*`.
+- **Sem segredos no front:** nenhuma API key/token no bundle React; o backend é quem fala com o modelo.
+- **Fallback:** se o backend estiver fora do ar, o CTA cai para o formulário curto (seção 9) como plano B.
+
+**Pendências do embed (a confirmar):**
+- (a confirmar) endpoint/rota exata do chat na `api.py` e formato do payload.
+- (a confirmar) host público do backend (subdomínio via Cloudflare, ex.: `api.getgymsite.com.br`).
+- (a confirmar) se o widget é componente interno do app ou pacote isolado para a landing.
 
 ---
 
@@ -47,7 +76,7 @@
 **Subheadline (rascunho):**
 > Inteligência de mercado feita para academias. A gente mostra os bairros, perfis e oportunidades com maior potencial para o seu negócio fitness crescer com previsibilidade.
 
-**CTA primário:** "Quero meu diagnóstico gratuito" → **abre o agente "isca"** (chat de viabilidade).
+**CTA primário:** "Quero meu diagnóstico gratuito" → **abre o widget do agente "isca"**.
 **CTA secundário (texto):** "Ver como funciona" (rola para a seção 3).
 
 **Observação visual:** mapa/painel ilustrativo de uma região com áreas de oportunidade destacadas (mock, sem dados reais de cliente).
@@ -76,7 +105,7 @@
 2. **Receba o mapa de oportunidades** — onde estão os bairros e perfis com maior potencial para a sua academia, a partir de bases públicas e da nossa modelagem proprietária.
 3. **Plano de ação** — recomendações práticas de onde captar, onde expandir e onde investir mídia com retorno.
 
-*(Cada passo com um ícone simples e uma linha de apoio. O passo 1 abre o agente.)*
+*(Cada passo com um ícone simples e uma linha de apoio. O passo 1 abre o widget do agente.)*
 
 ---
 
@@ -155,7 +184,7 @@
 
 **Subtítulo (rascunho):** Comece falando com o consultor. Sem compromisso.
 
-**CTA:** "Quero meu diagnóstico gratuito" → **abre o agente "isca"**.
+**CTA:** "Quero meu diagnóstico gratuito" → **abre o widget do agente "isca"**.
 
 **Gate (formulário de produção, exibido ao final da conversa):** campos canônicos do app —
 - UF / Município / Bairro
@@ -169,14 +198,15 @@
 
 ## 10. Notas de implementação (técnico / interno)
 
-- Stack prevista: Vite + React; deploy em Cloudflare Pages (alinhar com `PLAN_APP_FRONTEND.md`).
-- **Conversão = agente "isca"** (Google Agent Platform). A landing embeda o agente; o formulário de produção é o gate ao final.
-- (a confirmar) método de embed do agente (widget/iframe/SDK) e destino do lead capturado.
-- ATENÇÃO: agente só vai ao ar após Deploy autorizado (hoje em DRAFT, ver `PLAN_AGENTE.md`).
+- Stack: Vite + React; deploy em Cloudflare Pages (alinhar com `PLAN_APP_FRONTEND.md`).
+- **Conversão = agente "isca" via widget React nativo** (ver seção 0.2), chamando `POST /chat` (`api.py` → motor em `services/`). Iframe do Agent Studio **não** é usado na página pública.
+- Backend alcançado pelo **túnel/CORS Cloudflare já existente** (`CLOUDFLARED_CORS_SETUP.md`); `allow_origins` travado no domínio do site.
+- Sem segredos no bundle do front; o backend é quem fala com o modelo.
+- Agent Studio permanece como ambiente de prompt/eval (hoje em DRAFT, ver `PLAN_AGENTE.md`); nada vai a público sem Deploy autorizado.
 - SEO: foco em termos do setor fitness + intenção local (a confirmar palavras-chave).
-- Sem expor nomes de fontes, ferramentas ou modelos em qualquer copy pública nem nas respostas do agente.
+- Sem expor nomes de fontes, ferramentas, modelo ou projeto em qualquer copy pública nem nas respostas do agente.
 - Revisar todos os [PLACEHOLDER] e marcações "(a confirmar)" antes de publicar.
 
 ---
 
-_Status: rascunho v2 — estrutura + copy com integração do agente "isca". Próximo: validar headline, definir embed do agente, depoimentos reais e destino do formulário._
+_Status: rascunho v3 — estrutura + copy + decisão de embed (widget React → backend próprio). Próximo: confirmar rota/host do backend, depoimentos reais e destino do formulário._
