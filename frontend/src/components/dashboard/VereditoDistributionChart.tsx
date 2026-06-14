@@ -1,17 +1,18 @@
 /**
- * VereditoDistributionChart — donut chart de distribuição de vereditos.
+ * VereditoDistributionChart — distribuição de vereditos como barra segmentada
+ * horizontal + breakdown (linguagem Geo-Intel, consistente com o report).
+ * Cores via tokens runtime hsl(var(--veredito-*)) — mesmos do PosicionamentoCard.
  */
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { VereditoDistribution } from '@/hooks/useDashboardStats'
 
 const COLORS: Record<string, string> = {
-  APROVADO: 'hsl(142 70% 45%)',
-  'APROVADO COM RESSALVAS': 'hsl(45 95% 55%)',
-  'INVESTIGAR MAIS': 'hsl(210 80% 55%)',
-  REPROVADO: 'hsl(0 70% 50%)',
-  SEM_VEREDITO: 'hsl(220 10% 70%)',
+  APROVADO: 'hsl(var(--veredito-aprovado))',
+  'APROVADO COM RESSALVAS': 'hsl(var(--veredito-ressalvas))',
+  'INVESTIGAR MAIS': 'hsl(var(--status-investigate))',
+  REPROVADO: 'hsl(var(--veredito-reprovado))',
+  SEM_VEREDITO: 'var(--muted-foreground)',
 }
 
 const LABELS: Record<string, string> = {
@@ -33,25 +34,15 @@ export function VereditoDistributionChart({
     return <Skeleton className="h-72 rounded-xl" />
   }
 
-  if (data.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribuição de vereditos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhum dado disponível.</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const chartData = data.map((d) => ({
-    name: LABELS[d.veredito] ?? d.veredito,
-    value: d.count,
-    pct: d.pct,
-    color: COLORS[d.veredito] ?? 'hsl(220 10% 70%)',
-  }))
+  const rows = data
+    .map((d) => ({
+      key: d.veredito,
+      label: LABELS[d.veredito] ?? d.veredito,
+      color: COLORS[d.veredito] ?? 'var(--muted-foreground)',
+      count: d.count,
+      pct: d.pct,
+    }))
+    .sort((a, b) => b.count - a.count)
 
   return (
     <Card className="@container/card min-h-[280px]">
@@ -59,38 +50,39 @@ export function VereditoDistributionChart({
         <CardTitle>Distribuição de vereditos</CardTitle>
         <CardDescription>Baseado em todos os relatórios visíveis</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={85}
-              paddingAngle={3}
-              dataKey="value"
-              stroke="none"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+      <CardContent className="space-y-4">
+        {rows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Nenhum dado disponível.</p>
+        ) : (
+          <>
+            {/* Barra segmentada — proporção de cada veredito */}
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
+              {rows.map((r) => (
+                <div
+                  key={r.key}
+                  style={{ width: `${r.pct}%`, background: r.color }}
+                  title={`${r.label}: ${r.count} (${r.pct}%)`}
+                />
               ))}
-            </Pie>
-            <Tooltip
-              formatter={(value: any, _name: any, props: any) => [
-                `${value} (${props?.payload?.pct ?? 0}%)`,
-                '',
-              ]}
-            />
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              iconType="circle"
-              iconSize={8}
-              formatter={(value: string) => <span className="text-xs">{value}</span>}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+            </div>
+            {/* Breakdown */}
+            <ul className="space-y-1.5">
+              {rows.map((r) => (
+                <li key={r.key} className="flex items-center gap-2 text-sm">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ background: r.color }}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{r.label}</span>
+                  <span className="font-mono tabular-nums">{r.count}</span>
+                  <span className="w-10 text-right font-mono text-xs text-muted-foreground">
+                    {r.pct}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </CardContent>
     </Card>
   )

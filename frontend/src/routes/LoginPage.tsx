@@ -194,7 +194,7 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm space-y-6">
         <header className="space-y-2 text-center">
-          <div aria-hidden className="text-4xl">🏋️</div>
+          <div aria-hidden className="text-4xl"></div>
           <h1 className="text-2xl font-semibold tracking-tight">
             GymSite Intelligence
           </h1>

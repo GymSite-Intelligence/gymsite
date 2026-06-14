@@ -18,7 +18,9 @@ RUN rm -f .env .env.local .env.development .env.development.local .env.productio
 RUN npm run build
 
 # ── Stage 2: serve static via nginx on Cloud Run's $PORT (8080) ──
-FROM nginx:1.27-alpine
+# Imagem unprivileged: roda como uid 101 (non-root), pid/temp em /tmp, escuta 8080.
+# Resolve semgrep missing-user sem quebrar Cloud Run (8080 > 1024, sem bind privilegiado).
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080

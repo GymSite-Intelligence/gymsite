@@ -16,7 +16,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     <NextThemesProvider
       attribute="data-theme"
       defaultTheme={DEFAULT_APP_THEME}
-      themes={['escuro', 'claro']}
+      themes={['escuro', 'claro', 'geo']}
       enableSystem={false}
       storageKey={APP_THEME_STORAGE_KEY}
       disableTransitionOnChange

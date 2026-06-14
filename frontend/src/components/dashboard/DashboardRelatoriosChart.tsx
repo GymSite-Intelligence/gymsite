@@ -26,6 +26,7 @@ import {
   ToggleGroupItem,
 } from '@/components/ui/toggle-group'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 import type { DashboardChartPoint } from '@/hooks/useDashboardStats'
 
 const chartConfig = {
@@ -47,6 +48,7 @@ export function DashboardRelatoriosChart({
   loading: boolean
 }) {
   const isMobile = useIsMobile()
+  const isAdmin = useIsAdmin()
   const [timeRange, setTimeRange] = React.useState('90d')
 
   React.useEffect(() => {
@@ -72,7 +74,9 @@ export function DashboardRelatoriosChart({
       <CardHeader>
         <CardTitle>Atividade</CardTitle>
         <CardDescription>
-          Relatórios concluídos e custo Gemini por dia
+          {isAdmin
+            ? 'Relatórios concluídos e custo Gemini por dia'
+            : 'Relatórios concluídos por dia'}
         </CardDescription>
         <div className="flex items-center gap-2 @[767px]/card:ml-auto">
           <ToggleGroup
@@ -162,14 +166,17 @@ export function DashboardRelatoriosChart({
                 stroke="var(--color-relatorios)"
                 stackId="a"
               />
-              <Area
-                dataKey="custo_brl"
-                type="natural"
-                fill="var(--color-custo_brl)"
-                fillOpacity={0.15}
-                stroke="var(--color-custo_brl)"
-                stackId="b"
-              />
+              {/* Série de custo = economia interna; só admin (useIsAdmin). */}
+              {isAdmin && (
+                <Area
+                  dataKey="custo_brl"
+                  type="natural"
+                  fill="var(--color-custo_brl)"
+                  fillOpacity={0.15}
+                  stroke="var(--color-custo_brl)"
+                  stackId="b"
+                />
+              )}
             </AreaChart>
           </ChartContainer>
         )}

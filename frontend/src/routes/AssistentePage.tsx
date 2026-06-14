@@ -8,8 +8,17 @@ import { ChatLayout } from '@/components/chat/ChatLayout'
 import { useConversationalChat } from '@/hooks/useConversationalChat'
 
 export function AssistentePage() {
-  const { messages, sessions, state, sendMessage, isLoading, error, newSession, selectSession } =
-    useConversationalChat()
+  const {
+    messages,
+    sessions,
+    state,
+    sendMessage,
+    sendFeedback,
+    isLoading,
+    error,
+    newSession,
+    selectSession,
+  } = useConversationalChat()
 
   return (
     <ChatLayout
@@ -21,6 +30,7 @@ export function AssistentePage() {
       onSendMessage={sendMessage}
       onNewSession={newSession}
       onSelectSession={selectSession}
+      onFeedback={sendFeedback}
     />
   )
 }

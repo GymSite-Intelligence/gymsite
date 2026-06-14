@@ -400,6 +400,7 @@ else:
 # Regex extras: localhost dev + Cloudflare Pages (preview hash.gymsite-3p0.pages.dev)
 _cors_origin_regex = (
     r"http://localhost:\d+"
+    r"|http://127\.0\.0\.1:\d+"
     r"|https://([a-z0-9-]+\.)*gymsite-3p0\.pages\.dev"
 )
 
@@ -2190,6 +2191,7 @@ class AssistenteChatInput(BaseModel):
 
 class AssistenteChatOutput(BaseModel):
     resposta: str
+    interacao_id: str | None = None  # referência pro feedback (FT dataset)
 
 
 @app.post("/api/assistente/chat", response_model=AssistenteChatOutput)
@@ -2221,22 +2223,60 @@ async def assistente_chat(request: Request, payload: AssistenteChatInput) -> Ass
         if intencao == "fora_de_escopo":
             return AssistenteChatOutput(resposta=_RESPOSTA_FORA_DE_ESCOPO)
 
+        meta_rag: dict = {}
         contexto = build_contexto_chat(
             user_id=user_id,
             pergunta=payload.pergunta,
             relatorio_id=payload.relatorio_id,
+            meta=meta_rag,
         )
         resposta = await chat_async(
             prompt_text=contexto,
             max_tokens=1024,
             temperature=0.7,
         )
-        return AssistenteChatOutput(resposta=resposta)
+        from services.chat_log import registrar_interacao
+
+        interacao_id = registrar_interacao(
+            user_id=user_id,
+            endpoint="chat",
+            pergunta=payload.pergunta,
+            resposta=resposta,
+            intencao=intencao,
+            kb_fontes=meta_rag.get("kb_fontes"),
+            relatorio_id=payload.relatorio_id,
+        )
+        return AssistenteChatOutput(resposta=resposta, interacao_id=interacao_id)
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Erro no Tinker Bot: %s", e)
         raise HTTPException(status_code=500, detail=f"Erro no assistente: {str(e)}")
+
+
+class AssistenteFeedbackInput(BaseModel):
+    interacao_id: str
+    rating: int  # 1 (boa) | -1 (ruim)
+    comentario: str | None = None
+    correcao: str | None = None  # resposta ideal — vira alvo no dataset de FT
+
+
+@app.post("/api/assistente/feedback")
+async def assistente_feedback(request: Request, payload: AssistenteFeedbackInput) -> dict:
+    """Feedback de resposta do chat — alimenta o dataset de fine-tuning Vertex."""
+    user_id, _ = _require_authenticated(request)
+    from services.chat_log import registrar_feedback
+
+    ok = registrar_feedback(
+        payload.interacao_id,
+        user_id=user_id,
+        rating=payload.rating,
+        comentario=payload.comentario,
+        correcao=payload.correcao,
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail="Interação não encontrada ou rating inválido.")
+    return {"ok": True}
 
 
 # ── Agente de IA Conversacional ────────────────────────────────────────────
@@ -2254,6 +2294,7 @@ class ConversarOutput(BaseModel):
     resposta: str
     relatorio_id: str | None = None
     status: str
+    interacao_id: str | None = None  # referência pro feedback admin (FT dataset)
 
 
 @app.post("/api/assistente/conversar", response_model=ConversarOutput)
@@ -2285,13 +2326,27 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
         try:
             from services.tinker_bot import chat_async
             from services.tinker_context import build_contexto_chat
+            meta_rag: dict = {}
             contexto = build_contexto_chat(
                 user_id=user_id,
                 pergunta=payload.mensagem,
                 relatorio_id=resultado.get("relatorio_id"),
+                meta=meta_rag,
             )
             resposta_qa = await chat_async(prompt_text=contexto, max_tokens=1024, temperature=0.7)
             resultado["resposta"] = resposta_qa
+            from services.chat_log import registrar_interacao
+
+            resultado["interacao_id"] = registrar_interacao(
+                user_id=user_id,
+                endpoint="conversar",
+                pergunta=payload.mensagem,
+                resposta=resposta_qa,
+                intencao=intencao,
+                session_id=resultado.get("session_id"),
+                kb_fontes=meta_rag.get("kb_fontes"),
+                relatorio_id=resultado.get("relatorio_id"),
+            )
         except Exception:
             logger.warning("Fallback QA falhou para intencao=%s", intencao)
             resultado["resposta"] = (
@@ -2349,6 +2404,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
         resposta=resultado.get("resposta", ""),
         relatorio_id=resultado.get("relatorio_id"),
         status=resultado.get("status", "coletando_slots"),
+        interacao_id=resultado.get("interacao_id"),
     )
 
 

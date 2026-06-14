@@ -94,18 +94,24 @@ jobs:
       - name: Executar benchmark
         env:
           GOOGLE_DISTANCE_MATRIX_API_KEY: ${{ secrets.GOOGLE_DISTANCE_MATRIX_API_KEY }}
+          # Dados controláveis pelo usuário entram como env (não interpolados no shell)
+          # para evitar script injection — semgrep run-shell-injection.
+          SCOPE_DESTINOS: ${{ steps.scope.outputs.destinos }}
+          IN_TIPO_CARGA: ${{ github.event.inputs.tipo_carga }}
+          IN_FORNECEDORES: ${{ github.event.inputs.fornecedores }}
+          IN_DESTINOS: ${{ github.event.inputs.destinos }}
         run: |
-          # Prepara argumentos
+          # Prepara argumentos (lendo de env, nunca de ${{ }} dentro do shell)
           FORNECEDORES=""
-          DESTINOS="${{ steps.scope.outputs.destinos }}"
-          TIPO_CARGA="${{ github.event.inputs.tipo_carga || 'carga_geral' }}"
+          DESTINOS="$SCOPE_DESTINOS"
+          TIPO_CARGA="${IN_TIPO_CARGA:-carga_geral}"
 
-          if [ -n "${{ github.event.inputs.fornecedores }}" ]; then
-            FORNECEDORES="--fornecedores ${{ github.event.inputs.fornecedores }}"
+          if [ -n "$IN_FORNECEDORES" ]; then
+            FORNECEDORES="--fornecedores $IN_FORNECEDORES"
           fi
 
-          if [ -n "${{ github.event.inputs.destinos }}" ]; then
-            DESTINOS="--destinos ${{ github.event.inputs.destinos }}"
+          if [ -n "$IN_DESTINOS" ]; then
+            DESTINOS="--destinos $IN_DESTINOS"
           fi
 
           # Executa benchmark

@@ -626,6 +626,16 @@ def _fetch_listings_como_candidatos(
             except Exception:
                 pass
 
+        # Street view do imóvel — SÓ quando geocodificado de verdade (coords do
+        # endereço). Com fallback de centro de cidade a foto seria do centro,
+        # enganosa; nesse caso fica "" e a UI mostra "street view indisponível".
+        sv_url = ""
+        if geocoded:
+            try:
+                sv_url = obter_street_view_url(c_lat, c_lng)
+            except Exception:
+                sv_url = ""
+
         candidatos.append({
             "place_id": f"listing_{l.source}_{l.listing_id or len(candidatos)}",
             "nome": f"Imóvel anunciado · {l.area_m2}m² · {l.source.upper()}",
@@ -657,7 +667,7 @@ def _fetch_listings_como_candidatos(
             "polos_geradores": [],
             "estimativa_visibilidade": "a_confirmar_no_field",
             "avenida_principal": False,
-            "street_view_url": "",
+            "street_view_url": sv_url,
             "telefone": "",
             "website": l.listing_url,
         })

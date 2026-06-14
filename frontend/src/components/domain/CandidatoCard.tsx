@@ -65,6 +65,19 @@ export function CandidatoCard({
         ? 'ImovelWeb'
         : 'Anúncio'
 
+  // street_view_url pode vir VAZIO em candidatos-listing mesmo com lat/lng
+  // (o pipeline não preenche pra esses). Fallback: monta o proxy do backend
+  // a partir das coordenadas — o endpoint /api/maps/street-view já funciona.
+  const streetViewSrc = candidato.street_view_url
+    ? candidato.street_view_url.startsWith('/')
+      ? `${API_BASE}${candidato.street_view_url}`
+      : candidato.street_view_url
+    : // Fallback só com coords reais (geocoded). Em fallback de centro-cidade
+      // (geocoded === false) a foto seria do centro, enganosa → fica vazio.
+      candidato.lat != null && candidato.lng != null && candidato.geocoded !== false
+      ? `${API_BASE}/api/maps/street-view?lat=${candidato.lat}&lng=${candidato.lng}`
+      : ''
+
   return (
     <article
       className={cn(
@@ -74,13 +87,9 @@ export function CandidatoCard({
     >
       {/* Header com street view */}
       <div className="relative aspect-[16/10] bg-muted">
-        {candidato.street_view_url && !imgError ? (
+        {streetViewSrc && !imgError ? (
           <img
-            src={
-              candidato.street_view_url.startsWith('/')
-                ? `${API_BASE}${candidato.street_view_url}`
-                : candidato.street_view_url
-            }
+            src={streetViewSrc}
             alt={`Street view de ${candidato.nome}`}
             onError={() => setImgError(true)}
             loading="lazy"

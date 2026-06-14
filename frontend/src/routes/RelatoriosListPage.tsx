@@ -235,7 +235,7 @@ function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-border rounded-lg text-center">
-      <span aria-hidden className="text-4xl mb-3">📊</span>
+      <span aria-hidden className="text-4xl mb-3"></span>
       {semOrg ? (
         <>
           <h3 className="font-semibold mb-1">Sem acesso à organização</h3>
