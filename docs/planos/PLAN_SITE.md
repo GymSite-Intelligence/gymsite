@@ -9,14 +9,33 @@
 
 ## 0. Objetivo e princípios
 
-- **Objetivo da página:** transformar visitante (dono de academia / gestor fitness) em lead qualificado que aceita um diagnóstico gratuito.
+- **Objetivo da página:** transformar visitante (dono de academia / gestor fitness) em lead qualificado, usando o **agente "isca"** como porta de entrada da conversão.
 - **Promessa central:** mostrar onde estão os clientes certos antes de gastar com marketing no escuro.
 - **Posicionamento:** inteligência de mercado **vertical para o setor fitness** — diferente dos concorrentes horizontais (geomarketing genérico).
 - **Diretrizes:**
   - Linguagem simples, frases curtas, zero jargão técnico.
   - Cada bloco termina com clareza sobre o próximo passo.
   - Conformidade com a LGPD apresentada como diferencial de confiança, não como letra miúda.
-  - Nenhum preço; CTA sempre para o diagnóstico gratuito.
+  - Nenhum preço; CTA sempre para o diagnóstico gratuito **via agente**.
+
+---
+
+## 0.1 Integração com o agente "isca" (conversão central)
+
+> O CTA da landing **não leva a um formulário estático** — ele abre o agente conversacional já criado (ver `PLAN_AGENTE.md` e `PLAN_APP_FRONTEND.md`).
+
+**Agente:** "GymSite — Consultor de Viabilidade" (Google Agent Platform / Studio).
+
+**Fluxo de conversão:**
+1. Visitante clica no CTA → **abre o agente "isca"** (widget de chat na própria landing).
+2. O agente conversa, entende a região/negócio e **demonstra valor** com uma amostra (potencial da região / leitura de concorrência) — sempre respeitando sigilo de fontes, LGPD e Fase 0.
+3. Quando há interesse, o agente faz o **gate**: conduz para o **formulário de produção** (campos canônicos do app: UF, município, bairro, tipo de negócio, porte, público-alvo, contato).
+4. Lead capturado entra no fluxo do app → geração do relatório de viabilidade.
+
+**Notas técnicas:**
+- O formulário curto da seção 9 é o **gate** ao final da conversa, não a porta de entrada.
+- (a confirmar) forma de embed do agente na landing (widget/iframe/SDK) — alinhar com `PLAN_APP_FRONTEND.md`.
+- Sem expor nomes de fontes, ferramentas ou modelos em qualquer copy ou resposta do agente.
 
 ---
 
@@ -28,8 +47,8 @@
 **Subheadline (rascunho):**
 > Inteligência de mercado feita para academias. A gente mostra os bairros, perfis e oportunidades com maior potencial para o seu negócio fitness crescer com previsibilidade.
 
-**CTA primário:** "Quero meu diagnóstico gratuito"
-**CTA secundário (texto):** "Ver como funciona"
+**CTA primário:** "Quero meu diagnóstico gratuito" → **abre o agente "isca"** (chat de viabilidade).
+**CTA secundário (texto):** "Ver como funciona" (rola para a seção 3).
 
 **Observação visual:** mapa/painel ilustrativo de uma região com áreas de oportunidade destacadas (mock, sem dados reais de cliente).
 
@@ -53,11 +72,11 @@
 
 **Título (rascunho):** Simples assim — em 3 passos.
 
-1. **Diagnóstico gratuito** — a gente analisa sua região e seu público a partir de bases públicas e da nossa modelagem proprietária.
-2. **Mapa de oportunidades** — você recebe onde estão os bairros e perfis com maior potencial para a sua academia.
+1. **Converse com o consultor** — clique e o nosso consultor de viabilidade (agente "isca") pergunta sua região e seu negócio. Em minutos, ele já mostra uma amostra do potencial.
+2. **Receba o mapa de oportunidades** — onde estão os bairros e perfis com maior potencial para a sua academia, a partir de bases públicas e da nossa modelagem proprietária.
 3. **Plano de ação** — recomendações práticas de onde captar, onde expandir e onde investir mídia com retorno.
 
-*(Cada passo com um ícone simples e uma linha de apoio.)*
+*(Cada passo com um ícone simples e uma linha de apoio. O passo 1 abre o agente.)*
 
 ---
 
@@ -78,6 +97,7 @@
 **Título (rascunho):** Por que a GymSite e não uma ferramenta genérica?
 
 - **Feita para o fitness:** não é geomarketing genérico adaptado — é pensada para academias e estúdios.
+- **Consultor que conversa:** em vez de formulário frio, um consultor inteligente entende seu caso e já mostra valor na hora.
 - **Bases públicas + modelagem proprietária:** combinamos dados públicos com um modelo próprio que traduz tudo em decisão de negócio.
 - **LGPD by design:** privacidade e conformidade desde a origem — você usa inteligência de mercado sem risco.
 - **Linguagem de dono, não de cientista de dados:** entregamos respostas, não planilhas que ninguém entende.
@@ -104,6 +124,9 @@
 **Isso está de acordo com a LGPD?**
 > Sim. A conformidade com a LGPD faz parte do projeto desde a concepção. Não trabalhamos com dados pessoais sensíveis de terceiros para te entregar resultado.
 
+**Falar com o consultor me obriga a alguma coisa?**
+> Não. A conversa é gratuita e sem compromisso. Você só avança para o diagnóstico completo se quiser.
+
 **Preciso ter conhecimento técnico?**
 > Não. A entrega é em linguagem de negócio, com recomendações práticas.
 
@@ -126,32 +149,34 @@
 
 ---
 
-## 9. CTA final + formulário curto
+## 9. CTA final + gate (formulário curto)
 
 **Título (rascunho):** Pronto para enxergar seu mercado com clareza?
 
-**Subtítulo (rascunho):** Comece pelo diagnóstico gratuito. Sem compromisso.
+**Subtítulo (rascunho):** Comece falando com o consultor. Sem compromisso.
 
-**Campos do formulário (mínimo):**
-- Nome
-- E-mail
-- WhatsApp
-- Nome da academia / cidade
+**CTA:** "Quero meu diagnóstico gratuito" → **abre o agente "isca"**.
 
-**Botão:** "Quero meu diagnóstico gratuito"
+**Gate (formulário de produção, exibido ao final da conversa):** campos canônicos do app —
+- UF / Município / Bairro
+- Tipo de negócio / Porte
+- Público-alvo (faixa etária, gênero)
+- Contato (nome, e-mail, WhatsApp)
 
-**Microcopy abaixo do botão:** "Resposta em até 1 dia útil. Seus dados ficam protegidos conforme a LGPD."
+**Microcopy abaixo do CTA:** "Resposta em minutos no chat. Seus dados ficam protegidos conforme a LGPD."
 
 ---
 
 ## 10. Notas de implementação (técnico / interno)
 
-- Stack prevista: Vite + React; deploy em Cloudflare Pages.
-- Formulário → integração com captação (a definir o destino do lead).
+- Stack prevista: Vite + React; deploy em Cloudflare Pages (alinhar com `PLAN_APP_FRONTEND.md`).
+- **Conversão = agente "isca"** (Google Agent Platform). A landing embeda o agente; o formulário de produção é o gate ao final.
+- (a confirmar) método de embed do agente (widget/iframe/SDK) e destino do lead capturado.
+- ATENÇÃO: agente só vai ao ar após Deploy autorizado (hoje em DRAFT, ver `PLAN_AGENTE.md`).
 - SEO: foco em termos do setor fitness + intenção local (a confirmar palavras-chave).
-- Sem expor nomes de fontes, ferramentas ou modelos em qualquer copy pública.
+- Sem expor nomes de fontes, ferramentas ou modelos em qualquer copy pública nem nas respostas do agente.
 - Revisar todos os [PLACEHOLDER] e marcações "(a confirmar)" antes de publicar.
 
 ---
 
-_Status: rascunho inicial v1 — estrutura + copy para revisão. Próximo: validar headline, depoimentos reais e definir destino do formulário._
+_Status: rascunho v2 — estrutura + copy com integração do agente "isca". Próximo: validar headline, definir embed do agente, depoimentos reais e destino do formulário._
