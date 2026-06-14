@@ -1,0 +1,29 @@
+{
+  "cidade": "Fortaleza",
+  "uf": "CE",
+  "fonte": "curadoria_pilot_referencia_ipece_simda",
+  "nota": "Valores de trabalho para Fase B ate DataStore CKAN municipal. Validar contra IPECE/SIMDA antes de producao.",
+  "data_referencia": "2022-2024",
+  "bairros": {
+    "meireles": {
+      "renda_media": 4850,
+      "populacao": 38500,
+      "dataset_id": "pilot:ipece_regional"
+    },
+    "aldeota": {
+      "renda_media": 5200,
+      "populacao": 42000,
+      "dataset_id": "pilot:ipece_regional"
+    },
+    "parangaba": {
+      "renda_media": 2180,
+      "populacao": 34121,
+      "dataset_id": "pilot:simda_fortaleza"
+    },
+    "fatima": {
+      "renda_media": 1950,
+      "populacao": 28000,
+      "dataset_id": "pilot:ipece_regional"
+    }
+  }
+}

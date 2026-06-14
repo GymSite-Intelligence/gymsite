@@ -1,0 +1,13 @@
+{
+  "cidade": "Curitiba",
+  "uf": "PR",
+  "fonte": "curadoria_gymsite_fase_c",
+  "data_coleta": "2026-06-03",
+  "taxas": {
+    "alvara_funcionamento_brl": {"min": 1200, "max": 5000},
+    "taxa_bombeiros_brl": {"min": 500, "max": 2500},
+    "projeto_arquitetonico_cau_brl": {"min": 18000, "max": 55000},
+    "vistoria_sanitaria_brl": {"min": 250, "max": 900}
+  },
+  "prazo_meses_tipico": {"alvara": 4, "bombeiros": 2}
+}

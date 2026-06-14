@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "fonte": "curadoria_gymsite_fase_c",
+  "data_coleta": "2026-06-03",
+  "notas": "Referência educacional — não substitui OSM/CNPJ no relatório. Scrape de sites de franquia fora do escopo.",
+  "redes": [
+    {
+      "nome": "Smart Fit",
+      "modelo": "low",
+      "ticket_tipico_brl": 99.9,
+      "investimento_unidade_mil_brl": null,
+      "ticker": "SMFT3",
+      "fonte": "RI Smart Fit / curadoria"
+    },
+    {
+      "nome": "Bluefit",
+      "modelo": "low",
+      "ticket_tipico_brl": 109.9,
+      "investimento_unidade_mil_brl": null,
+      "listada_b3": false,
+      "fonte": "curadoria — não listada B3"
+    },
+    {
+      "nome": "Selfit",
+      "modelo": "low",
+      "ticket_tipico_brl": 119.9,
+      "fonte": "curadoria"
+    },
+    {
+      "nome": "Bodytech",
+      "modelo": "mid",
+      "ticket_tipico_brl": 189.9,
+      "fonte": "curadoria"
+    },
+    {
+      "nome": "Bio Ritmo",
+      "modelo": "premium",
+      "ticket_tipico_brl": 249.9,
+      "fonte": "curadoria"
+    },
+    {
+      "nome": "Panobianco",
+      "modelo": "low",
+      "ticket_tipico_brl": 39.9,
+      "fonte": "curadoria — plano restrito"
+    }
+  ]
+}
