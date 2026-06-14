@@ -346,11 +346,24 @@ def _concorrentes_parque_enriquecidos(
     if bloco.get("status") != "ok" or not bloco.get("concorrentes"):
         return [], bloco
 
-    out: list[dict] = []
-    for c in bloco["concorrentes"][:limit]:
+    alvos = bloco["concorrentes"][:limit]
+    # Places match em paralelo (I/O bound): N searchText sequenciais bloqueavam o
+    # event loop do pipeline async (starva A2/A4 em paralelo). Threadpool encurta a
+    # janela de bloqueio de ~N×1s pra ~max(1s)×ceil(N/workers).
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _match(c: dict) -> dict | None:
         nome = c.get("nome") or c.get("razao_social") or ""
         endereco = c.get("endereco") or ""
-        p = _places_match_por_texto(nome, endereco, cidade, uf)
+        return _places_match_por_texto(nome, endereco, cidade, uf)
+
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(alvos)))) as ex:
+        matches = list(ex.map(_match, alvos))
+
+    out: list[dict] = []
+    for c, p in zip(alvos, matches):
+        nome = c.get("nome") or c.get("razao_social") or ""
+        endereco = c.get("endereco") or ""
         if p:
             loc = p.get("location") or {}
             plat, plng = loc.get("latitude", 0.0), loc.get("longitude", 0.0)
