@@ -60,6 +60,8 @@ import { InteligenciaCompetitivaResumoCard } from '@/components/domain/Inteligen
 import { EntrantesCnpjTable } from '@/components/domain/EntrantesCnpjTable'
 import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
+import { DemandaFuturaCard } from '@/components/domain/DemandaFuturaCard'
+import { AneisCompetitivosCard } from '@/components/domain/AneisCompetitivosCard'
 import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
 import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
 import { DoresHeatmap } from '@/components/domain/DoresHeatmap'
@@ -697,6 +699,20 @@ function RelatorioViewerContent({
       {out.obras_cno_em_curso && (
         <Section title="Obras em andamento (CNO)" collapsible>
           <ObrasEmAndamentoTable block={out.obras_cno_em_curso} />
+        </Section>
+      )}
+
+      {/* 7.46 Demanda futura datada (Apêndice B) */}
+      {out.demanda_futura && out.demanda_futura.status === 'ok' && (
+        <Section title="Demanda futura (obras no raio)" collapsible>
+          <DemandaFuturaCard block={out.demanda_futura} />
+        </Section>
+      )}
+
+      {/* 7.47 Anéis competitivos (Apêndice D) — score ponderado */}
+      {out.aneis_competitivos && (out.aneis_competitivos.total_concorrentes ?? 0) > 0 && (
+        <Section title="Anéis competitivos" collapsible>
+          <AneisCompetitivosCard block={out.aneis_competitivos} />
         </Section>
       )}
 

@@ -126,6 +126,45 @@ export interface OutputConsolidado {
   entrantes_cnpj_90d?: EntrantesCnpj90dJSON
   /** Obras fitness em andamento (CNO) + benchmark tempo obra. */
   obras_cno_em_curso?: ObrasCnoEmCursoJSON
+  /** Demanda futura datada (Apêndice B) — obras residenciais no raio → captura T+24. */
+  demanda_futura?: DemandaFuturaJSON
+  /** Anéis competitivos (Apêndice D) — score ponderado por proximidade. */
+  aneis_competitivos?: AneisCompetitivosJSON
+}
+
+export interface DemandaFuturaObraJSON {
+  empreendimento?: string | null
+  construtora?: string | null
+  bairro?: string | null
+  unidades_est?: number | null
+  unidades_fonte?: string | null
+  entrega?: string | null
+  amenidade_fitness?: boolean
+  captura_est?: number | null
+  confianca?: string | null
+  provavel_residencial?: boolean
+  fonte_url?: string | null
+}
+
+export interface DemandaFuturaJSON {
+  status?: string
+  n_obras?: number
+  provavel_residencial_n?: number
+  refinadas?: number
+  captura_total_est?: number
+  moradores_total_est?: number
+  janela_entrega?: { de?: string; ate?: string } | null
+  obras?: DemandaFuturaObraJSON[]
+  fonte?: string
+}
+
+export interface AneisCompetitivosJSON {
+  por_anel?: { NO_BAIRRO?: number; FRONTEIRA?: number; REGIONAL?: number }
+  score_competitivo_ponderado?: number
+  concorrentes_no_bairro?: number
+  no_bairro_por_porte?: { pequena?: number; media?: number; grande?: number }
+  total_concorrentes?: number
+  nota?: string
 }
 
 export interface PosicionamentoEstrategicoJSON {
