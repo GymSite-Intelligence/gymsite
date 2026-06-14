@@ -33,6 +33,14 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     # Janelas temporais (CNO → entrega → compra equipamento).
     "meses_entrega":        {"valor": 30, "fonte": "fallback_mediana_obra_24_36m (recalibrar CNO encerradas)", "data_coleta": "2026-06-14", "metodo": "mediana_tempo_obra", "unidade": "meses"},
     "janela_compra_equipamento_meses": {"valor": 4, "fonte": "fallback_3_6m_antes_entrega", "data_coleta": "2026-06-14", "metodo": "lead_time_compra", "unidade": "meses"},
+    # Anéis competitivos (Apêndice D) — pesos por anel + raio de fronteira.
+    "anel_peso_no_bairro":  {"valor": 1.0, "fonte": "Motor v2 Apêndice D", "data_coleta": "2026-06-14", "metodo": "peso_anel", "unidade": "fator"},
+    "anel_peso_fronteira":  {"valor": 0.5, "fonte": "Motor v2 Apêndice D", "data_coleta": "2026-06-14", "metodo": "peso_anel", "unidade": "fator"},
+    "anel_peso_regional":   {"valor": 0.2, "fonte": "Motor v2 Apêndice D", "data_coleta": "2026-06-14", "metodo": "peso_anel", "unidade": "fator"},
+    "raio_fronteira_km":    {"valor": 2.0, "fonte": "Motor v2 Apêndice D (≤2km da borda)", "data_coleta": "2026-06-14", "metodo": "raio_anel", "unidade": "km"},
+    # Porte de academia por nº de avaliações (Places) — recalibrável.
+    "porte_pequena_max_avaliacoes": {"valor": 150, "fonte": "fallback_heuristica_places", "data_coleta": "2026-06-14", "metodo": "limiar_porte", "unidade": "avaliacoes"},
+    "porte_media_max_avaliacoes":   {"valor": 600, "fonte": "fallback_heuristica_places", "data_coleta": "2026-06-14", "metodo": "limiar_porte", "unidade": "avaliacoes"},
 }
 
 _OVERRIDE_CACHE: dict[str, dict[str, Any]] | None = None

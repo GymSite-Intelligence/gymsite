@@ -221,7 +221,7 @@ Ordem: **B → A-CNO → D → C** (A-IPTU gated).
 |---|---|
 | B — Demanda futura datada | 🟢 **VIVO (2026-06-14)** — CNO fresco (RFB maio/2026) no banco via `rfb_cno_loader`; demanda futura acende nacional (Fortaleza 359 obras/janela 2026-2028, SP 640, Curitiba 416…). Crosswalk RFB↔IBGE 5570 (`municipio_rf_ibge`) destravou todas as cidades. Falta só refino A4 + integração A7/A9 |
 | A-CNO — vetores de obra | ⏳ **próximo** (funciona com dado histórico) |
-| D — anéis competitivos | ⏳ (precede F2 schema; sem dependência CNO) |
+| D — anéis competitivos | 🟢 **tool construído** — `aneis_competitivos_tools.py`: classifica NO_BAIRRO/FRONTEIRA/REGIONAL (nome + distância ao centroide), score PONDERADO (1.0/0.5/0.2), porte por avaliações, multiesporte flag. Params na regra de ouro. 8 testes (fix Wally: 1.7 vs 3 plano). **Falta wire no A6** (plumbing do centroide) |
 | C — leads condominial | 🟢 **construído** — `leads_condominial_tools.py`: gatilho amenidade fitness (refino) → CNPJ incorporadora → RFB QSA + **Apollo decisor** → `oportunidades_prospeccao`. 4 testes (deps injetadas). Prioridade por janela de compra de equipamento |
 | A-IPTU — valor venal | 🔒 gated (CKAN municipal) |
 
