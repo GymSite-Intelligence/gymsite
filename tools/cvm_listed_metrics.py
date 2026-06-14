@@ -16,6 +16,16 @@ logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE_PATH = ROOT / "metrics" / "cache" / "sector_listed.json"
+# Curadoria RI (#2): KPIs operacionais que o CVM ITR não traz (vivem no release).
+RI_OVERLAY_PATH = ROOT / "metrics" / "cache" / "sector_listed_ri_overlay.json"
+
+# KPIs operacionais — origem RI/release, não CVM ITR. Cobertura monitorada (alerta).
+OPERATIONAL_KPIS: tuple[str, ...] = (
+    "alunos_ativos",
+    "arpu_brl",
+    "churn_pct",
+    "capex_por_unidade_brl",
+)
 
 # Fallback mínimo quando batch CVM ainda não rodou (sem Bluefit/BIOM3 — ticker incorreto).
 DEFAULT_LISTED: dict[str, Any] = {
@@ -73,13 +83,84 @@ def save_sector_listed_snapshot(data: dict[str, Any]) -> Path:
     return CACHE_PATH
 
 
+def _load_ri_overlay() -> dict[str, Any]:
+    """Curadoria RI de KPIs operacionais por ticker (estrutura: empresas[TICKER].kpis)."""
+    if not RI_OVERLAY_PATH.is_file():
+        return {}
+    try:
+        data = json.loads(RI_OVERLAY_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _aplicar_ri_overlay(data: dict[str, Any]) -> dict[str, Any]:
+    """Preenche KPIs operacionais null com curadoria RI (não sobrescreve CVM)."""
+    overlay = _load_ri_overlay()
+    empresas_ov = (overlay.get("empresas") or {}) if overlay else {}
+    if not empresas_ov:
+        return data
+    for emp in data.get("empresas") or []:
+        if not isinstance(emp, dict):
+            continue
+        ov = empresas_ov.get((emp.get("ticker") or "").upper())
+        if not ov:
+            continue
+        kpis = emp.setdefault("kpis", {})
+        for k, v in (ov.get("kpis") or {}).items():
+            if v is not None and kpis.get(k) is None:
+                kpis[k] = v
+        emp["kpis_operacionais_fonte"] = overlay.get("fonte")
+        emp["kpis_operacionais_periodo"] = ov.get("periodo_ref")
+        if ov.get("contexto"):
+            emp["contexto_ri"] = ov["contexto"]
+    return data
+
+
 def obter_sector_listed(*, force_defaults: bool = False) -> dict[str, Any]:
-    """Retorna snapshot de redes listadas; nunca levanta exceção."""
+    """Retorna snapshot de redes listadas; nunca levanta exceção.
+
+    CVM ITR cobre financeiro; KPIs operacionais (alunos/ARPU/churn) vêm da
+    curadoria RI overlay quando disponível. Cobertura é monitorada por
+    `sector_kpi_coverage` / `sector_kpi_alertas`.
+    """
     if not force_defaults:
         snap = _load_snapshot()
         if snap and snap.get("empresas"):
-            return snap
-    return dict(DEFAULT_LISTED)
+            return _aplicar_ri_overlay(dict(snap))
+    return _aplicar_ri_overlay(dict(DEFAULT_LISTED))
+
+
+def sector_kpi_coverage(empresa: dict[str, Any]) -> dict[str, Any]:
+    """Cobertura de KPIs operacionais (RI) de uma empresa — para alerta/monitor."""
+    kpis = (empresa or {}).get("kpis") or {}
+    faltando = [k for k in OPERATIONAL_KPIS if kpis.get(k) is None]
+    preenchidos = [k for k in OPERATIONAL_KPIS if kpis.get(k) is not None]
+    total = len(OPERATIONAL_KPIS)
+    return {
+        "ticker": (empresa or {}).get("ticker"),
+        "total": total,
+        "preenchidos": len(preenchidos),
+        "pct": round(100.0 * len(preenchidos) / total, 1) if total else 0.0,
+        "faltando": faltando,
+    }
+
+
+def sector_kpi_alertas(data: dict[str, Any] | None = None) -> list[str]:
+    """Alertas quando KPIs operacionais não estão 100% — driva fechamento via RI overlay."""
+    data = data or obter_sector_listed()
+    alertas: list[str] = []
+    for emp in data.get("empresas") or []:
+        if not isinstance(emp, dict):
+            continue
+        cov = sector_kpi_coverage(emp)
+        if cov["pct"] < 100.0:
+            alertas.append(
+                f"⚠️ KPIs operacionais {cov['ticker']} em {cov['pct']:.0f}% "
+                f"({cov['preenchidos']}/{cov['total']}) — faltam {', '.join(cov['faltando'])}. "
+                f"Preencher metrics/cache/sector_listed_ri_overlay.json com RI ({emp.get('kpis_operacionais_fonte') or 'ri.smartfit.com.br'})."
+            )
+    return alertas
 
 
 def empresa_por_ticker(ticker: str) -> dict[str, Any] | None:

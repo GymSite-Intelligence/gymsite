@@ -132,9 +132,10 @@ def build_bundle(
     if comp.get("status") != "ok":
         missing.append("competicao_osm")
 
+    from tools.cvm_listed_metrics import sector_kpi_coverage
     from tools.franchise_curated import bloco_para_bundle
     from tools.legal_fees_loader import bloco_para_bundle as legal_bloco
-    from tools.market_bundle import compute_bundle_stale
+    from tools.market_bundle import compute_bundle_stale, live_trail_pending
 
     valido = datetime.now(timezone.utc) + timedelta(days=7)
     payload = {
@@ -161,6 +162,13 @@ def build_bundle(
     stale, stale_reasons = compute_bundle_stale(payload)
     payload["stale"] = stale
     payload["stale_reasons"] = stale_reasons
+    payload["live_trail_pending"] = live_trail_pending(payload)
+    # Cobertura de KPIs operacionais (RI) por empresa listada — visível no bundle.
+    payload["sector_kpi_gaps"] = [
+        sector_kpi_coverage(e)
+        for e in (payload.get("sector_benchmarks") or {}).get("empresas") or []
+        if isinstance(e, dict)
+    ]
     return payload
 
 
@@ -189,7 +197,13 @@ def main() -> int:
     path = save_market_bundle(args.cidade, args.bairro, args.uf, bundle)
     print("written:", path)
     print("missing_fields:", bundle.get("missing_fields"))
+    print("live_trail_pending:", bundle.get("live_trail_pending"))
+    print("stale:", bundle.get("stale"), bundle.get("stale_reasons"))
     print("codigo_ibge:", (bundle.get("local") or {}).get("codigo_ibge_municipio"))
+    from tools.cvm_listed_metrics import sector_kpi_alertas
+
+    for a in sector_kpi_alertas(bundle.get("sector_benchmarks")):
+        print("[KPI-ALERT]", a)
     return 0
 
 

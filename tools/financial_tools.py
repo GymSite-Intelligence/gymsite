@@ -711,6 +711,22 @@ def _alertas_vs_sector_listed(cenarios: dict[str, Any]) -> list[str]:
         alertas.append(
             f"⚠️ Payback estendido com alavancagem setorial SMFT3 ~{alav_ref}x DL/EBITDA (referência CVM)"
         )
+
+    # Cobertura de KPIs operacionais (RI): expõe quando comparação operacional
+    # (ARPU/churn/alunos) está indisponível — não silenciar a lacuna.
+    try:
+        from tools.cvm_listed_metrics import empresa_por_ticker, sector_kpi_coverage
+
+        emp = empresa_por_ticker("SMFT3")
+        if emp:
+            cov = sector_kpi_coverage(emp)
+            if cov["pct"] < 100.0:
+                alertas.append(
+                    f"ℹ️ Comparação operacional SMFT3 parcial ({cov['pct']:.0f}%) — "
+                    f"sem {', '.join(cov['faltando'])} (CVM ITR não cobre; preencher RI overlay)"
+                )
+    except Exception:
+        pass
     return alertas
 
 
