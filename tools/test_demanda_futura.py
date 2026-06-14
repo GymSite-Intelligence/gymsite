@@ -86,3 +86,28 @@ def test_sem_credencial_indisponivel(monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     r = demanda_futura_datada("Fortaleza", "CE")
     assert r["status"] == "indisponivel"
+
+
+def test_detalhada_aplica_refino_top_n(monkeypatch):
+    from tools import demanda_futura_tools as dft
+
+    obras = [
+        {"area_m2": 9000, "data_inicio": "2025-06-01", "em_curso": True,
+         "nome": "Construtora A", "bairro": "Aldeota"},
+        {"area_m2": 3000, "data_inicio": "2025-06-01", "em_curso": True,
+         "nome": "Construtora B", "bairro": "Aldeota"},
+    ]
+    monkeypatch.setattr(dft, "_obras_grande_porte_municipio", lambda c, u: obras)
+
+    def fake_refino(o):
+        if o["nome"] == "Construtora A":
+            return {"unidades_exatas": 300.0, "tipologia": "3+ dorm", "amenidade_fitness": True,
+                    "fonte_url": "http://x", "confianca": "alta", "empreendimento": "Tower A"}
+        return {"unidades_exatas": None, "confianca": "baixa", "empreendimento": None}
+
+    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=5, _refino_fn=fake_refino)
+    assert r["status"] == "ok" and r["n_obras"] == 2
+    linha_a = next(l for l in r["obras"] if l["construtora"] == "Construtora A")
+    assert linha_a["unidades_est"] == 300.0                  # refino sobrescreveu proxy
+    assert linha_a["unidades_fonte"] == "lancamento_exato"
+    assert linha_a["confianca"] == "alta" and linha_a["amenidade_fitness"] is True

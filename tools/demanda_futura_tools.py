@@ -166,6 +166,25 @@ def _confianca(n_obras: int) -> str:
     return "media" if n_obras >= 3 else "baixa"
 
 
+def _obras_futuras_municipio(
+    cidade: str, uf: str, bairro: str | None, *, somente_em_curso: bool = True
+) -> list[dict] | None:
+    """Obras de grande porte com ENTREGA ainda no futuro (corta zumbis). None se fonte off."""
+    obras = _obras_grande_porte_municipio(cidade, uf)
+    if obras is None:
+        return None
+    if somente_em_curso:
+        obras = [o for o in obras if o.get("em_curso")]
+    ref = _ref_atual_ym()
+    obras = [o for o in obras if _entrega_no_futuro(o.get("data_inicio"), ref)]
+    if bairro:
+        from tools.bairro_normalize import normalizar_bairro
+
+        alvo = normalizar_bairro(bairro)
+        obras = [o for o in obras if normalizar_bairro(o.get("bairro") or "") == alvo]
+    return obras
+
+
 def demanda_futura_datada(
     cidade: str,
     uf: str,
@@ -177,19 +196,10 @@ def demanda_futura_datada(
     somente_em_curso: bool = True,
 ) -> dict[str, Any]:
     """Agrega demanda futura das obras de grande porte com entrega ainda à frente."""
-    obras = _obras_grande_porte_municipio(cidade, uf)
+    obras = _obras_futuras_municipio(cidade, uf, bairro, somente_em_curso=somente_em_curso)
     if obras is None:
         return {"status": "indisponivel", "motivo": "fonte_cno_grande_porte_indisponivel",
                 "cidade": cidade, "uf": uf}
-    if somente_em_curso:
-        obras = [o for o in obras if o.get("em_curso")]
-    ref = _ref_atual_ym()
-    obras = [o for o in obras if _entrega_no_futuro(o.get("data_inicio"), ref)]
-    if bairro:
-        from tools.bairro_normalize import normalizar_bairro
-
-        alvo = normalizar_bairro(bairro)
-        obras = [o for o in obras if normalizar_bairro(o.get("bairro") or "") == alvo]
 
     if not obras:
         return {"status": "sem_dados", "cidade": cidade, "uf": uf, "bairro": bairro,
@@ -231,4 +241,82 @@ def demanda_futura_datada(
             "A4 (site do lançamento) trazer contagem exata. Fatores e fontes em fatores_usados. "
             "Estimativa de prospecção — não é dado fiscal."
         ),
+    }
+
+
+def demanda_futura_detalhada(
+    cidade: str,
+    uf: str,
+    *,
+    bairro: str | None = None,
+    perfil_bairro: str = "geral",
+    top_n: int = 5,
+    market_share: float | None = None,
+    ticket_brl: float | None = None,
+    _refino_fn: Any = None,
+) -> dict[str, Any]:
+    """Por-obra (top_n por área, com refino A4 do site do lançamento) + totais.
+
+    Para o relatório (tabela de empreendimentos). Refino só nas top_n (grounding é caro);
+    demais obras ficam no proxy. `_refino_fn` injetável → testável sem rede.
+    """
+    obras = _obras_futuras_municipio(cidade, uf, bairro)
+    if obras is None:
+        return {"status": "indisponivel", "cidade": cidade, "uf": uf}
+    if not obras:
+        return {"status": "sem_dados", "cidade": cidade, "uf": uf, "bairro": bairro,
+                "n_obras": 0, "obras": [], "confianca": "nenhuma"}
+
+    from tools.cno_bigquery_loader import _KW_RESIDENCIAL
+    from tools.refino_lancamento_tools import refinar_demanda_via_lancamento
+
+    def _provavel_residencial(nome: str, refino: dict | None) -> bool:
+        tip = str((refino or {}).get("tipologia") or "").lower()
+        if "residenc" in tip or "dorm" in tip or "studio" in tip:
+            return True
+        if tip in ("comercial", "infra"):
+            return False
+        n = (nome or "").lower()
+        return any(k in n for k in _KW_RESIDENCIAL)
+
+    refino_fn = _refino_fn or refinar_demanda_via_lancamento
+    obras = sorted(obras, key=lambda o: -float(o.get("area_m2") or 0))
+
+    linhas: list[dict] = []
+    tot = {"captura_est": 0.0, "moradores_est": 0.0}
+    for i, o in enumerate(obras):
+        refino = refino_fn(o) if i < top_n else None
+        unid_exatas = (refino or {}).get("unidades_exatas")
+        tipologia = (refino or {}).get("tipologia")
+        e = estimar_demanda_obra(
+            float(o.get("area_m2") or 0), unidades_exatas=unid_exatas, tipologia=tipologia,
+            perfil_bairro=perfil_bairro, market_share=market_share, ticket_brl=ticket_brl,
+        )
+        tot["captura_est"] += e["captura_est"]
+        tot["moradores_est"] += e["moradores_est"]
+        linhas.append({
+            "empreendimento": (refino or {}).get("empreendimento"),
+            "construtora": o.get("nome"),
+            "bairro": o.get("bairro"),
+            "unidades_est": e["unidades_est"],
+            "unidades_fonte": e["unidades_fonte"],
+            "entrega": _meses_para_entrega(o.get("data_inicio")),
+            "amenidade_fitness": (refino or {}).get("amenidade_fitness", False),
+            "captura_est": e["captura_est"],
+            "confianca": (refino or {}).get("confianca", "baixa"),
+            "provavel_residencial": _provavel_residencial(o.get("nome") or "", refino),
+            "fonte_url": (refino or {}).get("fonte_url"),
+        })
+
+    return {
+        "status": "ok", "cidade": cidade, "uf": uf, "bairro": bairro,
+        "n_obras": len(obras), "refinadas": min(top_n, len(obras)),
+        "provavel_residencial_n": sum(1 for l in linhas if l["provavel_residencial"]),
+        "obras": linhas[:max(top_n, 10)],
+        "captura_total_est": round(tot["captura_est"], 1),
+        "moradores_total_est": round(tot["moradores_est"], 1),
+        "perfil_bairro": perfil_bairro,
+        "fonte": "CNO grande porte (RFB) + refino A4 (site do lançamento)",
+        "nota": ("Proxy área = limite superior (inclui não-residencial); refino A4 e "
+                 "provavel_residencial são o gate de confiança. Liderar pelo refinado."),
     }

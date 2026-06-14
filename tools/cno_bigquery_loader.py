@@ -114,11 +114,31 @@ def minerar(*, dry_run: bool = False, chunk: int = 500) -> dict:
 # ── Fase B: obras de grande porte (proxy residencial) → demanda futura ─────────
 _TABLE_GP = "public.cno_obras_grande_porte"
 # Exclusões: fitness (tem tabela própria) + comercial/institucional óbvio.
+# Exclui não-residencial: comercial/institucional + INFRA/obra pública/serviço
+# (proxy residencial é ruidoso; refino A4 é o gate final de residencial).
 _KW_COMERCIAL = (
+    # comercial / institucional
     "hospital", "escola", "universidade", "faculdade", "shopping", "galpao", "galpão",
     "posto", "igreja", "hotel", "prefeitura", "secretaria", "terminal", "ginasio",
     "ginásio", "estadio", "estádio", "creche", "presidio", "presídio", "supermercado",
-    "industria", "indústria", "fabrica", "fábrica", "armazem", "armazém",
+    "industria", "indústria", "fabrica", "fábrica", "armazem", "armázem", "armazém",
+    "clinica", "clínica", "delegacia", "quartel", "camara", "câmara", "tribunal", "forum",
+    # infra / obra pública / serviço (não geram moradores)
+    "barragem", "rodovia", "ponte", "viaduto", "saneamento", "esgoto", "adutora",
+    "drenagem", "pavimenta", "subestacao", "subestação", "transmissao", "transmissão",
+    "terraplan", "aeroporto", "ferrovia", "reservatorio", "reservatório", "estacao de",
+    "estação de", "servicos comuns de engenharia", "serviços comuns de engenharia",
+    "manutencao", "manutenção", "reforma", "ampliacao", "ampliação", "restauracao",
+    "restauração", "consorcio", "consórcio", "duto", "linha de", "usina", "porto",
+    "vias e logradouros", "sistema viario", "sistema viário", "granel", "cais",
+    "eolic", "eólic", "solar", "air hub", "aterro", "sanitario", "sanitário",
+)
+
+# Sinal POSITIVO de residencial (sobe confiança do proxy; refino A4 confirma).
+_KW_RESIDENCIAL = (
+    "residencial", "edificio", "edifício", "condominio", "condomínio", "empreendimento imobiliario",
+    "empreendimento imobiliário", "incorporac", "incorporaç", "morada", "reserva", "ville",
+    "jardim", "torre", "vila ", "village", "parque residencial", "loteamento",
 )
 _AREA_GP_MIN = 2000
 _AREA_GP_MAX = 100_000  # corta mega-infra (não é prédio residencial)
