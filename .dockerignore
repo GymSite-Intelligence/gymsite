@@ -38,3 +38,10 @@ eval/
 scratch/
 tools/__pycache__/
 agents/__pycache__/
+
+# Auditoria (relatórios de scan contêm secrets detectados — NÃO ir pra imagem)
+Auditoria/
+audit-reports/
+*.zip
+*.html
+Prints/
