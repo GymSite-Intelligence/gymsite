@@ -382,6 +382,8 @@ export interface CandidatoJSON {
   motivo: string
   polos_geradores: string[]
   street_view_url?: string
+  /** true = coords vieram do geocode do endereço; false/undefined = fallback centro-cidade. */
+  geocoded?: boolean
   estimativa_visibilidade?: string
   avenida_principal?: boolean
   qualidade_sinal?: string
@@ -725,6 +727,7 @@ function mapCandidatoRow(row: Record<string, unknown>): CandidatoJSON {
     polos_geradores: Array.isArray(polos) ? (polos as string[]) : [],
     street_view_url:
       typeof row.street_view_url === 'string' ? row.street_view_url : undefined,
+    geocoded: typeof row.geocoded === 'boolean' ? row.geocoded : undefined,
     estimativa_visibilidade:
       typeof row.estimativa_visibilidade === 'string'
         ? row.estimativa_visibilidade

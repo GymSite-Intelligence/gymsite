@@ -40,10 +40,11 @@ import { AssistentePage } from '@/routes/AssistentePage'
 import AdminParceirosPage from '@/routes/AdminParceirosPage'
 import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
 import { PlanosListPage } from '@/routes/PlanosListPage'
+import { ThemeLabPage } from '@/routes/ThemeLabPage'
 import type { Veredito } from '@/types/domain'
 
 // Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
-const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade', '/pdf-smoke', '/acesso'])
+const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade', '/pdf-smoke', '/acesso', '/theme-lab'])
 
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -313,10 +314,17 @@ const execucaoRoute = createRoute({
   }),
 })
 
+const themeLabRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/theme-lab',
+  component: ThemeLabPage,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
   privacidadeRoute,
+  themeLabRoute,
   indexRoute,
   relatoriosListRoute,
   novoRelatorioRoute,
