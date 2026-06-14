@@ -2,7 +2,7 @@
  * Demanda futura datada (Apêndice B) — obras residenciais no raio → moradores →
  * captura fitness em T+24. Lidera pelo refinado (site/instagram/PDF da construtora).
  */
-import { Building2, CalendarClock, Dumbbell, ExternalLink, Users } from 'lucide-react'
+import { Building2, CalendarClock, ExternalLink, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DemandaFuturaJSON } from '@/hooks/useRelatorioDetail'
 
@@ -57,13 +57,13 @@ export function DemandaFuturaCard({ block }: { block: DemandaFuturaJSON }) {
               <th className="px-3 py-2">Bairro</th>
               <th className="px-3 py-2 text-right">Unidades</th>
               <th className="px-3 py-2">Entrega</th>
-              <th className="px-3 py-2">Fitness</th>
+              <th className="px-3 py-2 text-right">Captura est.</th>
               <th className="px-3 py-2">Confiança</th>
             </tr>
           </thead>
           <tbody>
             {obras.map((o, i) => (
-              <tr key={i} className="border-t">
+              <tr key={i} className={cn('border-t', o.provavel_residencial === false && 'opacity-50')}>
                 <td className="px-3 py-2">
                   <span className="font-medium">{o.empreendimento || o.construtora || '—'}</span>
                   {o.fonte_url && (
@@ -75,13 +75,13 @@ export function DemandaFuturaCard({ block }: { block: DemandaFuturaJSON }) {
                 </td>
                 <td className="px-3 py-2 text-muted-foreground">{o.bairro || '—'}</td>
                 <td className="px-3 py-2 text-right">
-                  {o.unidades_est}
+                  {Math.round(o.unidades_est ?? 0)}
                   <span className="ml-1 text-[10px] text-muted-foreground">
                     {o.unidades_fonte === 'lancamento_exato' ? '✓exato' : 'proxy'}
                   </span>
                 </td>
                 <td className="px-3 py-2">{o.entrega || '—'}</td>
-                <td className="px-3 py-2">{o.amenidade_fitness ? <Dumbbell className="size-4 text-veredito-aprovado" /> : '—'}</td>
+                <td className="px-3 py-2 text-right">{o.captura_est != null ? `~${Math.round(o.captura_est)}` : '—'}</td>
                 <td className={cn('px-3 py-2 font-medium', CONF_STYLE[o.confianca ?? 'baixa'])}>
                   {o.confianca ?? 'baixa'}
                 </td>
@@ -94,7 +94,7 @@ export function DemandaFuturaCard({ block }: { block: DemandaFuturaJSON }) {
       <p className="text-[11px] text-muted-foreground">
         {block.refinadas ? `${block.refinadas} obras refinadas via site/instagram/PDF da construtora (auditado). ` : ''}
         Unidades por proxy área÷75 até refino A4. Captura = moradores × penetração × market share.
-        Estimativa de prospecção — {block.fonte}.
+        Linhas esmaecidas = provavelmente não-residencial (proxy, fora do gate). Estimativa de prospecção — {block.fonte}.
       </p>
     </div>
   )
