@@ -528,6 +528,46 @@ def _is_tool_hallucination_error(exc: BaseException) -> bool:
     return msg.startswith("Tool '") and "not found" in msg
 
 
+def _supabase_writer_client():
+    url = (os.getenv("SUPABASE_URL") or "").strip()
+    key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
+           or os.getenv("SUPABASE_KEY") or "").strip()
+    return create_client(url, key) if url and key else None
+
+
+def _update_demanda_row(relatorio_id: str, demanda: dict) -> bool:
+    """Atualiza relatorio_outputs.demanda_futura. True se afetou linha."""
+    cli = _supabase_writer_client()
+    if cli is None:
+        return False
+    try:
+        res = (cli.table("relatorio_outputs").update({"demanda_futura": demanda})
+               .eq("relatorio_id", relatorio_id).execute())
+        return bool(getattr(res, "data", None))
+    except Exception:
+        return False
+
+
+async def _refinar_demanda_async(relatorio_id: str, cidade: str, uf: str, bairro: str) -> None:
+    """Refino A4 auditado (grounding) FORA do hot-path; atualiza a linha quando o
+    relatorio_outputs existir (poll ~5min). Nunca quebra o pipeline."""
+    try:
+        from tools.demanda_futura_tools import demanda_futura_detalhada
+
+        det = await asyncio.to_thread(
+            demanda_futura_detalhada, cidade, uf, bairro=bairro, top_n=3
+        )
+        if not det or det.get("status") != "ok":
+            return
+        for _ in range(30):  # espera o relatório salvar a linha, então atualiza
+            await asyncio.sleep(10)
+            if await asyncio.to_thread(_update_demanda_row, relatorio_id, det):
+                logger.info("demanda_futura refinada (async) aplicada rel=%s", relatorio_id)
+                return
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("refino demanda async falhou rel=%s: %s", relatorio_id, exc)
+
+
 async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioInput) -> dict:
     """Executa o pipeline ADK e persiste custos. Retorna summary."""
     from google.adk.runners import Runner
@@ -568,13 +608,17 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
                 uf,
                 enrichment_ctx,
             )
-            # Demanda futura datada (CNO grande porte + refino A4 das top obras).
-            # Guardado: nunca quebra o pipeline; ausência → ignora no relatório.
+            # Demanda futura datada (CNO grande porte). HOT-PATH = proxy rápido
+            # (top_n=0, ZERO grounding) → não atrasa o relatório. O refino A4 auditado
+            # (site/instagram/PDF da construtora) roda ASSÍNCRONO e atualiza a linha depois.
             try:
                 from tools.demanda_futura_tools import demanda_futura_detalhada
 
                 enrichment_ctx["demanda_futura"] = demanda_futura_detalhada(
-                    payload.cidade, uf, bairro=payload.bairro, top_n=3,
+                    payload.cidade, uf, bairro=payload.bairro, top_n=0,
+                )
+                asyncio.create_task(
+                    _refinar_demanda_async(relatorio_id, payload.cidade, uf, payload.bairro)
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("demanda_futura falhou (segue sem): %s", exc)
