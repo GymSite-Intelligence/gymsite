@@ -222,7 +222,7 @@ Ordem: **B → A-CNO → D → C** (A-IPTU gated).
 | B — Demanda futura datada | 🟢 **VIVO (2026-06-14)** — CNO fresco (RFB maio/2026) no banco via `rfb_cno_loader`; demanda futura acende nacional (Fortaleza 359 obras/janela 2026-2028, SP 640, Curitiba 416…). Crosswalk RFB↔IBGE 5570 (`municipio_rf_ibge`) destravou todas as cidades. Falta só refino A4 + integração A7/A9 |
 | A-CNO — vetores de obra | ⏳ **próximo** (funciona com dado histórico) |
 | D — anéis competitivos | ⏳ (precede F2 schema; sem dependência CNO) |
-| C — leads condominial | ⏳ (subproduto B — também dependente de CNO fresco) |
+| C — leads condominial | 🟢 **construído** — `leads_condominial_tools.py`: gatilho amenidade fitness (refino) → CNPJ incorporadora → RFB QSA + **Apollo decisor** → `oportunidades_prospeccao`. 4 testes (deps injetadas). Prioridade por janela de compra de equipamento |
 | A-IPTU — valor venal | 🔒 gated (CKAN municipal) |
 
 **Reprioritização (pós-achado vintage):** A-CNO + D primeiro (não dependem de futuro/
