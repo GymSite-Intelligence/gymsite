@@ -247,8 +247,14 @@ NÃO baixa — igual sandbox). Rodar da máquina BR do usuário OU Cloud Run `sa
 `python -m tools.rfb_cno_loader`. Download não testável no sandbox (geo-block); parser
 validado por fixture.
 
-**Pendente Fase B:** (1) **rodar `rfb_cno_loader` de BR** → dado fresco no banco (destrava
-demanda futura real); (2) `refinar_demanda_via_lancamento` (A4 grounding → unidades
-exatas/tipologia/amenidade, alimenta o hook `unidades_exatas`); (3) integração A7/A9.
+**Refino A4 + gate residencial — CONSTRUÍDO 2026-06-14:** `refino_lancamento_tools.py`
+(grounding Vertex → unidades exatas/tipologia/amenidade; match cep+número=alta;
+só alta sobrescreve proxy) + `demanda_futura_detalhada` (por-obra, top_n refinadas,
+flag `provavel_residencial`). 8+1 testes. **Lição:** proxy área é limite superior
+ruidoso (infra/obra pública vazam); o refino A4 + flag residencial é o gate de confiança.
+Exclusões reforçadas + 11k linhas infra limpas do banco.
+
+**Pendente Fase B:** integração **A7/A9** no relatório (bloco "Demanda futura" usando
+`demanda_futura_detalhada`, liderando pelo refinado). Refino roda nas top_n por custo.
 
 *Criado 2026-06-14. Atualizado conforme cada fase fecha com teste verde.*
