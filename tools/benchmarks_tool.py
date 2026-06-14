@@ -128,12 +128,29 @@ def _sanitizar_benchmark_payload(data: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _ler_snapshot_arquivo() -> dict | None:
-    """Snapshot unificado (setorial + sector_listed) do batch."""
-    if not SNAPSHOT_PATH.exists():
-        return None
+def _ler_snapshot_supabase() -> dict | None:
+    """Snapshot do armazém compartilhado (prod) quando habilitado."""
     try:
-        data = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+        from tools.market_store import fetch_snapshot, supabase_enabled
+
+        if supabase_enabled():
+            return fetch_snapshot("benchmark_snapshots")
+    except Exception:
+        return None
+    return None
+
+
+def _ler_snapshot_arquivo() -> dict | None:
+    """Snapshot unificado (setorial + sector_listed): Supabase primeiro, depois disco."""
+    data = _ler_snapshot_supabase()
+    if data is None:
+        if not SNAPSHOT_PATH.exists():
+            return None
+        try:
+            data = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+    try:
         if not isinstance(data, dict):
             return None
         ts_raw = data.get("gerado_em") or data.get("_cached_at_iso")

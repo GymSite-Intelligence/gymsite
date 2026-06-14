@@ -1,0 +1,65 @@
+# Batch semanal de dados de mercado — canal 1 (CVM/SINAPI) + canal 2 (benchmarks)
+# + market_bundles → grava em Supabase (public.market_bundles / market_snapshots).
+# Substitui o cron de VM. Custo: GitHub Actions free tier.
+# Storage: Supabase (API lê de lá em prod, sem rebuild de imagem).
+
+name: Weekly Market Batch
+
+on:
+  schedule:
+    # Domingo 06:00 UTC (~03:00 BRT)
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+    inputs:
+      only_cvm:
+        description: "Só CVM + benchmarks (sem bundles)"
+        type: boolean
+        default: false
+
+jobs:
+  weekly-batch:
+    name: Build market bundles + snapshots → Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run weekly batch
+        env:
+          MARKET_BUNDLE_SUPABASE: "1"
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          SEARCHAPI_KEY: ${{ secrets.SEARCHAPI_KEY }}
+        run: |
+          ARGS="--skip-enrichment"
+          if [ "${{ github.event.inputs.only_cvm }}" = "true" ]; then
+            ARGS="$ARGS --only-cvm"
+          fi
+          python scripts/batch/run_weekly_market_batch.py $ARGS
+
+      - name: Upload bundles artifact (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-bundles
+          path: |
+            data/market_bundles/*.json
+            metrics/cache/benchmark_snapshots.json
+          retention-days: 7
+          if-no-files-found: ignore
