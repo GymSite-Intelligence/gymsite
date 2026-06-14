@@ -1,14 +1,12 @@
-# PLAN - Infra / Hosting / DNS
+# PLAN — Infra / Hosting / DNS
 
-> Categoria: dominio, hospedagem, DNS e CDN do GymSite.
-> Atualizado em 2026-06-13.
-> Nota de privacidade: dados pessoais do titular (CPF/endereco/telefone) NAO sao registrados aqui.
+Categoria: dominio, hospedagem, DNS e CDN do GymSite. Atualizado em 2026-06-13. Nota de privacidade: dados pessoais do titular (CPF/endereco/telefone) NAO sao registrados aqui.
 
 ## Objetivo
 
 Manter o dominio do produto registrado, apontado corretamente e servido com hospedagem + CDN, base para o site/app e e-mail.
 
-## Dominio (Registro.br) - verificado
+## Dominio (Registro.br) — verificado
 
 - Dominio: gymsite.com.br
 - Status: Publicado
@@ -17,7 +15,7 @@ Manter o dominio do produto registrado, apontado corretamente e servido com hosp
 - Servidores DNS apontados: ns1080.hostgator.com.br e ns1081.hostgator.com.br
 - Conclusao: o DNS autoritativo e a HostGator (NAO a Cloudflare). Confirmado tambem pelo lado Cloudflare: gymsite.com.br nao e uma zona na conta Cloudflare.
 
-## Hospedagem (HostGator) - verificado
+## Hospedagem (HostGator) — verificado
 
 - Produto: Plano M (compartilhado)
 - Dominio principal: gymsite.com.br
@@ -25,12 +23,12 @@ Manter o dominio do produto registrado, apontado corretamente e servido com hosp
 - Servidor/cPanel: host br1080 | IP do servidor: 69.49.241.85
 - Subdominios: nenhum cadastrado manualmente (apenas os de servico do cPanel)
 
-## DNS (cPanel Zone Editor) - verificado em 2026-06-13
+## DNS (cPanel Zone Editor) — verificado em 2026-06-13
 
 Registros relevantes da zona gymsite.com.br (segredos como chaves DKIM completas nao reproduzidos aqui):
 
 | Nome | Tipo | Valor | TTL |
-|------|------|-------|-----|
+|---|---|---|---|
 | gymsite.com.br. | A | 69.49.241.85 (HostGator) | 14400 |
 | www.gymsite.com.br. | CNAME | gymsite-3p0.pages.dev (Cloudflare Pages) | 14400 |
 | mail.gymsite.com.br. | A | 69.49.241.85 | 14400 |
@@ -45,10 +43,28 @@ Tambem existem os subdominios padrao do cPanel (cpanel, webmail, webdisk, ftp, a
 
 ## Alteracoes aplicadas em 2026-06-13 (com autorizacao)
 
-1. DMARC: criado o registro TXT _dmarc.gymsite.com.br com politica de MONITORAMENTO (p=none) e relatorios agregados para dmarc@gymsite.com.br. Proximo passo (apos analisar relatorios): endurecer para p=quarantine e depois p=reject.
-2. Redirect canonico: criado redirect 301 PERMANENTE do apex gymsite.com.br -> https://www.gymsite.com.br (opcao 'nao redirecionar www', para NAO afetar www que e servido pelo Cloudflare Pages). Confirmado pelo cPanel: "'/' on 'gymsite.com.br' redirects to 'https://www.gymsite.com.br'".
+- DMARC: criado o registro TXT _dmarc.gymsite.com.br com politica de MONITORAMENTO (p=none) e relatorios agregados para dmarc@gymsite.com.br. Proximo passo (apos analisar relatorios): endurecer para p=quarantine e depois p=reject.
+- Redirect canonico: criado redirect 301 PERMANENTE do apex gymsite.com.br -> https://www.gymsite.com.br (opcao 'nao redirecionar www', para NAO afetar www que e servido pelo Cloudflare Pages). Confirmado pelo cPanel: "'/' on 'gymsite.com.br' redirects to 'https://www.gymsite.com.br'".
 
-## CDN / Edge (Cloudflare Pages) - VERIFICADO no painel Cloudflare em 2026-06-13
+## SSL / TLS (AutoSSL HostGator) — VERIFICADO em 2026-06-13
+
+Contexto: na verificacao inicial, o AutoSSL constava com erro da ultima execucao ("does not resolve to any IP addresses") — diagnostico defasado, anterior a estabilizacao do DNS. Validacao via DNS-over-HTTPS confirmou que o apex resolve publicamente (A 69.49.241.85, NS HostGator). Re-executado o AutoSSL (com autorizacao).
+
+Resultado (9/9 dominios "AutoSSL Domain Validated", expiram em 12/09/2026, renovacao automatica):
+
+| Dominio | Status | Expira |
+|---|---|---|
+| gymsite.com.br (apex) | VALIDADO | 12/09/2026 |
+| www.gymsite.com.br | VALIDADO (renova junto com o apex) | 12/09/2026 |
+| mail.gymsite.com.br | VALIDADO | 12/09/2026 |
+| cpanel.gymsite.com.br | VALIDADO | 12/09/2026 |
+| webmail.gymsite.com.br | VALIDADO | 12/09/2026 |
+| webdisk / cpcontacts / cpcalendars / autodiscover | VALIDADO | 12/09/2026 |
+
+- Efeito: o apex agora tem certificado TLS valido, entao o redirect 301 https://gymsite.com.br -> https://www.gymsite.com.br resolve SEM erro de certificado.
+- Nota: o HostGator tambem emitiu cert para www, mas o trafego de www continua servido pelo Cloudflare Pages (CNAME), que usa o proprio certificado. A redundancia e inofensiva.
+
+## CDN / Edge (Cloudflare Pages) — VERIFICADO no painel Cloudflare em 2026-06-13
 
 - Conta Cloudflare: marcelo.rosas@vectracargo.com.br.
 - Projeto Pages que serve o site: nome 'gymsite' (subdominio padrao gymsite-3p0.pages.dev).
@@ -62,24 +78,24 @@ Tambem existem os subdominios padrao do cPanel (cpanel, webmail, webdisk, ftp, a
 - www.gymsite.com.br -> CNAME gymsite-3p0.pages.dev (projeto Pages 'gymsite') -> app em producao.
 - Host canonico: www.
 
-## E-mail - verificado (via DNS)
+## E-mail — verificado (via DNS)
 
 - E-mail do dominio gymsite.com.br: provedor Titan (mx1/mx2.titan.email, SPF include spf.titan.email, DKIM titan1, DMARC p=none).
-- E-mail outbound de prospeccao (Apollo) usa OUTRO dominio (vectracargo.com.br) - ver PLAN_APOLLO.md. Sao fluxos distintos.
+- E-mail outbound de prospeccao (Apollo) usa OUTRO dominio (vectracargo.com.br) — ver PLAN_APOLLO.md. Sao fluxos distintos.
 
 ## Riscos / pontos de atencao
 
-1. DMARC esta em p=none (monitoramento). Nao protege contra spoofing ainda — endurecer apos validar relatorios.
-2. O redirect do apex roda no HostGator; depende do apex continuar apontando para 69.49.241.85. Se o apex for movido, revisar.
-3. E-mail do dominio (Titan) e e-mail de prospeccao (Apollo/vectracargo) sao distintos — manter SPF/DKIM/DMARC de cada dominio separados.
-4. Renovacoes: dominio (13/06/2028) e hospedagem (13/12/2026) tem datas diferentes — monitorar.
+- DMARC esta em p=none (monitoramento). Nao protege contra spoofing ainda — endurecer apos validar relatorios.
+- O redirect do apex roda no HostGator; depende do apex continuar apontando para 69.49.241.85. Se o apex for movido, revisar.
+- E-mail do dominio (Titan) e e-mail de prospeccao (Apollo/vectracargo) sao distintos — manter SPF/DKIM/DMARC de cada dominio separados.
+- Renovacoes: dominio (13/06/2028), hospedagem (13/12/2026) e certificados TLS (12/09/2026, auto-renovam) tem datas diferentes — monitorar.
 
 ## Pendencias / proximos passos
 
-1. Validar o redirect apex->www em producao (testar http e https no apex).
-2. Acompanhar relatorios DMARC e endurecer a politica (quarantine -> reject).
-3. Garantir certificado TLS valido no apex (para o 301 funcionar via https).
-4. Registrar credenciais/acessos em cofre proprio do usuario (nao neste repo).
+- [x] Garantir certificado TLS valido no apex (para o 301 funcionar via https) — RESOLVIDO via AutoSSL em 2026-06-13.
+- [ ] Validar o redirect apex->www em producao (testar http e https no apex) — requer teste manual do usuario (CORS impede teste automatizado daqui).
+- [ ] Acompanhar relatorios DMARC e endurecer a politica (quarantine -> reject).
+- [ ] Registrar credenciais/acessos em cofre proprio do usuario (nao neste repo).
 
 ## Constraints
 
