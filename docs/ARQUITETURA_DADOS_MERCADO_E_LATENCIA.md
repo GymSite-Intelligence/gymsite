@@ -14,6 +14,44 @@ Relacionado: [`MARKET_ATLAS_MASTER_PLAN.md`](./MARKET_ATLAS_MASTER_PLAN.md), [`G
 
 ---
 
+## 0. Status de implementação (auditado 2026-06-14)
+
+Este documento foi escrito como **plano** (2026-06-02). Auditoria de código mostra que **Fase A está construída, Fase B parcial e partes da Fase C já existem** — o texto abaixo descreve a arquitetura-alvo; aqui o estado real.
+
+| Componente | Estado | Evidência |
+|------------|--------|-----------|
+| `tools/ckan_client.py`, `tools/cvm_listed_metrics.py`, `tools/market_bundle.py`, `tools/sinapi_indices.py` | ✅ existe | módulos no repo |
+| `scripts/batch/{discover_ckan_catalog,build_market_bundles,update_benchmark_snapshots,update_capex_indices}.py` | ✅ existe | batch completo |
+| Bundles materializados | ✅ 14 em `data/market_bundles/*.json` | Fortaleza×7, Curitiba, Brasília, João Pessoa, Niterói… |
+| Snapshots/cache | ✅ `metrics/cache/{benchmark_snapshots,capex_indices,sector_listed}.json` + `cvm/itr_*.zip` 2020–2026 | CVM real baixado |
+| A0 loader + inject | ✅ `carregar_market_bundle` (A0), `inject_market_bundle_context` (`api.py`) | trilha feliz ligada |
+| Hierarquia snapshot→grounding→fallback | ✅ `benchmarks_tool.py` | `_ler_snapshot_arquivo`→`_buscar_via_grounding`→`DEFAULTS_FALLBACK` |
+| DAG Airflow + crontab | ✅ existe (era "Fase C/adiar") | `scripts/batch/dags/`, `cron/` |
+| Franquias / legal_fees curados | ✅ pilot | `data/franchise_curated/`, `data/legal_fees_pilot/` |
+
+### Dois canais de aquisição de métricas (verificado 2026-06-14)
+
+Métricas entram por **dois canais ortogonais** — não confundir (são papéis diferentes):
+
+| Canal | Fonte | Tool | Métricas | Consumidor | Estado |
+|-------|-------|------|----------|------------|--------|
+| **1 — Dados abertos** | CVM ITR / IBGE / CKAN | `cvm_listed_metrics`, `ibge_tools`, `ckan_client` | SMFT3 **financeiro** (`margem_ebitda_pct` 47.8, `divida_liquida_ebitda` 1.48); pop/renda | `_alertas_vs_sector_listed` (comparação vs rede listada) | financeiro ✅; operacional-listado (ARPU/churn/alunos) via RI overlay = **25%** (só `alunos_ativos`) |
+| **2 — Benchmarking setorial** | ACAD/IHRSA/HFA via Search Grounding → fallback | `benchmarks_tool` | **operacional setor**: `ticket_por_modelo` (=ARPU), `churn_mensal_por_modelo`, `inadimplencia_por_modelo`, freq. semanal | `calcular_viabilidade_3_cenarios` (**INPUT do modelo A4**) | ✅ **~100%** (mid R$149, churn .07; sanos) |
+
+**Correção de enquadramento:** o operacional que o **modelo de viabilidade usa** (ticket/churn por modelo) vem do **canal 2** e está completo/saneado. Os "25%" referem-se só ao **canal 1 / SMFT3-listado** (enriquecimento de comparação, secundário) — não é input do modelo. O alerta `sector_kpi_*` monitora o canal 1.
+
+**Saúde do canal 2 (corrigido 2026-06-14):** snapshot estava expirado (11d > TTL 7d) → runtime caía no grounding de 2025-11; e `setorial` tinha ticket alucinado (premium R$1500). `update_benchmark_snapshots.py --force-grounding` refrescou: `gerado_em` 2026-06-14, tickets sanos. O guard `TICKET_SANITY_BANDS` capturou nova alucinação ao vivo (premium R$1375 → capado R$299,90) — guard validado, mantém. Cron de fato não roda sozinho ainda (refresh manual).
+
+### Gaps reais (reclassificados — não são "plano por fazer", são lacunas de dado/refino)
+
+1. **KPIs operacionais (RI) — agora MONITORADOS (2026-06-14).** CVM ITR só traz financeiro (`margem_ebitda_pct` 47.8 ✅, `divida_liquida_ebitda` ✅); ARPU/churn/alunos vivem no RI (doc proíbe scrape primário). Adicionado caminho de **curadoria #2**: `metrics/cache/sector_listed_ri_overlay.json` preenche nulos sem sobrescrever CVM. Hoje `alunos_ativos=5,2 mi` (1T26, fonte RI) → cobertura **25%**. `sector_kpi_coverage()`/`sector_kpi_alertas()` (cvm_listed_metrics) + alerta em `financial_tools._alertas_vs_sector_listed` + `sector_kpi_gaps` no bundle/build **expõem a lacuna (não silenciam)** e apontam a fonte pra fechar 100%. `arpu_brl`/`churn_pct`/`capex_por_unidade_brl` pendentes (não divulgados em release público — preencher do RI deck). Não bloqueia trilha feliz.
+2. **Renda-bairro = curadoria pilot**, não DataStore dinâmico. `renda_media:4850, fonte: curadoria_pilot_referencia_ipece_simda` (só `data/bairro_renda_pilot/`). DoD #3 atendido por valor curado; fetch municipal automático = Fase B aberta.
+3. **Competição/aluguel = trilha viva (RESOLVIDO 2026-06-14).** Antes: bundle batch nascia `stale:True` por `competicao_osm_ausente` (batch rodou sem chave Maps) → `inject` nunca dava `skip_deep_research` → **DR sempre rodava**. Fix: `compute_bundle_stale` deixou de contar competição/aluguel (são trilha 3, preenchidas no relatório por A3/enrichment); novo `live_trail_pending()` + `LIVE_TRAIL_FIELDS`; `inject_market_bundle_context` ignora missing de trilha-viva ao decidir `skip_deep_research`. 8 bundles destravaram. Regressão travada em `tools/test_fase_c.py`.
+4. **4 bundles expirados — RESOLVIDO (2026-06-14).** altamira, anápolis, brasília, eusébio rebuildados com `refresh_enrichment=True`; agora `stale=False`, `competicao_local.status=ok` (chave Maps corrigida popula competição no batch), `live_trail_pending=[]`. Frota: **0/14 stale** (era 8). Os outros 8 seguem não-stale com competição resolvida live no relatório (rebuild opcional no batch semanal preenche no batch também).
+5. **Slug com acento:** `bundle_path` usa bairro cru → `fortaleza_eusébio_CE.json`; lookup sem acento (`eusebio`) não casa. Normalizar slug (strip de acentos) = backlog pequeno.
+
+---
+
 ## 1. Problema (confirmado em logs e código)
 
 | Métrica | Faixa observada | Causa principal |
@@ -235,7 +273,14 @@ Alinhado ao [Market Atlas F0](MARKET_ATLAS_MASTER_PLAN.md):
 | **F2** | Batch semanal: `discover_ckan` + `build_market_bundles` + CVM snapshots | A0 deixa de ser pesquisador |
 | **F3** | Pipeline enxuto: A4/A6 determinísticos + narrativa compacta | Meta tokens/tempo |
 
-**Agendamento:** `cron` na VM (`0 3 * * 0`) → depois DAG Airflow/Composer se a equipe já usar GCP Composer. Mesma função Python nos dois casos.
+**Agendamento (decidido 2026-06-14): GitHub Actions + Supabase, custo US$0** — supera o cron de VM (que custaria ~US$6-8/mês 24/7 p/ job semanal). Supabase tem `pg_cron`/`pg_net` mas **não roda Python** (só agenda/dispara); então compute = GitHub Actions (free tier), storage = Supabase.
+
+- **Compute:** `.github/workflows/weekly-market-batch.yml` (cron `0 6 * * 0`, ~03:00 BRT + `workflow_dispatch`) roda `run_weekly_market_batch.py` com `--skip-enrichment` (sem Playwright no CI; competição/aluguel são trilha viva, resolvidas no relatório).
+- **Storage:** tabelas `public.market_bundles` + `public.market_snapshots` (JSONB, migração `db/migrations/20260614_market_store.sql`). `tools/market_store.py` (thin, guarded) + `market_bundle.py`/`benchmarks_tool.py` leem Supabase-first, fallback FS. Opt-in por env `MARKET_BUNDLE_SUPABASE=1`.
+- **pg_cron:** job `market_bundles_mark_expired` (`0 4 * * *`) marca expirado via SQL — rede de segurança caso o batch atrase.
+- **Dois lugares precisam da flag+creds:** (a) GitHub Actions (escreve — 6 secrets), (b) env da API Cloud Run (lê — `MARKET_BUNDLE_SUPABASE=1`; SUPABASE_URL/service key a API já tem).
+
+VM/Airflow ficam como opção futura se a equipe migrar pra Composer; mesma função Python.
 
 ```
 VM (southamerica-east1)
@@ -330,28 +375,29 @@ supabase/migrations/
 
 ## 10. Plano de implementação
 
-### Fase A — Alto ROI (1–2 semanas)
+### Fase A — Alto ROI (1–2 semanas) ✅ CONSTRUÍDA
 
-- [ ] `tools/ckan_client.py` + `discover_ckan_catalog.py`
-- [ ] `tools/cvm_listed_metrics.py` + fixtures de teste
-- [ ] `scripts/batch/update_benchmark_snapshots.py`
-- [ ] `benchmarks_tool`: snapshot → grounding → fallback
-- [ ] `scripts/batch/build_market_bundles.py` (IBGE + cache local + CVM + catalog)
-- [ ] `api.py`: injetar bundle como `inject_cache_context` (flag `A0_CONTEXT_SOURCE`)
-- [ ] `agents/a0`: tool `carregar_market_bundle` + DR fallback
-- [ ] Testes sem rede (fixtures CVM/CKAN)
+- [x] `tools/ckan_client.py` + `discover_ckan_catalog.py`
+- [x] `tools/cvm_listed_metrics.py` + fixtures de teste
+- [x] `scripts/batch/update_benchmark_snapshots.py`
+- [x] `benchmarks_tool`: snapshot → grounding → fallback
+- [x] `scripts/batch/build_market_bundles.py` (IBGE + cache local + CVM + catalog)
+- [x] `api.py`: injetar bundle (`inject_market_bundle_context`, flag `A0_CONTEXT_SOURCE`)
+- [x] `agents/a0`: tool `carregar_market_bundle` + DR fallback
+- [x] Testes sem rede (`tools/test_fase_c.py`)
 
-### Fase B — Bairro + CAPEX obra
+### Fase B — Bairro + CAPEX obra (parcial)
 
-- [ ] DataStore municipal (Fortaleza, SP pilot) → `demografia.bairro`
-- [ ] SINAPI por UF → `capex_indices` + `fonte_obra` em `_calcular_capex_detalhado`
+- [~] DataStore municipal → `demografia.bairro`: **curadoria pilot** (`data/bairro_renda_pilot/`), fetch dinâmico pendente
+- [x] SINAPI por UF → `capex_indices` + `fonte_obra` em `_calcular_capex_detalhado` (`tools/sinapi_indices.py`, tabela 2296)
 
-### Fase C — Opcional
+### Fase C — Opcional (parcial)
 
-- [ ] Franquias curadas / scrape experimental
-- [ ] `legal_fees` municipal
-- [ ] DAG Airflow espelhando cron VM
-- [ ] Golden eval sem DR (`A0_CONTEXT_SOURCE=ckan_bundle` only)
+- [x] Franquias curadas (`data/franchise_curated/`) / scrape experimental pendente
+- [x] `legal_fees` municipal (pilot — `data/legal_fees_pilot/`)
+- [x] DAG Airflow espelhando cron VM (`scripts/batch/dags/gym_market_weekly_dag.py`)
+- [~] Golden eval sem DR: `scripts/batch/golden_bundle_a0_gate.py` existe; cobertura a ampliar
+- [ ] KPIs operacionais CVM (ARPU/churn/alunos) — exige RI parsing (gap #1)
 
 ### Definition of Done (produto)
 
@@ -406,4 +452,4 @@ Não usar DR para: população Censo, renda municipal, KPI SMFT3, aluguel median
 
 ---
 
-*Última atualização: 2026-06-02 — documento criado para consolidar arquitetura discutida em sessão Cursor + PRDs benchmarks/CAPEX.*
+*Última atualização: 2026-06-14 — auditoria de implementação (seção 0) + fix de classificação trilha-viva (`compute_bundle_stale`/`inject_market_bundle_context`). Original 2026-06-02: arquitetura discutida em sessão Cursor + PRDs benchmarks/CAPEX.*
