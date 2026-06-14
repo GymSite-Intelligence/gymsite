@@ -7,9 +7,8 @@
  * spec F2); clicar na barra abre a ficha da etapa.
  */
 import { useMemo } from 'react'
-import { Badge } from '@/components/ui/badge'
 import type { Tarefa } from '@/hooks/usePlaybook'
-import { CATEGORIA_COR, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
+import { CategoriaBadge } from '@/components/execucao/PlaybookKanban'
 
 const DIA_MS = 24 * 60 * 60 * 1000
 
@@ -118,12 +117,7 @@ export function PlaybookTimeline({
                   className="group flex items-center gap-2 rounded px-1 py-0.5 text-left transition-colors hover:bg-accent/50"
                 >
                   <span className="flex w-[212px] shrink-0 items-center gap-1.5">
-                    <Badge
-                      variant="outline"
-                      className={`px-1 text-[9px] ${CATEGORIA_COR[t.categoria] ?? CATEGORIA_COR.OUTRO}`}
-                    >
-                      {(CATEGORIA_LABEL[t.categoria] ?? t.categoria).slice(0, 5)}
-                    </Badge>
+                    <CategoriaBadge categoria={t.categoria} compact />
                     <span
                       className={`truncate text-xs ${concluida ? 'text-muted-foreground line-through' : ''}`}
                       title={t.titulo}

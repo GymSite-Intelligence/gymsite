@@ -123,6 +123,7 @@ class TarefaCreateRequest(BaseModel):
 class TarefaEditRequest(BaseModel):
     titulo: Optional[str] = Field(None, max_length=200)
     descricao: Optional[str] = Field(None, max_length=2000)
+    criterio_verificacao: Optional[str] = Field(None, max_length=2000, description="Critério de aceite (Check/SIPOC)")
     categoria: Optional[str] = None
     custo_planejado: Optional[int] = Field(None, ge=0, description="Centavos")
     data_inicio: Optional[str] = None
@@ -133,6 +134,8 @@ class TarefaEditRequest(BaseModel):
 
 class ChecklistCreateRequest(BaseModel):
     descricao: str = Field(..., min_length=1, max_length=300)
+    criterio_aceite: Optional[str] = Field(None, max_length=500)
+    responsavel_pessoa_id: Optional[str] = None
 
 
 ANEXO_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -277,7 +280,22 @@ def excluir_tarefa(tarefa_id: str, request: Request):
 def adicionar_checklist(tarefa_id: str, data: ChecklistCreateRequest, request: Request):
     user_id = _require_user(request)
     try:
-        return playbook_service.adicionar_checklist_item(_sb(), tarefa_id, user_id, data.descricao)
+        return playbook_service.adicionar_checklist_item(
+            _sb(), tarefa_id, user_id, data.descricao,
+            criterio_aceite=data.criterio_aceite,
+            responsavel_pessoa_id=data.responsavel_pessoa_id,
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/tarefas/{tarefa_id}/sugerir-passos")
+def sugerir_passos(tarefa_id: str, request: Request):
+    user_id = _require_user(request)
+    try:
+        return playbook_service.sugerir_passos(_sb(), tarefa_id, user_id)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:

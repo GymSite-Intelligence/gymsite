@@ -6,8 +6,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
-import { CalendarDays, Plus, Users, Wallet } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { AlertTriangle, CalendarDays, Gauge, Plus, Users, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -153,39 +152,128 @@ export function ProjetoExecucaoPage() {
   return (
     <div className="flex h-full flex-col gap-4 p-4 md:p-6">
       <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-semibold">{playbook.nome}</h1>
-          {playbook.tarefas_atrasadas > 0 && (
-            <Badge variant="outline" className="border-red-200 bg-red-50 text-red-700">
-              {playbook.tarefas_atrasadas} etapa(s) atrasada(s)
-            </Badge>
-          )}
-        </div>
+        <h1 className="text-xl font-semibold">{playbook.nome}</h1>
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-36 overflow-hidden rounded-full bg-muted">
+        {/* KPI strip Geo-Intel — progresso, prazo, orçamento, atrasadas */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {/* Progresso */}
+          <div
+            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
+            style={{ borderLeft: '3px solid var(--chart-1)' }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Progresso
+              </span>
+              <Gauge size={15} style={{ color: 'var(--chart-1)' }} />
+            </div>
+            <span className="text-2xl font-semibold leading-none tabular-nums">
+              {playbook.percentual_concluido}%
+            </span>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${playbook.percentual_concluido}%` }}
+                className="h-full rounded-full transition-all"
+                style={{ width: `${playbook.percentual_concluido}%`, background: 'var(--chart-1)' }}
               />
             </div>
-            <span className="font-medium text-foreground">
-              {playbook.percentual_concluido}% concluído
-            </span>
-            <span>
-              ({playbook.tarefas_concluidas}/{playbook.total_tarefas} etapas)
+            <span className="text-xs text-muted-foreground">
+              {playbook.tarefas_concluidas}/{playbook.total_tarefas} etapas
             </span>
           </div>
-          {conclusao && (
-            <span className="inline-flex items-center gap-1">
-              <CalendarDays className="h-4 w-4" /> Previsão de abertura: {conclusao}
+
+          {/* Previsão de abertura */}
+          <div
+            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
+            style={{ borderLeft: '3px solid var(--chart-2)' }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Previsão de abertura
+              </span>
+              <CalendarDays size={15} style={{ color: 'var(--chart-2)' }} />
+            </div>
+            <span className="text-2xl font-semibold leading-none tabular-nums">
+              {conclusao ?? '—'}
             </span>
-          )}
-          <span className="inline-flex items-center gap-1">
-            <Wallet className="h-4 w-4" />
-            Gasto {formatBRL(gasto / 100)} de {formatBRL(previsto / 100)} previstos
-          </span>
+            <span className="text-xs text-muted-foreground">data prevista de conclusão</span>
+          </div>
+
+          {/* Orçamento */}
+          <div
+            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
+            style={{
+              borderLeft: `3px solid ${
+                gasto > previsto && previsto > 0
+                  ? 'hsl(var(--veredito-reprovado))'
+                  : 'hsl(var(--veredito-aprovado))'
+              }`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Orçamento
+              </span>
+              <Wallet size={15} className="text-muted-foreground" />
+            </div>
+            <span className="text-2xl font-semibold leading-none tabular-nums">
+              {formatBRL(gasto / 100)}
+            </span>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${previsto > 0 ? Math.min(100, (gasto / previsto) * 100) : 0}%`,
+                  background:
+                    gasto > previsto && previsto > 0
+                      ? 'hsl(var(--veredito-reprovado))'
+                      : 'hsl(var(--veredito-aprovado))',
+                }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              de {formatBRL(previsto / 100)} previstos
+            </span>
+          </div>
+
+          {/* Etapas atrasadas */}
+          <div
+            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
+            style={{
+              borderLeft: `3px solid ${
+                playbook.tarefas_atrasadas > 0
+                  ? 'hsl(var(--veredito-reprovado))'
+                  : 'var(--muted-foreground)'
+              }`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Etapas atrasadas
+              </span>
+              <AlertTriangle
+                size={15}
+                style={{
+                  color:
+                    playbook.tarefas_atrasadas > 0
+                      ? 'hsl(var(--veredito-reprovado))'
+                      : 'var(--muted-foreground)',
+                }}
+              />
+            </div>
+            <span
+              className="text-2xl font-semibold leading-none tabular-nums"
+              style={
+                playbook.tarefas_atrasadas > 0
+                  ? { color: 'hsl(var(--veredito-reprovado))' }
+                  : undefined
+              }
+            >
+              {playbook.tarefas_atrasadas}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {playbook.tarefas_atrasadas > 0 ? 'precisam de atenção' : 'tudo no prazo'}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

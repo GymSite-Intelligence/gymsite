@@ -400,6 +400,7 @@ else:
 # Regex extras: localhost dev + Cloudflare Pages (preview hash.gymsite-3p0.pages.dev)
 _cors_origin_regex = (
     r"http://localhost:\d+"
+    r"|http://127\.0\.0\.1:\d+"
     r"|https://([a-z0-9-]+\.)*gymsite-3p0\.pages\.dev"
 )
 
