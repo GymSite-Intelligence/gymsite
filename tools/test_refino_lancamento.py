@@ -5,6 +5,7 @@ import json
 
 from tools.refino_lancamento_tools import (
     _extrair_lancamento,
+    _fonte_preferida,
     _validar_match,
     refinar_demanda_via_lancamento,
 )
@@ -15,9 +16,12 @@ _OBRA = {
     "bairro": "Aldeota",
 }
 
+# fonte auditável padrão (domínio da incorporadora, não portal)
+_FONTES = [{"uri": "https://construtoradiagonal.com.br/cidade-jardim", "titulo": "Cidade Jardim"}]
 
-def _mock(payload: dict):
-    return lambda _q: json.dumps(payload)
+
+def _mock(payload: dict, fontes=None):
+    return lambda _q: {"texto": json.dumps(payload), "fontes": _FONTES if fontes is None else fontes}
 
 
 def test_extrai_json_com_cerca_markdown():
@@ -45,18 +49,35 @@ def test_match_sem_nada_baixa():
     assert _validar_match(_OBRA, ext) == ("baixa", "sem_match")
 
 
-def test_refino_alta_confianca_sobrescreve_proxy():
+def test_fonte_preferida_evita_portal():
+    fontes = [{"uri": "https://vivareal.com/x"}, {"uri": "https://construtoraz.com.br/emp"}]
+    assert _fonte_preferida(fontes) == "https://construtoraz.com.br/emp"
+    assert _fonte_preferida([]) is None
+
+
+def test_refino_alta_match_e_fonte_sobrescreve_proxy():
     payload = {"empreendimento": "Cidade Jardim Tower", "construtora": "Diagonal",
-               "torres": 3, "unidades": 240, "tipologia": "3+ dorm",
+               "torres": 3, "andares": 20, "unidades": 240, "tipologia": "3+ dorm",
                "amenidades": ["piscina", "espaço fitness", "salão"],
-               "url": "https://x.com/cjt",
                "endereco": {"cep": "60160000", "numero": "1450", "bairro": "Aldeota"}}
     r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload))
     assert r["confianca"] == "alta"
-    assert r["unidades_exatas"] == 240.0          # sobrescreve proxy
-    assert r["amenidade_fitness"] is True         # gatilho do lead C
-    assert r["fonte_url"] == "https://x.com/cjt"   # auditável
-    assert r["tipologia"] == "3+ dorm"
+    assert r["unidades_exatas"] == 240.0
+    assert r["andares"] == 20
+    assert r["auditado"] is True
+    assert r["amenidade_fitness"] is True
+    # fonte_url = citação REAL do grounding (incorporadora), não auto-reportada
+    assert r["fonte_url"] == "https://construtoradiagonal.com.br/cidade-jardim"
+
+
+def test_refino_sem_fonte_rebaixa_e_nao_sobrescreve():
+    # match cep+numero seria alta, MAS sem citação de grounding → não-auditável → media.
+    payload = {"construtora": "Diagonal", "unidades": 240,
+               "endereco": {"cep": "60160000", "numero": "1450", "bairro": "Aldeota"}}
+    r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload, fontes=[]))
+    assert r["auditado"] is False
+    assert r["confianca"] == "media"              # rebaixado de alta
+    assert r["unidades_exatas"] is None           # não sobrescreve sem auditoria
 
 
 def test_refino_baixa_confianca_mantem_proxy():
@@ -64,10 +85,10 @@ def test_refino_baixa_confianca_mantem_proxy():
                "amenidades": [], "endereco": {"bairro": "Centro"}}
     r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload))
     assert r["confianca"] == "baixa"
-    assert r["unidades_exatas"] is None           # NÃO sobrescreve (mantém proxy)
+    assert r["unidades_exatas"] is None
 
 
 def test_refino_grounding_quebrado_nao_crasha():
-    r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=lambda _q: "lixo")
+    r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=lambda _q: {"texto": "lixo", "fontes": []})
     assert r["unidades_exatas"] is None
     assert r["confianca"] == "baixa"

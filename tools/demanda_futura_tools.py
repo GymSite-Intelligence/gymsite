@@ -285,6 +285,8 @@ def demanda_futura_detalhada(
     linhas: list[dict] = []
     tot = {"captura_est": 0.0, "moradores_est": 0.0}
     for i, o in enumerate(obras):
+        if i < top_n:
+            o = {**o, "cidade": cidade, "uf": uf}  # query do refino precisa de cidade/uf
         refino = refino_fn(o) if i < top_n else None
         unid_exatas = (refino or {}).get("unidades_exatas")
         tipologia = (refino or {}).get("tipologia")

@@ -23,39 +23,84 @@ _AMENIDADE_FITNESS = ("academia", "fitness", "espaço fitness", "espaco fitness"
 
 
 def _montar_query(obra: dict) -> str:
-    constru = (obra.get("nome") or obra.get("nome_empresarial") or "").strip()
+    # Liderar por ENDEREÇO (identifica o empreendimento na web); nome CNO costuma ser
+    # SPE/LTDA (ruído). Cidade/UF ajudam a desambiguar.
     log = (obra.get("logradouro") or "").strip()
     num = (obra.get("numero_logradouro") or "").strip()
     bairro = (obra.get("bairro") or "").strip()
-    return (f"empreendimento residencial lançamento construtora {constru} "
-            f"{log} {num} {bairro} torres unidades amenidades academia")
+    cidade = (obra.get("cidade") or "").strip()
+    uf = (obra.get("uf") or "").strip()
+    return (f"empreendimento residencial lançamento apartamento {log} {num} {bairro} "
+            f"{cidade} {uf} torres unidades amenidades academia")
 
 
-def _grounding_lancamento(query: str) -> str:
-    """Chama Gemini+Search (Vertex) pedindo JSON do empreendimento. Rede."""
+# Portais/agregadores — NÃO são fonte primária da incorporadora (auditável só como apoio).
+_DOMINIOS_PORTAL = ("vivareal", "zapimoveis", "olx", "chavesnamao", "quintoandar",
+                    "imovelweb", "lopes.com", "loft.com", "wimoveis", "netimoveis",
+                    "google.com", "wikipedia", "facebook", "instagram")
+
+
+def _extrair_fontes_grounding(resp: Any) -> list[dict]:
+    """Citações REAIS do grounding (grounding_metadata) — fonte auditável.
+    uri = redirect de atribuição Vertex; dominio = site real (web.domain)."""
+    out: list[dict] = []
+    try:
+        for c in (getattr(resp, "candidates", None) or []):
+            gm = getattr(c, "grounding_metadata", None)
+            for ch in (getattr(gm, "grounding_chunks", None) or []):
+                web = getattr(ch, "web", None)
+                uri = getattr(web, "uri", None) if web else None
+                if uri:
+                    out.append({"uri": uri, "dominio": getattr(web, "domain", None),
+                                "titulo": getattr(web, "title", None)})
+    except Exception:
+        pass
+    return out
+
+
+def _eh_portal(f: dict) -> bool:
+    alvo = ((f.get("dominio") or "") + " " + (f.get("uri") or "")).lower()
+    return any(p in alvo for p in _DOMINIOS_PORTAL)
+
+
+def _fonte_preferida(fontes: list[dict]) -> str | None:
+    """Prefere o site da construtora/incorporadora (não portal/agregador). Usa o domínio
+    real (web.domain); retorna o uri (redirect de atribuição Vertex, link citável)."""
+    if not fontes:
+        return None
+    for f in fontes:
+        if not _eh_portal(f):
+            return f.get("uri")
+    return fontes[0].get("uri")
+
+
+def _grounding_lancamento(query: str) -> dict:
+    """Chama Gemini+Search (Vertex). Retorna {texto, fontes[]} — fontes = citações reais."""
     from google.genai import types
     from tools._genai_client import build_genai_client, generate_content_resilient
 
     client = build_genai_client()
     prompt = (
-        "Busque a página oficial de lançamento do empreendimento imobiliário descrito e "
-        "responda em JSON puro (sem markdown):\n"
+        "Você DEVE usar a ferramenta de busca (não responda de memória). "
+        "Pesquise a página oficial da construtora/incorporadora do empreendimento descrito.\n"
+        "1) Escreva 1-2 frases com o que encontrou, citando a fonte.\n"
+        "2) Depois, AO FINAL, um bloco JSON exatamente neste formato:\n"
         "{\n"
-        '  "empreendimento": "<nome>", "construtora": "<nome>", "url": "<fonte>",\n'
-        '  "torres": <int|null>, "unidades": <int total|null>,\n'
+        '  "empreendimento": "<nome>", "construtora": "<nome>",\n'
+        '  "torres": <int|null>, "andares": <int|null>, "unidades": <int total|null>,\n'
         '  "tipologia": "<studio|1-2 dorm|3+ dorm|comercial|misto|null>",\n'
         '  "amenidades": ["..."],\n'
         '  "endereco": {"cep": "<digits|null>", "numero": "<str|null>", "bairro": "<str|null>"}\n'
         "}\n"
-        "Se não achar com confiança, retorne unidades=null. NÃO invente.\n\n"
-        f"Descrição: {query}"
+        "Preencha SÓ com o que a busca retornou; sem resultado confiável → unidades=null. NÃO invente.\n\n"
+        f"Empreendimento (por endereço): {query}"
     )
     resp = generate_content_resilient(
         client, model="gemini-2.5-flash", contents=prompt,
         config=types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())]),
         max_retries=2, base_delay=3.0,
     )
-    return (resp.text or "").strip()
+    return {"texto": (resp.text or "").strip(), "fontes": _extrair_fontes_grounding(resp)}
 
 
 def _extrair_lancamento(texto: str) -> dict | None:
@@ -115,35 +160,50 @@ def _validar_match(obra: dict, ext: dict) -> tuple[str, str]:
     return "baixa", "sem_match"
 
 
+def _rebaixar_sem_fonte(confianca: str, tem_fonte: bool) -> str:
+    """Sem citação de grounding = não-auditável → rebaixa (alta→media, media→baixa)."""
+    if tem_fonte:
+        return confianca
+    return {"alta": "media", "media": "baixa"}.get(confianca, "baixa")
+
+
 def refinar_demanda_via_lancamento(
     obra: dict,
     *,
-    _grounding_fn: Callable[[str], str] | None = None,
+    _grounding_fn: Callable[[str], dict] | None = None,
 ) -> dict:
-    """Refina uma obra via site do lançamento. Só ALTA confiança sobrescreve proxy.
+    """Refina uma obra via site da construtora/incorporadora. AUDITÁVEL: usa as CITAÇÕES
+    reais do grounding (não o url auto-reportado). Só ALTA (match + fonte) sobrescreve proxy.
 
-    Retorna {unidades_exatas|None, tipologia, amenidade_fitness, fonte_url,
-             confianca, metodo_match, empreendimento}. Nunca levanta.
+    Retorna {unidades_exatas|None, andares, tipologia, amenidade_fitness, fonte_url,
+             fontes[], confianca, metodo_match, empreendimento, auditado}. Nunca levanta.
     """
-    base = {"unidades_exatas": None, "tipologia": None, "amenidade_fitness": False,
-            "fonte_url": None, "confianca": "baixa", "metodo_match": "sem_match",
-            "empreendimento": None}
+    base = {"unidades_exatas": None, "andares": None, "tipologia": None,
+            "amenidade_fitness": False, "fonte_url": None, "fontes": [],
+            "confianca": "baixa", "metodo_match": "sem_match", "empreendimento": None,
+            "auditado": False}
     try:
         gfn = _grounding_fn or _grounding_lancamento
-        ext = _extrair_lancamento(gfn(_montar_query(obra)))
+        g = gfn(_montar_query(obra)) or {}
+        texto, fontes = g.get("texto", ""), (g.get("fontes") or [])
+        ext = _extrair_lancamento(texto)
         if not ext:
             return base
-        confianca, metodo = _validar_match(obra, ext)
+        match, metodo = _validar_match(obra, ext)
+        tem_fonte = bool(fontes)
+        confianca = _rebaixar_sem_fonte(match, tem_fonte)  # gate de auditabilidade
         unidades = _unidades_do_extraido(ext)
         return {
-            # só sobrescreve o proxy quando o match é de ALTA confiança.
             "unidades_exatas": unidades if confianca == "alta" else None,
+            "andares": ext.get("andares"),
             "tipologia": ext.get("tipologia"),
             "amenidade_fitness": _tem_amenidade_fitness(ext),
-            "fonte_url": ext.get("url"),
+            "fonte_url": _fonte_preferida(fontes),   # citação REAL, não auto-reportada
+            "fontes": fontes,
             "confianca": confianca,
             "metodo_match": metodo,
             "empreendimento": ext.get("empreendimento"),
+            "auditado": tem_fonte,
         }
     except Exception as e:
         print(f"[refino_lancamento] falha: {type(e).__name__}: {e}")
