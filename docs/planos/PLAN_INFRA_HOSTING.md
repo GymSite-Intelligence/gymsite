@@ -102,3 +102,22 @@ Resultado (9/9 dominios "AutoSSL Domain Validated", expiram em 12/09/2026, renov
 - Nao inserir senhas nem alterar permissoes de acesso em nome do usuario.
 - Nao publicar/alterar DNS sem autorizacao explicita.
 - Nao reproduzir segredos (chaves DKIM completas, tokens) neste repo.
+
+
+## Dominio getgymsite.com.br (Registro.br -> Cloudflare) - migracao de DNS em 2026-06-14
+
+Contexto: dominio adicional getgymsite.com.br (distinto de gymsite.com.br). Migrado o DNS autoritativo da HostGator para a Cloudflare.
+
+- Estado anterior (Registro.br): NS ns1080.hostgator.com.br e ns1081.hostgator.com.br.
+- Acao (com autorizacao): no Registro.br, NS alterados para os da Cloudflare e SALVOS pelo usuario.
+- Novos NS (Cloudflare): adelaide.ns.cloudflare.com e jihoon.ns.cloudflare.com.
+- Zona Cloudflare getgymsite.com.br: status ACTIVE.
+- NS de origem registrados pela Cloudflare: ns1080/ns1081.hostgator.com.br.
+
+E-mail (verificado na zona Cloudflare em 2026-06-14): registros MX preservados e em modo DNS-only (sem proxy Cloudflare): mx1.titan.email (prio 10) e mx2.titan.email (prio 20). Provedor Titan, com SPF/DKIM (default._domainkey, titan1._domainkey) e DMARC (_dmarc) presentes na zona; valores de chave omitidos por seguranca. A entrega de e-mail e preservada.
+
+Composicao da zona migrada (contagem de registros): 9 A, 4 CNAME, 2 MX, 4 SRV, 10 TXT.
+
+Propagacao: no momento do registro, o DNS publico global ainda servia os NS antigos da HostGator (cache de TTL ~6h drenando). A delegacao deve refletir os NS da Cloudflare apos a expiracao do cache. Verificacao pendente: reconferir via DNS-over-HTTPS que os NS publicos ja apontam para adelaide/jihoon.
+
+Constraints respeitadas: a confirmacao final (SALVAR) no Registro.br foi feita pelo usuario; nenhum segredo/token/chave DKIM reproduzido; nenhuma permissao de acesso alterada.
