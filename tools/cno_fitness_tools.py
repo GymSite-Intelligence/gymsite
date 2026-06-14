@@ -1146,9 +1146,13 @@ def cruzar_entrantes_obras_cno(
         obras_municipio = []
         obras_ftz = []
     else:
-        # obras_municipio = TODAS as obras (match endereço/CEP) — só extract local
-        # (tabela Supabase guarda só fitness). Em CNO_SOURCE=supabase degrada p/ [].
-        obras_municipio = _load_cno_obras_municipio(cno_path, municipio, area_min=50.0)
+        # obras_municipio = TODAS as obras (match endereço/CEP) — só extract local.
+        # Em CNO_SOURCE=supabase PULA o parse do cno.csv (~800MB) — hog de latência
+        # no A0; degrada p/ [] (tabela Supabase guarda só fitness, servidas em obras_ftz).
+        obras_municipio = (
+            [] if _cno_supabase_enabled()
+            else _load_cno_obras_municipio(cno_path, municipio, area_min=50.0)
+        )
         # obras_ftz = obras fitness — roteado pelo chokepoint (Supabase em prod).
         obras_ftz = _load_obras_fitness_municipio(
             cno_path, municipio, cidade, uf, cnpj_cnae_por_cnpj=cnpj_idx
