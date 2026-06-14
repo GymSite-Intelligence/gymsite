@@ -294,8 +294,12 @@ def demanda_futura_detalhada(
             float(o.get("area_m2") or 0), unidades_exatas=unid_exatas, tipologia=tipologia,
             perfil_bairro=perfil_bairro, market_share=market_share, ticket_brl=ticket_brl,
         )
-        tot["captura_est"] += e["captura_est"]
-        tot["moradores_est"] += e["moradores_est"]
+        residencial = _provavel_residencial(o.get("nome") or "", refino)
+        # Gate residencial: prédio comercial/infra não gera morador → não soma demanda.
+        # Mantém a obra na lista (transparência) mas fora dos totais (Apêndice A).
+        if residencial:
+            tot["captura_est"] += e["captura_est"]
+            tot["moradores_est"] += e["moradores_est"]
         linhas.append({
             "empreendimento": (refino or {}).get("empreendimento"),
             "construtora": o.get("nome"),
@@ -304,9 +308,9 @@ def demanda_futura_detalhada(
             "unidades_fonte": e["unidades_fonte"],
             "entrega": _meses_para_entrega(o.get("data_inicio")),
             "amenidade_fitness": (refino or {}).get("amenidade_fitness", False),
-            "captura_est": e["captura_est"],
+            "captura_est": e["captura_est"] if residencial else 0.0,
             "confianca": (refino or {}).get("confianca", "baixa"),
-            "provavel_residencial": _provavel_residencial(o.get("nome") or "", refino),
+            "provavel_residencial": residencial,
             "fonte_url": (refino or {}).get("fonte_url"),
         })
 

@@ -111,3 +111,28 @@ def test_detalhada_aplica_refino_top_n(monkeypatch):
     assert linha_a["unidades_est"] == 300.0                  # refino sobrescreveu proxy
     assert linha_a["unidades_fonte"] == "lancamento_exato"
     assert linha_a["confianca"] == "alta" and linha_a["amenidade_fitness"] is True
+
+
+def test_gate_residencial_exclui_nao_residencial_dos_totais(monkeypatch):
+    """Prédio comercial/infra fica na lista (transparência) mas fora dos totais."""
+    from tools import demanda_futura_tools as dft
+
+    obras = [
+        {"area_m2": 8000, "data_inicio": "2025-06-01", "em_curso": True,
+         "nome": "EDIFICIO RESERVA DO PARQUE", "bairro": "Cocó"},   # residencial (keyword)
+        {"area_m2": 8000, "data_inicio": "2025-06-01", "em_curso": True,
+         "nome": "GALPAO LOGISTICO ABC", "bairro": "Cocó"},          # não-residencial
+    ]
+    monkeypatch.setattr(dft, "_obras_grande_porte_municipio", lambda c, u: obras)
+
+    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=0, _refino_fn=lambda o: None)
+    res = next(l for l in r["obras"] if l["construtora"] == "EDIFICIO RESERVA DO PARQUE")
+    nao = next(l for l in r["obras"] if l["construtora"] == "GALPAO LOGISTICO ABC")
+
+    assert res["provavel_residencial"] is True
+    assert nao["provavel_residencial"] is False
+    assert nao["captura_est"] == 0.0                       # não soma demanda
+    assert res["captura_est"] > 0.0
+    # total = só a residencial (mesma área → captura da residencial)
+    assert r["provavel_residencial_n"] == 1
+    assert abs(r["captura_total_est"] - round(res["captura_est"], 1)) < 0.5
