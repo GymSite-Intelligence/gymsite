@@ -35,9 +35,11 @@ def _montar_query(obra: dict) -> str:
 
 
 # Portais/agregadores — NÃO são fonte primária da incorporadora (auditável só como apoio).
+# Portais/agregadores — não são fonte primária. Instagram/Facebook NÃO entram:
+# são canais OFICIAIS da construtora (2ª fonte de cruzamento).
 _DOMINIOS_PORTAL = ("vivareal", "zapimoveis", "olx", "chavesnamao", "quintoandar",
                     "imovelweb", "lopes.com", "loft.com", "wimoveis", "netimoveis",
-                    "google.com", "wikipedia", "facebook", "instagram")
+                    "google.com", "wikipedia")
 
 
 def _extrair_fontes_grounding(resp: Any) -> list[dict]:
@@ -81,17 +83,19 @@ def _grounding_lancamento(query: str) -> dict:
 
     client = build_genai_client()
     prompt = (
-        "Você DEVE usar a ferramenta de busca (não responda de memória). "
-        "Pesquise a página oficial da construtora/incorporadora do empreendimento descrito.\n"
-        "1) Escreva 1-2 frases com o que encontrou, citando a fonte.\n"
+        "Você DEVE usar a ferramenta de busca (não responda de memória). Pesquise DUAS fontes "
+        "da construtora/incorporadora do empreendimento descrito: (a) o SITE OFICIAL e "
+        "(b) o INSTAGRAM oficial (instagram.com/...). Cruze as duas.\n"
+        "1) Escreva 1-2 frases com o que encontrou, citando as fontes.\n"
         "2) Depois, AO FINAL, um bloco JSON exatamente neste formato:\n"
         "{\n"
-        '  "empreendimento": "<nome>", "construtora": "<nome>",\n'
+        '  "empreendimento": "<nome>", "construtora": "<nome>", "instagram": "<url|null>",\n'
         '  "torres": <int|null>, "andares": <int|null>, "unidades": <int total|null>,\n'
         '  "tipologia": "<studio|1-2 dorm|3+ dorm|comercial|misto|null>",\n'
         '  "amenidades": ["..."],\n'
-        '  "endereco": {"cep": "<digits|null>", "numero": "<str|null>", "bairro": "<str|null>"}\n'
+        '  "endereco": {"cep": "<digits do endereço NA FONTE|null>", "numero": "<numero NA FONTE|null>", "bairro": "<bairro|null>"}\n'
         "}\n"
+        "No campo endereco, ECOE o endereço que aparece NA FONTE (não o da pergunta) para validação. "
         "Preencha SÓ com o que a busca retornou; sem resultado confiável → unidades=null. NÃO invente.\n\n"
         f"Empreendimento (por endereço): {query}"
     )
@@ -167,6 +171,26 @@ def _rebaixar_sem_fonte(confianca: str, tem_fonte: bool) -> str:
     return {"alta": "media", "media": "baixa"}.get(confianca, "baixa")
 
 
+def _eh_instagram(f: dict) -> bool:
+    alvo = ((f.get("dominio") or "") + " " + (f.get("uri") or "")).lower()
+    return "instagram.com" in alvo or "instagr.am" in alvo
+
+
+def _instagram_url(fontes: list[dict], ext: dict) -> str | None:
+    """Instagram oficial: do JSON do modelo ou de uma citação instagram.com."""
+    ig = (ext.get("instagram") or "").strip()
+    if ig:
+        return ig
+    for f in fontes:
+        if _eh_instagram(f):
+            return f.get("uri")
+    return None
+
+
+def _tem_site_oficial(fontes: list[dict]) -> bool:
+    return any(not _eh_portal(f) and not _eh_instagram(f) for f in fontes)
+
+
 def refinar_demanda_via_lancamento(
     obra: dict,
     *,
@@ -179,9 +203,9 @@ def refinar_demanda_via_lancamento(
              fontes[], confianca, metodo_match, empreendimento, auditado}. Nunca levanta.
     """
     base = {"unidades_exatas": None, "andares": None, "tipologia": None,
-            "amenidade_fitness": False, "fonte_url": None, "fontes": [],
-            "confianca": "baixa", "metodo_match": "sem_match", "empreendimento": None,
-            "auditado": False}
+            "amenidade_fitness": False, "fonte_url": None, "instagram_url": None,
+            "fontes": [], "cruzado": False, "confianca": "baixa",
+            "metodo_match": "sem_match", "empreendimento": None, "auditado": False}
     try:
         gfn = _grounding_fn or _grounding_lancamento
         g = gfn(_montar_query(obra)) or {}
@@ -191,7 +215,21 @@ def refinar_demanda_via_lancamento(
             return base
         match, metodo = _validar_match(obra, ext)
         tem_fonte = bool(fontes)
-        confianca = _rebaixar_sem_fonte(match, tem_fonte)  # gate de auditabilidade
+        emp = ext.get("empreendimento")
+        instagram = _instagram_url(fontes, ext)
+        site_of = _tem_site_oficial(fontes)
+        cruzado = site_of and bool(instagram)
+        # Buscamos PELO endereço: empreendimento achado + fonte oficial = link estabelecido.
+        #   sem fonte/empreendimento → baixa (não-auditável);
+        #   achado + site oficial      → media;
+        #   + cep/número ecoado bate   → alta;  + instagram cruza  → alta.
+        oficial = site_of or bool(instagram)   # site OU instagram = canal oficial
+        if not tem_fonte or not emp:
+            confianca = "baixa"
+        else:
+            confianca = "media" if oficial else "baixa"
+            if metodo == "cep_numero" or cruzado:
+                confianca = "alta"
         unidades = _unidades_do_extraido(ext)
         return {
             "unidades_exatas": unidades if confianca == "alta" else None,
@@ -199,7 +237,9 @@ def refinar_demanda_via_lancamento(
             "tipologia": ext.get("tipologia"),
             "amenidade_fitness": _tem_amenidade_fitness(ext),
             "fonte_url": _fonte_preferida(fontes),   # citação REAL, não auto-reportada
+            "instagram_url": instagram,
             "fontes": fontes,
+            "cruzado": cruzado,
             "confianca": confianca,
             "metodo_match": metodo,
             "empreendimento": ext.get("empreendimento"),

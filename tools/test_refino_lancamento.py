@@ -70,14 +70,44 @@ def test_refino_alta_match_e_fonte_sobrescreve_proxy():
     assert r["fonte_url"] == "https://construtoradiagonal.com.br/cidade-jardim"
 
 
-def test_refino_sem_fonte_rebaixa_e_nao_sobrescreve():
-    # match cep+numero seria alta, MAS sem citação de grounding → não-auditável → media.
-    payload = {"construtora": "Diagonal", "unidades": 240,
+def test_refino_sem_fonte_e_baixa_e_nao_sobrescreve():
+    # cep+numero bateria, MAS sem citação de grounding → não-auditável → baixa.
+    payload = {"empreendimento": "X", "construtora": "Diagonal", "unidades": 240,
                "endereco": {"cep": "60160000", "numero": "1450", "bairro": "Aldeota"}}
     r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload, fontes=[]))
     assert r["auditado"] is False
-    assert r["confianca"] == "media"              # rebaixado de alta
-    assert r["unidades_exatas"] is None           # não sobrescreve sem auditoria
+    assert r["confianca"] == "baixa"              # sem fonte = não-auditável
+    assert r["unidades_exatas"] is None
+
+
+def test_instagram_capturado_da_citacao():
+    payload = {"construtora": "Diagonal", "unidades": 240, "endereco": {"bairro": "Aldeota"}}
+    fontes = [{"uri": "https://construtoradiagonal.com.br/cjt", "dominio": "construtoradiagonal.com.br"},
+              {"uri": "https://instagram.com/construtoradiagonal", "dominio": "instagram.com"}]
+    r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload, fontes=fontes))
+    assert r["instagram_url"] == "https://instagram.com/construtoradiagonal"
+
+
+def test_cruzado_site_mais_instagram_alta():
+    # achado + site oficial + instagram → cruzado → alta (sobrescreve proxy).
+    payload = {"empreendimento": "Tower X", "construtora": "Diagonal", "unidades": 240,
+               "endereco": {"bairro": "Aldeota"}}
+    fontes = [{"uri": "https://construtoradiagonal.com.br/x", "dominio": "construtoradiagonal.com.br"},
+              {"uri": "https://instagram.com/diagonal", "dominio": "instagram.com"}]
+    r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload, fontes=fontes))
+    assert r["cruzado"] is True
+    assert r["confianca"] == "alta"
+    assert r["unidades_exatas"] == 240.0
+
+
+def test_site_sem_instagram_fica_media():
+    # achado + site oficial, sem instagram nem cep-eco → media → não sobrescreve.
+    payload = {"empreendimento": "Tower X", "construtora": "Diagonal", "unidades": 240,
+               "endereco": {"bairro": "Aldeota"}}
+    r = refinar_demanda_via_lancamento(_OBRA, _grounding_fn=_mock(payload))  # só site
+    assert r["cruzado"] is False
+    assert r["confianca"] == "media"
+    assert r["unidades_exatas"] is None
 
 
 def test_refino_baixa_confianca_mantem_proxy():
