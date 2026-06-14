@@ -84,10 +84,77 @@ O visitante da landing é **anônimo** (não tem conta nem org). A rota atual do
 - **LGPD:** aviso curto no início do chat + consentimento antes do gate de contato.
 - **Fallback:** backend fora do ar → CTA cai para o formulário curto (seção 9).
 
-**Pendências do embed (a confirmar):**
-- (a confirmar) criar o endpoint público `/api/public/isca/chat` (hoje só existe a rota logada).
-- (a confirmar) host público do backend (subdomínio via Cloudflare, ex.: `api.getgymsite.com.br`).
-- (a confirmar) se o widget é componente interno do app ou pacote isolado para a landing.
+
+---
+
+## 0.3 Fluxo de slot-filling do "modo isca" (conversa → gate)
+
+> Objetivo: o agente preenche os **slots canônicos** (mesmos do app) conversando, mostra valor cedo e só pede contato quando o lead já está "aquecido".
+
+**Slots canônicos (verificados no projeto):**
+- `uf`, `cidade`, `bairro` (localização)
+- `tipo_negocio` (academia / crossfit_box / studio_pilates / studio_funcional / outro)
+- `tamanho_preset` (p / m / g) — opcional na isca
+- `publico_alvo` (faixa etária, ex. "25-40") e `genero_alvo` (misto / predom_fem / predom_masc / ...) — opcionais na isca
+- **contato** (nome, e-mail, WhatsApp) — coletado só no gate
+
+**Ordem das perguntas (do mais leve ao mais comprometedor):**
+1. **Abertura (0 slot):** "Me conta: você já tem academia ou está pensando em abrir? Em qual cidade/bairro?" → captura `cidade` + `bairro` + `uf`.
+2. **Tipo de negócio:** "É academia tradicional, CrossFit, pilates, funcional…?" → `tipo_negocio`.
+3. **PROVA DE VALOR (cedo!):** com cidade+bairro+tipo já dá pra devolver uma **amostra** (potencial da região / panorama de concorrência) — sem números atribuídos a fonte, em linguagem de negócio. É aqui que o visitante sente o "uau".
+4. **Refino opcional:** público-alvo / porte, só se a conversa fluir.
+5. **GATE (contato):** "Quer que eu monte o diagnóstico completo dessa região e te envie? Me passa nome, e-mail e WhatsApp." → consentimento LGPD + cria o **lead**.
+
+**Regras do gate:**
+- **Nunca** pedir contato antes de ter entregue valor (passo 3).
+- Pedir **consentimento LGPD explícito** antes de gravar contato (checkbox/confirmação no chat).
+- Se o visitante recusar o contato: oferecer um resumo do que viu e deixar o canal aberto (sem insistir).
+- Cobertura fora da área primária → reconhecer e oferecer "sob demanda" (alinha com o fallback do `PLAN_AGENTE.md`); não usar a busca p/ nomear concorrentes.
+
+**Estados da sessão (isca):**
+`coletando_local` → `coletando_tipo` → `amostra_entregue` → `refino_opcional` → `gate_contato` → `lead_capturado` | `encerrado_sem_lead`.
+
+---
+
+## 0.4 Contrato do endpoint público (proposta)
+
+> **Atenção (verificado):** a rota atual `POST /api/assistente/chat` é **stateless** — `AssistenteChatInput{ pergunta: str, relatorio_id: str|None }` → `AssistenteChatOutput{ resposta: str }`, e **exige JWT**. Para a isca pública precisamos de **sessão/estado** (conversa multi-turno anônima) e **sem JWT** — por isso um endpoint novo, não a reutilização direta.
+
+**Endpoint:** `POST /api/public/isca/chat` (sem JWT; sessão anônima)
+
+**Request (proposta):**
+```json
+{
+  "session_id": "uuid-anon-ou-null-no-1o-contato",
+  "mensagem": "texto do visitante",
+  "consent_lgpd": false
+}
+```
+
+**Response (proposta):**
+```json
+{
+  "session_id": "uuid-anon",
+  "resposta": "texto do agente",
+  "estado": "amostra_entregue",
+  "gate_aberto": false,
+  "slots": { "uf": null, "cidade": "...", "bairro": "...", "tipo_negocio": "academia" },
+  "lead_id": null
+}
+```
+
+**Regras de sessão / segurança:**
+- **Sessão anônima efêmera:** `session_id` emitido no 1º contato; TTL curto (ex. 30 min); estado guardado server-side (não no cliente).
+- **Tenant público dedicado** (org_id reservado p/ leads) — nunca um tenant de cliente.
+- **Escopo "isca":** só ferramentas de amostra (panorama/contagem), sem acesso a relatórios pagos.
+- **Rate-limit por IP/sessão** + limite de turnos por sessão; anti-abuso.
+- **Gate:** `lead_id` só é criado quando `consent_lgpd=true` e o slot de contato está completo.
+- **CORS:** `allow_origins` travado no domínio do site.
+- **Sem segredos no front:** nenhum JWT/API key no bundle.
+- **Reuso:** internamente chama o **mesmo motor** (`services/tinker_bot`) com um `build_contexto_chat` em modo "isca" (contexto reduzido), aproveitando os guardrails de sigilo já existentes.
+
+**Erros (proposta):** `429` rate-limit · `422` payload inválido · `409` sessão expirada (reabrir) · `503` motor indisponível → front cai para o formulário curto (seção 9).
+
 
 ---
 
@@ -223,7 +290,7 @@ O visitante da landing é **anônimo** (não tem conta nem org). A rota atual do
 
 - Stack: Vite + React; deploy em Cloudflare Pages (alinhar com `PLAN_APP_FRONTEND.md`).
 - **Conversão = agente "isca" via widget React nativo** (ver seção 0.2).
-- **Chat hoje é logado** (`POST /api/assistente/chat`, JWT multi-tenant). Para a landing pública: **criar endpoint público** `/api/public/isca/chat` com sessão anônima, tenant público, escopo "isca", rate-limit — **reusando o mesmo motor** (`services/tinker_bot`).
+- **Chat hoje é logado e stateless** (`POST /api/assistente/chat`, JWT; input `pergunta`+`relatorio_id`). Para a landing: **criar endpoint público** `/api/public/isca/chat` com sessão anônima, estado multi-turno, tenant público, escopo "isca", rate-limit — **reusando o mesmo motor** (`services/tinker_bot`). Ver seções 0.3 e 0.4.
 - Backend alcançado pelo **túnel/CORS Cloudflare já existente** (`CLOUDFLARED_CORS_SETUP.md`); `allow_origins` travado no domínio do site.
 - Sem segredos no bundle do front; o backend é quem fala com o modelo. Nunca distribuir JWT/API key no site.
 - Agent Studio permanece como ambiente de prompt/eval (hoje em DRAFT, ver `PLAN_AGENTE.md`); nada vai a público sem Deploy autorizado.
@@ -233,4 +300,4 @@ O visitante da landing é **anônimo** (não tem conta nem org). A rota atual do
 
 ---
 
-_Status: rascunho v4 — embed detalhado: chat hoje é logado (JWT); landing exige endpoint público "isca" com sessão anônima reusando o mesmo motor. Próximo: especificar o endpoint público + onde fica o gate de contato._
+_Status: rascunho v5 — embed + slot-filling (0.3) + contrato do endpoint público (0.4). Próximo: confirmar criação do endpoint público, host do backend e onde guardar o estado da sessão anônima._
