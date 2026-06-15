@@ -484,10 +484,28 @@ function RelatorioViewerContent({
         const ancoras = todosCandidatos.filter((c) => !c.listing_url)
         return (
           <>
-            {anunciados.length > 0 && (
+            {anunciados.length > 0 && (() => {
+              const _norm = (s: string) =>
+                (s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+              const alvo = _norm(inp.bairro ?? '')
+              const marcados = anunciados.slice(0, 3).map((cand) => ({
+                cand,
+                foraDoBairro: Boolean(alvo) && !_norm(cand.endereco ?? '').includes(alvo),
+              }))
+              const algumFora = marcados.some((m) => m.foraDoBairro)
+              return (
               <Section title="Top Candidatos — imóveis anunciados">
+                {algumFora && inp.bairro && (
+                  <p className="mb-3 rounded-lg border border-veredito-ressalvas/40 bg-veredito-ressalvas/5 px-3 py-2 text-xs text-muted-foreground">
+                    ⚠ Alguns imóveis estão em <strong>bairro vizinho</strong> (o GeoScout não
+                    achou vago em {inp.bairro}). O referencial de viabilidade — demografia,
+                    concorrência e aluguel de referência — é do bairro <strong>{inp.bairro}</strong> e
+                    independe do imóvel específico abaixo; trate-os como ponto de partida físico,
+                    não como o veredito do bairro.
+                  </p>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {anunciados.slice(0, 3).map((cand, i) => {
+                  {marcados.map(({ cand, foraDoBairro }, i) => {
                     const scoreGeral =
                       cand.score_geoscout != null && scoreRegional != null
                         ? (cand.score_geoscout + scoreRegional * 3) / 4
@@ -498,12 +516,14 @@ function RelatorioViewerContent({
                         candidato={cand}
                         posicao={i + 1}
                         scoreGeral={scoreGeral}
+                        foraDoBairro={foraDoBairro}
                       />
                     )
                   })}
                 </div>
               </Section>
-            )}
+              )
+            })()}
             {anunciados.length === 0 && (
               <Section title="Top Candidatos — imóveis anunciados">
                 <p className="text-sm text-muted-foreground">

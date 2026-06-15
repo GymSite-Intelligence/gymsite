@@ -40,6 +40,8 @@ export interface CandidatoCardProps {
   posicao: number
   /** Score Geral combinado (4 dim) — calculado no caller pra todos receberem mesma base */
   scoreGeral?: number | null
+  /** Imóvel está FORA do bairro alvo (GeoScout caiu em bairro vizinho) — exige alerta. */
+  foraDoBairro?: boolean
   className?: string
 }
 
@@ -47,6 +49,7 @@ export function CandidatoCard({
   candidato,
   posicao,
   scoreGeral = null,
+  foraDoBairro = false,
   className,
 }: CandidatoCardProps) {
   const [imgError, setImgError] = useState(false)
@@ -116,12 +119,20 @@ export function CandidatoCard({
             {portalLabel}
           </Badge>
         )}
-        {candidato.qualidade_sinal === 'rebusca-ampliada' && (
+        {candidato.qualidade_sinal === 'rebusca-ampliada' && !foraDoBairro && (
           <Badge
             variant="secondary"
             className="absolute bottom-2 left-2 bg-emerald-600/90 text-white backdrop-blur"
           >
             achado na re-busca
+          </Badge>
+        )}
+        {foraDoBairro && (
+          <Badge
+            variant="warning"
+            className="absolute bottom-2 left-2 backdrop-blur"
+          >
+            ⚠ bairro vizinho
           </Badge>
         )}
         {/* Badge visibilidade (canto direito) — tonalidade por nível */}
