@@ -3145,21 +3145,9 @@ e recomendar levantar mais opções regionais>
 
 ---
 
-## 📞 Script de Abordagem — Top 1
-
-**Canal recomendado:** <canal do A5>
-**Melhor horário:** <timing do A5>
-
-```
-<colar literalmente o script_abordagem do ContactHunter>
-```
-
-**Próximos passos:**
-1. <ação 1>
-2. <ação 2>
-3. <ação 3>
-
----
+<!-- Script de Abordagem / contato de decisor REMOVIDO do relatório de viabilidade:
+     contatar decisor é PROSPECÇÃO (rota própria com Apollo people_search), não decisão
+     de viabilidade. NÃO gerar seção de abordagem/contato aqui. -->
 
 ## ⚠️ Alertas Globais
 <lista consolidada dos alertas dos agentes que afetam a decisão.

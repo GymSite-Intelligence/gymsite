@@ -151,19 +151,22 @@ parallel_analysis = ParallelAgent(
     ],
 )
 
-# ── Pipeline completo: ContextBuilder → GeoScout → Análise Paralela → ContactHunter → Relatório ──
+# ── Pipeline de VIABILIDADE: ContextBuilder → GeoScout → Análise Paralela → Relatório ──
+# A5 ContactHunter (contato dos decisores) SAIU daqui: contatar decisor é PROSPECÇÃO, não
+# viabilidade (você decide SE abrir; contato vem depois, na rota de prospecção com Apollo
+# people_search). Tira custo (~R$0,17/relatório) + 1 step de latência do relatório de
+# viabilidade. O agente segue definido p/ a rota de prospecção consumir.
 pipeline = SequentialAgent(
     name="GymSitePipeline",
     description=(
-        "Pipeline sequencial: contexto de mercado (Deep Research) → "
-        "localização → análise paralela → contato → relatório final → "
-        "posicionamento estratégico (ERRC)."
+        "Pipeline de viabilidade: contexto de mercado (Deep Research) → localização → "
+        "análise paralela (demografia/competitivo/financeiro) → relatório final → "
+        "posicionamento estratégico (ERRC). Contato de decisor é prospecção (fora daqui)."
     ),
     sub_agents=[
-        context_builder_agent,        # A0 — Deep Research (NOVO em v0.4)
+        context_builder_agent,        # A0 — Deep Research
         geoscout_agent,                # A1
         parallel_analysis,             # A2 + A3 + A4
-        contact_hunter_agent,          # A5
         report_consolidator_agent,     # A6
         positioning_strategist_agent,  # A9 — Posicionamento ERRC
     ],
