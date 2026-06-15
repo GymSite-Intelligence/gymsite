@@ -1002,10 +1002,77 @@ def _build_pipeline_prompt(p: NovoRelatorioInput) -> str:
 # Endpoints
 # ════════════════════════════════════════════════════════════════════════════
 
+def _git_sha_disco() -> str | None:
+    """SHA curto do HEAD no DISCO (best-effort)."""
+    import subprocess
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=base,
+            capture_output=True, text=True, timeout=3,
+        ).stdout.strip()
+        return out or None
+    except Exception:
+        return None
+
+
+def _capturar_versao_boot() -> dict:
+    """Versão CONGELADA no boot = SHA do código que entrou em memória neste processo.
+
+    Lido 1× no import (não por request — senão leria o disco já avançado e mentiria).
+    Comparar com o HEAD do disco detecta processo stale: uvicorn sem --reload (bug
+    Py3.14) não recarrega; ver feedback memory restart-server-pós-código. Em prod
+    (Cloud Run, sem .git) usa env GIT_SHA/K_REVISION injetada no build.
+    """
+    sha = os.environ.get("GIT_SHA") or os.environ.get("K_REVISION") or ""
+    branch = os.environ.get("GIT_BRANCH") or ""
+    fonte = "env"
+    if not sha:
+        fonte = "git"
+        sha = _git_sha_disco() or ""
+        if not sha:
+            fonte = "indisponivel"
+        else:
+            import subprocess
+            try:
+                base = os.path.dirname(os.path.abspath(__file__))
+                branch = subprocess.run(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=base,
+                    capture_output=True, text=True, timeout=3,
+                ).stdout.strip()
+            except Exception:
+                branch = ""
+    return {
+        "commit": sha or "unknown",
+        "branch": branch or "unknown",
+        "fonte": fonte,
+        "booted_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+_VERSAO_BOOT = _capturar_versao_boot()
+logger.info("versão em execução (boot): %s", _VERSAO_BOOT)
+
+
 @app.get("/")
 def read_root() -> dict:
     """Root endpoint for health checks from Google Cloud Run."""
     return {"status": "ok", "service": "gymsite-api"}
+
+
+@app.get("/api/version")
+def version() -> dict:
+    """Versão do código EM EXECUÇÃO (SHA congelado no boot) vs HEAD do disco.
+
+    `stale=true` → o processo roda código mais velho que o disco: REINICIAR o uvicorn
+    antes de confiar em relatório gerado (sem --reload o código fica preso em memória).
+    """
+    disco = _git_sha_disco()
+    stale = bool(
+        disco and _VERSAO_BOOT["commit"] not in ("unknown", "")
+        and disco != _VERSAO_BOOT["commit"]
+    )
+    return {**_VERSAO_BOOT, "commit_disco": disco, "stale": stale}
 
 
 @app.get("/favicon.ico", include_in_schema=False)
