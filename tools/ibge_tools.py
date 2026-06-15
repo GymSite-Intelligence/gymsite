@@ -369,7 +369,9 @@ def calcular_score_demografico(pop_faixa: int, renda_media: float) -> float:
     return min(score + param("score_demo_base"), 10.0)
 
 
-def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> dict:
+def analise_demografica_completa(
+    cidade: str, uf: str, faixa: str = "18-45", bairro: str | None = None,
+) -> dict:
     """
     Macro-tool: executa as 5 etapas demográficas em UMA chamada.
 
@@ -430,6 +432,33 @@ def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> 
 
     renda_data = buscar_renda(mun["codigo"])
     renda = float(renda_data["renda_media"])
+    fonte_renda = renda_data["fonte"]
+    renda_granularidade = renda_data.get("granularidade", "uf")
+    renda_bairro_bloco: dict | None = None
+
+    # Renda do BAIRRO (CKAN IDH-Renda → per capita Atlas) tem precedência sobre a
+    # municipal quando disponível: bairro alta renda (ex.: Cocó R$ 2.095 vs Fortaleza
+    # R$ 1.572) deixa de ser subdimensionado no score. Mesma fonte que o perfil A/B da
+    # demanda → relatório mãe coerente. Município vira fallback rotulado.
+    if (bairro or "").strip():
+        try:
+            from tools.bairro_renda_loader import enrich_demografia_bairro
+
+            b = (enrich_demografia_bairro({}, cidade, bairro, uf).get("bairro") or {})
+            renda_b = b.get("renda_media")
+            if renda_b:
+                renda_bairro_bloco = {
+                    "renda_bairro": float(renda_b),
+                    "idh_renda": b.get("idh_renda"),
+                    "ranking_idh": b.get("ranking_idh"),
+                    "renda_municipio_fallback": renda,
+                    "fonte": b.get("fonte") or "CKAN IDH-Renda (Atlas) por bairro",
+                }
+                renda = float(renda_b)
+                fonte_renda = renda_bairro_bloco["fonte"]
+                renda_granularidade = "bairro"
+        except Exception as exc:
+            print(f"[A2] renda do bairro indisponível ({type(exc).__name__}: {exc}) — usando municipal")
 
     # pyrefly: ignore [unnecessary-type-conversion]
     score = float(calcular_score_demografico(pop_faixa, renda))
@@ -457,10 +486,12 @@ def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> 
         "score_demografico": score,
         "classificacao": classificacao,
         "fonte_populacao": pop_data.get("aviso", "IBGE Censo 2022"),
-        "fonte_renda": renda_data["fonte"],
-        # Granularidade da renda: "municipal" (Censo 2022) ou "uf" (fallback)
-        # A6 usa pra avisar no relatório quando a renda é só média estadual.
-        "renda_granularidade": renda_data.get("granularidade", "uf"),
+        "fonte_renda": fonte_renda,
+        # Granularidade da renda: "bairro" (CKAN IDH), "municipal" (Censo 2022) ou "uf".
+        # A6 usa pra avisar no relatório quando a renda é só média estadual/municipal.
+        "renda_granularidade": renda_granularidade,
+        "bairro": bairro or None,
+        "renda_bairro": renda_bairro_bloco,  # null = sem CKAN do bairro (usou municipal)
     }
     # Se caiu no fallback UF, propaga o aviso pra A2/A6 sinalizarem no markdown
     if renda_data.get("aviso"):
