@@ -432,6 +432,19 @@ function RelatorioViewerContent({
 
       {/* BODY — coluna única full-width (TOC virou dropdown no header) */}
       <div className="min-w-0 space-y-8">
+      {/* Alertas e Ressalvas — POSICIONADO NO TOPO: o usuário deve ver os riscos
+          antes de mergulhar nos detalhes (decisão informada). */}
+      {out.alertas_financeiros && out.alertas_financeiros.length > 0 && (
+        <Section
+          title={
+            out.veredito === 'REPROVADO'
+              ? `Alertas Críticos (${out.alertas_financeiros.length})`
+              : `Alertas e Ressalvas (${out.alertas_financeiros.length})`
+          }
+        >
+          <AlertasViz alertas={out.alertas_financeiros} veredito={out.veredito} />
+        </Section>
+      )}
       {/* 2. Scores Regionais */}
       <Section title="Scores Regionais">
         <ScoresViz
@@ -812,19 +825,6 @@ function RelatorioViewerContent({
         return null
       })()}
 
-      {/* 12. Alertas + Decisão (collapsible) */}
-      {out.alertas_financeiros && out.alertas_financeiros.length > 0 && (
-        <Section
-          title={
-            out.veredito === 'REPROVADO'
-              ? `Alertas Críticos (${out.alertas_financeiros.length})`
-              : `Alertas e Ressalvas (${out.alertas_financeiros.length})`
-          }
-          collapsible
-        >
-          <AlertasViz alertas={out.alertas_financeiros} veredito={out.veredito} />
-        </Section>
-      )}
       </div>
     </div>
   )
