@@ -1540,10 +1540,15 @@ def buscar_concorrentes_balanceados(
     # Agora: searchText geo-fenced pelo bairro alvo. Se NENHUMA unidade da rede
     # estiver no raio expandido (default 5km), a rede vai pra `redes_nao_encontradas`
     # ao invés de ser fabricada com unidade de outra região.
+    # Modo âncora bairro (flag): NÃO faz busca expandida. A expandida (raio 5km)
+    # re-puxa redes A0 de bairros adjacentes (ex.: Gaviões Aldeota num relatório de
+    # Cocó), desfazendo o anchoring que a âncora bairro garantiu. Rede A0 sem unidade
+    # no bairro vira `não_encontrada` (sinal honesto), não é fabricada de outra região.
+    _modo_ancora_bairro = os.getenv("CONCORRENTES_SOURCE", "").strip().lower() == "parque"
     redes_nao_encontradas: list[str] = []
     for rede in redes_pendentes:
         match = None
-        if lat_alvo and lng_alvo:
+        if not _modo_ancora_bairro and lat_alvo and lng_alvo:
             match = _buscar_rede_geofenced(
                 rede, lat_alvo, lng_alvo, raio_expandido_metros
             )
