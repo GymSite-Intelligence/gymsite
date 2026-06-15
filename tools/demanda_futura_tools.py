@@ -45,18 +45,31 @@ def estimar_demanda_obra(
     perfil_bairro: str = "geral",
     market_share: float | None = None,
     ticket_brl: float | None = None,
+    ocupacao_censo: float | None = None,
 ) -> dict[str, Any]:
-    """Núcleo PURO — cadeia corrigida, fatores via param(). Base dos testes.
+    """Núcleo PURO — cadeia corrigida, fatores via FONTE real > param fallback.
 
     unidades_exatas (refino A4) sobrescreve o proxy area/m2_por_unidade.
-    Retorna pool E captura (proxy ≠ fato) + fatores_usados com fonte.
+    ocupacao_censo (IBGE Censo 2022 setor, média moradores REAL do bairro) é a FONTE da
+    ocupação; o param ocupacao_* é só fallback rotulado quando o Censo não responde
+    (regra de ouro: dado tem fonte/método, não hardcode). Retorna pool E captura
+    (proxy ≠ fato) + fatores_usados com fonte.
     """
     area = max(0.0, float(area_total_m2 or 0))
     m2_un = param("m2_por_unidade")
     unidades = float(unidades_exatas) if unidades_exatas else (area / m2_un if m2_un else 0.0)
 
     ocup_key = ocupacao_por_tipologia(tipologia)
-    ocupacao = param(ocup_key)
+    if ocupacao_censo and float(ocupacao_censo) > 0:
+        ocupacao = float(ocupacao_censo)
+        ocup_fonte = {
+            "valor": round(ocupacao, 2),
+            "fonte": "IBGE Censo 2022 por setor censitário (média de moradores do bairro)",
+            "metodo": "agregado dos setores no raio do centróide do bairro",
+        }
+    else:
+        ocupacao = param(ocup_key)
+        ocup_fonte = {**param_meta(ocup_key), "nota": "fallback rotulado — Censo setor indisponível"}
     pen_key = "penetracao_bairro_ab" if perfil_bairro == "ab" else "penetracao_geral"
     penetracao = param(pen_key)
     share = float(market_share) if market_share is not None else param("market_share_default")
@@ -76,7 +89,7 @@ def estimar_demanda_obra(
         "captura_est": round(captura, 1),
         "receita_incremental_est": round(receita, 2),
         "fatores_usados": {
-            "ocupacao": param_meta(ocup_key),
+            "ocupacao": ocup_fonte,
             "penetracao": param_meta(pen_key),
             "market_share": ({"valor": share, "fonte": "A4/anéis"} if market_share is not None else param_meta("market_share_default")),
             "inadimplencia": param_meta("inadimplencia_default"),
@@ -244,6 +257,34 @@ def demanda_futura_datada(
     }
 
 
+def _ocupacao_censo_bairro(
+    cidade: str, uf: str, bairro: str | None, obras: list[dict],
+    _censo_fn: Any = None,
+) -> tuple[float | None, dict | None]:
+    """(media_moradores, bloco_censo) do Censo 2022 setor no centróide do bairro.
+
+    FONTE real da ocupação (regra de ouro); best-effort — falha → (None, None) e o
+    estimador cai no param fallback. id_municipio vem das obras CNO (acelera a query BQ).
+    """
+    try:
+        from tools.censo_setor_tools import demografia_setor_censo
+        from tools.maps_tools import geocode_endereco
+
+        censo_fn = _censo_fn or demografia_setor_censo
+        end = f"{bairro}, {cidade}, Brasil" if (bairro or "").strip() else f"{cidade}, Brasil"
+        geo = geocode_endereco(end)
+        lat, lng = geo.get("lat"), geo.get("lng")
+        if lat is None or lng is None:
+            return None, None
+        idm = next((str(o.get("id_municipio")) for o in obras if o.get("id_municipio")), None)
+        censo = censo_fn(lat, lng, id_municipio=idm)
+        if censo and censo.get("media_moradores"):
+            return float(censo["media_moradores"]), censo
+    except Exception as exc:
+        print(f"[demanda] ocupação Censo falhou: {type(exc).__name__}: {exc}")
+    return None, None
+
+
 def demanda_futura_detalhada(
     cidade: str,
     uf: str,
@@ -254,6 +295,7 @@ def demanda_futura_detalhada(
     market_share: float | None = None,
     ticket_brl: float | None = None,
     _refino_fn: Any = None,
+    _censo_fn: Any = None,
 ) -> dict[str, Any]:
     """Por-obra (top_n por área, com refino A4 do site do lançamento) + totais.
 
@@ -294,6 +336,10 @@ def demanda_futura_detalhada(
     refino_fn = _refino_fn or refinar_demanda_via_lancamento
     obras = sorted(obras, key=lambda o: -float(o.get("area_m2") or 0))
 
+    # Ocupação do bairro: FONTE = IBGE Censo 2022 por setor (média moradores real do
+    # bairro); o param ocupacao_* é só fallback. Busca 1x pelo centróide (best-effort).
+    ocupacao_censo, censo_bloco = _ocupacao_censo_bairro(cidade, uf, bairro, obras, _censo_fn)
+
     linhas: list[dict] = []
     tot = {"captura_est": 0.0, "moradores_est": 0.0}
     for i, o in enumerate(obras):
@@ -305,6 +351,7 @@ def demanda_futura_detalhada(
         e = estimar_demanda_obra(
             float(o.get("area_m2") or 0), unidades_exatas=unid_exatas, tipologia=tipologia,
             perfil_bairro=perfil_bairro, market_share=market_share, ticket_brl=ticket_brl,
+            ocupacao_censo=ocupacao_censo,
         )
         residencial, base_res, conf_res = _classificar_residencial(o.get("nome") or "", refino)
         # Gate residencial: prédio comercial/infra/ambíguo não gera morador → não soma
@@ -341,6 +388,9 @@ def demanda_futura_detalhada(
         "obras": linhas[:max(top_n, 10)],
         "captura_total_est": round(tot["captura_est"], 1),
         "moradores_total_est": round(tot["moradores_est"], 1),
+        # Demografia do bairro (Censo 2022 setor) usada como FONTE da ocupação; null = caiu no fallback param.
+        "demografia_censo_bairro": censo_bloco,
+        "ocupacao_fonte": "censo_2022_setor" if ocupacao_censo else "param_fallback",
         "perfil_bairro": perfil_bairro,
         "fonte": "CNO grande porte (RFB) + refino A4 (site do lançamento)",
         "nota": ("Proxy área = limite superior (inclui não-residencial); refino A4 e "

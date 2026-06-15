@@ -50,6 +50,19 @@ def test_market_share_explicito_do_a4():
     assert e["fatores_usados"]["market_share"]["fonte"] == "A4/anéis"
 
 
+def test_ocupacao_censo_e_fonte_param_e_fallback():
+    """Censo 2022 (média moradores) é a FONTE da ocupação; param só fallback rotulado."""
+    com_censo = estimar_demanda_obra(40_000, unidades_exatas=100, ocupacao_censo=2.67)
+    sem_censo = estimar_demanda_obra(40_000, unidades_exatas=100)
+    # Censo manda: moradores = unidades × média_moradores do bairro (real, não param)
+    assert abs(com_censo["moradores_est"] - 100 * 2.67) < 0.5
+    assert "Censo 2022" in com_censo["fatores_usados"]["ocupacao"]["fonte"]
+    # sem Censo → param, rotulado como fallback
+    assert "fallback" in (sem_censo["fatores_usados"]["ocupacao"].get("nota") or "")
+    # ocupação do Censo (2.67) ≠ ocupação default do param → moradores diferentes
+    assert com_censo["moradores_est"] != sem_censo["moradores_est"]
+
+
 def test_fatores_carregam_fonte():
     e = estimar_demanda_obra(10_000)
     for f in ("ocupacao", "penetracao", "market_share", "inadimplencia", "ticket_brl"):
@@ -105,7 +118,7 @@ def test_detalhada_aplica_refino_top_n(monkeypatch):
                     "fonte_url": "http://x", "confianca": "alta", "empreendimento": "Tower A"}
         return {"unidades_exatas": None, "confianca": "baixa", "empreendimento": None}
 
-    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=5, _refino_fn=fake_refino)
+    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=5, _refino_fn=fake_refino, _censo_fn=lambda *a, **k: None)
     assert r["status"] == "ok" and r["n_obras"] == 2
     linha_a = next(l for l in r["obras"] if l["construtora"] == "Construtora A")
     assert linha_a["unidades_est"] == 300.0                  # refino sobrescreveu proxy
@@ -126,7 +139,7 @@ def test_classificacao_residencial_base_e_conservadora(monkeypatch):
          "nome": "SPE GENERICO 01 LTDA", "bairro": "Cocó"},        # sem sinal
     ]
     monkeypatch.setattr(dft, "_obras_grande_porte_municipio", lambda c, u: obras)
-    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=0, _refino_fn=lambda o: None)
+    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=0, _refino_fn=lambda o: None, _censo_fn=lambda *a, **k: None)
 
     by = {l["construtora"]: l for l in r["obras"]}
     assert by["EDIFICIO RESERVA DO PARQUE"]["provavel_residencial"] is True
@@ -152,7 +165,7 @@ def test_gate_residencial_exclui_nao_residencial_dos_totais(monkeypatch):
     ]
     monkeypatch.setattr(dft, "_obras_grande_porte_municipio", lambda c, u: obras)
 
-    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=0, _refino_fn=lambda o: None)
+    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=0, _refino_fn=lambda o: None, _censo_fn=lambda *a, **k: None)
     res = next(l for l in r["obras"] if l["construtora"] == "EDIFICIO RESERVA DO PARQUE")
     nao = next(l for l in r["obras"] if l["construtora"] == "GALPAO LOGISTICO ABC")
 
