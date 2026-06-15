@@ -58,6 +58,7 @@ import { DoresPorCategoria } from '@/components/domain/DoresPorCategoria'
 import { PicoLotacaoViz } from '@/components/domain/PicoLotacaoViz'
 import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
 import { NovasUnidadesCard } from '@/components/domain/NovasUnidadesCard'
+import { DemografiaBairroCard } from '@/components/domain/DemografiaBairroCard'
 import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
 import { DemandaFuturaCard } from '@/components/domain/DemandaFuturaCard'
@@ -453,6 +454,15 @@ function RelatorioViewerContent({
           scoresRegionais={out.scores_regionais}
         />
       </Section>
+
+      {/* 2.5 Demografia do bairro — renda (CKAN) + população/ocupação (Censo 2022),
+          fontes reais por dimensão (bairro não herda o município). */}
+      {out.demografia_bairro &&
+        (out.demografia_bairro.renda_media != null || out.demografia_bairro.populacao != null) && (
+        <Section title="Demografia do bairro">
+          <DemografiaBairroCard block={out.demografia_bairro} />
+        </Section>
+      )}
 
       {/* 3. Contexto de Mercado (schema v1.2 → market_context completo; v1.1 → fallback) */}
       {(out.market_context || meta.fonte_market_context) && (

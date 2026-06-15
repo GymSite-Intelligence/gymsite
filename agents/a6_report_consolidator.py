@@ -1856,6 +1856,19 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # Demanda futura datada (CNO grande porte + refino A4) — injetada no state pelo api.py.
     demanda_futura_block = state.get("demanda_futura") or {}
 
+    # Demografia do BAIRRO (renda CKAN + população/ocupação Censo 2022) — fontes reais,
+    # determinístico (sem LLM). Persistido + renderizado em mini-cards na UI.
+    demografia_bairro_block: dict = {}
+    try:
+        from tools.demografia_bairro_tools import demografia_bairro as _demo_bairro
+
+        _idm = str((inner_mc.get("codigo_ibge") or "") if isinstance(inner_mc, dict) else "") or None
+        demografia_bairro_block = _demo_bairro(
+            cidade_efetiva, uf_mc, _bairro_alvo_da_busca(state), id_municipio=_idm
+        )
+    except Exception:
+        logger.warning("A6 demografia_bairro falhou", exc_info=True, extra={"agent": "A6"})
+
     obras_cno_block = state.get("obras_cno_pronto") or {}
     if not isinstance(obras_cno_block, dict) or obras_cno_block.get("status") not in (
         "ok",
@@ -2153,6 +2166,9 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             # Schema v1.12 — anéis competitivos (Apêndice D): score PONDERADO por
             # proximidade (NO_BAIRRO/FRONTEIRA/REGIONAL) — não infla pela força do vizinho.
             "aneis_competitivos": aneis_competitivos_resumo,
+            # Schema v1.13 — demografia do bairro (renda CKAN + pop/ocupação Censo 2022),
+            # fontes reais por dimensão. Renderizado em mini-cards na UI.
+            "demografia_bairro": demografia_bairro_block,
         },
         "metadata_execucao": {
             # Schema v1.2: mantém só infos de execução. Dados ricos do

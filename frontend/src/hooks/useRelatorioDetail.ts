@@ -130,6 +130,23 @@ export interface OutputConsolidado {
   demanda_futura?: DemandaFuturaJSON
   /** Anéis competitivos (Apêndice D) — score ponderado por proximidade. */
   aneis_competitivos?: AneisCompetitivosJSON
+  /** Demografia do bairro: renda (CKAN) + população/ocupação (Censo 2022). Fontes reais. */
+  demografia_bairro?: DemografiaBairroJSON
+}
+
+export interface DemografiaBairroJSON {
+  cidade?: string
+  bairro?: string | null
+  renda_media?: number | null
+  idh_renda?: number | null
+  ranking_idh?: string | null
+  renda_fonte?: string | null
+  renda_data_referencia?: string | null
+  populacao?: number | null
+  domicilios?: number | null
+  media_moradores?: number | null
+  populacao_fonte?: string | null
+  censo_n_setores?: number | null
 }
 
 export interface DemandaFuturaObraJSON {
