@@ -110,21 +110,9 @@ export function CoberturaRedesA0Card({
         </section>
       )}
 
-      {/* Concorrentes excluídos por filtro semântico */}
-      {cobertura.concorrentes_excluidos && cobertura.concorrentes_excluidos.length > 0 && (
-        <section className="space-y-1.5 pt-2 border-t border-border/60">
-          <h4 className="text-[11px] uppercase tracking-wider font-mono text-muted-foreground">
-            Excluídos por filtro semântico ({cobertura.concorrentes_excluidos.length})
-          </h4>
-          <ul className="space-y-1">
-            {cobertura.concorrentes_excluidos.slice(0, 5).map((c, i) => (
-              <li key={i} className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{c.nome}</span> — {c.motivo}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Excluídos por filtro semântico: removido da UI de produção (debug interno,
+          desacoplado da informação real). O dado segue em cobertura.concorrentes_excluidos
+          pra QA/telemetria, mas não polui o relatório do usuário. */}
     </div>
   )
 }
