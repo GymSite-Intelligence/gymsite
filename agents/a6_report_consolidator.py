@@ -1899,10 +1899,14 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     try:
         from tools.demografia_bairro_tools import demografia_bairro as _demo_bairro
 
+        # cidade/uf/bairro auto-contidos (cidade_efetiva é definido em branch condicional
+        # acima — não dá pra depender dele aqui). inner_mc sempre disponível.
+        _bai = _bairro_alvo_da_busca(state)
+        _cid_raw = (inner_mc.get("cidade") if isinstance(inner_mc, dict) else "") or ""
+        _cid_ef, _ = resolver_cidade_efetiva(_cid_raw, _bai)
+        _uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or ""
         _idm = str((inner_mc.get("codigo_ibge") or "") if isinstance(inner_mc, dict) else "") or None
-        demografia_bairro_block = _demo_bairro(
-            cidade_efetiva, uf_mc, _bairro_alvo_da_busca(state), id_municipio=_idm
-        )
+        demografia_bairro_block = _demo_bairro(_cid_ef, _uf, _bai, id_municipio=_idm)
     except Exception:
         logger.warning("A6 demografia_bairro falhou", exc_info=True, extra={"agent": "A6"})
 
