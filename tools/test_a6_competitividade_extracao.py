@@ -6,6 +6,17 @@ from agents.a6_report_consolidator import (
 )
 
 
+def test_post_check_saturacao_corrige_over_statement():
+    """Safety net A6 flash: narrativa 'SATURADO/extrema' vira o nível real quando BAIXO/MEDIO."""
+    txt = "O mercado competitivo é **SATURADO**. Há extrema saturação e saturação alta."
+    baixo = _alinhar_markdown_ao_estruturado(txt, {"nivel_saturacao": "BAIXO"})
+    assert "SATURADO" not in baixo and "extrema satura" not in baixo.lower()
+    assert "baixa saturação competitiva" in baixo
+    # nível ALTO/SATURADO não é rebaixado
+    alto_txt = "mercado SATURADO real"
+    assert _alinhar_markdown_ao_estruturado(alto_txt, {"nivel_saturacao": "SATURADO"}) == alto_txt
+
+
 def test_slim_concorrente_corta_campos_pesados():
     """Slim dropa grounding cru + reviews duplicadas + cap 5 reviews; mantém o report."""
     c = {

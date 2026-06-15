@@ -1706,6 +1706,27 @@ def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
             md,
             count=1,
         )
+
+    # Post-check de SATURAÇÃO (safety net p/ A6 flash): o LLM às vezes narra "extrema
+    # saturação"/"mercado SATURADO" puxando o nº do raio 3km, contradizendo o
+    # nivel_saturacao estruturado (do bairro). Quando o dado diz BAIXO/MEDIO, corrige
+    # o over-statement no texto. Determinístico — não depende da fidelidade do flash.
+    nivel = (out.get("nivel_saturacao") or "").upper()
+    _frase = {
+        "BAIXO": "baixa saturação competitiva",
+        "MEDIO": "saturação competitiva moderada",
+        "ALTO": "alta saturação competitiva",
+        "SATURADO": "mercado saturado",
+    }.get(nivel)
+    if _frase and nivel in ("BAIXO", "MEDIO"):
+        md = re.sub(r"extrema\s+satura[çc][ãa]o(\s+competitiva)?", _frase, md, flags=re.I)
+        md = re.sub(r"altamente\s+saturad[oa]", _frase, md, flags=re.I)
+        md = re.sub(r"satura[çc][ãa]o\s+(alta|extrema|elevada)", _frase, md, flags=re.I)
+        # "mercado (competitivo) (é/está) SATURADO" → frase do nível real
+        md = re.sub(
+            r"mercado(\s+competitivo)?(\s+(?:é|está|se mostra))?\s+\*{0,2}SATURAD[OA]\*{0,2}",
+            f"mercado com {_frase}", md, flags=re.I,
+        )
     return md
 
 
