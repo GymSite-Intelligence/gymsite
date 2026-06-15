@@ -143,6 +143,8 @@ export interface DemandaFuturaObraJSON {
   captura_est?: number | null
   confianca?: string | null
   provavel_residencial?: boolean
+  base_residencial?: string | null
+  ni_responsavel?: string | null
   fonte_url?: string | null
 }
 
@@ -150,6 +152,7 @@ export interface DemandaFuturaJSON {
   status?: string
   n_obras?: number
   provavel_residencial_n?: number
+  residencial_por_base?: Record<string, number>
   refinadas?: number
   captura_total_est?: number
   moradores_total_est?: number

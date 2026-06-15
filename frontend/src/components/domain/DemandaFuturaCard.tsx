@@ -105,8 +105,11 @@ export function DemandaFuturaCard({ block }: { block: DemandaFuturaJSON }) {
 
       <p className="text-[11px] text-muted-foreground">
         {block.refinadas ? `${block.refinadas} obras refinadas via site/instagram/PDF da construtora (auditado). ` : ''}
+        {block.residencial_por_base
+          ? `Residenciais classificados: ${block.residencial_por_base.refino_tipologia ?? 0} por refino auditado, ${block.residencial_por_base.nome_residencial ?? 0} por nome (CNO). Obra sem sinal não conta. `
+          : ''}
         Unidades por proxy área÷75 até refino A4. Captura = moradores × penetração × market share (futuros membros captáveis, não leads).
-        Estimativa de prospecção — {block.fonte}.
+        Fonte registral: CNPJ responsável no CNO. {block.fonte}.
       </p>
     </div>
   )
