@@ -109,9 +109,9 @@ bundle pré-computado e o relatório sai em **3–8 min com 40k–120k tokens**.
 | Carga CNPJ 2026-05 | ✅ completa (132.961) |
 | `renda_media_bairro` (Trilha 1) via CKAN municipal oficial | ✅ primário — `bairro_renda_loader._carregar_ckan_bairros` (Fortaleza, 124 bairros, IDH-Renda→renda pc); piloto curado = fallback; wire em bundle + `financial_tools` |
 | CNO carregado no Supabase (Trilha 4) | ✅ carga fresca RFB bulk → `public.cno_obras_fitness` sob `CNO_SOURCE=supabase` (extract CSV = fallback) |
-| Batch semanal (cron/DAG escritos) | ❌ nunca agendado |
-| Catálogo CKAN das cidades-alvo (`data/ckan_catalog/` p/ bundle) | ❌ vazio |
-| Bundles gerados | ❌ nenhum |
+| Batch semanal | 🟢 AGENDADO (2026-06-15): `.github/workflows/weekly-market-batch.yml` cron domingo 6h + workflow_dispatch, secrets configurados (GCP_SA_KEY/SUPABASE/MAPS/SEARCHAPI). Roda `run_weekly_market_batch.py` (CVM + bundles das ondas + golden gate). Depende dos secrets estarem setados no repo GitHub |
+| Censo 2022 setor no Supabase | 🟢 CARREGADO (2026-06-15): `censo_setor` com **456.008 setores** nacionais (`censo_setor_loader --nacional`). Censo é estático → load 1x, não é passo semanal |
+| Bundles gerados | 🟢 EM GERAÇÃO (2026-06-15): `run_weekly_market_batch --skip-cvm` gera os bundles das 10 ondas (market_waves.csv) já com demografia (renda CKAN + pop/ocupação Censo). Antes: nenhum |
 | CNO via BQ basedosdados nacional (Trilha 4 → seção 7) | ⏳ rota decidida 2026-06-14; loader+tabela+cron por construir. `bigquery.jobUser` CONFIRMADO presente na SA (2026-06-15) — não falta mais |
 | CVM/RI (Trilha 2) | 🟡 PARCIAL (2026-06-15): `atualizar_sector_listed_via_cvm` rodado → CVM ITR real persistido (SMFT3 margem EBITDA 47,8%, dívida/EBITDA 1,48) + ARPU proxy derivado (receita÷alunos). Cobertura KPI op. 25%→50%. Falta: churn (só RI), capex/unidade (extrair DFC), agendar batch |
 | Censo 2022 setor censitário / BQ basedosdados (Trilha 6) | 🟡 PARCIAL (2026-06-15): população/domicílios/**média moradores** por setor LIVE via `censo_setor_tools` (BQ, ST_DWITHIN no centróide). Cocó: 127 setores, pop 72.453, média 2,67. Já é FONTE da ocupação na demanda futura (param=fallback). **Renda por setor 2022 NÃO existe** (IBGE não liberou) → renda segue do CKAN Trilha 1. Falta: wire pop no A2/bundle + polígono real do bairro |
