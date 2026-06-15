@@ -57,7 +57,7 @@ import { recalcularCenariosComKit } from '@/lib/recalcula-cenario-com-kit'
 import { DoresPorCategoria } from '@/components/domain/DoresPorCategoria'
 import { PicoLotacaoViz } from '@/components/domain/PicoLotacaoViz'
 import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
-import { EntrantesCnpjTable } from '@/components/domain/EntrantesCnpjTable'
+import { NovasUnidadesCard } from '@/components/domain/NovasUnidadesCard'
 import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
 import { DemandaFuturaCard } from '@/components/domain/DemandaFuturaCard'
@@ -694,17 +694,12 @@ function RelatorioViewerContent({
         </Section>
       )}
 
-      {/* 7.4 Novos entrantes CNPJ (90d) */}
-      {out.entrantes_cnpj_90d && (out.entrantes_cnpj_90d.entrantes?.length ?? 0) > 0 && (
-        <Section title="Novos entrantes (CNPJ — 90 dias)" collapsible>
-          <MapaMunicipioMercado
-            className="mb-4"
-            relatorioId={relatorioId}
-            cidade={inp.cidade}
-            uf={inp.uf ?? out.entrantes_cnpj_90d.uf}
-            bairro={inp.bairro}
-          />
-          <EntrantesCnpjTable block={out.entrantes_cnpj_90d} relatorioId={relatorioId} />
+      {/* 7.4 Novas unidades (90d) — panorama em mini-cards. A lista nominal de
+          entrantes (com QSA/contato) migrou pra rota de PROSPECÇÃO; aqui fica só o
+          agregado (total/segmento/bairro) com o bairro pesquisado destacado. */}
+      {out.entrantes_cnpj_90d && (out.entrantes_cnpj_90d.total ?? 0) > 0 && (
+        <Section title="Novas unidades (90 dias)" collapsible>
+          <NovasUnidadesCard block={out.entrantes_cnpj_90d} bairroAlvo={inp.bairro} />
         </Section>
       )}
 
