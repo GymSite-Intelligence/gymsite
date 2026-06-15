@@ -2,6 +2,7 @@
 """A6: Consolidador final — relatório executivo markdown com gap + bairros alternativos + crowdsource."""
 import json
 import logging
+import os
 import re
 import time
 from datetime import datetime
@@ -1527,6 +1528,23 @@ def _resolver_competitividade_extracao(
     rating_medio = ic_raw.get("rating_medio_concorrentes") or inner_ic.get(
         "rating_medio_concorrentes"
     )
+
+    # Modo âncora bairro: o score/saturação do A3b podem ter vindo do raio-3km
+    # (ex.: 211 academias → SATURADO → score 0.0), contradizendo a saturação do
+    # bairro (10 concorrentes → MEDIO). Recomputa AMBOS do set analisado (bairro)
+    # pra serem COERENTES entre si — senão o resumo executivo narra "extrema
+    # saturação" a partir do score 0.0 enquanto a saturação estruturada diz MEDIO.
+    if os.getenv("CONCORRENTES_SOURCE", "").strip().lower() == "parque" and detalhados:
+        _num = len(detalhados)
+        _ratings = [
+            _safe_float(c.get("rating_geral") or c.get("rating_oficial"))
+            for c in detalhados
+        ]
+        _rok = [r for r in _ratings if r and r > 0]
+        _rmed = round(sum(_rok) / len(_rok), 2) if _rok else (_safe_float(rating_medio) or 0.0)
+        nivel_sat = classificar_saturacao(_num, 3.0)
+        score_conc = calcular_score_concorrencia(_num, _rmed, nivel_sat)
+        rating_medio = _rmed
     total_analisados = (
         ic_raw.get("total_concorrentes_analisados")
         or inner_ic.get("total_concorrentes_analisados")
