@@ -19,7 +19,11 @@ from tools.financial_tools import analise_financeira_a4_completo
 # prompt anti-code-execution endurecido e teste isolado.
 financial_estimator_agent = Agent(
     name="FinancialEstimator",
-    model="gemini-2.5-pro",
+    # Pro→Flash (AUDITORIA_CUSTO_LLM_PIPELINE rec#1, mapa cost_optimizations): o A4 é
+    # aritmética estruturada (tools fazem a conta em 3 cenários), Flash basta. Corta o
+    # long-pole do parallel block (Pro era o mais lento) + pressão de quota Gemini (429)
+    # + ~4× custo de output. A6 (síntese final) permanece Pro.
+    model="gemini-2.5-flash",
     description=(
         "Calcula viabilidade financeira em 3 cenários (low/mid/premium) com aluguel "
         "real (mediana de 3 queries paralelas Search Grounding + fallback ACAD), "
