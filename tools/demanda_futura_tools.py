@@ -203,10 +203,11 @@ def demanda_futura_datada(
     uf: str,
     *,
     bairro: str | None = None,
-    perfil_bairro: str = "geral",
+    perfil_bairro: str = "auto",
     market_share: float | None = None,
     ticket_brl: float | None = None,
     somente_em_curso: bool = True,
+    _demo_fn: Any = None,
 ) -> dict[str, Any]:
     """Agrega demanda futura das obras de grande porte com entrega ainda à frente."""
     obras = _obras_futuras_municipio(cidade, uf, bairro, somente_em_curso=somente_em_curso)
@@ -217,6 +218,11 @@ def demanda_futura_datada(
     if not obras:
         return {"status": "sem_dados", "cidade": cidade, "uf": uf, "bairro": bairro,
                 "n_obras": 0, "confianca": "nenhuma", "fonte": "CNO grande porte (RFB)"}
+
+    # Perfil A/B derivado da renda real do bairro ("auto"); valor explícito é honrado.
+    perfil_fonte: dict | None = None
+    if perfil_bairro == "auto":
+        perfil_bairro, perfil_fonte = _perfil_renda_bairro(cidade, uf, bairro, obras, _demo_fn)
 
     agg = {"moradores_est": 0.0, "pool_fitness_est": 0.0, "captura_est": 0.0,
            "receita_incremental_est": 0.0, "unidades_est": 0.0}
@@ -245,6 +251,7 @@ def demanda_futura_datada(
         "receita_incremental_est": round(agg["receita_incremental_est"], 2),
         "janela_entrega": {"de": min(entregas), "ate": max(entregas)} if entregas else None,
         "perfil_bairro": perfil_bairro,
+        "perfil_bairro_fonte": perfil_fonte,
         "fatores_usados": fatores,
         "confianca": _confianca(len(obras)),
         "fonte": "CNO grande porte (RFB) — proxy residencial área > 2000 m²",
@@ -285,17 +292,49 @@ def _ocupacao_censo_bairro(
     return None, None
 
 
+def _perfil_renda_bairro(
+    cidade: str, uf: str, bairro: str | None, obras: list[dict],
+    _demo_fn: Any = None,
+) -> tuple[str, dict | None]:
+    """(perfil, meta) derivado da renda REAL do bairro (CKAN IDH-Renda + renda pc).
+
+    Corrige o capenga de sempre usar penetração 'geral': bairro alta renda (ex.: Cocó
+    IDH-Renda 0,89) passa a usar penetração A/B. best-effort — sem dado → ('geral', meta).
+    id_municipio vem das obras CNO (acelera a query Censo).
+    """
+    try:
+        from tools.demografia_bairro_tools import classificar_perfil_bairro
+
+        # Renda-only (CKAN IDH-Renda): evita re-geocode/Censo já feito em
+        # _ocupacao_censo_bairro. _demo_fn injetável → testável sem rede.
+        def _renda_ckan(_c, _u, _b, *, id_municipio=None):
+            from tools.bairro_renda_loader import enrich_demografia_bairro
+            b = (enrich_demografia_bairro({}, _c, _b, _u).get("bairro") or {})
+            return {"renda_media": b.get("renda_media"), "idh_renda": b.get("idh_renda")}
+
+        demo_fn = _demo_fn or _renda_ckan
+        idm = next((str(o.get("id_municipio")) for o in obras if o.get("id_municipio")), None)
+        demo = demo_fn(cidade, uf, bairro, id_municipio=idm)
+        cls = classificar_perfil_bairro(demo.get("renda_media"), demo.get("idh_renda"))
+        return cls["perfil"], cls
+    except Exception as exc:
+        print(f"[demanda] perfil renda falhou: {type(exc).__name__}: {exc}")
+    return "geral", {"perfil": "geral", "base": "erro", "confianca": "baixa",
+                     "fonte": "derivação de perfil falhou — penetração geral"}
+
+
 def demanda_futura_detalhada(
     cidade: str,
     uf: str,
     *,
     bairro: str | None = None,
-    perfil_bairro: str = "geral",
+    perfil_bairro: str = "auto",
     top_n: int = 5,
     market_share: float | None = None,
     ticket_brl: float | None = None,
     _refino_fn: Any = None,
     _censo_fn: Any = None,
+    _demo_fn: Any = None,
 ) -> dict[str, Any]:
     """Por-obra (top_n por área, com refino A4 do site do lançamento) + totais.
 
@@ -340,8 +379,14 @@ def demanda_futura_detalhada(
     # bairro); o param ocupacao_* é só fallback. Busca 1x pelo centróide (best-effort).
     ocupacao_censo, censo_bloco = _ocupacao_censo_bairro(cidade, uf, bairro, obras, _censo_fn)
 
+    # Perfil A/B: FONTE = renda real do bairro (CKAN IDH-Renda + renda pc). "auto" deriva;
+    # valor explícito ("ab"/"geral") do caller é honrado. Corrige o capenga do default "geral".
+    perfil_fonte: dict | None = None
+    if perfil_bairro == "auto":
+        perfil_bairro, perfil_fonte = _perfil_renda_bairro(cidade, uf, bairro, obras, _demo_fn)
+
     linhas: list[dict] = []
-    tot = {"captura_est": 0.0, "moradores_est": 0.0}
+    tot = {"captura_est": 0.0, "moradores_est": 0.0, "receita_est": 0.0}
     for i, o in enumerate(obras):
         if i < top_n:
             o = {**o, "cidade": cidade, "uf": uf}  # query do refino precisa de cidade/uf
@@ -359,6 +404,7 @@ def demanda_futura_detalhada(
         if residencial:
             tot["captura_est"] += e["captura_est"]
             tot["moradores_est"] += e["moradores_est"]
+            tot["receita_est"] += e["receita_incremental_est"]
         linhas.append({
             "empreendimento": (refino or {}).get("empreendimento"),
             "construtora": o.get("nome"),
@@ -367,7 +413,11 @@ def demanda_futura_detalhada(
             "unidades_fonte": e["unidades_fonte"],
             "entrega": _meses_para_entrega(o.get("data_inicio")),
             "amenidade_fitness": (refino or {}).get("amenidade_fitness", False),
-            "captura_est": e["captura_est"] if residencial else 0.0,
+            # Cadeia clara pro usuário: moradores (Censo) → membros captáveis (nossa
+            # fatia) → receita/mês. Tudo 0 em obra não-residencial (fora do gate).
+            "moradores_est": e["moradores_est"] if residencial else 0.0,
+            "captura_est": e["captura_est"] if residencial else 0.0,  # membros captáveis
+            "receita_mensal_est": e["receita_incremental_est"] if residencial else 0.0,
             # confiança do refino (quando rodou) tem precedência; senão a da classificação.
             "confianca": (refino or {}).get("confianca") or conf_res,
             "provavel_residencial": residencial,
@@ -386,12 +436,14 @@ def demanda_futura_detalhada(
             for base in ("refino_tipologia", "nome_residencial")
         },
         "obras": linhas[:max(top_n, 10)],
-        "captura_total_est": round(tot["captura_est"], 1),
-        "moradores_total_est": round(tot["moradores_est"], 1),
+        "captura_total_est": round(tot["captura_est"], 1),       # membros captáveis (T+24)
+        "moradores_total_est": round(tot["moradores_est"], 1),   # moradores novos (Censo)
+        "receita_total_mensal_est": round(tot["receita_est"], 2),  # R$/mês de receita futura
         # Demografia do bairro (Censo 2022 setor) usada como FONTE da ocupação; null = caiu no fallback param.
         "demografia_censo_bairro": censo_bloco,
         "ocupacao_fonte": "censo_2022_setor" if ocupacao_censo else "param_fallback",
         "perfil_bairro": perfil_bairro,
+        "perfil_bairro_fonte": perfil_fonte,  # base/confiança/fonte da derivação A/B (auditável)
         "fonte": "CNO grande porte (RFB) + refino A4 (site do lançamento)",
         "nota": ("Proxy área = limite superior (inclui não-residencial); refino A4 e "
                  "provavel_residencial são o gate de confiança. Liderar pelo refinado."),

@@ -39,6 +39,10 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     # ── Penetração fitness (% da pop. que É MEMBRO de academia) — ACAD ───────
     "penetracao_geral":     _p(0.045, "ACAD/Panorama Fitness Brasil", "penetracao_mercado", "fração", "benchmark", "2026-06-14"),
     "penetracao_bairro_ab": _p(0.10, "ACAD (bairro alta renda A/B)", "penetracao_mercado_segmentada", "fração", "benchmark", "2026-06-14"),
+    # Corte de perfil A/B (define se o bairro usa penetração segmentada). Derivado da
+    # renda REAL do bairro (CKAN IDH-Renda Atlas + renda per capita), não default.
+    "perfil_ab_idh_renda_min": _p(0.800, "Atlas Brasil/PNUD (IDH-Renda 'muito alto' ≥ 0,800)", "corte_perfil_renda", "índice", "calibracao"),
+    "perfil_ab_renda_pc_min":  _p(2000.0, "IBGE classes A/B (corte renda per capita, ~2× mediana nacional)", "corte_perfil_renda", "BRL/pessoa", "calibracao"),
     "market_share_default": _p(0.15, "fallback_conservador (A4/anéis recalibra)", "quota_raio_estimada", "fração", "calibracao", "2026-06-14"),
     "inadimplencia_default": _p(0.06, "fallback_ACAD_com_recorrencia", "benchmark_setorial", "fração", "benchmark", "2026-06-14"),
     "meses_entrega":        _p(30, "fallback_mediana_obra_24_36m (recalibrar CNO encerradas)", "mediana_tempo_obra", "meses", "benchmark", "2026-06-14"),

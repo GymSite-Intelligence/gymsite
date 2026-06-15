@@ -8,9 +8,11 @@ from tools.demanda_futura_tools import (
     _confianca,
     _entrega_no_futuro,
     _meses_para_entrega,
+    _perfil_renda_bairro,
     demanda_futura_datada,
     estimar_demanda_obra,
 )
+from tools.demografia_bairro_tools import classificar_perfil_bairro
 from tools.parametros_metodologia import param
 
 
@@ -43,6 +45,32 @@ def test_perfil_ab_aumenta_pool():
     assert ab["pool_fitness_est"] > geral["pool_fitness_est"]
     assert abs(ab["pool_fitness_est"] / geral["pool_fitness_est"]
                - param("penetracao_bairro_ab") / param("penetracao_geral")) < 0.02
+
+
+def test_classificar_perfil_bairro_deriva_da_renda():
+    # IDH-Renda alto (ex.: Cocó 0,89) → A/B por idh (alta confiança)
+    alto = classificar_perfil_bairro(renda_media_pc=None, idh_renda=0.89)
+    assert alto["perfil"] == "ab" and alto["base"] == "idh_renda" and alto["confianca"] == "alta"
+    # Sem IDH mas renda pc acima do corte → A/B por renda (média confiança)
+    renda = classificar_perfil_bairro(renda_media_pc=param("perfil_ab_renda_pc_min") + 1, idh_renda=None)
+    assert renda["perfil"] == "ab" and renda["base"] == "renda_per_capita"
+    # Renda baixa → geral
+    baixo = classificar_perfil_bairro(renda_media_pc=900.0, idh_renda=0.55)
+    assert baixo["perfil"] == "geral" and baixo["base"] == "renda_abaixo_ab"
+    # Sem dado nenhum → geral fallback rotulado (baixa confiança)
+    vazio = classificar_perfil_bairro()
+    assert vazio["perfil"] == "geral" and vazio["base"] == "sem_dado_renda" and vazio["confianca"] == "baixa"
+
+
+def test_perfil_renda_bairro_auto_deriva_via_demo_fn():
+    # _demo_fn injetável → testa sem rede. Bairro alta renda vira "ab".
+    def fake_demo(cidade, uf, bairro, *, id_municipio=None):
+        return {"renda_media": 2500.0, "idh_renda": 0.89}
+    perfil, meta = _perfil_renda_bairro("Fortaleza", "CE", "Cocó", [{"id_municipio": "2304400"}], fake_demo)
+    assert perfil == "ab" and meta["base"] == "idh_renda"
+    # Bairro sem renda → geral
+    perfil2, meta2 = _perfil_renda_bairro("X", "CE", "Y", [{}], lambda *a, **k: {"renda_media": None, "idh_renda": None})
+    assert perfil2 == "geral" and meta2["base"] == "sem_dado_renda"
 
 
 def test_market_share_explicito_do_a4():

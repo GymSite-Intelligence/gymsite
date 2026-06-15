@@ -15,6 +15,36 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def classificar_perfil_bairro(
+    renda_media_pc: float | None = None,
+    idh_renda: float | None = None,
+) -> dict[str, Any]:
+    """Deriva perfil 'ab' | 'geral' da renda REAL do bairro (regra de ouro).
+
+    'ab' (penetração fitness segmentada, ~10%) quando o bairro é alta renda; senão
+    'geral' (~4,5%). Ordem de confiança: IDH-Renda (CKAN/Atlas) > renda per capita >
+    sem dado (fallback 'geral' rotulado). Cortes via param() — recalibráveis.
+
+    Retorna {perfil, base, confianca, fonte} — exposto no relatório (auditável).
+    """
+    from tools.parametros_metodologia import param
+
+    idh_min = param("perfil_ab_idh_renda_min")
+    renda_min = param("perfil_ab_renda_pc_min")
+
+    if idh_renda is not None and float(idh_renda) >= idh_min:
+        return {"perfil": "ab", "base": "idh_renda", "confianca": "alta",
+                "fonte": f"CKAN IDH-Renda {float(idh_renda):.3f} ≥ {idh_min:.3f} (alta renda A/B)"}
+    if renda_media_pc is not None and float(renda_media_pc) >= renda_min:
+        return {"perfil": "ab", "base": "renda_per_capita", "confianca": "media",
+                "fonte": f"renda per capita R$ {float(renda_media_pc):.0f} ≥ R$ {renda_min:.0f} (A/B)"}
+    if idh_renda is None and renda_media_pc is None:
+        return {"perfil": "geral", "base": "sem_dado_renda", "confianca": "baixa",
+                "fonte": "renda do bairro indisponível — penetração geral (fallback rotulado)"}
+    return {"perfil": "geral", "base": "renda_abaixo_ab", "confianca": "media",
+            "fonte": "renda/IDH do bairro abaixo do corte A/B — penetração geral"}
+
+
 def demografia_bairro(
     cidade: str,
     uf: str,
