@@ -117,18 +117,41 @@ def _aplicar_ri_overlay(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+def _derivar_kpis(data: dict[str, Any]) -> dict[str, Any]:
+    """Deriva KPIs do CVM estruturado quando não há RI (regra de ouro: fonte+método).
+
+    ARPU proxy = receita líquida trimestral ÷ alunos ÷ 3 (mensal). Fonte primária (CVM
+    ITR) + alunos (RI). Rotulado como proxy: a receita total inclui franquia/outros, então
+    SUPERESTIMA o ticket de mensalidade própria — é teto, não ticket exato.
+    """
+    for emp in data.get("empresas") or []:
+        if not isinstance(emp, dict):
+            continue
+        kpis = emp.setdefault("kpis", {})
+        det = emp.get("detalhes_cvm") or {}
+        rec_mil = det.get("receita_liquida_mil")
+        alunos = kpis.get("alunos_ativos")
+        if kpis.get("arpu_brl") is None and rec_mil and alunos:
+            kpis["arpu_brl"] = round(float(rec_mil) * 1000.0 / float(alunos) / 3.0, 2)
+            kpis["arpu_brl_fonte"] = (
+                "proxy CVM: receita líquida trimestral ÷ alunos ÷ 3 (inclui franquia/"
+                "outras receitas → teto do ticket, não mensalidade própria exata)"
+            )
+    return data
+
+
 def obter_sector_listed(*, force_defaults: bool = False) -> dict[str, Any]:
     """Retorna snapshot de redes listadas; nunca levanta exceção.
 
-    CVM ITR cobre financeiro; KPIs operacionais (alunos/ARPU/churn) vêm da
-    curadoria RI overlay quando disponível. Cobertura é monitorada por
-    `sector_kpi_coverage` / `sector_kpi_alertas`.
+    CVM ITR cobre financeiro; KPIs operacionais (alunos/ARPU/churn) vêm da curadoria RI
+    overlay quando disponível, ou DERIVADOS do CVM (ARPU proxy). Cobertura é monitorada
+    por `sector_kpi_coverage` / `sector_kpi_alertas`.
     """
     if not force_defaults:
         snap = _load_snapshot()
         if snap and snap.get("empresas"):
-            return _aplicar_ri_overlay(dict(snap))
-    return _aplicar_ri_overlay(dict(DEFAULT_LISTED))
+            return _derivar_kpis(_aplicar_ri_overlay(dict(snap)))
+    return _derivar_kpis(_aplicar_ri_overlay(dict(DEFAULT_LISTED)))
 
 
 def sector_kpi_coverage(empresa: dict[str, Any]) -> dict[str, Any]:
