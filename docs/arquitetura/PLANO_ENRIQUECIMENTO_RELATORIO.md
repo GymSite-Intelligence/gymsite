@@ -56,8 +56,16 @@ Princípio: **mineração no batch (banco), cálculo no pipeline (read), zero AP
 
 ## PARTE 2 — ARQUITETURA DE CONSTRUÇÃO
 
-### 2.1 Fase B — Demanda Futura Datada (🟥 BLOQUEADA POR VINTAGE DE DADO)
+### 2.1 Fase B — Demanda Futura Datada (🟢 VIVO com CNO fresco — atualizado 2026-06-15)
 
+> **Atualização 2026-06-15 (supera o achado de vintage abaixo):** o gargalo de
+> dado defasado foi resolvido — o CNO foi carregado **FRESCO no Supabase** via
+> loader `rfb_cno_loader` (flag `CNO_SOURCE=supabase`), e a **demanda futura
+> datada acende NACIONAL**. Status: **VIVO com CNO fresco (Supabase)**. A rota BQ
+> `basedosdados` nacional foi **decidida em 14/06**; falta apenas **construir
+> loader + tabela + cron** dessa rota. O bloco abaixo descreve o achado original
+> de vintage (basedosdados ≤2021) e fica como contexto histórico.
+>
 > **Achado 2026-06-14:** `basedosdados.br_me_cno` é snapshot **defasado** —
 > `max(data_inicio) = 2021-05`. Zero obras desde 2022. "Demanda FUTURA" (entrega
 > início+30m no futuro) é **impossível** com esse dado: o filtro de entrega futura
@@ -219,14 +227,15 @@ Ordem: **B → A-CNO → D → C** (A-IPTU gated).
 
 | Fase | Estado |
 |---|---|
-| B — Demanda futura datada | 🟢 **VIVO (2026-06-14)** — CNO fresco (RFB maio/2026) no banco via `rfb_cno_loader`; demanda futura acende nacional (Fortaleza 359 obras/janela 2026-2028, SP 640, Curitiba 416…). Crosswalk RFB↔IBGE 5570 (`municipio_rf_ibge`) destravou todas as cidades. Falta só refino A4 + integração A7/A9 |
+| B — Demanda futura datada | 🟢 **VIVO com CNO fresco (Supabase) (atualizado 2026-06-15)** — CNO fresco (RFB maio/2026) no banco via `rfb_cno_loader` (`CNO_SOURCE=supabase`); demanda futura acende nacional (Fortaleza 359 obras/janela 2026-2028, SP 640, Curitiba 416…). Crosswalk RFB↔IBGE 5570 (`municipio_rf_ibge`) destravou todas as cidades. **Rota BQ `basedosdados` nacional decidida 14/06 — falta construir loader+tabela+cron.** Falta também refino A4 + integração A7/A9 |
 | A-CNO — vetores de obra | ⏳ **próximo** (funciona com dado histórico) |
-| D — anéis competitivos | 🟢 **tool construído** — `aneis_competitivos_tools.py`: classifica NO_BAIRRO/FRONTEIRA/REGIONAL (nome + distância ao centroide), score PONDERADO (1.0/0.5/0.2), porte por avaliações, multiesporte flag. Params na regra de ouro. 8 testes (fix Wally: 1.7 vs 3 plano). **Falta wire no A6** (plumbing do centroide) |
+| D — anéis competitivos | 🟡 **parcial (atualizado 2026-06-15)** — `aneis_competitivos_tools.py`: a classificação **NO_BAIRRO funciona** (NO_BAIRRO/FRONTEIRA/REGIONAL por nome + distância). **PENDENTE:** (1) o score ponderado por anel (1.0/0.5/0.2) **não alimenta o score final**; (2) `dist_borda` ainda é **centróide**, não polígono; (3) **multiesporte não é exibido**. Params na regra de ouro; 8 testes (fix Wally: 1.7 vs 3 plano). Falta wire no A6 |
 | C — leads condominial | 🟢 **construído** — `leads_condominial_tools.py`: gatilho amenidade fitness (refino) → CNPJ incorporadora → RFB QSA + **Apollo decisor** → `oportunidades_prospeccao`. 4 testes (deps injetadas). Prioridade por janela de compra de equipamento |
 | A-IPTU — valor venal | 🔒 gated (CKAN municipal) |
 
-**Reprioritização (pós-achado vintage):** A-CNO + D primeiro (não dependem de futuro/
-freshness); B/C revisitar quando fonte CNO fresca existir.
+**Reprioritização (atualizado 2026-06-15):** a fonte CNO fresca **já existe** (Supabase),
+então B/C estão **destravados** — supera o congelamento "pós-achado vintage". A-CNO + D
+seguem valendo com dado histórico; B lidera (CNO fresco nacional).
 
 **Infra REGRA DE OURO (construída 2026-06-14):** `tools/parametros_metodologia.py` +
 tabela `public.parametros_metodologia` (11 fatores com fonte/método, recalibráveis).

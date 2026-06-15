@@ -28,9 +28,18 @@ cidade pra treinar. A pergunta não é "quantas academias tem em Fortaleza"
 — é "quantas o morador DESTE bairro alcança em 10 minutos".
 
 **GymSite:** anéis competitivos (Motor v2 Apêndice D): NO_BAIRRO (peso
-1.00), FRONTEIRA ≤2 km da borda (0.50), REGIONAL (0.20). Distância à
-BORDA do polígono, não ao centróide. Score competitivo ponderado por anel
-— Aldeota forte não pode mascarar Cocó vazio.
+1.00), FRONTEIRA ≤2 km (0.50), REGIONAL (0.20). **FEITO (jun/2026):** a
+classificação por anel funciona — `classificar_anel` casa NO_BAIRRO pelo
+campo `bairro_concorrente` por CONTÉM ("Cocó" em "Lojas 2/3 - Cocó"); no
+relatório real os 10 concorrentes de Cocó saem NO_BAIRRO=10 (antes
+REGIONAL=9, por bug do campo). **PENDENTE (roadmap, não pronto):** (a) o
+score ponderado por anel (`resumo_aneis.score_competitivo_ponderado`)
+ainda NÃO alimenta o `score_concorrencia` — hoje o score vem da saturação
+por CONTAGEM; (b) `dist_borda_km` é distância ao CENTRÓIDE (média dos
+candidatos GeoScout), não à borda do polígono do bairro — falta o
+polígono/grade; (c) flag `multiesporte` e lista per-competitor
+(anel/porte/dist) são computadas mas ainda não exibidas no relatório. A
+meta "Aldeota forte não mascara Cocó vazio" depende de (a).
 
 ## Aula 3 — Importância → prever movimento, não fotografar
 
@@ -71,8 +80,10 @@ atendem a mesma necessidade ("me exercitar") por outro caminho. O filtro
 que separa também REGISTRA: excluído não é invisível, é categorizado.
 
 **GymSite:** seção "excluídos por filtro semântico" com motivo; flag
-`multiesporte` pra quem é gym + natação (VS Club — falso negativo morto
-no Motor v2); parques ativos próximos como polo de concorrência indireta
+`multiesporte` pra quem é gym + natação/luta (VS Club mantido como flag,
+não mais excluído — falso negativo morto no Motor v2; flag computada mas
+ainda não exibida no relatório, jun/2026); parques ativos próximos como
+polo de concorrência indireta
 gratuita.
 
 ## Aula 7 — Distribuição dos players → mapa, não lista

@@ -37,8 +37,14 @@ bundle pré-computado e o relatório sai em **3–8 min com 40k–120k tokens**.
   CVM — organiza o acesso."
 - **Lacuna que fecha:** `renda_media_bairro` — Deep Research não entrega (caso
   Parangaba documentado). Portais CKAN municipais (IPECE, SIMDA, secretarias) têm.
-- **Estado:** `tools/ckan_client.py` + `bairro_renda_loader` prontos e testados;
-  `data/ckan_catalog/` praticamente vazio (1 arquivo de teste com bug São Paulo/CE).
+- **Estado (atualizado 2026-06-15):** `renda_media_bairro` agora é puxado do **CKAN
+  municipal OFICIAL como fonte primária**, não mais lacuna aberta. `bairro_renda_loader.
+  _carregar_ckan_bairros` baixa o dataset "Desenvolvimento Humano por Bairro" de Fortaleza
+  (dados.fortaleza.ce.gov.br), lê a coluna IDH-Renda e converte para renda per capita pela
+  fórmula Atlas Brasil/PNUD (Rmin 8,59 / Rmax 4033,99) — cobre os 124 bairros de Fortaleza.
+  Wire completo (bundle build + `financial_tools`). O **piloto curado**
+  (`data/bairro_renda_pilot/`) virou FALLBACK rotulado. `tools/ckan_client.py` +
+  `bairro_renda_loader` prontos e testados.
 
 ### Trilha 2 — Setor listado (CVM/RI)
 - Smart Fit (SMFT3), Bluefit: ITR/DRE/KPIs → `sector_benchmarks` (ARPU, churn,
@@ -68,8 +74,12 @@ bundle pré-computado e o relatório sai em **3–8 min com 40k–120k tokens**.
 - **Bônus:** `calcular_benchmark_tempo_obra_cno()` — mediana/P25/P75 de tempo de
   obra por porte → alimenta prazos do PLAYBOOK de execução (tarefas de OBRAS com
   benchmark real, não chute).
-- **Estado:** tools prontas (`cno_fitness_tools`, `consultar_municipio_cnpj_cno`),
-  dados via extract local (`CNO_DATA_DIR`); pendência: indexar em tabela Supabase.
+- **Estado (atualizado 2026-06-15):** CNO **carregado no Supabase** — flag
+  `CNO_SOURCE=supabase` roteia a leitura para `public.cno_obras_fitness`; loader
+  `rfb_cno_loader` faz carga fresca via RFB bulk (dadosabertos.rfb.gov.br/CNO) → Supabase
+  (`extract` local CSV permanece como fallback/teste). Tools prontas (`cno_fitness_tools`,
+  `consultar_municipio_cnpj_cno`). Próximo: rota BQ basedosdados nacional (seção 7) +
+  batch (cron) — ainda não agendados.
 
 ### Trilha 5 — Local viva (Places/OSM/portais de aluguel)
 - Concorrência atual (A3), listings OLX/ImovelWeb (A1), popular times — já em
@@ -90,24 +100,29 @@ bundle pré-computado e o relatório sai em **3–8 min com 40k–120k tokens**.
 
 ---
 
-## 4. Estado consolidado: motor pronto, chave desligada
+## 4. Estado consolidado: motor pronto, chave desligada (atualizado 2026-06-15)
 
 | Peça | Estado |
 |---|---|
 | Código das 5 trilhas (clients, loaders, bundle, gates de teste) | ✅ commitado |
 | Modos `A0_CONTEXT_SOURCE` (`auto`/`ckan_bundle` estrito/`deep_research_fallback`) | ✅ implementados |
 | Carga CNPJ 2026-05 | ✅ completa (132.961) |
+| `renda_media_bairro` (Trilha 1) via CKAN municipal oficial | ✅ primário — `bairro_renda_loader._carregar_ckan_bairros` (Fortaleza, 124 bairros, IDH-Renda→renda pc); piloto curado = fallback; wire em bundle + `financial_tools` |
+| CNO carregado no Supabase (Trilha 4) | ✅ carga fresca RFB bulk → `public.cno_obras_fitness` sob `CNO_SOURCE=supabase` (extract CSV = fallback) |
 | Batch semanal (cron/DAG escritos) | ❌ nunca agendado |
-| Catálogo CKAN das cidades-alvo | ❌ vazio |
+| Catálogo CKAN das cidades-alvo (`data/ckan_catalog/` p/ bundle) | ❌ vazio |
 | Bundles gerados | ❌ nenhum |
-| CNO indexado no Supabase | ❌ extract local apenas — **rota decidida: BQ basedosdados** (seção 7), falta construir loader+tabela+cron |
-| Rota BQ-basedosdados (fontes nacionais) | ⏳ decidida 2026-06-14 (seção 7); CNO = 1º caso; falta `bigquery.jobUser` na SA |
+| CNO via BQ basedosdados nacional (Trilha 4 → seção 7) | ⏳ rota decidida 2026-06-14; loader+tabela+cron por construir; falta `bigquery.jobUser` na SA |
+| CVM/RI (Trilha 2) | ❌ `cvm_fetch`/`cvm_listed_metrics` prontos com fixtures, não agendados |
+| Censo 2022 setor censitário / BQ basedosdados (Trilha 6) | ❌ não construído |
 | Recarga mensal CNPJ automatizada | ❌ manual |
 
 ## 5. Os 4 passos para ligar o motor
 
 1. `discover_ckan_catalog` para as cidades-alvo reais (Fortaleza, Eusébio, Caucaia,
-   João Pessoa...) — popular `data/ckan_catalog/`.
+   João Pessoa...) — popular `data/ckan_catalog/` para o bundle. (Nota 2026-06-15:
+   o caso `renda_media_bairro` de Fortaleza já está LIVE via rota dedicada do
+   `bairro_renda_loader`, primária sobre o piloto — independente desse catálogo.)
 2. Agendar `run_weekly_market_batch` (GitHub Actions ou cron na VM) — inclui recarga
    CNPJ mensal e refresh CVM.
 3. **CNO via BigQuery basedosdados** (não download de zip) → filtra fitness NACIONAL →
@@ -131,7 +146,7 @@ nosso processo ou morre.
 
 | Dataset BD | Granularidade | Alimenta | Por quê |
 |---|---|---|---|
-| Censo 2022 / Censo Demográfico | **setor censitário** | A2 score demanda, anel NO_BAIRRO, TAM bairro | população/renda/domicílios DENTRO do polígono do bairro — mata o gap renda_media_bairro sem depender de portal municipal (Trilha 1 vira fallback) |
+| Censo 2022 / Censo Demográfico | **setor censitário** | A2 score demanda, anel NO_BAIRRO, TAM bairro | população/renda/domicílios DENTRO do polígono do bairro — reforça `renda_media_bairro` (hoje já coberto via CKAN municipal da Trilha 1, que viraria fallback) com granularidade de setor sem depender de portal municipal. **Ainda não construído** |
 | Atlas do Desenvolvimento Humano (ADH) | UDH (sub-municipal) | A2 score socioeconômico | IDHM-renda por região intraurbana; única fonte nacional padronizada nesse grão |
 | RAIS | município × CNAE | A0 contexto, benchmark setor | vínculos formais CNAE 9313-1 = tamanho do mercado empregador fitness; massa salarial = demanda diurna (quem TRABALHA perto da academia) |
 | CAGED | município × CNAE, mensal | A0 "setor cresce/encolhe" | saldo de empregos fitness 12m = dinâmica do mercado local com fonte oficial e data |
