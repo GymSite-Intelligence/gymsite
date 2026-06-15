@@ -549,14 +549,18 @@ def buscar_academias(
             places_ok = False
             data = {"error": str(e)}
 
-    # ── Âncora bairro (flag CONCORRENTES_SOURCE=parque) ──────────────────────
+    # ── Âncora bairro (DEFAULT) ──────────────────────────────────────────────
     # textSearch "{tipo} {bairro} {cidade} {uf}" (dado Google Maps, bairro-scoped) +
     # filtro types fitness + filtro bairro + cross parque CNPJ (contato). Resolve o
     # anchoring município/raio: a Nearby 3km puxava bairros adjacentes (AYO Guararapes,
-    # Smart Fit Papicu num relatório de Cocó). Auditoria Maps: textSearch acha 14 reais
-    # em Cocó vs parque-only 5 (recall) e sem o lixo (escritório/restaurante).
-    # `agregados` (densidade 3km) fica como contexto regional. 3km = fallback.
-    if os.getenv("CONCORRENTES_SOURCE", "").strip().lower() == "parque" and bairro.strip():
+    # Max Forma/BlueFit Aldeota num relatório de Cocó). Auditoria Maps: textSearch acha
+    # 14 reais em Cocó vs parque-only 5 (recall) e sem o lixo (escritório/restaurante).
+    # `agregados` (densidade 3km) fica como contexto regional.
+    # É o DEFAULT quando há bairro; opt-out explícito (raio 3km) via
+    # CONCORRENTES_SOURCE in {radius,nearby,raio,municipio}.
+    _conc_src = os.getenv("CONCORRENTES_SOURCE", "").strip().lower()
+    _usar_ancora_bairro = _conc_src not in ("radius", "nearby", "raio", "municipio")
+    if _usar_ancora_bairro and bairro.strip():
         base_bairro = _descobrir_concorrentes_bairro(tipo_negocio, bairro, cidade, uf, lat, lng)
         if base_bairro:
             base_bairro.sort(key=lambda x: -(x.get("num_avaliacoes") or 0))
