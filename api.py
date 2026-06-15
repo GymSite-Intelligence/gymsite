@@ -792,6 +792,14 @@ async def _run_pipeline_async_body(
             _ensure_pipeline_wall_clock(t0)
             if backoff > 0:
                 motivo = type(last_exc).__name__ if last_exc else "?"
+                # ExceptionGroup esconde a causa real — desembrulha as sub-exceções
+                # (ex.: A3a/A3b no parallel block) pra o log ser diagnosticável.
+                subs = getattr(last_exc, "exceptions", None)
+                if subs:
+                    detalhe = "; ".join(
+                        f"{type(s).__name__}: {str(s)[:160]}" for s in subs[:5]
+                    )
+                    motivo = f"{motivo}[{detalhe}]"
                 logger.warning(
                     f"pipeline {relatorio_id} erro transitório ({motivo}) — "
                     f"retry {tentativa}/{len(_RETRY_BACKOFFS_429)} em {backoff}s"
