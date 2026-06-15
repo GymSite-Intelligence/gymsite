@@ -81,16 +81,16 @@ fluxo_obrigatorio (2 passos APENAS):
   - passo: 2
     acao: emitir JSON de saída final
     instrucao: |
-      Pegue o output da macro-tool e devolva-o como `analise_financeira`
-      (já no formato esperado pelo A6), acrescentando apenas:
-        - recomendacao_modelo: "Low Cost" | "Mid Market" | "Premium" | "Nenhum"
-          (use o `recomendacao` da macro)
-        - score_viabilidade: 0-10 baseado em payback e margem do MELHOR cenário
-        - justificativa: 2-3 frases sobre perfil demográfico do bairro
-          (incluir efeito do gênero alvo se ≠ misto — ex: "Predominância
-           feminina favorece modelo Mid Market com mix Pilates+Yoga, ticket
-           pode ser 15-20% acima do benchmark")
-        - alertas[]: lista de avisos (ver regras abaixo)
+      A macro-tool JÁ retorna determinístico (NÃO recalcule, NÃO invente):
+        - score_viabilidade (0-10) — folha do veredito; COPIE LITERAL do retorno
+        - recomendacao_modelo ("Low Cost"|"Mid Market"|"Premium"|"Nenhum") — COPIE
+        - alertas[] — os alertas de RISCO obrigatórios já vêm prontos; COPIE a lista
+      Devolva tudo como `analise_financeira` (formato do A6) e acrescente APENAS:
+        - justificativa: 2-3 frases sobre o perfil demográfico/competitivo do bairro
+          (cite o efeito do gênero alvo se ≠ misto — ex: "Predominância feminina
+           favorece Mid Market com mix Pilates+Yoga"). Texto livre — é o ÚNICO campo
+           que você redige. Pode ADICIONAR um alerta TEXTUAL extra de nicho (gênero/
+           tamanho) à lista, mas NUNCA remova nem altere os alertas de risco da tool.
 
 ## CALIBRAÇÃO POR GÊNERO ALVO (ajustes sobre o output da macro-tool)
 Aplique ESTES ajustes ao classificar/justificar o cenário recomendado:
@@ -168,13 +168,14 @@ Critérios ACAD pra viabilidade:
 - Margem líquida saudável: 15-25% (ALTO)
 - Aluguel sustentável: <15% do faturamento bruto
 
-## ALERTAS DE RISCO OBRIGATÓRIOS
-- Payback > 60 meses → "⚠️ Inviável — modelo não fecha conta"
-- Margem < 10% → "⚠️ Margem apertada, sem espaço pra imprevistos"
-- Aluguel > 15% do faturamento projetado → "⚠️ Aluguel compromete viabilidade"
-- Pico simultâneo > capacidade física → "⚠️ Capacidade insuficiente nos horários cheios"
-- Sensibilidade matrículas -30% = INVIAVEL → "⚠️ Modelo só funciona com execução
-  no benchmark Smart Fit; abaixo disso, prejuízo"
+## ALERTAS DE RISCO (determinísticos — a tool JÁ os gera, você só COPIA)
+A macro aplica estas 6 regras em código e devolve em `alertas[]`. NÃO recalcule;
+servem só pra você entender o que cada alerta significa ao redigir a justificativa:
+- Payback > 60 meses → inviável
+- Margem < 10% → apertada
+- Aluguel > 15% do faturamento → compromete viabilidade
+- Pico simultâneo > capacidade física → capacidade insuficiente
+- Sensibilidade matrículas -30% = INVIAVEL → só fecha no benchmark Smart Fit
 
 ## SAÍDA ESPERADA (JSON, schema v2)
 {
@@ -266,12 +267,10 @@ justificativa, alertas) conforme regras acima.
 ## REGRAS
 - NUNCA invente dados financeiros sem chamar a macro-tool
 - SEMPRE inclua o aviso de metodologia
-- Se payback > 60 meses, classifique como INVIAVEL e explique
-- Considere o perfil demográfico do A2 (renda, faixa etária) para
-  recomendar o modelo adequado
-- score_viabilidade = score do MELHOR cenário (0-10)
-- NÃO recalcule matriculas/pico/sensibilidade — a tool retorna tudo pronto.
-- Texto de alertas DEVE citar benchmark ACAD quando relevante.
+- score_viabilidade, recomendacao_modelo e alertas[] são DETERMINÍSTICOS da tool —
+  COPIE LITERAL, NÃO recalcule nem invente (são folha do veredito do relatório)
+- NÃO recalcule matriculas/pico/sensibilidade/score — a tool retorna tudo pronto
+- Você redige APENAS `justificativa` (perfil demográfico/competitivo + efeito do gênero)
 """,
     tools=[
         analise_financeira_a4_completo,    # 1 macro consolidada (Tier 1 + Tier 2)

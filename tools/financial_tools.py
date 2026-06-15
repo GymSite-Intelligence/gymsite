@@ -938,6 +938,61 @@ def _calcular_sensibilidade(
 
 
 # ── Macro-tool consolidadora A4 (Task #56 — mesmo padrão A3a/A3b) ──
+def calcular_score_viabilidade(payback_meses: float, ocupacao_break: float) -> float:
+    """Score 0-10 de viabilidade (CANÔNICO) — payback + ocupação no break-even.
+
+    Cortes e base via param() (calibração GymSite v2). Mesma fórmula usada pela
+    granularização (metodologia_explain). É a FOLHA `score_viabilidade` do score_bairro
+    → veredito; determinístico para o LLM do A4 não inventar.
+    """
+    score = 0.0
+    if payback_meses <= param("payback_limiar_excelente"): score += 4.0
+    elif payback_meses <= param("payback_limiar_bom"): score += 3.0
+    elif payback_meses <= param("payback_limiar_regular"): score += 2.0
+    elif payback_meses <= param("payback_limiar_fraco"): score += 1.0
+    if ocupacao_break < param("ocupacao_break_otima"): score += 3.0
+    elif ocupacao_break < param("ocupacao_break_boa"): score += 2.0
+    elif ocupacao_break < param("ocupacao_break_limite"): score += 1.0
+    return round(min(score + param("score_viab_base"), 10.0), 2)
+
+
+def _resumo_decisao_a4(fin: dict) -> dict:
+    """Campos de decisão DETERMINÍSTICOS do A4 (LLM não inventa): score_viabilidade
+    (folha do veredito), recomendacao_modelo (do cenário escolhido) e os alertas de
+    risco obrigatórios. LLM fica só com a justificativa narrativa.
+    """
+    cenarios = fin.get("cenarios") or {}
+    rec_modelo = fin.get("recomendacao") or "Nenhum"
+    c = cenarios.get(_faixa_key_de_modelo(rec_modelo)) or {}
+
+    payback = float(c.get("payback_meses") or 999)
+    cap = float(c.get("capacidade_maxima_alunos") or 0)
+    be = float(c.get("alunos_break_even") or 0)
+    ocup_break = (be / cap) if cap > 0 else 1.0
+    score = calcular_score_viabilidade(payback, ocup_break)
+
+    alertas: list[str] = []
+    margem = float(c.get("margem_percentual") or 0)
+    receita = float(c.get("receita_mensal") or 0)
+    aluguel = float((c.get("custos_detalhados") or {}).get("aluguel")
+                    or fin.get("aluguel_mensal") or 0)
+    pico = float(c.get("alunos_pico_calculado") or 0)
+    cap_pico = float(c.get("capacidade_simultanea_pico") or 0)
+    if payback > param("payback_limiar_fraco"):
+        alertas.append("⚠️ Payback > 60 meses — modelo não fecha conta (inviável).")
+    if margem < param("viab_margem_medio"):
+        alertas.append("⚠️ Margem < 10% — sem espaço pra imprevistos.")
+    if receita > 0 and aluguel / receita > param("aluguel_sustentavel_pct_faturamento"):
+        alertas.append("⚠️ Aluguel > 15% do faturamento projetado — compromete viabilidade.")
+    if cap_pico > 0 and pico > cap_pico:
+        alertas.append("⚠️ Pico simultâneo > capacidade física nos horários cheios.")
+    for s in c.get("sensibilidade") or []:
+        if s.get("id") == "matriculas_menos_30pct" and s.get("viabilidade") == "INVIAVEL":
+            alertas.append("⚠️ Matrículas −30% torna o modelo inviável — só fecha no benchmark Smart Fit.")
+    return {"score_viabilidade": score, "recomendacao_modelo": rec_modelo,
+            "ocupacao_break_recomendado": round(ocup_break, 3), "alertas_risco": alertas}
+
+
 async def analise_financeira_a4_completo(
     bairro: str,
     cidade: str,
@@ -1164,6 +1219,15 @@ async def analise_financeira_a4_completo(
         "area_m2_min": area_m2_min,
         "area_m2_max": area_m2_max,
     }
+    # Decisão DETERMINÍSTICA (LLM não inventa): score_viabilidade (folha do veredito),
+    # recomendacao_modelo e alertas de risco obrigatórios. LLM só redige a justificativa.
+    _dec = _resumo_decisao_a4(fin)
+    fin["score_viabilidade"] = _dec["score_viabilidade"]
+    fin["recomendacao_modelo"] = _dec["recomendacao_modelo"]
+    fin["ocupacao_break_recomendado"] = _dec["ocupacao_break_recomendado"]
+    for av in _dec["alertas_risco"]:
+        if av not in fin["alertas"]:
+            fin["alertas"].append(av)
     return fin
 
 

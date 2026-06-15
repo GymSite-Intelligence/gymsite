@@ -140,10 +140,12 @@ def explicar_score_viabilidade(payback_meses: float, ocupacao_break: float) -> d
         if ocupacao_break < param(nome):
             pts_oc, oc_param = pts, nome
             break
-    score = min(pts_pb + pts_oc + 3.0, 10.0)
+    # scorer canônico (mesma fonte que o A4 usa em produção)
+    from tools.financial_tools import calcular_score_viabilidade
+    score = calcular_score_viabilidade(payback_meses, ocupacao_break)
     return {
         "score": round(score, 2),
-        "formula": "min(pts_payback + pts_ocupacao + 3.0, 10)",
+        "formula": "min(pts_payback + pts_ocupacao + score_viab_base, 10)",
         "componentes": {
             "payback_meses": {"valor": payback_meses, "pts": pts_pb,
                               "cutoff": _leaf(pb_param) if pb_param else "acima do limite"},

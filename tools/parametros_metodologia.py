@@ -97,6 +97,8 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "ocupacao_break_otima":  _p(0.30, "calibração metodológica GymSite v2", "limiar_score", "fração", "calibracao"),
     "ocupacao_break_boa":    _p(0.50, "calibração metodológica GymSite v2", "limiar_score", "fração", "calibracao"),
     "ocupacao_break_limite": _p(0.70, "calibração metodológica GymSite v2", "limiar_score", "fração", "calibracao"),
+    "score_viab_base": _p(3.0, "calibração metodológica GymSite v2 (base aditiva viabilidade)", "score_base", "pontos", "calibracao"),
+    "aluguel_sustentavel_pct_faturamento": _p(0.15, "ACAD/Sebrae (aluguel sustentável < 15% do faturamento)", "limiar_risco", "fração", "benchmark"),
     "margem_operacional_ticket_pct": _p(0.15, "benchmark setorial (margem sobre ticket bruto)", "margem_operacional", "fração", "benchmark"),
     "fator_projecao_6m": _p(1.3, "benchmark setorial (rampa 6m sobre break-even)", "fator_rampa", "fator", "benchmark"),
     # Classificação de viabilidade (status ALTO/MEDIO/BAIXO) — payback (meses) + margem (%)
