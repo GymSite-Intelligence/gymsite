@@ -27,6 +27,7 @@ from tools.financial_tools import (
     MATRICULADOS_POR_M2,
     projecao_demanda_receita_obra,
 )
+from tools.parametros_metodologia import param, param_int
 
 _ROOT = Path(__file__).resolve().parent.parent
 logger = logging.getLogger("gymsite.cno")
@@ -64,9 +65,9 @@ def _flush_encoding_replacement_log(context: str) -> None:
         )
     _encoding_replacement_hits = 0
 
-# Faixa plausível para unidade fitness comercial (obra)
-_AREA_MIN_M2 = 80.0
-_AREA_MAX_M2 = 8_000.0
+# Faixa plausível para unidade fitness comercial (obra) — sourced via param()
+_AREA_MIN_M2 = param("cno_area_min_m2")
+_AREA_MAX_M2 = param("cno_area_max_m2")
 
 # CNAE do negócio (CNPJ) — NÃO confundir com CNAE da obra (4120400 = construção)
 _CNAE_ACADEMIA = "9313100"
@@ -121,11 +122,11 @@ _KEYWORDS_EXCLUSAO_OBRA = (
     "contorno do campus",
 )
 
-# Duração obra (encerradas): filtros de plausibilidade
-_DURACAO_MIN_DIAS = 60
-_DURACAO_MAX_DIAS = 1_200
-_DIAS_POR_M2_MIN = 0.04
-_DIAS_POR_M2_MAX = 4.0
+# Duração obra (encerradas): filtros de plausibilidade — sourced via param()
+_DURACAO_MIN_DIAS = param_int("cno_duracao_min_dias")
+_DURACAO_MAX_DIAS = param_int("cno_duracao_max_dias")
+_DIAS_POR_M2_MIN = param("cno_dias_por_m2_min")
+_DIAS_POR_M2_MAX = param("cno_dias_por_m2_max")
 
 
 def _normalize_cnae(cnae: str | None) -> str:
@@ -1442,8 +1443,8 @@ def consultar_municipio_cnpj_cno(
 
 # ── Agregação CNO por bairro (bairros alternativos / polo) ─────────────────
 
-_AREA_MIN_EDIFICACAO = 80.0
-_AREA_MAX_EDIFICACAO = 50_000.0
+_AREA_MIN_EDIFICACAO = param("cno_area_edificacao_min")
+_AREA_MAX_EDIFICACAO = param("cno_area_edificacao_max")
 
 
 def _load_cno_areas_index(cno_dir: Path) -> dict[str, list[dict]]:

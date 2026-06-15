@@ -29,6 +29,8 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from tools.parametros_metodologia import param, param_int
+
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
     PLAYWRIGHT_AVAILABLE = True
@@ -114,15 +116,15 @@ def _calcular_perfil(hora_pico_str: str, max_pct: int, min_pct: int, picos_altos
     except (ValueError, TypeError):
         return "indeterminado"
     spread = max_pct - min_pct
-    if spread < 25:
+    if spread < param("pop_spread_24h_equilibrado"):
         return "24h_equilibrado"
-    if len(picos_altos) >= 5:
+    if len(picos_altos) >= param_int("pop_picos_min_multi"):
         return "multi_pico"
-    if 6 <= hora <= 10:
+    if param_int("pop_hora_manha_ini") <= hora <= param_int("pop_hora_manha_fim"):
         return "manha_pico"
-    if 11 <= hora <= 15:
+    if param_int("pop_hora_almoco_ini") <= hora <= param_int("pop_hora_almoco_fim"):
         return "almoco_pico"
-    if 16 <= hora <= 20:
+    if param_int("pop_hora_tarde_ini") <= hora <= param_int("pop_hora_tarde_fim"):
         return "tarde_pico"
     return "noite_pico"
 
@@ -322,17 +324,18 @@ def _calcular_oportunidade(resumo_por_dia: dict) -> str:
 
     perfis = [r["perfil"] for r in resumo_por_dia.values()]
 
-    if perfis.count("tarde_pico") >= 4:
+    dias_min = param_int("pop_dias_min_perfil")
+    if perfis.count("tarde_pico") >= dias_min:
         return (
             "Concorrente concentrado no horário 17-20h. "
             "Oportunidade: programa diferenciado na manhã (06-10h) com personal incluso."
         )
-    if perfis.count("manha_pico") >= 4:
+    if perfis.count("manha_pico") >= dias_min:
         return (
             "Concorrente com pico matutino. "
             "Oportunidade: aulas noturnas premium e madrugada com personal."
         )
-    if perfis.count("almoco_pico") >= 4:
+    if perfis.count("almoco_pico") >= dias_min:
         return (
             "Pico concentrado no almoço. "
             "Oportunidade: treinos express 30min manhã/noite para quem não pode no almoço."
@@ -341,15 +344,15 @@ def _calcular_oportunidade(resumo_por_dia: dict) -> str:
     dias_uteis = ["segunda", "terca", "quarta", "quinta"]
     dias_uteis_baixos = [
         d for d in dias_uteis
-        if resumo_por_dia.get(d, {}).get("pct_vale", 100) <= 20
+        if resumo_por_dia.get(d, {}).get("pct_vale", 100) <= param("pop_vale_midweek_max")
     ]
-    if len(dias_uteis_baixos) >= 2:
+    if len(dias_uteis_baixos) >= param_int("pop_dias_min_vale_midweek"):
         return (
             f"Movimento muito baixo em dias úteis ({', '.join(dias_uteis_baixos)}). "
             "Oportunidade: programa de fidelização mid-week com benefícios exclusivos."
         )
 
-    if perfis.count("24h_equilibrado") >= 4:
+    if perfis.count("24h_equilibrado") >= dias_min:
         return (
             "Academia bem distribuída ao longo do dia. "
             "Competir por horário não é vantagem — focar em diferencial de serviço/preço."
@@ -553,15 +556,15 @@ def _extrair_sync(
         min_pct = min(horas.values())
         hora_pico = max(horas, key=horas.get)
         hora_vale = min(horas, key=horas.get)
-        picos_altos = [h for h, p in horas.items() if p >= 70]
+        picos_altos = [h for h, p in horas.items() if p >= param("pop_pct_pico_alto")]
         resumo_por_dia[dia] = {
             "hora_pico": hora_pico,
             "pct_pico": max_pct,
             "hora_vale": hora_vale,
             "pct_vale": min_pct,
             "perfil": _calcular_perfil(hora_pico, max_pct, min_pct, picos_altos),
-            "horas_superlotadas": sorted([h for h, p in horas.items() if p >= 80]),
-            "horas_livres": sorted([h for h, p in horas.items() if p <= 20]),
+            "horas_superlotadas": sorted([h for h, p in horas.items() if p >= param("pop_pct_superlotado")]),
+            "horas_livres": sorted([h for h, p in horas.items() if p <= param("pop_pct_livre")]),
         }
 
     dia_mais_movimentado = None
@@ -573,11 +576,12 @@ def _extrair_sync(
             "percentual": dia_top[1]["pct_pico"],
         }
 
-    # Horários livres consolidados (≤ 15% qualquer dia)
+    # Horários livres consolidados (≤ pop_pct_muito_livre% qualquer dia)
+    _muito_livre = param("pop_pct_muito_livre")
     horarios_livres = []
     for dia, horas in dados_por_dia.items():
         for h, p in horas.items():
-            if p <= 15:
+            if p <= _muito_livre:
                 horarios_livres.append(f"{dia} {h}h ({p}%)")
 
     base_result.update({

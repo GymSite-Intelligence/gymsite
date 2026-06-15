@@ -14,6 +14,7 @@ from google.adk.agents import Agent
 from google.genai import types
 from tools.utils_tools import obter_data_atual
 from tools.token_telemetry import before_agent_callback as _telemetry_before
+from tools.parametros_metodologia import param
 
 # Thinking calibrado: A6 sintetiza outputs de 5 agentes anteriores, decide
 # bairros alternativos quando score_geral < 6, escolhe o veredito final
@@ -2017,11 +2018,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     veredito = "REPROVADO"
     score_decisao = score_top1_candidato if score_top1_candidato is not None else score_bairro
     if score_decisao is not None:
-        if score_decisao >= 8.0:
+        if score_decisao >= param("veredito_limiar_aprovado"):
             veredito = "APROVADO"
-        elif score_decisao >= 6.0:
+        elif score_decisao >= param("veredito_limiar_ressalvas"):
             veredito = "APROVADO COM RESSALVAS"
-        elif score_decisao >= 4.0:
+        elif score_decisao >= param("veredito_limiar_investigar"):
             veredito = "INVESTIGAR MAIS"
 
     # ── Guard determinístico: 0 concorrentes (P1) ──

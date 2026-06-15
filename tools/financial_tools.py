@@ -22,7 +22,10 @@ Todos os benchmarks vêm de fontes auditáveis do setor fitness brasileiro:
   - Payback ideal: 24-36 meses
 
 ⚠️ ESTES VALORES SÃO BENCHMARKS — não substituem due diligence local.
+   Recalibráveis via tabela Supabase `parametros_metodologia` (param()).
 """
+
+from tools.parametros_metodologia import param, param_int, param_por_modelo
 
 BENCHMARKS_ALUGUEL = {
     "São Paulo": {"min": 45, "med": 85, "max": 150},
@@ -38,26 +41,27 @@ BENCHMARKS_ALUGUEL = {
     "default": {"min": 20, "med": 40, "max": 70},
 }
 
-TICKET_MEDIO = 149.90
-ALUNOS_POR_M2 = 3.5
+# Constantes sourceadas via param() (Supabase override > _DEFAULTS rotulado).
+TICKET_MEDIO = param("ticket_medio_nacional")
+ALUNOS_POR_M2 = param("alunos_por_m2_legado")
 
-# ── 3 cenários de ticket (ACAD/Sebrae benchmarks) ──────────────────
+# ── 3 cenários de ticket (ACAD/Sebrae benchmarks via param) ─────────
 TICKET_FAIXAS = {
     "low": {
         "label": "Low Cost",
-        "ticket_medio": 89.90,
+        "ticket_medio": param("ticket_low"),
         "descricao": "Modelo econômico 24h, sem personal, autoatendimento",
         "exemplos": "Smart Fit, Bluefit, Selfit",
     },
     "mid": {
         "label": "Mid Market",
-        "ticket_medio": 149.90,
+        "ticket_medio": param("ticket_mid"),
         "descricao": "Modelo intermediário com aulas em grupo e suporte",
         "exemplos": "Bodytech entry, academias regionais premium",
     },
     "premium": {
         "label": "Premium",
-        "ticket_medio": 299.90,
+        "ticket_medio": param("ticket_premium"),
         "descricao": "Modelo completo com personal, nutrição e experiência",
         "exemplos": "Bodytech, Bio Ritmo, academias boutique",
     },
@@ -93,9 +97,9 @@ CAPEX_BASE = {
 # - Bodytech entry: ~1.000 alunos / 1.500m² = ~0.7 matr/m²
 # - Bio Ritmo (premium): ~600 alunos / 2.000m² = ~0.3 matr/m²
 MATRICULADOS_POR_M2 = {
-    "low":     {"conservador": 1.5, "realista": 2.2, "agressivo": 3.0},
-    "mid":     {"conservador": 1.0, "realista": 1.4, "agressivo": 1.8},
-    "premium": {"conservador": 0.4, "realista": 0.6, "agressivo": 0.9},
+    m: {cal: param(f"matr_m2_{m}_{cal}")
+        for cal in ("conservador", "realista", "agressivo")}
+    for m in ("low", "mid", "premium")
 }
 
 # CNO / prospecção: códigos de situação da obra (RFB — campo Situação no CSV)
@@ -159,68 +163,60 @@ def projecao_demanda_receita_obra(
 
 # Capacidade FÍSICA simultânea (no pico horário) — check de conforto/segurança.
 # Diferente de matrículas: quantas pessoas cabem ao mesmo tempo na academia.
-CAPACIDADE_SIMULTANEA_POR_M2 = {"low": 0.55, "mid": 0.40, "premium": 0.25}
+CAPACIDADE_SIMULTANEA_POR_M2 = param_por_modelo("capacidade_simultanea")
 
 # Frequência semanal média do aluno por modelo (ACAD/Sebrae 2024).
 # Low-cost: alunos mais regulares (preço baixo → uso intenso pra valer).
 # Premium: alunos mais ocupados, frequência menor mas churn menor.
-FREQUENCIA_SEMANAL = {"low": 2.5, "mid": 2.0, "premium": 1.8}
+FREQUENCIA_SEMANAL = param_por_modelo("frequencia_semanal")
 
 # Pico share: % dos que vieram num dia que estão simultaneamente no pico (18h-21h).
 # Padrão ACAD: 25%.
-PICO_SHARE = 0.25
+PICO_SHARE = param("pico_share")
 
 # Taxas operacionais — calibradas por modelo (ACAD/Sebrae 2024).
 # Low-cost tem maior inadimplência (cliente mais sensível a preço) e maior churn.
 # Premium tem menor inadimplência (alunos mais comprometidos) e menor churn.
-TAXA_INADIMPLENCIA_POR_MODELO = {
-    "low":     0.06,   # 6% — Smart Fit reporta 5-7% em rounds investidor
-    "mid":     0.04,   # 4% — Bodytech entry média setor
-    "premium": 0.025,  # 2.5% — boutique/premium tem cliente mais fiel
-}
+TAXA_INADIMPLENCIA_POR_MODELO = param_por_modelo("inadimplencia")
 
 # Backward-compat — código v1 que ainda lê o campo único
-TAXA_INADIMPLENCIA = 0.04
+TAXA_INADIMPLENCIA = param("inadimplencia_mid")
 
-TAXA_CANCELAMENTO_MENSAL_POR_MODELO = {
-    "low":     0.10,   # 10% churn mensal (alto, mas reposição rápida)
-    "mid":     0.07,
-    "premium": 0.04,
-}
-TAXA_CANCELAMENTO_MENSAL = 0.08   # backward-compat
+TAXA_CANCELAMENTO_MENSAL_POR_MODELO = param_por_modelo("churn_mensal")
+TAXA_CANCELAMENTO_MENSAL = param("churn_mensal_mid")   # backward-compat
 
 # Custos detalhados — 12 linhas. Valores são "base" e são modulados por:
 # - aluguel: vem do Tier 1 Search Grounding (mediana) ou benchmark
 # - área: muitos custos escalam com m²
 # - modelo: premium tem folha maior, low-cost tem manutenção menor
 CUSTOS_DETALHADOS_BASE = {
-    "condominio_pct_aluguel": 0.15,     # 15% do aluguel
-    "iptu_mensal_base": 2000.0,          # R$ 2k/mês (varia por município)
-    "energia_por_m2": 12.0,              # R$/m² (low) — premium gasta mais com clima
-    "agua_por_m2": 2.0,                  # R$/m²
-    "internet_mensal": 800.0,            # R$ 800 fixo
-    "folha_por_modelo": {                # folha mínima por modelo
-        "low": 18000.0,                  # autoatendimento, ~6 funcionários
-        "mid": 32000.0,                  # ~10 funcionários (incluí instrutores)
-        "premium": 55000.0,              # ~16 funcionários (personal, nutri, recepção 24h)
+    "condominio_pct_aluguel": param("custo_condominio_pct_aluguel"),
+    "iptu_mensal_base": param("custo_iptu_mensal_base"),
+    "energia_por_m2": param("custo_energia_por_m2"),
+    "agua_por_m2": param("custo_agua_por_m2"),
+    "internet_mensal": param("custo_internet_mensal"),
+    "folha_por_modelo": {
+        "low": param("folha_min_low"),
+        "mid": param("folha_min_mid"),
+        "premium": param("folha_min_premium"),
     },
-    "manutencao_pct_capex": 0.005,       # 0.5% do CAPEX por mês
-    "contabilidade_mensal": 1300.0,
-    "sistema_gestao_mensal": 800.0,
-    "seguro_pct_capex": 0.002,           # 0.2% do CAPEX por mês
-    "outros_pct_receita": 0.02,          # 2% da receita pra imprevistos
+    "manutencao_pct_capex": param("custo_manutencao_pct_capex"),
+    "contabilidade_mensal": param("custo_contabilidade_mensal"),
+    "sistema_gestao_mensal": param("custo_sistema_gestao_mensal"),
+    "seguro_pct_capex": param("custo_seguro_pct_capex"),
+    "outros_pct_receita": param("custo_outros_pct_receita"),
 }
 
-CUSTOS_MARKETING_PCT = {"low": 0.06, "mid": 0.08, "premium": 0.12}
+CUSTOS_MARKETING_PCT = param_por_modelo("marketing_pct")
 
 # CAPEX detalhado
 CAPEX_DETALHADO_BASE = {
-    "equipamentos_por_m2": {"low": 350.0, "mid": 500.0, "premium": 850.0},
-    "obra_adaptacao_por_m2": {"low": 200.0, "mid": 350.0, "premium": 600.0},
-    "projeto_arquitetonico": 15000.0,
-    "alvara_e_taxas": 8000.0,
-    "contingencia_pct": 0.10,
-    "capital_giro_meses": 3,
+    "equipamentos_por_m2": param_por_modelo("capex_equip_m2"),
+    "obra_adaptacao_por_m2": param_por_modelo("capex_obra_m2"),
+    "projeto_arquitetonico": param("capex_projeto_arquitetonico"),
+    "alvara_e_taxas": param("capex_alvara_taxas"),
+    "contingencia_pct": param("capex_contingencia_pct"),
+    "capital_giro_meses": param_int("capex_capital_giro_meses"),
 }
 
 # Sensibilidade — 3 stress tests aplicados em cima do cenário "realista"
@@ -231,14 +227,10 @@ STRESS_TESTS = [
 ]
 
 # Ticket mensal sustentável ≈ % da renda domiciliar (ACAD / A2).
-TICKET_RENDA_PCT: dict[str, float] = {
-    "low": 0.08,
-    "mid": 0.12,
-    "premium": 0.15,
-}
+TICKET_RENDA_PCT: dict[str, float] = param_por_modelo("ticket_renda_pct")
 
 # Custo de capital pra cálculo de VPL/TIR (12% a.a. ≈ Selic + premium fitness)
-CUSTO_CAPITAL_ANUAL = 0.12
+CUSTO_CAPITAL_ANUAL = param("custo_capital_anual")
 
 
 def estimar_aluguel(cidade: str, area_m2: float) -> dict:
@@ -276,26 +268,26 @@ def calcular_viabilidade(aluguel_mensal: float, investimento_total: float,
         + 1300                     # contabilidade + seguro + outros
     )
 
-    margem = ticket - ticket * 0.15
+    margem = ticket - ticket * param("margem_operacional_ticket_pct")
     break_even = int(custos_fixos / margem) + 1
     capacidade = int(area_m2 * ALUNOS_POR_M2)
 
     # Projeção 6 meses
-    alunos_proj = int(break_even * 1.3)
+    alunos_proj = int(break_even * param("fator_projecao_6m"))
     lucro_proj = (alunos_proj * margem) - custos_fixos
     payback = int(investimento_total / max(lucro_proj, 1)) if lucro_proj > 0 else 999
 
-    # Score 0-10
+    # Score 0-10 (cortes via param — calibração metodológica)
     score = 0.0
-    if payback <= 18: score += 4.0
-    elif payback <= 30: score += 3.0
-    elif payback <= 48: score += 2.0
-    elif payback <= 60: score += 1.0
+    if payback <= param("payback_limiar_excelente"): score += 4.0
+    elif payback <= param("payback_limiar_bom"): score += 3.0
+    elif payback <= param("payback_limiar_regular"): score += 2.0
+    elif payback <= param("payback_limiar_fraco"): score += 1.0
 
     ocupacao_break = break_even / capacidade if capacidade > 0 else 1
-    if ocupacao_break < 0.30: score += 3.0
-    elif ocupacao_break < 0.50: score += 2.0
-    elif ocupacao_break < 0.70: score += 1.0
+    if ocupacao_break < param("ocupacao_break_otima"): score += 3.0
+    elif ocupacao_break < param("ocupacao_break_boa"): score += 2.0
+    elif ocupacao_break < param("ocupacao_break_limite"): score += 1.0
 
     alertas = []
     if aluguel_mensal > investimento_total * 0.05:
@@ -608,7 +600,7 @@ def _resolver_ticket_faixa(
     ticket = limpos.get(faixa_key, raw_ticket)
 
     if renda_media_bairro and renda_media_bairro > 0:
-        pct = TICKET_RENDA_PCT.get(faixa_key, 0.12)
+        pct = TICKET_RENDA_PCT.get(faixa_key, param("ticket_renda_pct_mid"))
         cap = round(renda_media_bairro * pct, 2)
         if ticket > cap:
             avisos.append(
@@ -892,11 +884,11 @@ def _classificar_viabilidade(lucro: float, payback: int, margem: float) -> dict:
     """Retorna {status, justificativa} baseado em 3 critérios."""
     if lucro <= 0:
         return {"status": "INVIAVEL", "justificativa": f"Prejuízo mensal de R$ {-lucro:,.0f}"}
-    if payback <= 36 and margem >= 15:
+    if payback <= param("viab_payback_alto") and margem >= param("viab_margem_alto"):
         return {"status": "ALTO", "justificativa": f"Margem {margem:.1f}% + payback {payback}m"}
-    if payback <= 60 and margem >= 10:
+    if payback <= param("viab_payback_medio") and margem >= param("viab_margem_medio"):
         return {"status": "MEDIO", "justificativa": f"Margem {margem:.1f}% + payback {payback}m (aceitável)"}
-    if payback <= 84:
+    if payback <= param("viab_payback_baixo"):
         return {"status": "BAIXO", "justificativa": f"Margem apertada {margem:.1f}%, payback longo {payback}m"}
     return {"status": "INVIAVEL", "justificativa": f"Payback {payback}m inviável"}
 

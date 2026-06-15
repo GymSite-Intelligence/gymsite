@@ -12,6 +12,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Optional
 
+from tools.parametros_metodologia import param
+
 
 @dataclass
 class Claim:
@@ -287,7 +289,7 @@ class A8ValidadorCruzado:
                 veredito = "APROVADO"
 
         score = float(state.get("score_bairro") or state.get("score_geral") or 0)
-        if veredito == "APROVADO" and score and score < 6.0:
+        if veredito == "APROVADO" and score and score < param("validacao_score_minimo_aprovado"):
             self._add(
                 "inconsistencia",
                 f"APROVADO com score_bairro {score}",
@@ -298,7 +300,7 @@ class A8ValidadorCruzado:
 
         score_comp = float(state.get("score_concorrencia") or 0)
         bairros = state.get("bairros_alternativos") or []
-        if score_comp and score_comp < 4.0 and not bairros:
+        if score_comp and score_comp < param("validacao_score_concorrencia_minimo") and not bairros:
             self._add(
                 "inconsistencia",
                 "Saturação sem bairros alternativos",
@@ -382,7 +384,12 @@ class A8ValidadorCruzado:
     def _calcular_score_validacao(self) -> float:
         if not self.alertas:
             return 1.0
-        pesos = {"CRITICO": 0.4, "ALTA": 0.25, "MEDIA": 0.15, "BAIXA": 0.05}
+        pesos = {
+            "CRITICO": param("validacao_peso_critico"),
+            "ALTA": param("validacao_peso_alta"),
+            "MEDIA": param("validacao_peso_media"),
+            "BAIXA": param("validacao_peso_baixa"),
+        }
         penalidade = sum(pesos.get(a.severidade, 0) for a in self.alertas)
         return max(0.0, 1.0 - penalidade)
 

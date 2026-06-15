@@ -10,6 +10,7 @@ import httpx
 logger = logging.getLogger(__name__)
 from tools.google_maps_key import get_google_maps_api_key
 from tools.maps_tools import calcular_distancia_km, geocode_endereco
+from tools.parametros_metodologia import param
 PLACES_BASE = "https://places.googleapis.com/v1/places"
 
 
@@ -504,7 +505,7 @@ def buscar_academias(
                 longitude=lng,
                 radius_meters=int(raio_metros),
                 included_types=["gym", "fitness_center"],
-                min_rating=4.2,
+                min_rating=param("benchmark_rating_bem_avaliada"),
             )
             agregados = {
                 "status": "ok" if "erro" not in base else "erro",
@@ -967,7 +968,8 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
     melhor = max(ratings_por_academia.items(), key=lambda x: x[1]) if ratings_por_academia else ("N/A", 0)
     pior = min(ratings_por_academia.items(), key=lambda x: x[1]) if ratings_por_academia else ("N/A", 0)
 
-    score_oportunidade = min(10.0, len(dores_rankeadas) * 0.8 + len(gaps_servicos) * 0.3)
+    score_oportunidade = min(10.0, len(dores_rankeadas) * param("score_oport_peso_dores")
+                             + len(gaps_servicos) * param("score_oport_peso_gaps"))
 
     # Dores dominantes COM nominação (top 5)
     dores_dominantes_nominadas = []
@@ -1000,10 +1002,10 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
 def classificar_saturacao(num_concorrentes: int, raio_km: float) -> str:
     area = math.pi * raio_km ** 2
     densidade = num_concorrentes / area if area > 0 else 0
-    if densidade < 0.3:   return "BAIXO"
-    elif densidade < 0.8: return "MEDIO"
-    elif densidade < 1.5: return "ALTO"
-    else:                 return "SATURADO"
+    if densidade < param("saturacao_densidade_baixo"):   return "BAIXO"
+    elif densidade < param("saturacao_densidade_medio"): return "MEDIO"
+    elif densidade < param("saturacao_densidade_alto"):  return "ALTO"
+    else:                                                return "SATURADO"
 
 
 def panorama_saturacao(
@@ -1043,9 +1045,18 @@ def panorama_saturacao(
 
 def calcular_score_concorrencia(num_concorrentes: int, rating_medio: float,
                                  saturacao: str) -> float:
-    bonus = {"BAIXO": 5.0, "MEDIO": 3.5, "ALTO": 1.5, "SATURADO": 0.0}
-    penalidade_qtd = min(num_concorrentes * 0.4, 4.0)
-    penalidade_rating = (rating_medio / 5.0) * 2.0 if rating_medio else 1.0
+    bonus = {
+        "BAIXO": param("score_conc_bonus_baixo"),
+        "MEDIO": param("score_conc_bonus_medio"),
+        "ALTO": param("score_conc_bonus_alto"),
+        "SATURADO": param("score_conc_bonus_saturado"),
+    }
+    penalidade_qtd = min(num_concorrentes * param("score_conc_penalidade_por_conc"),
+                         param("score_conc_penalidade_teto"))
+    penalidade_rating = (
+        (rating_medio / 5.0) * param("score_conc_rating_mult")
+        if rating_medio else param("score_conc_rating_default")
+    )
     score = bonus.get(saturacao, 2.0) + (10 - penalidade_qtd * 2) / 10 - penalidade_rating
     return round(max(0.0, min(10.0, score)), 2)
 
