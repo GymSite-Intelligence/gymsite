@@ -64,7 +64,6 @@ import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable
 import { DemandaFuturaCard } from '@/components/domain/DemandaFuturaCard'
 import { AneisCompetitivosCard } from '@/components/domain/AneisCompetitivosCard'
 import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
-import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
 import { DoresHeatmap } from '@/components/domain/DoresHeatmap'
 import { PlanosConcorrenciaTable } from '@/components/domain/PlanosConcorrenciaTable'
 import { FolgaPicoInsight } from '@/components/domain/FolgaPicoInsight'
@@ -797,12 +796,9 @@ function RelatorioViewerContent({
           <DoresPorCategoria competidores={out.competitors_set} />
           {/* Pico/lotação por academia — janela de demanda pro posicionamento */}
           <PicoLotacaoViz competidores={out.competitors_set} className="mt-4" />
-          <div className="mt-4">
-            <CompetidoresDoresTable
-              competidores={out.competitors_set}
-              servicosNaoOferecidos={out.servicos_nao_oferecidos}
-            />
-          </div>
+          {/* "Concorrentes — dores citadas nos reviews" REMOVIDO: redundante com
+              DoresHeatmap + DoresPorCategoria acima. O dado servicos_nao_oferecidos
+              segue no output (A9/posicionamento consome). */}
           <div className="mt-4">
             <PlanosConcorrenciaTable competidores={out.competitors_set} />
           </div>
