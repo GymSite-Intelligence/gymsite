@@ -112,9 +112,9 @@ bundle pré-computado e o relatório sai em **3–8 min com 40k–120k tokens**.
 | Batch semanal (cron/DAG escritos) | ❌ nunca agendado |
 | Catálogo CKAN das cidades-alvo (`data/ckan_catalog/` p/ bundle) | ❌ vazio |
 | Bundles gerados | ❌ nenhum |
-| CNO via BQ basedosdados nacional (Trilha 4 → seção 7) | ⏳ rota decidida 2026-06-14; loader+tabela+cron por construir; falta `bigquery.jobUser` na SA |
-| CVM/RI (Trilha 2) | ❌ `cvm_fetch`/`cvm_listed_metrics` prontos com fixtures, não agendados |
-| Censo 2022 setor censitário / BQ basedosdados (Trilha 6) | ❌ não construído |
+| CNO via BQ basedosdados nacional (Trilha 4 → seção 7) | ⏳ rota decidida 2026-06-14; loader+tabela+cron por construir. `bigquery.jobUser` CONFIRMADO presente na SA (2026-06-15) — não falta mais |
+| CVM/RI (Trilha 2) | 🟡 PARCIAL (2026-06-15): `atualizar_sector_listed_via_cvm` rodado → CVM ITR real persistido (SMFT3 margem EBITDA 47,8%, dívida/EBITDA 1,48) + ARPU proxy derivado (receita÷alunos). Cobertura KPI op. 25%→50%. Falta: churn (só RI), capex/unidade (extrair DFC), agendar batch |
+| Censo 2022 setor censitário / BQ basedosdados (Trilha 6) | 🟡 PARCIAL (2026-06-15): população/domicílios/**média moradores** por setor LIVE via `censo_setor_tools` (BQ, ST_DWITHIN no centróide). Cocó: 127 setores, pop 72.453, média 2,67. Já é FONTE da ocupação na demanda futura (param=fallback). **Renda por setor 2022 NÃO existe** (IBGE não liberou) → renda segue do CKAN Trilha 1. Falta: wire pop no A2/bundle + polígono real do bairro |
 | Recarga mensal CNPJ automatizada | ❌ manual |
 
 ## 5. Os 4 passos para ligar o motor
