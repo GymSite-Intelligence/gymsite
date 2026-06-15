@@ -45,8 +45,12 @@ def classificar_anel(
 
         dist = calcular_distancia_km(centroid_lat, centroid_lng, lat, lng)
 
-    bairro_c = comp.get("bairro") or ""
-    if bairro_alvo and bairro_c and normalizar_bairro(bairro_c) == normalizar_bairro(bairro_alvo):
+    # Campo do concorrente é `bairro_concorrente` (de _aplicar_bairro_concorrente);
+    # `bairro` é fallback. Match por CONTÉM (endereço vem "Lojas 2/3 - Cocó", não só "Cocó").
+    bairro_c = comp.get("bairro_concorrente") or comp.get("bairro") or ""
+    alvo_n = normalizar_bairro(bairro_alvo or "")
+    comp_n = normalizar_bairro(bairro_c)
+    if alvo_n and comp_n and (alvo_n == comp_n or alvo_n in comp_n):
         return "NO_BAIRRO", param("anel_peso_no_bairro"), dist
     if dist is not None and dist <= param("raio_fronteira_km"):
         return "FRONTEIRA", param("anel_peso_fronteira"), dist

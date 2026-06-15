@@ -2661,6 +2661,13 @@ Bairros indicados pela comunidade (priorizar análise nesta ordem):
 <3-5 linhas: o mercado é viável? Estratégia recomendada (low/mid/premium)?
 Qual o melhor candidato e por quê?>
 
+**ANCHORING COMPETITIVO (OBRIGATÓRIO):** a saturação e a narrativa competitiva do resumo
+executivo DEVEM ancorar nos concorrentes DO BAIRRO (`total_concorrentes_analisados` +
+`nivel_saturacao`), NUNCA no `total_encontrados_raio` (densidade do raio 3km, que inclui
+bairros adjacentes). NÃO escreva "extrema saturação" / "211 academias no raio 3km" como
+diagnóstico do bairro. Se `nivel_saturacao` = MEDIO ou BAIXO, o texto reflete isso, mesmo
+que o raio 3km tenha centenas — o raio 3km é só contexto regional.
+
 ---
 
 ## 📈 Scores Regionais
@@ -2671,10 +2678,11 @@ Qual o melhor candidato e por quê?>
 | Competitivo | X.X | <nivel_saturacao do A3> |
 | Viabilidade financeira | X.X | <viabilidade do A4 melhor cenário> |
 
-**Transparência (OBRIGATÓRIO):** logo após a tabela acima, inclua uma linha curta:
-- `Academias no raio 3km (Aggregate): <total_encontrados_raio> | amostra analisada (reviews): <total_concorrentes_analisados>`
-Se existir `total_encontrados_raio_nearby`, adicione entre parênteses:
-`(Nearby retornou: <total_encontrados_raio_nearby>, limitado por maxResultCount)`.
+**Transparência (OBRIGATÓRIO):** logo após a tabela acima, inclua DUAS linhas curtas:
+- `Concorrentes no bairro (analisados): <total_concorrentes_analisados> — saturação <nivel_saturacao>`
+- `Densidade regional (raio 3km, contexto): <total_encontrados_raio> academias — inclui bairros adjacentes, NÃO é a saturação do bairro`
+A saturação competitiva do bairro é a do A3 (`nivel_saturacao`), ancorada nos concorrentes
+analisados DO BAIRRO — não no número do raio 3km.
 
 **ATENÇÃO — campo correto para "Competitivo":**
 Use **`score_concorrencia`** do A3 (range 0-10, onde 10 = mercado pouco saturado / favorável).

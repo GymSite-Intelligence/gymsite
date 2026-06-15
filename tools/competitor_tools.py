@@ -1062,8 +1062,6 @@ _NOME_EXCLUSAO_KEYWORDS = (
     "futebol", "futsal", "soccer", "futbol",
     "tenis", "tênis", "tennis", "padel", "paddle",
     "vôlei", "volei", "volleyball",
-    "natação", "natacao", "swimming",
-    "hidro", "hidroginás", "hidroginas",
     "pole dance", "pole-dance",
     "escolinha de", "escola de futebol", "escola de tenis", "escola de vôlei",
     # Saúde / clínicas
@@ -1074,7 +1072,10 @@ _NOME_EXCLUSAO_KEYWORDS = (
     "loja de suplement", "suplementos &", "suplemento e",
 )
 
-# Modalidades únicas: excluir SE nome não tem qualificador "academia/fit/gym"
+# Modalidades únicas: excluir SE nome não tem qualificador "academia/fit/gym".
+# Aquáticas/lutas aqui (não na exclusão forte) porque academia COM piscina/luta é
+# multiesporte (Apêndice D: flag, não exclusão). Ex.: "Academia VS Club - Musculação,
+# natação" fica (tem qualificador); "Centro de Natação X" sai (sem qualificador).
 _MODALIDADES_UNICAS = (
     "muay thai", "muaythai", "muay-thai",
     "jiu jitsu", "jiu-jitsu", "jiujitsu",
@@ -1082,6 +1083,8 @@ _MODALIDADES_UNICAS = (
     "krav maga", "krav-maga",
     "ballet", "balé",
     "yoga", "ioga",
+    "natação", "natacao", "swimming",
+    "hidroginás", "hidroginas",
 )
 
 _QUALIFICADORES_ACADEMIA = (
