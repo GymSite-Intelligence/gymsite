@@ -43,7 +43,28 @@ def _build_demografia(cidade: str, bairro: str, uf: str) -> dict:
             "dataset_id": None,
         },
     }
-    return enrich_demografia_bairro(base, cidade, bairro, uf)
+    enriched = enrich_demografia_bairro(base, cidade, bairro, uf)
+    # População/ocupação do BAIRRO: IBGE Censo 2022 por setor (fonte real, granularidade
+    # de bairro, não município). Renda já veio do CKAN (enrich acima). Best-effort.
+    if (bairro or "").strip():
+        try:
+            from tools.censo_setor_tools import demografia_setor_censo
+            from tools.maps_tools import geocode_endereco
+
+            geo = geocode_endereco(f"{bairro}, {cidade}, Brasil")
+            lat, lng = geo.get("lat"), geo.get("lng")
+            idm = str(municipio.get("codigo_ibge") or "") or None
+            censo = demografia_setor_censo(lat, lng, id_municipio=idm) if lat is not None else None
+            if censo:
+                b = enriched.setdefault("bairro", {})
+                b["populacao"] = censo["populacao"]
+                b["domicilios"] = censo["domicilios"]
+                b["media_moradores"] = censo["media_moradores"]
+                b["populacao_fonte"] = censo["fonte"]
+                b["censo_n_setores"] = censo["n_setores"]
+        except Exception as exc:
+            print(f"[bundle] censo bairro falhou: {type(exc).__name__}: {exc}")
+    return enriched
 
 
 from dotenv import load_dotenv
