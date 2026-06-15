@@ -338,8 +338,14 @@ def _places_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
     body = {"textQuery": query, "maxResultCount": max_results,
             "languageCode": "pt-BR", "regionCode": "BR"}
     try:
-        with httpx.Client(timeout=20) as c:
-            data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
+        # Contabiliza o custo (places:searchText = SKU places_search_new) — a âncora
+        # bairro é a principal chamada Places nova por relatório; sem isto, o custo_brl
+        # do relatório subestimaria o Places real.
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("descobrir_concorrentes_bairro", "places_search_new", 1):
+            with httpx.Client(timeout=20) as c:
+                data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
     except Exception as exc:
         logger.debug("places textSearch '%s': %s", query, exc)
         return []
