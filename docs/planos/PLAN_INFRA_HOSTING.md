@@ -121,3 +121,37 @@ Composicao da zona migrada (contagem de registros): 9 A, 4 CNAME, 2 MX, 4 SRV, 1
 Propagacao: no momento do registro, o DNS publico global ainda servia os NS antigos da HostGator (cache de TTL ~6h drenando). A delegacao deve refletir os NS da Cloudflare apos a expiracao do cache. Verificacao pendente: reconferir via DNS-over-HTTPS que os NS publicos ja apontam para adelaide/jihoon.
 
 Constraints respeitadas: a confirmacao final (SALVAR) no Registro.br foi feita pelo usuario; nenhum segredo/token/chave DKIM reproduzido; nenhuma permissao de acesso alterada.
+
+## Landing getgymsite.com.br -> Cloudflare Pages (deploy + dominio) - 2026-06-14
+
+Contexto: a landing page (repo gym-insight-hub, branch main) foi publicada no Cloudflare Pages e o dominio getgymsite.com.br foi anexado ao projeto.
+
+Build / Deploy (Cloudflare Pages):
+- Projeto Pages: gym-insight-hub (subdominio padrao gym-insight-hub.pages.dev).
+- Conta Cloudflare: marcelo.rosas@vectracargo.com.br.
+- Framework preset: None. Build command: bun install && bun run build. Output dir: dist.
+- Variavel de build: BUN_VERSION=1.3.14.
+- Ajuste no repo: vite.config.ts passou a definir o target de build para Cloudflare Pages (commit a275381). Saida em dist/ (com _worker.js, _routes.json, _headers, _redirects).
+- 1o deploy FALHOU (dependencias nao instaladas; vite nao encontrado, exit 127). Corrigido prefixando o build com bun install. 2o deploy: SUCCESS (~38s).
+- Producao validada em gym-insight-hub.pages.dev: render OK, chatbot OK.
+
+Dominio customizado (Cloudflare Pages > Custom domains):
+- Anexados ao projeto: getgymsite.com.br (apex) e www.getgymsite.com.br.
+- Ambos: status ACTIVE, SSL enabled.
+
+DNS aplicado (cPanel/HostGator Zone Editor, com autorizacao):
+- Editado: www.getgymsite.com.br. CNAME -> gym-insight-hub.pages.dev (TTL 14400). Salvo apos refresh por conflito de serial da zona.
+- Criado: redirect 301 PERMANENTE do apex getgymsite.com.br -> https://www.getgymsite.com.br (opcao 'nao redirecionar www'). Confirmado pelo cPanel.
+- NAO alterados: A do apex (@), MX mx1/mx2.titan.email (e-mail preservado), mail, ftp, cpanel, webmail, SRV/TXT.
+
+Arquitetura de entrega observada:
+- www.getgymsite.com.br -> CNAME -> gym-insight-hub.pages.dev (Pages) -> HTTP 200.
+- apex getgymsite.com.br -> servido diretamente pelo Cloudflare Pages (HTTP 200, presenca de /cdn-cgi/rum). O redirect 301 do cPanel NAO e acionado no apex porque o trafego do apex chega ao Pages, nao ao HostGator. Efeito pratico: ambas as URLs servem o site com SSL.
+
+Ponto de atencao / a confirmar:
+- O comportamento acima (Pages pedindo 'Complete DNS setup' e a edicao de DNS funcionando no cPanel/HostGator) sugere que a zona autoritativa em uso ainda pode ser a HostGator, o que diverge da secao anterior (migracao de NS para Cloudflare). RECONFERIR via DNS-over-HTTPS quais NS publicos respondem por getgymsite.com.br e se a zona ativa e Cloudflare ou HostGator.
+- Caso se queira redirect estrito apex->www (em vez de servir conteudo nas duas URLs), criar uma Redirect Rule no proprio Cloudflare (nao no cPanel).
+
+Validacao de conteudo: varredura do DOM em producao (apex e www) sem termos sensiveis (0 hits).
+
+Constraints respeitadas: nenhuma alteracao de DNS salva sem autorizacao; nenhum segredo/token/chave reproduzido; nenhuma permissao de acesso alterada.
