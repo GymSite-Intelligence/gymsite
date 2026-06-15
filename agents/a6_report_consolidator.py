@@ -2557,7 +2557,11 @@ def _a6_after_agent_callback(callback_context):
 
 report_consolidator_agent = Agent(
     name="ReportConsolidator",
-    model="gemini-2.5-pro",
+    # Pro→Flash (custo): A6 era ~46% do custo LLM (R$4,82/relatório). A síntese é
+    # templada (instrução muito detalhada) sobre dados estruturados/determinísticos +
+    # contexto já enxuto (slim_concorrente) — Flash dá conta. Corta ~R$3,6/relatório.
+    # Validar qualidade da narrativa com golden case; reverter pra Pro se degradar.
+    model="gemini-2.5-flash",
     generate_content_config=_GENERATE_CONFIG,
     description=(
         "Consolida outputs dos 5 agentes em relatório executivo markdown completo, "
