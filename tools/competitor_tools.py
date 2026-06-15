@@ -298,18 +298,33 @@ def _buscar_academias_cnpj_bairro(
         return [], {"status": "erro", "motivo": str(exc)}
 
 
-def _places_match_por_texto(nome: str, endereco: str, cidade: str, uf: str) -> dict | None:
-    """Places searchText p/ casar UM estabelecimento do parque a um place_id real.
+# tipo_negocio (enum do formulário) → termo natural de busca. O enum cru
+# ("crossfit_box") é ruim como query; mapa rotulado (regra de ouro, não hardcode).
+_TIPO_NEGOCIO_KW = {
+    "academia": "academias",
+    "crossfit_box": "crossfit",
+    "studio_pilates": "pilates",
+    "studio_funcional": "treinamento funcional",
+    "outro": "academias",
+}
+# Tipos do Places que contam como academia tradicional. Mata restaurante/escritório/
+# loja (validado por auditoria Maps: Vistta Rooftop, Duets Office Towers caíam fora).
+_FITNESS_TYPES = {"gym", "fitness_center"}
 
-    Registro-primeiro: a descoberta é o parque CNPJ (quem existe no bairro); o Places
-    só enriquece (place_id/rating/geo/horário) cada um. Devolve o melhor place ou None.
-    """
+
+def _norm_txt(s: str) -> str:
+    """lower + sem acento, p/ casar bairro dentro de endereço/nome."""
+    import re as _re
+    import unicodedata
+    s = unicodedata.normalize("NFKD", (s or "").lower()).encode("ascii", "ignore").decode()
+    return _re.sub(r"\s+", " ", s).strip()
+
+
+def _places_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
+    """Places searchText cru → lista de places (estruturado, dado do Google Maps)."""
     api_key = get_google_maps_api_key()
     if not api_key:
-        return None
-    q = ", ".join(p for p in (nome, endereco, cidade, uf) if p and p.strip())
-    if not q.strip():
-        return None
+        return []
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": api_key,
@@ -320,85 +335,91 @@ def _places_match_por_texto(nome: str, endereco: str, cidade: str, uf: str) -> d
             "places.googleMapsUri"
         ),
     }
-    body = {"textQuery": q, "maxResultCount": 1, "languageCode": "pt-BR", "regionCode": "BR"}
+    body = {"textQuery": query, "maxResultCount": max_results,
+            "languageCode": "pt-BR", "regionCode": "BR"}
     try:
-        with httpx.Client(timeout=12) as c:
+        with httpx.Client(timeout=20) as c:
             data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
     except Exception as exc:
-        logger.debug("places searchText parque (%s): %s", nome, exc)
-        return None
-    places = data.get("places") or []
-    return places[0] if places else None
+        logger.debug("places textSearch '%s': %s", query, exc)
+        return []
+    return data.get("places") or []
 
 
-def _concorrentes_parque_enriquecidos(
-    bairro: str, cidade: str, uf: str, lat_centro: float, lng_centro: float, *, limit: int = 30,
-) -> tuple[list[dict], dict]:
-    """Base registro-primeiro: parque CNPJ fitness do BAIRRO + Places enriquece.
+def _cross_parque_contato(out: list[dict], cidade: str, uf: str, bairro: str) -> list[dict]:
+    """Cruza o parque CNPJ: anexa cnpj/telefone aos concorrentes que casam por nome.
 
-    Resolve o anchoring município/raio (a Nearby 3km puxava bairros adjacentes).
-    Devolve concorrentes no MESMO shape do buscar_academias (place_id/rating/geo reais
-    quando há match Places; senão lista mesmo assim, bairro-âncora, sem reviews).
+    Auditoria Maps mostrou que o parque tem recall baixo (5/14) e ruído (loja/escritório),
+    então NÃO é a âncora — é só enrich de contato p/ o A5 (decisor) nos que o Maps achou.
     """
-    from tools.concorrentes_parque_tools import listar_concorrentes_parque
+    try:
+        from tools.concorrentes_parque_tools import listar_concorrentes_parque
 
-    bloco = listar_concorrentes_parque(cidade, uf, bairro)
-    if bloco.get("status") != "ok" or not bloco.get("concorrentes"):
-        return [], bloco
+        bloco = listar_concorrentes_parque(cidade, uf, bairro)
+    except Exception:
+        return out
+    if not isinstance(bloco, dict) or bloco.get("status") != "ok":
+        return out
+    idx: dict[str, dict] = {}
+    for c in bloco.get("concorrentes") or []:
+        nome = _norm_txt(c.get("nome") or c.get("razao_social") or "")
+        if nome:
+            idx.setdefault(nome, c)
+    for o in out:
+        c = idx.get(_norm_txt(o.get("nome") or ""))
+        if c:
+            o["cnpj"] = c.get("cnpj")
+            o["telefone"] = o.get("telefone") or c.get("telefone") or ""
+            o["fonte_busca"] = "places_textsearch+cnpj"
+    return out
 
-    alvos = bloco["concorrentes"][:limit]
-    # Places match em paralelo (I/O bound): N searchText sequenciais bloqueavam o
-    # event loop do pipeline async (starva A2/A4 em paralelo). Threadpool encurta a
-    # janela de bloqueio de ~N×1s pra ~max(1s)×ceil(N/workers).
-    from concurrent.futures import ThreadPoolExecutor
 
-    def _match(c: dict) -> dict | None:
-        nome = c.get("nome") or c.get("razao_social") or ""
-        endereco = c.get("endereco") or ""
-        return _places_match_por_texto(nome, endereco, cidade, uf)
+def _descobrir_concorrentes_bairro(
+    tipo_negocio: str, bairro: str, cidade: str, uf: str,
+    lat_centro: float, lng_centro: float,
+) -> list[dict]:
+    """Âncora bairro (registro-primeiro refinado, validado por auditoria Maps).
 
-    with ThreadPoolExecutor(max_workers=min(8, max(1, len(alvos)))) as ex:
-        matches = list(ex.map(_match, alvos))
+    `textSearch "{tipo} {bairro} {cidade} {uf}"` → filtra bairro + types fitness →
+    cruza parque CNPJ (contato). Recall vem do Maps (auditoria: 14 reais em Cocó vs
+    parque 5); o type-filter mata escritório/restaurante/loja; o bairro-filter mata
+    bairros adjacentes que a query puxa. Mesmo shape do buscar_academias.
+    """
+    kw = _TIPO_NEGOCIO_KW.get((tipo_negocio or "").strip().lower(), "academias")
+    query = " ".join(x for x in [kw, bairro, cidade, uf] if x and x.strip())
+    places = _places_textsearch(query)
+    alvo = _norm_txt(bairro or "")
 
     out: list[dict] = []
-    for c, p in zip(alvos, matches):
-        nome = c.get("nome") or c.get("razao_social") or ""
-        endereco = c.get("endereco") or ""
-        if p:
-            loc = p.get("location") or {}
-            plat, plng = loc.get("latitude", 0.0), loc.get("longitude", 0.0)
-            periodos = (p.get("regularOpeningHours") or {}).get("weekdayDescriptions", [])
-            out.append({
-                "place_id": p.get("id", ""),
-                "nome": (p.get("displayName") or {}).get("text") or nome,
-                "endereco": p.get("formattedAddress") or endereco,
-                "lat": plat, "lng": plng,
-                "distancia_km": round(calcular_distancia_km(lat_centro, lng_centro, plat, plng), 2) if plat else 0.0,
-                "rating": p.get("rating"),
-                "num_avaliacoes": p.get("userRatingCount", 0),
-                "nivel_preco": "",
-                "status": p.get("businessStatus", ""),
-                "tipos": p.get("types", []),
-                "telefone": p.get("nationalPhoneNumber") or c.get("telefone") or "",
-                "website": p.get("websiteUri", ""),
-                "google_maps_uri": p.get("googleMapsUri", ""),
-                "tem_24h": any("24" in h for h in periodos) if periodos else False,
-                "horarios": periodos[:3],
-                "cnpj": c.get("cnpj"),
-                "fonte_busca": "cnpj_parque+places",
-            })
-        else:
-            out.append({
-                "place_id": f"cnpj/{c.get('cnpj', '')}",
-                "nome": nome, "endereco": endereco,
-                "lat": 0.0, "lng": 0.0, "distancia_km": 0.0,
-                "rating": None, "num_avaliacoes": 0, "nivel_preco": "",
-                "status": "CNPJ_ATIVO", "tipos": ["gym", "cnpj_fitness"],
-                "telefone": c.get("telefone") or "", "website": "",
-                "tem_24h": False, "horarios": [],
-                "cnpj": c.get("cnpj"), "fonte_busca": "cnpj_parque_sem_places",
-            })
-    return out, bloco
+    for p in places:
+        tipos = p.get("types") or []
+        if not (set(tipos) & _FITNESS_TYPES):
+            continue  # mata restaurante/escritório/loja
+        end = p.get("formattedAddress", "")
+        if alvo and alvo not in _norm_txt(end):
+            continue  # mata bairro adjacente puxado pela query (Aldeota etc.)
+        loc = p.get("location") or {}
+        plat, plng = loc.get("latitude", 0.0), loc.get("longitude", 0.0)
+        periodos = (p.get("regularOpeningHours") or {}).get("weekdayDescriptions", [])
+        out.append({
+            "place_id": p.get("id", ""),
+            "nome": (p.get("displayName") or {}).get("text") or "",
+            "endereco": end,
+            "lat": plat, "lng": plng,
+            "distancia_km": round(calcular_distancia_km(lat_centro, lng_centro, plat, plng), 2) if plat else 0.0,
+            "rating": p.get("rating"),
+            "num_avaliacoes": p.get("userRatingCount", 0),
+            "nivel_preco": "",
+            "status": p.get("businessStatus", ""),
+            "tipos": tipos,
+            "telefone": p.get("nationalPhoneNumber", ""),
+            "website": p.get("websiteUri", ""),
+            "google_maps_uri": p.get("googleMapsUri", ""),
+            "tem_24h": any("24" in h for h in periodos) if periodos else False,
+            "horarios": periodos[:3],
+            "fonte_busca": "places_textsearch",
+        })
+    return _cross_parque_contato(out, cidade, uf, bairro)
 
 
 def _buscar_academias_overpass(
@@ -434,6 +455,7 @@ def buscar_academias(
     cidade: str,
     raio_metros: int = 3000,
     uf: str = "",
+    tipo_negocio: str = "academia",
 ) -> dict:
     """
     Busca academias e fitness centers num raio do bairro/cidade.
@@ -520,32 +542,36 @@ def buscar_academias(
             places_ok = False
             data = {"error": str(e)}
 
-    # ── Registro-primeiro (flag CONCORRENTES_SOURCE=parque) ──────────────────
-    # Parque CNPJ fitness do BAIRRO vira a base; Places enriquece cada um (place_id/
-    # rating/geo reais). Resolve o anchoring município/raio: a Nearby 3km puxava
-    # academias de bairros adjacentes (ex.: AYO Guararapes, Smart Fit Papicu num
-    # relatório de Cocó). `agregados` (densidade 3km) fica como contexto regional.
-    # 3km vira fallback quando o parque está vazio/indisponível.
+    # ── Âncora bairro (flag CONCORRENTES_SOURCE=parque) ──────────────────────
+    # textSearch "{tipo} {bairro} {cidade} {uf}" (dado Google Maps, bairro-scoped) +
+    # filtro types fitness + filtro bairro + cross parque CNPJ (contato). Resolve o
+    # anchoring município/raio: a Nearby 3km puxava bairros adjacentes (AYO Guararapes,
+    # Smart Fit Papicu num relatório de Cocó). Auditoria Maps: textSearch acha 14 reais
+    # em Cocó vs parque-only 5 (recall) e sem o lixo (escritório/restaurante).
+    # `agregados` (densidade 3km) fica como contexto regional. 3km = fallback.
     if os.getenv("CONCORRENTES_SOURCE", "").strip().lower() == "parque" and bairro.strip():
-        base_parque, _meta_pq = _concorrentes_parque_enriquecidos(bairro, cidade, uf, lat, lng)
-        if base_parque:
-            base_parque.sort(key=lambda x: (x.get("distancia_km") or 0.0))
+        base_bairro = _descobrir_concorrentes_bairro(tipo_negocio, bairro, cidade, uf, lat, lng)
+        if base_bairro:
+            base_bairro.sort(key=lambda x: -(x.get("num_avaliacoes") or 0))
             _cnt = agregados.get("count_total") if isinstance(agregados, dict) else None
             return {
                 "bairro": bairro, "cidade": cidade, "raio_metros": raio_metros,
                 "lat_centro": lat, "lng_centro": lng,
                 "fonte_geocode": fonte_geocode,
-                "total_encontrados": len(base_parque),
-                "total_encontrados_nearby": len(base_parque),
+                "total_encontrados": len(base_bairro),
+                "total_encontrados_nearby": len(base_bairro),
                 "total_encontrados_agregado": int(_cnt) if isinstance(_cnt, (int, float)) else None,
                 "agregados_competicao_places": agregados if isinstance(agregados, dict) else {},
-                "fonte_busca_competidores": "cnpj_parque+places",
+                "fonte_busca_competidores": "places_textsearch_bairro+cnpj",
                 "redes_detectadas_osm": [],
-                "concorrentes": base_parque,
-                "nota_fonte": ("Registro-primeiro: parque CNPJ fitness do bairro; Places "
-                               "enriquece (sem busca ampla 3km). Densidade 3km = contexto regional."),
+                "concorrentes": base_bairro,
+                "nota_fonte": ("Âncora bairro: Places textSearch '{} {} {}' filtrado por "
+                               "bairro+fitness; parque CNPJ cruza contato. Densidade 3km = "
+                               "contexto regional.").format(
+                                   _TIPO_NEGOCIO_KW.get((tipo_negocio or '').strip().lower(), 'academias'),
+                                   bairro, cidade),
             }
-        # parque vazio → segue no fluxo Places 3km (fallback)
+        # textSearch vazio → segue no fluxo Places 3km (fallback)
 
     concorrentes: list[dict] = []
     fonte_busca = "google_places"
@@ -1434,7 +1460,17 @@ def buscar_concorrentes_balanceados(
 
     Retorna dict que substitui o output do `buscar_academias` no A3a.
     """
-    busca_nearby = buscar_academias(bairro, cidade, raio_metros)
+    # tipo_negocio/uf vêm do market_context (form) — necessários p/ a âncora bairro
+    # (textSearch "{tipo} {bairro} {cidade} {uf}"). Default seguro se ausente.
+    _tn, _uf = "academia", ""
+    _st0 = getattr(tool_context, "state", None)
+    if _st0 is not None:
+        _mc0 = _parse_market_context(_st0.get("market_context"))
+        if isinstance(_mc0, dict):
+            _in0 = _mc0.get("market_context") if isinstance(_mc0.get("market_context"), dict) else _mc0
+            _tn = (_in0.get("tipo_negocio") or "academia")
+            _uf = (_in0.get("uf") or _st0.get("uf") or "")
+    busca_nearby = buscar_academias(bairro, cidade, raio_metros, uf=_uf, tipo_negocio=_tn)
     if "erro" in busca_nearby:
         return {
             **busca_nearby,
