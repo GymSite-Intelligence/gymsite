@@ -34,7 +34,12 @@ export function DemandaFuturaCard({ block }: { block: DemandaFuturaJSON }) {
     )
   }
   const jan = block.janela_entrega
-  const obras = (block.obras ?? []).filter((o) => (o.unidades_est ?? 0) > 0).slice(0, 8)
+  // Só obras com captura estimada real (> 0). Captura ~0 = não-residencial (fora do
+  // gate) ou prédio pequeno demais — não entrega ROI, vira ruído na lista.
+  const obras = (block.obras ?? [])
+    .filter((o) => Math.round(o.captura_est ?? 0) > 0)
+    .sort((a, b) => (b.captura_est ?? 0) - (a.captura_est ?? 0))
+    .slice(0, 8)
 
   return (
     <div className="space-y-4">
@@ -49,6 +54,12 @@ export function DemandaFuturaCard({ block }: { block: DemandaFuturaJSON }) {
         />
       </div>
 
+      {obras.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground">
+          Nenhuma obra futura com captura estimada relevante (&gt; 0) no bairro — sem
+          projeção de receita futura material no momento.
+        </p>
+      ) : (
       <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left text-[11px] uppercase text-muted-foreground">
@@ -90,11 +101,12 @@ export function DemandaFuturaCard({ block }: { block: DemandaFuturaJSON }) {
           </tbody>
         </table>
       </div>
+      )}
 
       <p className="text-[11px] text-muted-foreground">
         {block.refinadas ? `${block.refinadas} obras refinadas via site/instagram/PDF da construtora (auditado). ` : ''}
-        Unidades por proxy área÷75 até refino A4. Captura = moradores × penetração × market share.
-        Linhas esmaecidas = provavelmente não-residencial (proxy, fora do gate). Estimativa de prospecção — {block.fonte}.
+        Unidades por proxy área÷75 até refino A4. Captura = moradores × penetração × market share (futuros membros captáveis, não leads).
+        Estimativa de prospecção — {block.fonte}.
       </p>
     </div>
   )
