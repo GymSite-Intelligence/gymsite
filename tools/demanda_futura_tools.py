@@ -267,17 +267,29 @@ def demanda_futura_detalhada(
         return {"status": "sem_dados", "cidade": cidade, "uf": uf, "bairro": bairro,
                 "n_obras": 0, "obras": [], "confianca": "nenhuma"}
 
-    from tools.cno_bigquery_loader import _KW_RESIDENCIAL
+    from tools.cno_bigquery_loader import _KW_COMERCIAL, _KW_RESIDENCIAL
     from tools.refino_lancamento_tools import refinar_demanda_via_lancamento
 
-    def _provavel_residencial(nome: str, refino: dict | None) -> bool:
+    def _classificar_residencial(nome: str, refino: dict | None) -> tuple[bool, str, str]:
+        """(residencial, base, confianca). base diz a FONTE da decisão; confiança a reflete.
+
+        Conservador: sem sinal → NÃO-residencial (não infla a demanda com obra ambígua).
+        - refino_tipologia: site/IG do lançamento auditado → alta
+        - nome_residencial / nome_comercial: keyword no nome CNO → media
+        - sem_sinal: nada decidiu → baixa (fica fora dos totais)
+        """
         tip = str((refino or {}).get("tipologia") or "").lower()
-        if "residenc" in tip or "dorm" in tip or "studio" in tip:
-            return True
-        if tip in ("comercial", "infra"):
-            return False
+        if tip:
+            if "residenc" in tip or "dorm" in tip or "studio" in tip:
+                return True, "refino_tipologia", "alta"
+            if tip in ("comercial", "infra"):
+                return False, "refino_tipologia", "alta"
         n = (nome or "").lower()
-        return any(k in n for k in _KW_RESIDENCIAL)
+        if any(k in n for k in _KW_RESIDENCIAL):
+            return True, "nome_residencial", "media"
+        if any(k in n for k in _KW_COMERCIAL):
+            return False, "nome_comercial", "media"
+        return False, "sem_sinal", "baixa"
 
     refino_fn = _refino_fn or refinar_demanda_via_lancamento
     obras = sorted(obras, key=lambda o: -float(o.get("area_m2") or 0))
@@ -294,9 +306,9 @@ def demanda_futura_detalhada(
             float(o.get("area_m2") or 0), unidades_exatas=unid_exatas, tipologia=tipologia,
             perfil_bairro=perfil_bairro, market_share=market_share, ticket_brl=ticket_brl,
         )
-        residencial = _provavel_residencial(o.get("nome") or "", refino)
-        # Gate residencial: prédio comercial/infra não gera morador → não soma demanda.
-        # Mantém a obra na lista (transparência) mas fora dos totais (Apêndice A).
+        residencial, base_res, conf_res = _classificar_residencial(o.get("nome") or "", refino)
+        # Gate residencial: prédio comercial/infra/ambíguo não gera morador → não soma
+        # demanda. Mantém a obra na lista (transparência) mas fora dos totais (Apêndice A).
         if residencial:
             tot["captura_est"] += e["captura_est"]
             tot["moradores_est"] += e["moradores_est"]
@@ -309,8 +321,11 @@ def demanda_futura_detalhada(
             "entrega": _meses_para_entrega(o.get("data_inicio")),
             "amenidade_fitness": (refino or {}).get("amenidade_fitness", False),
             "captura_est": e["captura_est"] if residencial else 0.0,
-            "confianca": (refino or {}).get("confianca", "baixa"),
+            # confiança do refino (quando rodou) tem precedência; senão a da classificação.
+            "confianca": (refino or {}).get("confianca") or conf_res,
             "provavel_residencial": residencial,
+            "base_residencial": base_res,            # FONTE da classificação (auditável)
+            "ni_responsavel": o.get("ni_responsavel"),  # CNPJ responsável no CNO (verificável)
             "fonte_url": (refino or {}).get("fonte_url"),
         })
 
@@ -318,6 +333,11 @@ def demanda_futura_detalhada(
         "status": "ok", "cidade": cidade, "uf": uf, "bairro": bairro,
         "n_obras": len(obras), "refinadas": min(top_n, len(obras)),
         "provavel_residencial_n": sum(1 for l in linhas if l["provavel_residencial"]),
+        # Transparência: de ONDE veio a classificação residencial (fonte por contagem).
+        "residencial_por_base": {
+            base: sum(1 for l in linhas if l["provavel_residencial"] and l["base_residencial"] == base)
+            for base in ("refino_tipologia", "nome_residencial")
+        },
         "obras": linhas[:max(top_n, 10)],
         "captura_total_est": round(tot["captura_est"], 1),
         "moradores_total_est": round(tot["moradores_est"], 1),

@@ -113,6 +113,33 @@ def test_detalhada_aplica_refino_top_n(monkeypatch):
     assert linha_a["confianca"] == "alta" and linha_a["amenidade_fitness"] is True
 
 
+def test_classificacao_residencial_base_e_conservadora(monkeypatch):
+    """Classificação carrega a BASE/fonte e é conservadora (sem sinal → não conta)."""
+    from tools import demanda_futura_tools as dft
+
+    obras = [
+        {"area_m2": 8000, "data_inicio": "2025-06-01", "em_curso": True,
+         "nome": "EDIFICIO RESERVA DO PARQUE", "bairro": "Cocó", "ni_responsavel": "111"},
+        {"area_m2": 8000, "data_inicio": "2025-06-01", "em_curso": True,
+         "nome": "GALPAO LOGISTICO ABC", "bairro": "Cocó"},        # comercial
+        {"area_m2": 8000, "data_inicio": "2025-06-01", "em_curso": True,
+         "nome": "SPE GENERICO 01 LTDA", "bairro": "Cocó"},        # sem sinal
+    ]
+    monkeypatch.setattr(dft, "_obras_grande_porte_municipio", lambda c, u: obras)
+    r = dft.demanda_futura_detalhada("Fortaleza", "CE", top_n=0, _refino_fn=lambda o: None)
+
+    by = {l["construtora"]: l for l in r["obras"]}
+    assert by["EDIFICIO RESERVA DO PARQUE"]["provavel_residencial"] is True
+    assert by["EDIFICIO RESERVA DO PARQUE"]["base_residencial"] == "nome_residencial"
+    assert by["EDIFICIO RESERVA DO PARQUE"]["ni_responsavel"] == "111"  # CNPJ fonte
+    assert by["GALPAO LOGISTICO ABC"]["base_residencial"] == "nome_comercial"
+    assert by["SPE GENERICO 01 LTDA"]["provavel_residencial"] is False  # conservador
+    assert by["SPE GENERICO 01 LTDA"]["base_residencial"] == "sem_sinal"
+    # só 1 residencial, e o resumo diz a fonte
+    assert r["provavel_residencial_n"] == 1
+    assert r["residencial_por_base"]["nome_residencial"] == 1
+
+
 def test_gate_residencial_exclui_nao_residencial_dos_totais(monkeypatch):
     """Prédio comercial/infra fica na lista (transparência) mas fora dos totais."""
     from tools import demanda_futura_tools as dft
