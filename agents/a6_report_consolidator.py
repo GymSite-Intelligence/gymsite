@@ -1474,6 +1474,39 @@ def _bruto_para_detalhado(c: dict) -> dict:
     return out
 
 
+# Campos crus/pesados que NÃO entram no relatório nem no contexto do A6 — só inflam
+# token (custo). enrichment_search_grounding_text = 1k+ chars de grounding cru;
+# reviews_traduzidas = duplicata de reviews; atividade_marketing = dict raw do enrichment.
+_CONCORRENTE_CAMPOS_PESADOS = (
+    "enrichment_search_grounding_text",
+    "reviews_traduzidas",
+    "atividade_marketing",
+    "enrichment",
+)
+
+
+def _slim_concorrente(c: dict) -> dict:
+    """Enxuga 1 concorrente p/ o A6: dropa campos crus e limita reviews ao que o
+    relatório usa (rating + quote curta + categoria de dor). Corta custo de token do A6
+    sem perder o que vira markdown."""
+    if not isinstance(c, dict):
+        return c
+    s = {k: v for k, v in c.items() if k not in _CONCORRENTE_CAMPOS_PESADOS}
+    revs = s.get("reviews") or []
+    if isinstance(revs, list):
+        s["reviews"] = [
+            {
+                "rating": r.get("rating"),
+                "quote_curta": (r.get("quote_curta") or r.get("texto") or r.get("snippet") or "")[:180],
+                "categoria_dor": r.get("categoria_dor"),
+                "sinal": r.get("sinal"),
+                "data_relativa": r.get("data_relativa"),
+            }
+            for r in revs[:5] if isinstance(r, dict)
+        ]
+    return s
+
+
 def _resolver_competitividade_extracao(
     *,
     ic_raw: dict,
@@ -1518,6 +1551,10 @@ def _resolver_competitividade_extracao(
             len(detalhados),
             extra={"agent": "A6", "context": "competitividade_fallback"},
         )
+
+    # Enxuga: dropa grounding cru + reviews duplicadas + cap 5 reviews/concorrente.
+    # Corta o maior contribuinte de token do A6 (R$107 acum.) sem perder o que vira report.
+    detalhados = [_slim_concorrente(c) for c in detalhados]
 
     score_conc = ic_raw.get("score_concorrencia") or inner_ic.get("score_concorrencia")
     nivel_sat = (

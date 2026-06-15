@@ -2,7 +2,26 @@
 from agents.a6_report_consolidator import (
     _alinhar_markdown_ao_estruturado,
     _resolver_competitividade_extracao,
+    _slim_concorrente,
 )
+
+
+def test_slim_concorrente_corta_campos_pesados():
+    """Slim dropa grounding cru + reviews duplicadas + cap 5 reviews; mantém o report."""
+    c = {
+        "nome": "Academia X", "rating_oficial": 4.5, "num_avaliacoes": 200,
+        "enrichment_search_grounding_text": "L" * 1500,
+        "reviews_traduzidas": [{"a": 1}] * 5,
+        "atividade_marketing": {"posts": ["p" * 500]},
+        "reviews": [{"rating": 1, "quote_curta": "Q" * 300, "categoria_dor": "atendimento",
+                     "sinal": "negativo", "extra": "y" * 200}] * 8,
+    }
+    s = _slim_concorrente(c)
+    assert "enrichment_search_grounding_text" not in s
+    assert "reviews_traduzidas" not in s and "atividade_marketing" not in s
+    assert s["nome"] == "Academia X" and s["rating_oficial"] == 4.5  # report-relevante mantido
+    assert len(s["reviews"]) == 5 and len(s["reviews"][0]["quote_curta"]) == 180
+    assert "extra" not in s["reviews"][0]                            # review enxuta
 
 
 def test_fallback_concorrentes_brutos_recalcula_score():
