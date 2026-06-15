@@ -1021,27 +1021,40 @@ def _capturar_versao_boot() -> dict:
 
     Lido 1× no import (não por request — senão leria o disco já avançado e mentiria).
     Comparar com o HEAD do disco detecta processo stale: uvicorn sem --reload (bug
-    Py3.14) não recarrega; ver feedback memory restart-server-pós-código. Em prod
-    (Cloud Run, sem .git) usa env GIT_SHA/K_REVISION injetada no build.
+    Py3.14) não recarrega; ver feedback memory restart-server-pós-código.
+
+    Precedência (cobre dev + prod Cloud Run, que não tem .git):
+      1. env GIT_SHA       — deploy `--set-env-vars GIT_SHA=$(git rev-parse --short HEAD)`
+      2. arquivo VERSION   — SHA bakeado na imagem (scripts/deploy_backend.sh)
+      3. git no disco      — ambiente de dev
+      4. K_REVISION        — revisão Cloud Run (não é git SHA, mas muda por deploy)
     """
-    sha = os.environ.get("GIT_SHA") or os.environ.get("K_REVISION") or ""
+    base = os.path.dirname(os.path.abspath(__file__))
     branch = os.environ.get("GIT_BRANCH") or ""
-    fonte = "env"
+    sha = (os.environ.get("GIT_SHA") or "").strip()
+    fonte = "env_git_sha" if sha else ""
     if not sha:
-        fonte = "git"
+        try:
+            with open(os.path.join(base, "VERSION"), encoding="utf-8") as fh:
+                sha = fh.read().strip()
+                fonte = "version_file" if sha else fonte
+        except Exception:
+            pass
+    if not sha:
         sha = _git_sha_disco() or ""
-        if not sha:
-            fonte = "indisponivel"
-        else:
+        if sha:
+            fonte = "git_disco"
             import subprocess
             try:
-                base = os.path.dirname(os.path.abspath(__file__))
-                branch = subprocess.run(
+                branch = branch or subprocess.run(
                     ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=base,
                     capture_output=True, text=True, timeout=3,
                 ).stdout.strip()
             except Exception:
-                branch = ""
+                pass
+    if not sha:
+        sha = (os.environ.get("K_REVISION") or "").strip()
+        fonte = "k_revision" if sha else "indisponivel"
     return {
         "commit": sha or "unknown",
         "branch": branch or "unknown",

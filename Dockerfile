@@ -7,6 +7,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN playwright install chromium
+# SHA do código bakeado na imagem → /api/version mostra a versão em prod (Cloud Run
+# sem .git). Passar no build: --build-arg GIT_SHA=$(git rev-parse --short HEAD).
+# Fluxo --source (buildpacks) ignora ARG: use --set-env-vars GIT_SHA=... no deploy
+# (scripts/deploy_backend.sh) ou o arquivo VERSION.
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
 COPY . .
 EXPOSE 8000
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

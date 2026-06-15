@@ -160,3 +160,6 @@ Manual ONR API/
 docs/arquitetura/*.pdf
 docs/arquitetura/*.csv
 docs/arquitetura/*.PDF
+
+# SHA carimbado no deploy (scripts/deploy_backend.sh) — artefato de build
+VERSION
