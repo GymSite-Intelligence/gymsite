@@ -237,6 +237,7 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "cno_area_gp_min_m2":      _p(2000,    "gate grande porte (cno_bigquery_loader)", "filtro_plausibilidade", "m2", "benchmark", "2026-06-16"),
     "cno_area_gp_max_m2":      _p(100000,  "gate grande porte (corta mega-infra)", "filtro_plausibilidade", "m2", "benchmark", "2026-06-16"),
     "cutoff_obras_meses":      _p(36,      "janela retroativa busca CNO (demanda_futura)", "janela_busca", "meses", "calibracao", "2026-06-16"),
+    "ig_cache_ttl_dias":       _p(14,      "frescor do cache de IG do concorrente (marketing muda devagar)", "freshness_cache", "dias", "calibracao", "2026-06-16"),
     "cno_duracao_min_dias":    _p(60,      "análise CNO encerradas (obra mínima)", "filtro_plausibilidade", "dias", "benchmark"),
     "cno_duracao_max_dias":    _p(1200,    "análise CNO encerradas (obra máxima)", "filtro_plausibilidade", "dias", "benchmark"),
     "cno_dias_por_m2_min":     _p(0.04,    "análise CNO encerradas (ritmo obra)", "filtro_plausibilidade", "dias/m2", "benchmark"),

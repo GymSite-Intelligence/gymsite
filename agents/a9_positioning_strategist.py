@@ -277,7 +277,10 @@ def _servicos_do_concorrente(c: dict) -> set[str]:
             for p in (c.get("planos_precos") or []) if isinstance(p, dict)
         ),
     ])
-    return {_SERVICOS_CATALOGO[k] for k in _detectar_modalidades(blob) if k in _SERVICOS_CATALOGO}
+    svc = {_SERVICOS_CATALOGO[k] for k in _detectar_modalidades(blob) if k in _SERVICOS_CATALOGO}
+    # serviços já detectados nas captions do IG (A3a/cache) — chaves do catálogo
+    svc |= {_SERVICOS_CATALOGO[k] for k in (c.get("servicos_ig") or []) if k in _SERVICOS_CATALOGO}
+    return svc
 
 
 def _resumo_oferta_e_gaps(state: dict) -> str | None:
