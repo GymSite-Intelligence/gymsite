@@ -12,6 +12,23 @@ from google.adk.agents import Agent
 from tools.financial_tools import analise_financeira_a4_completo
 
 
+def _persistir_a4_no_state(tool, args, tool_context, tool_response):
+    """Snapshot determinístico do retorno da macro A4 → analise_financeira_pronto.
+
+    Correção na fonte (espelha A1/_persistir_macro_no_state): o A4-flash às vezes
+    dropa/renomeia campos ao copiar o JSON da macro pro output_key (aviso_
+    metodologia, aluguel_pesquisa_detalhes, capex frete, custos_detalhados.aluguel).
+    Gravando o tool_response cru no state, o A6 lê os números auditáveis direto da
+    tool (bypassa o LLM) e só usa o echo pra `justificativa`. O state delta do
+    callback persiste a chave pro A6.
+    """
+    if getattr(tool, "name", "") == "analise_financeira_a4_completo" and isinstance(
+        tool_response, dict
+    ):
+        tool_context.state["analise_financeira_pronto"] = tool_response
+    return None
+
+
 # Flash REVERTIDO pra Pro 12/06 mesmo dia: no round 7 o A4-Flash alucinou
 # uma tool inexistente ("Tool 'run_code' not found") tentando executar código
 # pra aritmética que o Pro resolve direto — run inteiro morto. O corte de
@@ -188,7 +205,12 @@ servem só pra você entender o que cada alerta significa ao redigir a justifica
     "aluguel_min_m2_observado": 0.0,
     "aluguel_mediana_m2_observado": 0.0,
     "aluguel_max_m2_observado": 0.0,
-    "aviso_metodologia": "Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae",
+    "aviso_metodologia_aluguel": "Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae",
+    // COPIE LITERAL da tool — A6 lê estes pra montar a seção de referência de
+    // aluguel; sem eles o gate _renderizar_secao_referencia_aluguel retorna ""
+    "aluguel_pesquisa_detalhes": { "tier": "...", "mediana_r_m2": 0.0 },
+    "aluguel_municipio_referencia": { },
+    "referencia_macro_bcb": null,
     "schema_cenarios": "v2",
     "cenarios": {
       "low": {
@@ -228,6 +250,9 @@ servem só pra você entender o que cada alerta significa ao redigir a justifica
         "capex_detalhado": {
           "equipamentos": 437500, "obra_adaptacao": 250000,
           "projeto_arquitetonico": 15000, "alvara_e_taxas": 8000,
+          // COPIE LITERAL da tool (frete pode ser 5-10% do CAPEX fora do eixo SP/RJ)
+          "frete_equipamentos": 0, "frete_detalhes": null,
+          "fonte_equipamentos": "...", "fonte_frete": "...",
           "contingencia_pct": 0.10, "contingencia_valor": 71050, "total": 781550
         },
         "capex_total": 781550,
@@ -275,5 +300,6 @@ justificativa, alertas) conforme regras acima.
     tools=[
         analise_financeira_a4_completo,    # 1 macro consolidada (Tier 1 + Tier 2)
     ],
+    after_tool_callback=_persistir_a4_no_state,  # snapshot determinístico p/ o A6
     output_key="analise_financeira",
 )

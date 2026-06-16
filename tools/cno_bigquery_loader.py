@@ -146,8 +146,12 @@ _KW_RESIDENCIAL = (
     "empreendimento imobiliário", "incorporac", "incorporaç", "morada", "reserva", "ville",
     "jardim", "torre", "vila ", "village", "parque residencial", "loteamento",
 )
-_AREA_GP_MIN = 2000
-_AREA_GP_MAX = 100_000  # corta mega-infra (não é prédio residencial)
+# Gate grande porte recalibrável via parametros_metodologia (zero-hardcode).
+# Default rotulado (_DEFAULTS) se Supabase indisponível.
+from tools.parametros_metodologia import param_int
+
+_AREA_GP_MIN = param_int("cno_area_gp_min_m2")
+_AREA_GP_MAX = param_int("cno_area_gp_max_m2")  # corta mega-infra (não é prédio residencial)
 
 
 def _regex_or(keywords) -> str:
