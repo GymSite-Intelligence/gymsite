@@ -224,6 +224,66 @@ _SEARCHAPI_PORTAIS = (
 )
 _TERMOS_COMERCIAIS = ("galpão para alugar", "loja para alugar", "salão comercial alugar")
 
+# Locations API (free) — resolve o `location` canônico do Google p/ geo-targeting.
+# Sem isso, `detected_location: Desconhecido` e o índice devolve landing pages
+# genéricas da categoria (sem preço/área no snippet → descartadas). Cache in-process.
+_LOCATION_CACHE: dict[str, str | None] = {}
+
+
+def _resolver_location_searchapi(cidade: str, uf: str = "") -> str | None:
+    """Canonical name do Google p/ (cidade, uf) via Locations API. Free, best-effort."""
+    chave = f"{cidade}|{uf}".lower().strip()
+    if chave in _LOCATION_CACHE:
+        return _LOCATION_CACHE[chave]
+
+    import requests as _rq
+
+    key = (os.getenv("SEARCHAPI_KEY") or "").strip()
+    if not key:
+        _LOCATION_CACHE[chave] = None
+        return None
+
+    termo = f"{cidade} {uf}".strip()
+    canonical: str | None = None
+    try:
+        r = _rq.get(
+            "https://www.searchapi.io/api/v1/locations",
+            headers={"Authorization": f"Bearer {key}"},
+            params={"q": termo, "limit": 5},
+            timeout=20,
+        )
+        r.raise_for_status()
+        body = r.json()
+        # A API devolve lista (ou {"locations":[...]}). Pega 1º match no Brasil.
+        itens = body if isinstance(body, list) else (body.get("locations") or [])
+        for it in itens:
+            cc = str(it.get("country_code") or it.get("country") or "").upper()
+            if cc and cc not in ("BR", "BRAZIL", "BRASIL"):
+                continue
+            canonical = it.get("canonical_name") or it.get("name")
+            if canonical:
+                break
+    except Exception:
+        canonical = None
+
+    _LOCATION_CACHE[chave] = canonical
+    return canonical
+
+
+def _build_queries_aluguel(cidade: str, bairro: str = "") -> list[tuple[str, str]]:
+    """Ordena queries: bairro-específico PRIMEIRO (snippets c/ preço/área), depois
+    cidade-inteira. Dentro do cap, prioriza o que rende dado — não landing genérica."""
+    rounds: list[tuple[str, str]] = []
+    bairro = (bairro or "").strip()
+    if bairro:
+        for dominio, portal in _SEARCHAPI_PORTAIS:
+            for termo in _TERMOS_COMERCIAIS:
+                rounds.append((f"site:{dominio} {termo} {bairro} {cidade}", portal))
+    for dominio, portal in _SEARCHAPI_PORTAIS:
+        for termo in _TERMOS_COMERCIAIS:
+            rounds.append((f"site:{dominio} {termo} {cidade}", portal))
+    return rounds
+
 
 def _amostras_via_searchapi_google(
     cidade: str,
@@ -231,10 +291,13 @@ def _amostras_via_searchapi_google(
     area_m2_min: int,
     area_m2_max: int,
     max_queries: int = 8,
+    bairro: str = "",
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Colhe amostras de aluguel comercial do índice Google (SearchAPI).
 
     Retorna (amostras, erros). Best-effort: sem SEARCHAPI_KEY → ([], [...]).
+    Quando `bairro` é dado, prioriza queries bairro-específicas (mais preço/área
+    no snippet) dentro do mesmo cap de queries — geo via Locations API.
     """
     import requests as _rq
 
@@ -242,61 +305,61 @@ def _amostras_via_searchapi_google(
     if not key:
         return [], ["searchapi: SEARCHAPI_KEY ausente"]
 
+    location = _resolver_location_searchapi(cidade, uf)
     amostras: list[dict[str, Any]] = []
     erros: list[str] = []
     vistos: set[str] = set()
     queries_feitas = 0
 
-    for dominio, portal in _SEARCHAPI_PORTAIS:
-        for termo in _TERMOS_COMERCIAIS:
-            if queries_feitas >= max_queries:
-                break
-            q = f"site:{dominio} {termo} {cidade}"
-            queries_feitas += 1
-            try:
-                # google_light: mesmos organic_results (title/link/snippet) da
-                # spec, mais rápida/barata — suficiente pra busca site:.
-                # Paginação por `page` (a spec NÃO tem `num`).
-                r = _rq.get(
-                    "https://www.searchapi.io/api/v1/search",
-                    headers={"Authorization": f"Bearer {key}"},
-                    params={
-                        "engine": "google_light",
-                        "q": q,
-                        "gl": "br",
-                        "hl": "pt-br",
-                        "page": 1,
-                    },
-                    timeout=30,
-                )
-                r.raise_for_status()
-                organicos = r.json().get("organic_results") or []
-            except Exception as e:
-                erros.append(f"searchapi {portal} '{termo}': {type(e).__name__}")
-                continue
-
-            for res in organicos:
-                url = str(res.get("link") or "")
-                if not url or url in vistos:
-                    continue
-                vistos.add(url)
-                texto = f"{res.get('title') or ''} {res.get('snippet') or ''}"
-                m_preco = _PRECO_RE.search(texto)
-                m_area = _AREA_RE.search(texto)
-                if not m_preco or not m_area:
-                    continue
-                try:
-                    preco = float(m_preco.group(1).replace(".", ""))
-                    area = float(m_area.group(1))
-                except ValueError:
-                    continue
-                s = _sample_from_price_area(
-                    preco, area, url, portal, area_m2_min, area_m2_max
-                )
-                if s:
-                    amostras.append(s)
+    for q, portal in _build_queries_aluguel(cidade, bairro):
         if queries_feitas >= max_queries:
             break
+        queries_feitas += 1
+        try:
+            # google_light: mesmos organic_results (title/link/snippet) da
+            # spec, mais rápida/barata — suficiente pra busca site:.
+            # Paginação por `page` (a spec NÃO tem `num`).
+            params = {
+                "engine": "google_light",
+                "q": q,
+                "gl": "br",
+                "hl": "pt-br",
+                "page": 1,
+            }
+            if location:
+                params["location"] = location
+            r = _rq.get(
+                "https://www.searchapi.io/api/v1/search",
+                headers={"Authorization": f"Bearer {key}"},
+                params=params,
+                timeout=30,
+            )
+            r.raise_for_status()
+            organicos = r.json().get("organic_results") or []
+        except Exception as e:
+            erros.append(f"searchapi {portal} '{q}': {type(e).__name__}")
+            continue
+
+        for res in organicos:
+            url = str(res.get("link") or "")
+            if not url or url in vistos:
+                continue
+            vistos.add(url)
+            texto = f"{res.get('title') or ''} {res.get('snippet') or ''}"
+            m_preco = _PRECO_RE.search(texto)
+            m_area = _AREA_RE.search(texto)
+            if not m_preco or not m_area:
+                continue
+            try:
+                preco = float(m_preco.group(1).replace(".", ""))
+                area = float(m_area.group(1))
+            except ValueError:
+                continue
+            s = _sample_from_price_area(
+                preco, area, url, portal, area_m2_min, area_m2_max
+            )
+            if s:
+                amostras.append(s)
 
     return amostras, erros
 
@@ -855,6 +918,7 @@ async def pesquisar_aluguel_municipio(
     area_m2_max: int = 1500,
     keywords: tuple[str, ...] | None = None,
     *,
+    bairro: str = "",
     use_playwright: bool | None = None,
 ) -> dict[str, Any]:
     """
@@ -878,7 +942,7 @@ async def pesquisar_aluguel_municipio(
         from tools.api_cost_tracker import track_api_call
 
         amostras_idx, erros_idx = await asyncio.to_thread(
-            _amostras_via_searchapi_google, cidade, uf, parse_lo, parse_hi
+            _amostras_via_searchapi_google, cidade, uf, parse_lo, parse_hi, 8, bairro
         )
         with track_api_call("aluguel_tier1b", "searchapi_google_light", 8):
             pass

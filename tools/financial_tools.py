@@ -1056,7 +1056,7 @@ async def analise_financeira_a4_completo(
         municipio = municipio_cached
     else:
         municipio = await pesquisar_aluguel_municipio(
-            cidade, uf, area_m2_min, area_m2_max
+            cidade, uf, area_m2_min, area_m2_max, bairro=bairro
         )
     ref_municipio = municipio.get("aluguel_municipio_referencia") or {}
     n_validos_t1 = int(municipio.get("n_validos") or 0)
