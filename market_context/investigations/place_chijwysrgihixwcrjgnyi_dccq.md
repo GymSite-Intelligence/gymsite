@@ -2,71 +2,85 @@
      id: place_chijwysrgihixwcrjgnyi_dccq
      tier: grounded:gemini-2.5-flash
      endereco: Av. Santos Dumont, 3131 - Aldeota, Fortaleza - CE, 60150-165, Brasil
-     data: 2026-06-03T17:47:03.922550
+     data: 2026-06-16T08:28:50.150090
 -->
 
-## Relatório de Investigação: Shopping Del Paseo, Fortaleza
 
-O endereço Avenida Santos Dumont, 3131 - Aldeota, Fortaleza - CE, 60150-165, Brasil, é atualmente operado pelo **Shopping Del Paseo**, um centro comercial em pleno funcionamento.
+I was unable to browse the specific shop and services pages of the Shopping Del Paseo website, even though the main domain was found in search results. This might be due to restrictions on the browsing tool or dynamic content.
+
+However, from the initial search results, I already have some information about the stores. The "Lojas" page URL was `https://www.shoppingdelpaseo.com.br/lojas/`, and the "Gastronomia" page `https://www.shoppingdelpaseo.com.br/gastronomia/`. The search result snippets from these pages provided a list of businesses.
+
+From the first search, the Shopping Del Paseo website (shoppingdelpaseo.com.br) was identified.
+It states: "Com mais de 105 operações, entre lojas, quiosques, supermercado, restaurantes, cafeterias, conveniência e serviços".
+
+Reviewing the initial search results more closely:
+*   **Track & Field:** This store is listed on the Del Paseo website. It sells fitness apparel and aims to promote sport. It's a retail store, not a gym itself.
+*   No other gyms or fitness centers are explicitly listed in the provided snippets of stores or services.
+*   The "Serviços" category on the website, though not fully browsed, was mentioned in the contact page to cover "Cinema, Lojas, Shopping, Reclamação, Serviço, Gastronomia, funcionamento". This does not indicate a gym.
+
+Since I couldn't directly browse the internal pages, and the initial search snippets for the mall's directory didn't show a gym, it's highly probable there isn't a gym of the requested size *within* the Shopping Del Paseo that is easily discoverable online.
+
+Let's summarize the findings to answer the questions and prepare the JSON output.
 
 **1. Qual negócio opera HOJE neste endereço (nome fantasia e segmento)?**
-O principal operador é o **Shopping Del Paseo**, um shopping center que abriga mais de 100 operações comerciais, incluindo lojas de moda, gastronomia, serviços e entretenimento, como o cinema Grupo Cine. Há também uma torre comercial integrada, a "Torre Del Paseo", com salas comerciais.
+O endereço é ocupado pelo **Shopping Del Paseo**, um centro comercial que opera com mais de 105 lojas, quiosques, supermercado, restaurantes, cafeterias, conveniências e serviços. Entre os segmentos, destacam-se moda, tecnologia, gastronomia, entretenimento (cinema) e serviços. A loja **Track & Field**, de moda fitness, opera no local. Não há evidência de uma academia de grande porte operando no shopping.
 
 **2. Está aberto, fechado, em reforma ou aparenta vago?**
-O Shopping Del Paseo está **em pleno funcionamento**. Notícias recentes de 2024 indicam que o shopping passou por investimentos em modernização e rebranding, celebrando 24 anos de atividades em dezembro de 2024 e anunciando um investimento de R$3 milhões em julho de 2024 para melhorias e um novo mix de lojas. Uma notícia de 1º de junho de 2026 confirma o horário normal de funcionamento do shopping.
+O Shopping Del Paseo está **em funcionamento (OPERATIONAL)**. Notícias recentes de julho de 2024 indicam que o shopping está ativo, passando por modernização e rebranding, além de negociar novas lojas. Celebrou 22 anos em dezembro de 2022 e 23 anos recentemente.
 
 **3. O anúncio de aluguel (se houver URL) bate com a realidade do local?**
-Não foi encontrado um anúncio de aluguel para o empreendimento de 8000 m² como uma única unidade. No entanto, há anúncios de salas comerciais para alugar dentro da "Torre Del Paseo" e em edifícios próximos ao shopping. A área de 8000 m² mencionada no contexto do relatório provavelmente se refere à área total do shopping (que possui 10.500 m² de Área Bruta Locável com mais de 100 operações), e não a um único espaço disponível para locação para uma academia. Portanto, o "anúncio de aluguel" para o porte desejado não corresponde à realidade de um espaço unificado dentro do shopping.
+Não foram encontrados anúncios de aluguel de espaços específicos de grande porte dentro do Shopping Del Paseo nos resultados da busca.
 
 **4. Há notícias ou redes sociais recentes (12 meses) sobre o ponto?**
-Sim, há notícias recentes:
-*   Dezembro de 2024: O Shopping Del Paseo celebrou 24 anos com programação especial.
-*   Julho e Agosto de 2024: O shopping investiu R$3 milhões em modernização e anunciou rebranding da marca, incluindo mudanças no mix de lojas.
-*   Junho de 2026: Horário de funcionamento normal para o feriado de Corpus Christi.
-*   Julho de 2025: Foi noticiado que uma nova e grande unidade da Academia Gaviões seria inaugurada "do lado do shopping Del Paseo", em um prédio de cinco pavimentos, com três andares de musculação e outras salas fitness.
+Sim, há notícias recentes (julho de 2024) sobre o Shopping Del Paseo, destacando investimentos em modernização, reformulação de marca e a chegada de novas operações como a loja Noélia.
 
 **5. Se era varejo/academia grande: houve fechamento ou substituição?**
-O local é um shopping center consolidado, não uma academia ou varejo grande específico que tenha fechado. No entanto, a notícia sobre a Academia Gaviões (prevista para julho de 2025) é relevante: ela ocupará um prédio separado "do lado do shopping Del Paseo", em uma área que anteriormente abrigava a Camelo Modas Magazine e, mais recentemente, a farmácia Extra Farma. Isso indica que a área adjacente ao shopping tem espaço para empreendimentos de grande porte e há movimentação no segmento de academias na vizinhança.
+Não há indícios nos resultados da pesquisa de que havia uma academia de grande porte ou um varejo grande que tenha fechado ou sido substituído no Shopping Del Paseo. A loja Track & Field, de moda fitness, foi reformada e opera no local.
 
+**Implicação para academia:** O Shopping Del Paseo é um centro comercial ativo, mas não há evidência de uma academia de grande porte (800-1500 m²) em funcionamento no local, nem anúncios de espaços vagos com esse perfil. A presença de uma loja Track & Field indica um público com interesse em fitness, mas não substitui uma academia.
+
+Now, I will generate the final report and JSON.
+
+**Relatório de Investigação do Endereço Comercial: Shopping Del Paseo**
+
+**Endereço:** Av. Santos Dumont, 3131 - Aldeota, Fortaleza - CE, 60150-165, Brasil
+
+**Status Geral:** O Shopping Del Paseo encontra-se **em pleno funcionamento e ativo**, com operações comerciais, de alimentação e serviços. Há investimentos recentes em modernização e expansão do mix de lojas.
+
+**1. Qual negócio opera HOJE neste endereço (nome fantasia e segmento)?**
+*   O principal negócio operando no endereço é o **Shopping Del Paseo**, um centro comercial completo com mais de 105 operações.
+*   O mix de lojas inclui diversos segmentos como moda (Hering, Iury Costa, Cores de Maria), tecnologia (Casa do Celular), beleza (Adcos, L'Oréal), gastronomia (50 Sabores, McDonald's, Noélia Doces e Salgados), entretenimento (cinema) e serviços.
+*   Uma loja notável relacionada ao segmento fitness é a **Track & Field**, que vende artigos de moda e acessórios esportivos.
+
+**2. Está aberto, fechado, em reforma ou aparenta vago?**
+*   O shopping está **aberto e operacional**. Celebrou 22 anos em dezembro de 2022 e 23 anos recentemente.
+*   Notícias de julho de 2024 mencionam investimentos de R$ 3 milhões em modernização, rebranding e negociações para novas lojas na praça de alimentação, indicando um empreendimento dinâmico e em crescimento.
+
+**3. O anúncio de aluguel (se houver URL) bate com a realidade do local?**
+*   Não foram encontrados anúncios de aluguel de espaços específicos de grande porte (800-1500 m²) para a instalação de uma academia no Shopping Del Paseo através das buscas realizadas. O shopping parece estar focado na gestão de seu mix de lojistas existente e na adição de novas operações em áreas como gastronomia.
+
+**4. Há notícias ou redes sociais recentes (12 meses) sobre o ponto?**
+*   Sim, há diversas notícias recentes (julho de 2024) que abordam a modernização do shopping, a reformulação da marca e a chegada de novas operações. Isso demonstra a vitalidade e a constante atualização do empreendimento.
+
+**5. Se era varejo/academia grande: houve fechamento ou substituição?**
+*   Não foram encontradas evidências de fechamento ou substituição de uma academia de grande porte ou um varejo de 800-1500 m² no Shopping Del Paseo. A loja Track & Field foi reformada, mas é uma loja de varejo de artigos fitness, não uma academia.
+*   Academias Smart Fit localizadas em Fortaleza estão em outros shoppings ou endereços, não no Del Paseo.
+
+---
 ```json
 {
   "status_operacao": "em_funcionamento",
   "operador_atual": "Shopping Del Paseo",
-  "segmento": "varejo",
+  "segmento": "varejo_e_servicos",
   "confianca": "alta",
-  "coerencia_listing": "nao",
+  "coerencia_listing": "na",
   "evidencias": [
-    {
-      "fonte": "Shopping Del Paseo - Horário de Funcionamento",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDfRA_5aHpPBQLmCdiLHAzVFqiSRF8FkxMzm0AzK4O7-xmsGPTvQrdmnUanQnbvvLoMZrNdSEhej_ycHnEha1NFE0SurG8BYpOI7LPb2ajkVkDxluwCOSt1bvk",
-      "trecho": "Segunda a Sábado: 10h às 22h Domingos: 12h às 20h (Lojas e quiosques) • 11h às 22h (Praça de Alimentação)."
-    },
-    {
-      "fonte": "Shopping Del Paseo comemora 24 anos com uma programação muito especial - Balada IN",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGS6xIUS7dZ_DWUg5EnMD296KJG2ZZEaEoMV4QCNSa5ElWaOJ9WBrYGd9zaUi8Uy6rfkgu7MabSzA-xXFhSXjM_nwERmntUZxinO4yvQs7pVLskW-J-vhBgKeoDesNklJJEGbI5LbvEcpKRHbt0jLQwV2GoiSSv7EzsdpIL4SLs9-qktyQiOZUr2Hix4FJhvV2wS7iBeqvVru8LJ3WD_x4rPPQA0sZnFg==",
-      "trecho": "O Shopping Del Paseo comemora nesta sexta-feira (6), 24 anos de atividades com uma programação especial para os seus clientes. [...] Atualmente, o Del Paseo conta com mais de 100 operações comerciais e 560 vagas de estacionamento, distribuídas em três pisos, em uma área de 10.500 m²."
-    },
-    {
-      "fonte": "Shopping Del Paseo investe R$ 3 milhões em modernização e anuncia rebranding da marca - URB News",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF5IBLrNBQERDqdnIXI_NrI91zXTGsq3wCPGm9oN86eVWnTIvV-D7DyzNvgVDUgLV_J5WCnqpZwigZteE9G7p3ogr87Wvus7_6x0Q6qc9xKpKg7xWysOmwfXGAuIxuay6jmslkk0Sf_gN9xJdm-xd1hxnrH_tyPALhcYeNVhnSm63hstsXqXq9rnnRX9gm4o__Wg4zLHT-v3lf0WFKJkPB4BFog0yIXPCal0eofnOWdbx87",
-      "trecho": "O Shopping Del Paseo está lançando uma nova identidade visual em meio a investimentos em modernização de estruturas. [...] os investimentos superam a marca de R$3 milhões. [...] as mudanças também serão sentidas no mix de lojas do shopping, a exemplo do cinema, e de operações como Picanha do Cowboy, Day Play, e Track & Field, recém-reformada como a única em formato de loja nova, em Fortaleza."
-    },
-    {
-      "fonte": "Feriado de Corpus Christi, 4 de junho: veja o que abre e fecha em Fortaleza - G1 - Globo",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGin30Pgj5YmdTJ8vZuEMwqrYRUmcBgv08U9t676AAA13znx0H3p8yMa-ukjP7L1edgIWxSPF0895ILEHoWiKU7Dkc-KqDcPp_7Jd0sKZ7DgnWnOU6mSLnLFA0UIAWnaZQXknRxfzhwNBpLNhX0W_23tM6fwXBP0aCZ_GgN84ngPAWtM8x4xxvLbvRQJJuEPmPNI8hjFWc5d7vwpky8QvThJZIrhDeDI8qZV3R86HCM-oxR-xONgPJzsnk45A==",
-      "trecho": "O Shopping Del Paseo funcionará normalmente durante o feriado de Corpus Christi. A praça de alimentação e as lojas e quiosques estarão abertos das 10h às 22h."
-    },
-    {
-      "fonte": "Com cinco pavimentos, nova unidade da Academia Gaviões ocupará prédio na avenida Santos Dumont - Diário do Nordeste",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFd-VjbghyHpmOlsygY576vejxNZmFl0ASHkKiVrDLcom00yeGiJoWcFmXxH_4m4je2zXEEfkovDpNQZtrsjobf8UUz1Um8gwT7XtKVjMtJ36FxQBhs9FqyiwnsayrmGB4yv6_owMvdKDfpMN2vUaSUO0BAYM4hrKZLoiICOVZtlhNKukTfN8SsTq-jfwdm6EGmVURhWX9PqpToBWN3fIWJ-vzcMVu_fabytvN9yBqlwAAAo4xWCAxPOmFdbc3Tt_g6zPKE7gKJSh8IDBHwQjWC35zojRsBgGg==",
-      "trecho": "Atualmente em construção, o quarto empreendimento da Academia Gaviões em Fortaleza deve ser inaugurado em até três meses. A nova sede, que contará com três andares de equipamentos, além do térreo e do subsolo, será localizada na esquina da avenida Santos Dumont com a rua Leonardo Mota, no bairro Aldeota. [...] do lado do shopping Del Paseo"
-    },
-    {
-      "fonte": "Torre Comercial Del Paseo",
-      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFSPUL4Unb_lVkKn2AA_aRIaFjVpvhujPKZEBAb6LcsIwXTbRj9H277KSwS5TvjyCVtNbekBkQoi16GxItwEv6BI6HVDf6N6oijPhtZhbiky3tZggEWf50Y",
-      "trecho": "A Torre Empresarial Del Paseo está situada em uma das áreas mais nobres e estratégicas de Fortaleza. Integrada ao Shopping Del Paseo, oferece conveniência, visibilidade que une praticidade, segurança e estrutura completa para negócios."
-    }
+    {"fonte": "Investe CE", "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHOkC5i6PqCEnON5i6un_fLKncBXjlK5TFX-Qd5YGPKOPCzDq4Agsp80AIrF2vXpK6SyBlrV8kSZziRJO6_kvOb0EuWQE0W1PtNj2_jG5no8WD7vyyWU3iGyh9dYmX5303S4nm_l46SjaBNE6MTRHlpl47_pzuFm1NNodaQujz-JN95bTe9gQ5uz3m_8LbnUySd1ZoF9sDF3IEtDaVHUgDhr5GUfPgBhbwH2wcSq-mSyWhYP5NKG2hFj3ILB36DmZo=", "trecho": "Shopping Del Paseo completa 22 anos como um dos empreendimentos mais tradicionais e charmosos de Fortaleza."},
+    {"fonte": "Site Shopping Del Paseo", "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGmMHr0Fi4_pg36ZJbYA-9RhknnZ1xWwmPBtypVTZhg9b0a5mtyBRqKkfOkV78HXo5bwDOy3KESc-IvRMpPy7Fxqzwz6_Nmo9Nb4i1aSS5KjS-_4TdYW2Zsd8Hh", "trecho": "Horário de Funcionamento. Segunda a Sábado: 10h às 22h Domingos: 12h às 20h (Lojas e quiosques) • 11h às 22h (Praça de Alimentação)"},
+    {"fonte": "Diário do Nordeste", "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFw3H_Ol4wPV1glbtzvhPE7H6G4XiirFpeSlWhsgKAxD_UfQyR995Vy6K9fG7ifnhNQwq71MtFCgNvQST1tC2NFgTOrp2zuSFFZ2yKDAmjO1_rnd2mtdjNPOuw4bFQDt2jEYBgEulA7g-t-c1tqDlr1VE7-KEJjFVU3YbX83PkeFyzlHV4qmt8ONMpxoBZzmIbCDp52-aJAxIQBJVF2ePvqmYifzxudhXYlS_DGGcCqen-LIfG2PrsEhwH3ghvZ9Jc3lrRJXQ9a6E-XbTMMAn1mItLH9fz1r1gcuXg4WzEZGuYsUVpD0qbYT3s=", "trecho": "Del Paseo negocia novas lojas para praça de alimentação e confirma Noélia para setembro. (2024-07-17) Fique por dentro das últimas notícias do Ceará, Brasil e mundo."},
+    {"fonte": "Portal IN - Pompeu Vasconcelos", "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHLmOZnHUONkzekXLVuT2zC4X7P9gIuP1qkQrNRAWEZtJoI3kcNFcMIK6dMUW6CoPUP2z8lmHJcIlbMbngNMgsbVE71LHgeJdqNf3GiGG8VaY29Z-5h59iV25HoJatdY_Bal5R4IuGWEnTFHcCPXmt9-sRk8S2LJ0PUR_A5oD4UT8D5Ns4FN_L34HGNSdxCQt2uhX_Uu_R4uPPFNhgSZW3suIfaMtGVAo", "trecho": "Shopping Del Paseo investe R$ 3 milhões em modernização e anuncia rebranding. (2024-07-17) ... Track & Field, recém-reformada como a única em formato de loja nova, em Fortaleza."},
+    {"fonte": "Site Shopping Del Paseo - Lojas", "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMjsvJuhku4npzTirj0BR5dDe4syY8krbrQAVMTHuBoNq4PYCp9D_K5dYRSpcYq4eIN2_Rs8RUXFcoaAuMgmSWUYphkeH6TcT8wx4c1w6PkMiF4oVCmh6h8Q5hFdYGJ-wO", "trecho": "Track & Field. A Track & Field é uma marca que tem como intuito promover o esporte como parte essencial da vida das pessoas. Possui peças para todas as idades, com moda praia e fitness, além de um design inovador com tecnologia avançada."}
   ],
-  "implicacao_site": "O Shopping Del Paseo não oferece um único espaço de 800-1500 m² para academia, mas a abertura de uma grande academia adjacente em prédio separado sinaliza a atratividade da região para o segmento e a disponibilidade de imóveis de grande porte fora do mall."
+  "implicacao_site": "O Shopping Del Paseo está operacional e passando por modernização, mas não há indícios de uma academia de grande porte ou espaço vago compatível (800-1500 m²) para este fim, sendo necessário prospecção in loco para identificar oportunidades não anunciadas."
 }
 ```
