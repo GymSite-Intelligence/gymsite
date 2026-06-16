@@ -214,7 +214,7 @@ class A8ValidadorCruzado:
             )
 
     def _validar_dados_operacionais(self, md: str, state: dict) -> None:
-        veredito = (state.get("veredito") or "").upper()
+        veredito = str(state.get("veredito") or "").upper()
         if not veredito and "APROVADO" in md.upper():
             veredito = "APROVADO"
         if not veredito and "REPROVADO" in md.upper():
@@ -279,7 +279,7 @@ class A8ValidadorCruzado:
             await asyncio.gather(*[_one(c) for c in altas], return_exceptions=True)
 
     def _validar_veredito(self, md: str, claims: list[Claim], state: dict) -> None:
-        veredito = (state.get("veredito") or "").upper()
+        veredito = str(state.get("veredito") or "").upper()
         if not veredito:
             if "INVESTIGAR" in md.upper():
                 veredito = "INVESTIGAR MAIS"
@@ -322,7 +322,7 @@ class A8ValidadorCruzado:
     def _validar_narrativa_vs_financeiro(self, md: str, state: dict) -> None:
         """REPROVADO com posicionamento/resumo vendendo otimismo incondicional
         (caso rpt_1778371974 Meireles: payback 999 + 'oportunidade excepcional')."""
-        veredito = (state.get("veredito") or "").upper()
+        veredito = str(state.get("veredito") or "").upper()
         if veredito != "REPROVADO":
             return
         texto = " ".join(
@@ -344,8 +344,15 @@ class A8ValidadorCruzado:
 
     def _validar_evidencia_oportunidade(self, state: dict) -> None:
         """score_oportunidade_mercado >= 9 sustentado por reviews vazios ('Top')."""
-        ic = state.get("inteligencia_competitiva")
-        if not isinstance(ic, dict):
+        # output_key grava o echo do LLM como STRING no state — parsear pra dict
+        # antes de validar, senão o guard isinstance abortava a validação em 100%
+        # dos runs (regressão do fix de crash anterior). _parse_market_context
+        # tolera str JSON / fence markdown / dict e nunca levanta.
+        from tools.competitor_tools import _parse_market_context
+
+        ic_raw = state.get("inteligencia_competitiva")
+        ic = ic_raw if isinstance(ic_raw, dict) else _parse_market_context(ic_raw)
+        if not isinstance(ic, dict) or not ic:
             return
         inner_raw = ic.get("inteligencia_competitiva")
         inner = inner_raw if isinstance(inner_raw, dict) else ic

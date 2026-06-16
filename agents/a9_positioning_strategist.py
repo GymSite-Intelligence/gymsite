@@ -35,6 +35,11 @@ from google.adk.agents import Agent
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
 
+# Parser tolerante a str/JSON/fence (output_key grava echo do LLM como string):
+# sem ele, `state.get(...) or {}` deixava str passar e `.get()` crashava dentro
+# do try/except, desligando silenciosamente veredito determinístico + LangCache.
+from tools.competitor_tools import _parse_market_context
+
 _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=8192),  # pyright: ignore[reportCallIssue]
 )
@@ -116,7 +121,7 @@ def _resolve_location_from_state(state: dict) -> tuple[str, str]:
         or ""
     )
     if not cidade or not bairro:
-        mc = state.get("market_context") or {}
+        mc = _parse_market_context(state.get("market_context"))
         inner = (
             mc.get("market_context")
             if isinstance(mc.get("market_context"), dict)
@@ -132,7 +137,7 @@ def _resolve_uf_from_state(state: dict) -> str:
     ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
     uf = state.get("uf") or state.get("input_uf") or ip.get("uf") or ""
     if not uf:
-        mc = state.get("market_context") or {}
+        mc = _parse_market_context(state.get("market_context"))
         inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
         if isinstance(inner, dict):
             uf = inner.get("uf") or ""
@@ -151,7 +156,7 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
         uf = _resolve_uf_from_state(state)
         if not (cidade and bairro):
             return
-        ic = state.get("inteligencia_competitiva") or {}
+        ic = _parse_market_context(state.get("inteligencia_competitiva"))
         inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
         concorrentes = (
             (inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
@@ -194,7 +199,7 @@ def _a9_cache_prompt(state: dict) -> str:
     rid = rel_id.replace("-", "")[:32] if rel_id else "no_rid"
 
     # Hash dos top-5 concorrentes para evitar false positives
-    ic = state.get("inteligencia_competitiva") or {}
+    ic = _parse_market_context(state.get("inteligencia_competitiva"))
     inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
     concorrentes = (
         (inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
