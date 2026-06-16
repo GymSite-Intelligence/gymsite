@@ -25,7 +25,12 @@ def _norm(s: str) -> str:
 
 
 def renda_bairro_ipece(cidade: str, uf: str, bairro: str) -> dict | None:
-    """Linha do `ipece_renda_bairro` p/ o bairro (renda_resp, renda_pc, percentil, ranking)."""
+    """Renda do bairro — fonte NACIONAL `renda_bairro` (IBGE Censo 2022, 17k bairros).
+
+    Filtra por uf+bairro_norm (refina por cidade quando bate). Retorna dict com chaves
+    normalizadas (renda_pc, percentil, ranking, renda_resp_domicilio, fonte, ano) p/ o
+    avaliar_posicionamento consumir igual. Funciona em qualquer cidade com bairros IBGE.
+    """
     key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
            or os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_KEY"))
     if not (os.environ.get("SUPABASE_URL") and key and (bairro or "").strip()):
@@ -34,12 +39,23 @@ def renda_bairro_ipece(cidade: str, uf: str, bairro: str) -> dict | None:
         from tools.supabase_client import load_create_client
 
         cli = load_create_client()(os.environ["SUPABASE_URL"], key)
-        res = (cli.table("ipece_renda_bairro").select("*")
-               .eq("bairro_norm", _norm(bairro)).limit(1).execute())
-        rows = getattr(res, "data", None) or []
-        return rows[0] if rows else None
+        q = cli.table("renda_bairro").select("*").eq("bairro_norm", _norm(bairro))
+        if (uf or "").strip():
+            q = q.eq("uf", uf.strip().upper())
+        rows = getattr(q.limit(5).execute(), "data", None) or []
+        if not rows:
+            return None
+        # refina pela cidade quando houver match (evita bairro homônimo em outra cidade)
+        cnorm = _norm(cidade)
+        pick = next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), rows[0])
+        return {
+            "bairro": pick.get("bairro"), "renda_resp_domicilio": pick.get("renda_media"),
+            "renda_pc": pick.get("renda_pc"), "percentil": pick.get("percentil_municipio"),
+            "ranking": pick.get("ranking_municipio"), "fonte": pick.get("fonte"),
+            "ano": pick.get("ano"),
+        }
     except Exception as exc:
-        print(f"[posicionamento] renda IPECE indisponível: {type(exc).__name__}: {exc}")
+        print(f"[posicionamento] renda_bairro indisponível: {type(exc).__name__}: {exc}")
         return None
 
 
