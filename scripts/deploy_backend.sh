@@ -19,8 +19,8 @@ echo "[deploy] gymsite-api @ GIT_SHA=${SHA}"
 gcloud run deploy gymsite-api \
   --source . \
   --region us-central1 \
-  --no-use-buildpacks \
   --update-env-vars "GIT_SHA=${SHA}"
+# Nota: com Dockerfile na raiz, --source usa o Dockerfile por default (Cloud Build).
 
 echo "[deploy] ok — confira a versão em prod:"
 echo "  curl -s https://gymsite-api.vectracargo.com.br/api/version"
