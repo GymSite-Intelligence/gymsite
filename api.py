@@ -400,10 +400,14 @@ app = FastAPI(
 from backend.routers.parceiros_admin import router as parceiros_admin_router
 from backend.routers.execucao import router as execucao_router
 from backend.routers.rebusca import router as rebusca_router
+from backend.routers.leads import router as leads_router
+from backend.routers.chat import router as chat_router
 
 app.include_router(parceiros_admin_router)
 app.include_router(execucao_router)
 app.include_router(rebusca_router)
+app.include_router(leads_router)
+app.include_router(chat_router)
 
 # CORS: dev libera localhost:* via regex; producao vem de CORS_ORIGINS (.env),
 # comma-separated. Ex: CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
