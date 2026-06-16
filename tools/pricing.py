@@ -70,16 +70,31 @@ MAPS_API_BRL_PER_CALL: dict[str, float] = {
 # Helpers
 # ---------------------------------------------------------------------------
 def _lookup_model(model_raw: str | None) -> str | None:
-    """Normaliza nomes do tipo 'models/gemini-2.5-flash' → 'gemini-2.5-flash'."""
+    """Normaliza p/ a chave de preço. Robusto a 'models/gemini-2.5-flash' E ao repr
+    do objeto Gemini do ADK (\"model='gemini-2.5-flash' ... retry_options=...\") — o
+    wrap de retry passou a logar o repr inteiro no telemetry; sem isto o custo LLM zera.
+    """
     if not model_raw:
         return None
     m = model_raw.strip().lower()
     if m.startswith("models/"):
         m = m[len("models/"):]
-    # suporta sufixos de versão (e.g. -001, -002)
+    # match direto (nome limpo)
     for known in PRICING_BRL_PER_MILLION:
         if m == known or m.startswith(known + "-"):
             return known
+    # fallback: extrai 'gemini-X.Y-variante' de qualquer string (repr do Gemini, etc.)
+    import re as _re
+    mm = _re.search(r"gemini-[0-9.]+-[a-z-]+", m)
+    if mm:
+        cand = mm.group(0)
+        # 1) match EXATO primeiro (senão 'flash-lite' casaria 'flash' por prefixo)
+        if cand in PRICING_BRL_PER_MILLION:
+            return cand
+        # 2) prefixo, preferindo a chave conhecida MAIS LONGA que casa
+        candidatos = [k for k in PRICING_BRL_PER_MILLION if cand.startswith(k + "-")]
+        if candidatos:
+            return max(candidatos, key=len)
     return None
 
 

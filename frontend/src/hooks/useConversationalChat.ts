@@ -15,6 +15,8 @@ export interface ChatMessage {
   content: string
   timestamp: Date
   attachments?: ChatAttachment[]
+  /** id em chat_interacoes — habilita feedback admin (dataset de fine-tuning) */
+  interacaoId?: string
 }
 
 export interface ChatSessionItem {
@@ -38,6 +40,7 @@ export interface UseConversationalChatReturn {
   sessions: ChatSessionItem[]
   state: ConversationalState
   sendMessage: (text: string, attachments?: ChatAttachment[]) => Promise<void>
+  sendFeedback: (interacaoId: string, rating: 1 | -1, comentario?: string) => Promise<boolean>
   isLoading: boolean
   error: string | null
   newSession: () => void
@@ -152,6 +155,7 @@ export function useConversationalChat(): UseConversationalChatReturn {
           resposta: string
           relatorio_id: string | null
           status: string
+          interacao_id: string | null
         }
 
         setState({
@@ -197,6 +201,7 @@ export function useConversationalChat(): UseConversationalChatReturn {
           role: 'assistant',
           content: data.resposta,
           timestamp: new Date(),
+          interacaoId: data.interacao_id ?? undefined,
         }
         setMessages((prev) => [...prev, assistantMsg])
 
@@ -211,6 +216,27 @@ export function useConversationalChat(): UseConversationalChatReturn {
       }
     },
     [state.sessionId, saveMessage]
+  )
+
+  const sendFeedback = useCallback(
+    async (interacaoId: string, rating: 1 | -1, comentario?: string): Promise<boolean> => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (token) headers.Authorization = `Bearer ${token}`
+        const res = await fetch(`${API_BASE}/api/assistente/feedback`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ interacao_id: interacaoId, rating, comentario }),
+          signal: AbortSignal.timeout(15_000),
+        })
+        return res.ok
+      } catch {
+        return false
+      }
+    },
+    []
   )
 
   const newSession = useCallback(() => {
@@ -247,5 +273,5 @@ export function useConversationalChat(): UseConversationalChatReturn {
     [fetchMessages]
   )
 
-  return { messages, sessions, state, sendMessage, isLoading, error, newSession, selectSession }
+  return { messages, sessions, state, sendMessage, sendFeedback, isLoading, error, newSession, selectSession }
 }

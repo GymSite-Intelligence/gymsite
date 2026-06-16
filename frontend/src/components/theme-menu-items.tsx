@@ -13,11 +13,12 @@ import {
   persistAppThemeToUser,
 } from '@/lib/app-theme'
 import { useAuth } from '@/lib/auth'
-import { MoonIcon, SunIcon } from 'lucide-react'
+import { MoonIcon, SunIcon, MapIcon } from 'lucide-react'
 
 const THEME_ICONS = {
   moon: MoonIcon,
   sun: SunIcon,
+  map: MapIcon,
 } as const
 
 export function ThemeMenuItems() {

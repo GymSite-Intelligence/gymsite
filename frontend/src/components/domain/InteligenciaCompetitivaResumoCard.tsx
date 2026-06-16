@@ -114,37 +114,28 @@ export function InteligenciaCompetitivaResumoCard({
 
       <dl className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Metric
-          label="Saturação (raio 3 km)"
+          label="Saturação (bairro)"
           value={sat}
           valueClassName={satClass}
         />
-        {raio != null && (
-          <Metric label="Academias no raio (est.)" value={String(raio)} />
-        )}
-        {aggTotal != null && aggTotal !== raio && (
-          <Metric
-            label="Area Insights (Google)"
-            value={String(aggTotal)}
-          />
-        )}
-        {nearby != null && (
-          <Metric label="Nearby (amostra)" value={String(nearby)} />
-        )}
         {analisados != null && (
-          <Metric label="Reviews analisados" value={String(analisados)} />
+          <Metric label="Concorrentes no bairro" value={String(analisados)} />
+        )}
+        {raio != null && (
+          <Metric label="Densidade 3km (contexto regional)" value={String(raio)} />
         )}
         {parqueAtivo != null && (
-          <Metric label="Parque ativo (município)" value={String(parqueAtivo)} />
+          <Metric label="Parque município (contexto)" value={String(parqueAtivo)} />
         )}
         {typeof novos90 === 'number' && (
-          <Metric label="Novas unidades (90d)" value={String(novos90)} />
+          <Metric label="Novas unidades 90d (contexto)" value={String(novos90)} />
         )}
       </dl>
 
       {(redesDr.length > 0 || redesCobertas.length > 0) && (
         <section className="space-y-2">
           <h5 className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
-            Redes (Deep Research vs validadas no raio)
+            Redes (Deep Research vs validadas no bairro)
           </h5>
           <div className="flex flex-wrap gap-1.5">
             {redesDr.map((r) => (

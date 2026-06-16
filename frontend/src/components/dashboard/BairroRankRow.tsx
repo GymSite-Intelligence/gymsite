@@ -1,15 +1,13 @@
 import { MapPin, Trophy } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { BairroRankItem } from '@/lib/dashboard/bairros-ranking'
 
-function scoreBadgeVariant(
-  score: number | null,
-): 'success' | 'warning' | 'destructive' {
-  if (score == null) return 'destructive'
-  if (score >= 7) return 'success'
-  if (score >= 5) return 'warning'
-  return 'destructive'
+/** Cor do score via tokens runtime (consistente com veredito do report). */
+function scoreColor(score: number | null): string {
+  if (score == null) return 'var(--muted-foreground)'
+  if (score >= 7) return 'hsl(var(--veredito-aprovado))'
+  if (score >= 5) return 'hsl(var(--veredito-ressalvas))'
+  return 'hsl(var(--veredito-reprovado))'
 }
 
 export function BairroRankRow({
@@ -21,43 +19,46 @@ export function BairroRankRow({
   rank: number
   isLeader: boolean
 }) {
+  const color = scoreColor(item.scoreMedio)
+  const pct = item.scoreMedio != null ? Math.min(100, (item.scoreMedio / 10) * 100) : 0
+
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-border p-3',
-        isLeader &&
-          'bg-amber-50/50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900',
+        'flex items-center gap-3 rounded-lg border border-border p-3 transition-colors',
+        isLeader && 'bg-accent/5 ring-1 ring-accent/40',
       )}
+      style={{ borderLeft: `3px solid ${color}` }}
     >
-      <div className="flex items-center justify-center w-7 h-7 rounded-full bg-muted text-xs font-bold shrink-0">
-        {isLeader ? (
-          <Trophy size={14} className="text-amber-600" />
-        ) : (
-          rank + 1
-        )}
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
+        {isLeader ? <Trophy size={14} className="text-accent" /> : rank + 1}
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <MapPin size={12} className="text-muted-foreground shrink-0" />
-          <span className="text-sm font-medium truncate">{item.bairro}</span>
-          <span className="text-xs text-muted-foreground truncate">
+          <MapPin size={12} className="shrink-0 text-muted-foreground" />
+          <span className="truncate text-sm font-medium">{item.bairro}</span>
+          <span className="truncate text-xs text-muted-foreground">
             · {item.cidade}
             {item.uf ? `/${item.uf}` : ''}
           </span>
         </div>
-        <div className="flex items-center gap-3 mt-1">
-          <span className="text-[10px] text-muted-foreground font-mono">
+        <div className="mt-1 flex items-center gap-3">
+          <span className="font-mono text-[10px] text-muted-foreground">
             {item.count} relatório{item.count === 1 ? '' : 's'}
           </span>
-          <span className="text-[10px] text-muted-foreground font-mono">
+          <span className="font-mono text-[10px] text-muted-foreground">
             {item.aprovacaoPct}% aprov.
           </span>
         </div>
       </div>
-      <div className="text-right shrink-0">
-        <Badge variant={scoreBadgeVariant(item.scoreMedio)}>
+      {/* Score: valor + mini barra de intensidade */}
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <span className="font-mono text-sm font-semibold tabular-nums" style={{ color }}>
           {item.scoreMedio?.toFixed(1) ?? '—'}
-        </Badge>
+        </span>
+        <div className="h-1 w-12 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+        </div>
       </div>
     </div>
   )

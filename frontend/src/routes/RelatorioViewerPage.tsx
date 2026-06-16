@@ -17,7 +17,7 @@
  */
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
-import { AlertTriangle, ArrowLeft, ChevronDown, MapPin } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ChevronDown, ListTree, MapPin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Breadcrumb,
@@ -37,10 +37,11 @@ import { useRelatorioDetail } from '@/hooks/useRelatorioDetail'
 import { VeredictoBadge } from '@/components/domain/VeredictoBadge'
 import { DualVereditoStrip } from '@/components/domain/DualVereditoStrip'
 import { normalizeVereditoOceano } from '@/lib/oceano'
-import { ScoresDimensionais } from '@/components/domain/ScoresDimensionais'
-import { ContextoMercadoCard } from '@/components/domain/ContextoMercadoCard'
+import { ScoresViz } from '@/components/domain/ScoresViz'
+import { ContextoMercadoViz } from '@/components/domain/ContextoMercadoViz'
 import { CandidatoCard } from '@/components/domain/CandidatoCard'
 import { CenarioFinanceiroTable } from '@/components/domain/CenarioFinanceiroTable'
+import { CenariosViz } from '@/components/domain/CenariosViz'
 import { CapexBreakdownChart } from '@/components/domain/CapexBreakdownChart'
 import { ConsorcioCard } from '@/components/domain/ConsorcioCard'
 import { FinanceiroKpiStrip } from '@/components/domain/FinanceiroKpiStrip'
@@ -53,21 +54,25 @@ import {
 } from '@/data/kits'
 import type { ModeloNegocio, TamanhoCodigo } from '@/data/tamanhos-por-modelo'
 import { recalcularCenariosComKit } from '@/lib/recalcula-cenario-com-kit'
-import { CompetidorGroup } from '@/components/domain/CompetidorGroup'
+import { DoresPorCategoria } from '@/components/domain/DoresPorCategoria'
+import { PicoLotacaoViz } from '@/components/domain/PicoLotacaoViz'
 import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
-import { EntrantesCnpjTable } from '@/components/domain/EntrantesCnpjTable'
+import { NovasUnidadesCard } from '@/components/domain/NovasUnidadesCard'
+import { DemografiaBairroCard } from '@/components/domain/DemografiaBairroCard'
 import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
+import { DemandaFuturaCard } from '@/components/domain/DemandaFuturaCard'
+import { AneisCompetitivosCard } from '@/components/domain/AneisCompetitivosCard'
 import { CoberturaRedesA0Card } from '@/components/domain/CoberturaRedesA0Card'
-import { CompetidoresDoresTable } from '@/components/domain/CompetidoresDoresTable'
+import { DoresHeatmap } from '@/components/domain/DoresHeatmap'
 import { PlanosConcorrenciaTable } from '@/components/domain/PlanosConcorrenciaTable'
 import { FolgaPicoInsight } from '@/components/domain/FolgaPicoInsight'
 import { AluguelFonteAuditavel } from '@/components/domain/AluguelFonteAuditavel'
-import { DistribuicaoBairrosTable } from '@/components/domain/DistribuicaoBairrosTable'
-import { BairrosAlternativosTable } from '@/components/domain/BairrosAlternativosTable'
+import { DistribuicaoViz } from '@/components/domain/DistribuicaoViz'
+import { BairrosAlternativosViz } from '@/components/domain/BairrosAlternativosViz'
 import { TextoSecao } from '@/components/domain/TextoSecao'
 import { PosicionamentoCard } from '@/components/domain/PosicionamentoCard'
-import { AlertasGlobais } from '@/components/domain/AlertasGlobais'
+import { AlertasViz } from '@/components/domain/AlertasViz'
 import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { RebuscarCandidatosButton } from '@/components/domain/RebuscarCandidatosButton'
 import { GerarPlanoButton } from '@/components/execucao/GerarPlanoButton'
@@ -96,6 +101,80 @@ interface MetadataExecucaoShape {
   cached_market_context?: boolean
   redes_a0_solicitadas?: string[]
   schema_version?: string
+}
+
+/** Slug estável a partir do título (remove emoji/acentos) para âncora de seção. */
+function slugify(title: string): string {
+  return title
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase()
+}
+
+/**
+ * ReportNavMenu — atalhos de seção como DROPDOWN no header (ao lado das ações).
+ * Substitui a antiga sidebar TOC (que dava aparência de 2 sidebars) — o relatório
+ * passa a ocupar a largura total. Varre [data-section-title] no mount (robusto a
+ * seções condicionais), scroll-spy via IntersectionObserver reflete a seção atual
+ * no valor do select, e onChange dá scroll suave até a seção.
+ */
+function ReportNavMenu({ className }: { className?: string }) {
+  const [items, setItems] = useState<{ id: string; title: string }[]>([])
+  const [active, setActive] = useState<string>('')
+
+  useEffect(() => {
+    const els = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-section-title]'),
+    )
+    setItems(els.map((el) => ({ id: el.id, title: el.dataset.sectionTitle ?? '' })))
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) setActive((e.target as HTMLElement).id)
+        })
+      },
+      { rootMargin: '-15% 0px -75% 0px' },
+    )
+    els.forEach((el) => obs.observe(el))
+    return () => obs.disconnect()
+  }, [])
+
+  if (items.length === 0) return null
+
+  return (
+    <div className={cn('relative inline-flex', className)}>
+      <ListTree
+        size={14}
+        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+      <select
+        value={active}
+        onChange={(e) => {
+          const id = e.target.value
+          if (id) {
+            document
+              .getElementById(id)
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }
+        }}
+        className="h-9 max-w-[200px] appearance-none truncate rounded-md border border-border bg-card pl-8 pr-7 text-sm text-foreground shadow-sm outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="Ir para seção do relatório"
+      >
+        <option value="" disabled>
+          Ir para seção…
+        </option>
+        {items.map((it) => (
+          <option key={it.id} value={it.id}>
+            {it.title}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
 }
 
 export function RelatorioViewerPage() {
@@ -217,7 +296,7 @@ function RelatorioViewerContent({
       : null
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {(semCandidatos || semConcorrentes) && (
         <div className="rounded-lg border border-veredito-ressalvas/50 bg-veredito-ressalvas/5 p-4 space-y-2">
           <div className="flex items-start gap-2">
@@ -281,8 +360,8 @@ function RelatorioViewerContent({
           </div>
         </div>
       )}
-      {/* 1. Header (UI Lote 4): Breadcrumb + Título com veredito inline */}
-      <header className="space-y-3">
+      {/* 1. Header — hero card (breadcrumb + título + veredito + ações) */}
+      <header className="space-y-3 rounded-xl border border-border bg-card/40 p-5 sm:p-6">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -342,6 +421,7 @@ function RelatorioViewerContent({
               público {inp.publico_alvo ?? '25-40'}
             </span>
             <span className="ml-auto flex items-center gap-2">
+              <ReportNavMenu />
               <GerarPlanoButton relatorioId={relatorioId} />
               <RebuscarCandidatosButton relatorioId={relatorioId} />
               <RerunPipelineButton relatorioId={relatorioId} />
@@ -350,30 +430,47 @@ function RelatorioViewerContent({
         </div>
       </header>
 
+      {/* BODY — coluna única full-width (TOC virou dropdown no header) */}
+      <div className="min-w-0 space-y-8">
+      {/* Alertas e Ressalvas — POSICIONADO NO TOPO: o usuário deve ver os riscos
+          antes de mergulhar nos detalhes (decisão informada). */}
+      {out.alertas_financeiros && out.alertas_financeiros.length > 0 && (
+        <Section
+          title={
+            out.veredito === 'REPROVADO'
+              ? `Alertas Críticos (${out.alertas_financeiros.length})`
+              : `Alertas e Ressalvas (${out.alertas_financeiros.length})`
+          }
+        >
+          <AlertasViz alertas={out.alertas_financeiros} veredito={out.veredito} />
+        </Section>
+      )}
       {/* 2. Scores Regionais */}
       <Section title="Scores Regionais">
-        <ScoresDimensionais
+        <ScoresViz
           scoreBairro={out.score_bairro}
           scoreTop1={out.score_top1_candidato}
           scoresRegionais={out.scores_regionais}
         />
       </Section>
 
+      {/* 2.5 Demografia do bairro — renda (CKAN) + população/ocupação (Censo 2022),
+          fontes reais por dimensão (bairro não herda o município). */}
+      {out.demografia_bairro &&
+        (out.demografia_bairro.renda_media != null || out.demografia_bairro.populacao != null) && (
+        <Section title="Demografia do bairro">
+          <DemografiaBairroCard block={out.demografia_bairro} />
+        </Section>
+      )}
+
       {/* 3. Contexto de Mercado (schema v1.2 → market_context completo; v1.1 → fallback) */}
       {(out.market_context || meta.fonte_market_context) && (
-        <Section title="🔬 Contexto de Mercado">
-          <ContextoMercadoCard
-            relatorioId={relatorioId}
+        <Section title="Contexto de Mercado">
+          <ContextoMercadoViz
             marketContext={out.market_context}
-            coberturaRedes={out.cobertura_redes_a0}
-            fonte={meta.fonte_market_context}
-            dataColeta={meta.data_coleta_market_context}
-            cached={meta.cached_market_context}
-            redesA0={meta.redes_a0_solicitadas}
-            totalConcorrentesAnalisados={out.total_concorrentes_analisados}
             nivelSaturacao={out.nivel_saturacao}
             aluguelMedianaM2={out.aluguel_mediana_m2_observado}
-            fonteAluguel={out.fonte_aluguel}
+            totalConcorrentes={out.total_concorrentes_analisados}
           />
         </Section>
       )}
@@ -381,7 +478,7 @@ function RelatorioViewerContent({
       {/* 4. Resumo Executivo */}
       {out.resumo_executivo && (
         <TextoSecao
-          title="🎯 Resumo Executivo"
+          title="Resumo Executivo"
           texto={out.resumo_executivo}
           variant="highlight"
         />
@@ -396,10 +493,28 @@ function RelatorioViewerContent({
         const ancoras = todosCandidatos.filter((c) => !c.listing_url)
         return (
           <>
-            {anunciados.length > 0 && (
-              <Section title="🏆 Top Candidatos — imóveis anunciados">
+            {anunciados.length > 0 && (() => {
+              const _norm = (s: string) =>
+                (s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+              const alvo = _norm(inp.bairro ?? '')
+              const marcados = anunciados.slice(0, 3).map((cand) => ({
+                cand,
+                foraDoBairro: Boolean(alvo) && !_norm(cand.endereco ?? '').includes(alvo),
+              }))
+              const algumFora = marcados.some((m) => m.foraDoBairro)
+              return (
+              <Section title="Top Candidatos — imóveis anunciados">
+                {algumFora && inp.bairro && (
+                  <p className="mb-3 rounded-lg border border-veredito-ressalvas/40 bg-veredito-ressalvas/5 px-3 py-2 text-xs text-muted-foreground">
+                    ⚠ Alguns imóveis estão em <strong>bairro vizinho</strong> (o GeoScout não
+                    achou vago em {inp.bairro}). O referencial de viabilidade — demografia,
+                    concorrência e aluguel de referência — é do bairro <strong>{inp.bairro}</strong> e
+                    independe do imóvel específico abaixo; trate-os como ponto de partida físico,
+                    não como o veredito do bairro.
+                  </p>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {anunciados.slice(0, 3).map((cand, i) => {
+                  {marcados.map(({ cand, foraDoBairro }, i) => {
                     const scoreGeral =
                       cand.score_geoscout != null && scoreRegional != null
                         ? (cand.score_geoscout + scoreRegional * 3) / 4
@@ -410,14 +525,16 @@ function RelatorioViewerContent({
                         candidato={cand}
                         posicao={i + 1}
                         scoreGeral={scoreGeral}
+                        foraDoBairro={foraDoBairro}
                       />
                     )
                   })}
                 </div>
               </Section>
-            )}
+              )
+            })()}
             {anunciados.length === 0 && (
-              <Section title="🏆 Top Candidatos — imóveis anunciados">
+              <Section title="Top Candidatos — imóveis anunciados">
                 <p className="text-sm text-muted-foreground">
                   Nenhum imóvel anunciado na faixa de área passou no filtro de qualidade.
                   Use “Re-buscar pontos” no topo para uma nova varredura do mercado.
@@ -425,7 +542,7 @@ function RelatorioViewerContent({
               </Section>
             )}
             {ancoras.length > 0 && (
-              <Section title="🧲 Âncoras e polos de referência">
+              <Section title="Âncoras e polos de referência">
                 <p className="mb-3 text-xs text-muted-foreground">
                   Referências de fluxo e localização do bairro — não estão à locação.
                   Imóvel próximo a estas âncoras herda o movimento delas.
@@ -454,7 +571,7 @@ function RelatorioViewerContent({
 
       {/* 6. Viabilidade Financeira (collapsible) */}
       <Section
-        title="💰 Viabilidade Financeira — 3 Cenários"
+        title="Viabilidade Financeira — 3 Cenários"
         collapsible
         suffix={
           <AluguelFonteAuditavel
@@ -495,10 +612,16 @@ function RelatorioViewerContent({
                 aluguelMensal={out.aluguel_mensal}
                 cenarioMid={cenariosAtivos?.mid}
               />
+              {/* Viz radical dos 3 cenários (drill-down detalhado na tabela abaixo) */}
+              <CenariosViz
+                cenarios={cenariosAtivos}
+                modeloRecomendado={out.modelo_recomendado ?? undefined}
+                className="mt-4"
+              />
               {mostraReconciliacao && (
                 <div className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm">
                   <p className="font-medium text-emerald-700 dark:text-emerald-400">
-                    💡 Os cenários acima usam o aluguel de referência de mercado
+                    Os cenários acima usam o aluguel de referência de mercado
                     ({Number(aluguelRef).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}/mês
                     para a faixa de área) — premissa conservadora.
                   </p>
@@ -548,7 +671,7 @@ function RelatorioViewerContent({
         })()}
         {cenariosRecalc && (
           <p className="mt-2 text-[10px] text-muted-foreground font-mono">
-            ⚙ Valores recalculados via kit detalhado v1.5. Equipamentos
+            Valores recalculados via kit detalhado v1.5. Equipamentos
             diferentes por modelo: Low usa kit{' '}
             <strong>{tamanhosPorModelo.low.toUpperCase()}</strong> (econômico),
             Mid usa <strong>{tamanhosPorModelo.mid.toUpperCase()}</strong>{' '}
@@ -578,7 +701,7 @@ function RelatorioViewerContent({
         const kit = getKit(tipo, tamanho)
         if (!kit) return null
         return (
-          <Section title="🏋️ Kit de Equipamentos" collapsible>
+          <Section title="Kit de Equipamentos" collapsible>
             <KitEquipamentosTable kit={kit} />
           </Section>
         )
@@ -587,7 +710,7 @@ function RelatorioViewerContent({
       {/* 7. Posicionamento Recomendado (collapsible) */}
       {out.posicionamento_recomendado && (
         <TextoSecao
-          title="💡 Posicionamento Recomendado"
+          title="Posicionamento Recomendado"
           texto={out.posicionamento_recomendado}
           collapsible
         />
@@ -595,35 +718,44 @@ function RelatorioViewerContent({
 
       {/* 7.1 Posicionamento Estratégico A9 (ERRC) */}
       {out.posicionamento_estrategico && (
-        <Section title="🎯 Posicionamento Estratégico (ERRC)" collapsible>
+        <Section title="Posicionamento Estratégico (ERRC)" collapsible>
           <PosicionamentoCard data={out.posicionamento_estrategico} />
         </Section>
       )}
 
-      {/* 7.4 Novos entrantes CNPJ (90d) */}
-      {out.entrantes_cnpj_90d && (out.entrantes_cnpj_90d.entrantes?.length ?? 0) > 0 && (
-        <Section title="🆕 Novos entrantes (CNPJ — 90 dias)" collapsible>
-          <MapaMunicipioMercado
-            className="mb-4"
-            relatorioId={relatorioId}
-            cidade={inp.cidade}
-            uf={inp.uf ?? out.entrantes_cnpj_90d.uf}
-            bairro={inp.bairro}
-          />
-          <EntrantesCnpjTable block={out.entrantes_cnpj_90d} relatorioId={relatorioId} />
+      {/* 7.4 Novas unidades (90d) — panorama em mini-cards. A lista nominal de
+          entrantes (com QSA/contato) migrou pra rota de PROSPECÇÃO; aqui fica só o
+          agregado (total/segmento/bairro) com o bairro pesquisado destacado. */}
+      {out.entrantes_cnpj_90d && (out.entrantes_cnpj_90d.total ?? 0) > 0 && (
+        <Section title="Novas unidades (90 dias)" collapsible>
+          <NovasUnidadesCard block={out.entrantes_cnpj_90d} bairroAlvo={inp.bairro} />
         </Section>
       )}
 
       {/* 7.45 Obras fitness em andamento (CNO) */}
       {out.obras_cno_em_curso && (
-        <Section title="🏗 Obras em andamento (CNO)" collapsible>
+        <Section title="Obras em andamento (CNO)" collapsible>
           <ObrasEmAndamentoTable block={out.obras_cno_em_curso} />
+        </Section>
+      )}
+
+      {/* 7.46 Demanda futura datada (Apêndice B) */}
+      {out.demanda_futura && out.demanda_futura.status === 'ok' && (
+        <Section title="Demanda futura (obras no raio)" collapsible>
+          <DemandaFuturaCard block={out.demanda_futura} />
+        </Section>
+      )}
+
+      {/* 7.47 Anéis competitivos (Apêndice D) — score ponderado */}
+      {out.aneis_competitivos && (out.aneis_competitivos.total_concorrentes ?? 0) > 0 && (
+        <Section title="Anéis competitivos" collapsible>
+          <AneisCompetitivosCard block={out.aneis_competitivos} />
         </Section>
       )}
 
       {/* 7.5 Cobertura Deep Research (schema v1.4) */}
       {out.cobertura_redes_a0 && out.cobertura_redes_a0.redes_solicitadas?.length > 0 && (
-        <Section title="🔍 Cobertura Deep Research" collapsible>
+        <Section title="Cobertura Deep Research" collapsible>
           <CoberturaRedesA0Card
             cobertura={out.cobertura_redes_a0}
             bairroAlvo={data.input_canonico?.bairro || data.input_canonico?.cidade}
@@ -633,7 +765,7 @@ function RelatorioViewerContent({
 
       {/* 8. Inteligência Competitiva — tabela por concorrente substituindo Dores Dominantes */}
       {out.competitors_set && out.competitors_set.length > 0 && (
-        <Section title="🥊 Inteligência Competitiva" collapsible>
+        <Section title="Inteligência Competitiva" collapsible>
           {(out.entrantes_cnpj_90d?.entrantes?.length ?? 0) === 0 && (
             <MapaMunicipioMercado
               className="mb-4"
@@ -658,13 +790,15 @@ function RelatorioViewerContent({
             totalAnalisados={out.total_concorrentes_analisados}
             bairroAlvo={inp.bairro}
           />
-          <CompetidorGroup competidores={out.competitors_set} />
-          <div className="mt-4">
-            <CompetidoresDoresTable
-              competidores={out.competitors_set}
-              servicosNaoOferecidos={out.servicos_nao_oferecidos}
-            />
-          </div>
+          {/* Heatmap de dores dominantes (totais por categoria) */}
+          <DoresHeatmap competidores={out.competitors_set} className="mb-4" />
+          {/* Dores segmentadas por categoria — link pro review no Maps, sem texto */}
+          <DoresPorCategoria competidores={out.competitors_set} />
+          {/* Pico/lotação por academia — janela de demanda pro posicionamento */}
+          <PicoLotacaoViz competidores={out.competitors_set} className="mt-4" />
+          {/* "Concorrentes — dores citadas nos reviews" REMOVIDO: redundante com
+              DoresHeatmap + DoresPorCategoria acima. O dado servicos_nao_oferecidos
+              segue no output (A9/posicionamento consome). */}
           <div className="mt-4">
             <PlanosConcorrenciaTable competidores={out.competitors_set} />
           </div>
@@ -673,8 +807,8 @@ function RelatorioViewerContent({
 
       {/* 9. Distribuição Geográfica */}
       {out.distribuicao_geografica && out.distribuicao_geografica.length > 0 && (
-        <Section title="📍 Distribuição Geográfica dos Concorrentes" collapsible>
-          <DistribuicaoBairrosTable
+        <Section title="Distribuição Geográfica dos Concorrentes" collapsible>
+          <DistribuicaoViz
             distribuicao={out.distribuicao_geografica}
             bairroAlvo={inp.bairro}
           />
@@ -683,11 +817,11 @@ function RelatorioViewerContent({
 
       {/* 10. Bairros Alternativos (com aviso geográfico v1.5) */}
       {out.bairros_alternativos && out.bairros_alternativos.length > 0 && (
-        <Section title="🗺️ Bairros Alternativos Recomendados" collapsible>
+        <Section title="Bairros Alternativos Recomendados" collapsible>
           {out.aviso_geografico && (
             <div className="mb-4 rounded-md border-l-2 border-veredito-ressalvas bg-veredito-ressalvas/5 p-3 text-xs leading-relaxed">
               <strong className="text-veredito-ressalvas">
-                ⚠ Correção geográfica detectada
+                Correção geográfica detectada
               </strong>
               <p className="mt-1 text-foreground/90">{out.aviso_geografico}</p>
               {out.cidade_efetiva && (
@@ -700,7 +834,7 @@ function RelatorioViewerContent({
               )}
             </div>
           )}
-          <BairrosAlternativosTable bairros={out.bairros_alternativos} />
+          <BairrosAlternativosViz bairros={out.bairros_alternativos} />
         </Section>
       )}
 
@@ -712,23 +846,7 @@ function RelatorioViewerContent({
         return null
       })()}
 
-      {/* 12. Alertas + Decisão (collapsible) */}
-      {out.alertas_financeiros && out.alertas_financeiros.length > 0 && (
-        <Section
-          title={
-            out.veredito === 'REPROVADO'
-              ? `⚠️ Alertas Críticos (${out.alertas_financeiros.length})`
-              : `⚠️ Alertas e Ressalvas (${out.alertas_financeiros.length})`
-          }
-          collapsible
-        >
-          <AlertasGlobais
-            alertas={out.alertas_financeiros}
-            veredito={out.veredito}
-            hideHeader
-          />
-        </Section>
-      )}
+      </div>
     </div>
   )
 }
@@ -761,7 +879,11 @@ function Section({
     )
   }
   return (
-    <section className="space-y-4">
+    <section
+      id={slugify(title)}
+      data-section-title={title}
+      className="scroll-mt-24 space-y-4"
+    >
       <SectionHeader title={title} suffix={suffix} />
       {children}
     </section>
@@ -790,7 +912,11 @@ function CollapsibleSection({
   const [open, setOpen] = useState(defaultOpen)
   return (
     <Collapsible open={open} onOpenChange={setOpen} asChild>
-      <section className="space-y-4">
+      <section
+        id={slugify(title)}
+        data-section-title={title}
+        className="scroll-mt-24 space-y-4"
+      >
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <CollapsibleTrigger asChild>

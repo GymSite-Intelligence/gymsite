@@ -246,7 +246,7 @@ export function ComparadorPage() {
         titulo="Viabilidade Financeira (modelo recomendado de cada)"
         descricao={
           outA.modelo_recomendado !== outB.modelo_recomendado
-            ? `⚠ Modelos recomendados diferentes — A=${outA.modelo_recomendado}, B=${outB.modelo_recomendado}`
+            ? `Modelos recomendados diferentes — A=${outA.modelo_recomendado}, B=${outB.modelo_recomendado}`
             : undefined
         }
       >

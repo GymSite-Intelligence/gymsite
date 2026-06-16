@@ -10,6 +10,22 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from google.adk.agents import Agent, SequentialAgent, ParallelAgent
 
+# Retry per-call no nível do MODELO (Eixo C confiabilidade): um 429 RESOURCE_EXHAUSTED
+# (quota Vertex, sobretudo gemini-2.5-pro do A6) retenta a CHAMADA com backoff, em vez de
+# estourar e disparar o retry da pipeline INTEIRA (~10min re-rodando tudo). ADK Gemini
+# suporta retry_options nativo; aplicado a todos os agentes em _attach_telemetry.
+try:
+    from google.adk.models.google_llm import Gemini as _AdkGemini
+    from google.genai import types as _genai_types
+
+    _RETRY_OPTIONS = _genai_types.HttpRetryOptions(
+        attempts=4, initial_delay=2.0, max_delay=60.0, exp_base=2.0,
+        http_status_codes=[429, 503, 500],
+    )
+except Exception:  # ADK/genai ausente em algum contexto — segue sem retry de modelo
+    _AdkGemini = None
+    _RETRY_OPTIONS = None
+
 from agents.a0_context_builder import context_builder_agent
 from agents.a1_geoscout import geoscout_agent
 from agents.a2_demo_analyst import demo_analyst_agent
@@ -62,10 +78,22 @@ def _attach_telemetry(*agents):
     """Anexa callbacks: before_agent (run_id + otel) + after_model (tokens) + after_agent (otel + state dump)."""
     for ag in agents:
         try:
+            # Envolve o modelo (string) num Gemini com retry_options → 429 retenta a
+            # chamada, não a pipeline. Só LlmAgent com model string; BaseAgent (A3a) pula.
+            if _AdkGemini is not None and _RETRY_OPTIONS is not None:
+                _m = getattr(ag, "model", None)
+                if isinstance(_m, str) and _m.strip():
+                    try:
+                        ag.model = _AdkGemini(model=_m, retry_options=_RETRY_OPTIONS)
+                    except Exception:
+                        pass  # mantém a string se o wrap falhar
             ag.before_agent_callback = _chain_callbacks(
                 getattr(ag, "before_agent_callback", None), _otel_before
             )
-            if getattr(ag, "after_model_callback", None) is None:
+            # after_model_callback só existe em LlmAgent. BaseAgent determinístico
+            # (A3a) não chama modelo — pular sem abortar o resto do attach.
+            _tem_model_cb = "after_model_callback" in getattr(type(ag), "model_fields", {})
+            if _tem_model_cb and getattr(ag, "after_model_callback", None) is None:
                 ag.after_model_callback = _telemetry_after_model
             ag.after_agent_callback = _chain_callbacks(
                 getattr(ag, "after_agent_callback", None), _otel_after
@@ -123,19 +151,22 @@ parallel_analysis = ParallelAgent(
     ],
 )
 
-# ── Pipeline completo: ContextBuilder → GeoScout → Análise Paralela → ContactHunter → Relatório ──
+# ── Pipeline de VIABILIDADE: ContextBuilder → GeoScout → Análise Paralela → Relatório ──
+# A5 ContactHunter (contato dos decisores) SAIU daqui: contatar decisor é PROSPECÇÃO, não
+# viabilidade (você decide SE abrir; contato vem depois, na rota de prospecção com Apollo
+# people_search). Tira custo (~R$0,17/relatório) + 1 step de latência do relatório de
+# viabilidade. O agente segue definido p/ a rota de prospecção consumir.
 pipeline = SequentialAgent(
     name="GymSitePipeline",
     description=(
-        "Pipeline sequencial: contexto de mercado (Deep Research) → "
-        "localização → análise paralela → contato → relatório final → "
-        "posicionamento estratégico (ERRC)."
+        "Pipeline de viabilidade: contexto de mercado (Deep Research) → localização → "
+        "análise paralela (demografia/competitivo/financeiro) → relatório final → "
+        "posicionamento estratégico (ERRC). Contato de decisor é prospecção (fora daqui)."
     ),
     sub_agents=[
-        context_builder_agent,        # A0 — Deep Research (NOVO em v0.4)
+        context_builder_agent,        # A0 — Deep Research
         geoscout_agent,                # A1
         parallel_analysis,             # A2 + A3 + A4
-        contact_hunter_agent,          # A5
         report_consolidator_agent,     # A6
         positioning_strategist_agent,  # A9 — Posicionamento ERRC
     ],

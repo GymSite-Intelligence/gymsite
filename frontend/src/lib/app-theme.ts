@@ -10,18 +10,19 @@ import { isSupabaseConfigured } from '@/lib/mock-auth'
 
 export const APP_THEME_STORAGE_KEY = 'gymsite-theme'
 
-export const APP_THEME_IDS = ['escuro', 'claro'] as const
+export const APP_THEME_IDS = ['escuro', 'claro', 'geo'] as const
 export type AppThemeId = (typeof APP_THEME_IDS)[number]
 
 export type AppThemeOption = {
   id: AppThemeId
   label: string
-  icon: 'moon' | 'sun'
+  icon: 'moon' | 'sun' | 'map'
 }
 
 export const APP_THEME_OPTIONS: readonly AppThemeOption[] = [
   { id: 'escuro', label: 'Escuro', icon: 'moon' },
   { id: 'claro', label: 'Claro', icon: 'sun' },
+  { id: 'geo', label: 'Geo-Intel', icon: 'map' },
 ] as const
 
 export const DEFAULT_APP_THEME: AppThemeId = 'escuro'
@@ -54,7 +55,7 @@ export function normalizeAppThemeId(value: unknown): AppThemeId {
 }
 
 export function isAppThemeDark(theme: AppThemeId): boolean {
-  return theme === 'escuro'
+  return theme === 'escuro' || theme === 'geo'
 }
 
 export function readStoredAppTheme(): AppThemeId | null {

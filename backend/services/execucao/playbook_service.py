@@ -19,7 +19,7 @@ from typing import Any, Optional
 
 logger = logging.getLogger("gymsite.playbook_service")
 
-STATUS_TAREFA_VALIDOS = {"A_FAZER", "EM_ANDAMENTO", "CONCLUIDA", "BLOQUEADA", "CANCELADA"}
+STATUS_TAREFA_VALIDOS = {"A_FAZER", "EM_ANDAMENTO", "AGUARDANDO_APROVACAO", "CONCLUIDA", "BLOQUEADA", "CANCELADA"}
 
 
 def _agora_iso() -> str:
@@ -119,7 +119,7 @@ def obter_playbook_completo(sb, playbook_id: str, user_id: str) -> Optional[dict
         ).data or []
         checklist = (
             sb.table("tarefa_checklist")
-            .select("id, tarefa_id, descricao, concluido, ordem, responsavel_pessoa_id")
+            .select("id, tarefa_id, descricao, concluido, ordem, responsavel_pessoa_id, criterio_aceite")
             .in_("tarefa_id", ids)
             .is_("deleted_at", "null")
             .order("ordem")
@@ -204,6 +204,53 @@ def _predecessoras_pendentes(sb, tarefa_id: str) -> list[str]:
         .execute()
     ).data or []
     return [p["titulo"] for p in preds if p["status"] not in ("CONCLUIDA", "CANCELADA")]
+
+
+def _status_alvo_por_checklist(sb, tarefa: dict[str, Any]) -> Optional[str]:
+    """
+    Status que a etapa DEVERIA ter, derivado do checklist + dependências.
+    Guardrail do kanban (auto-transição):
+      - predecessora TERMINA_PARA_COMECAR pendente  -> BLOQUEADA (dependência manda)
+      - sem checklist (total == 0)                  -> None (mantém manual)
+      - 0 itens concluídos                          -> A_FAZER
+      - parcial                                     -> EM_ANDAMENTO
+      - todos concluídos                            -> AGUARDANDO_APROVACAO (não conclui sozinho)
+    CONCLUIDA só via aprovação do responsável/Owner. CANCELADA -> None (não mexe).
+    Retorna None quando não há sinal pra auto-transicionar.
+    """
+    if tarefa.get("status") == "CANCELADA":
+        return None
+    if _predecessoras_pendentes(sb, tarefa["id"]):
+        return "BLOQUEADA"
+    itens = (
+        sb.table("tarefa_checklist")
+        .select("concluido")
+        .eq("tarefa_id", tarefa["id"])
+        .execute()
+    ).data or []
+    total = len(itens)
+    if total == 0:
+        return None
+    done = sum(1 for i in itens if i.get("concluido"))
+    if done == 0:
+        return "A_FAZER"
+    if done < total:
+        return "EM_ANDAMENTO"
+    # Checklist 100% NÃO conclui sozinho — vai pra aprovação do responsável (Owner).
+    return "AGUARDANDO_APROVACAO"
+
+
+def _aplicar_status_auto(sb, tarefa: dict[str, Any], alvo: str) -> None:
+    """Aplica transição automática de status (guardrail), recalculando o cache.
+    Não audita nem valida predecessora (o alvo já foi computado com elas)."""
+    upd: dict[str, Any] = {"status": alvo, "updated_at": _agora_iso()}
+    if alvo == "CONCLUIDA":
+        upd["data_conclusao"] = date.today().isoformat()
+    elif tarefa.get("status") == "CONCLUIDA":
+        # reabriu (desmarcou item) — limpa a data de conclusão
+        upd["data_conclusao"] = None
+    sb.table("tarefas").update(upd).eq("id", tarefa["id"]).execute()
+    _recalcular_contadores(sb, tarefa["playbook_id"])
 
 
 def _recalcular_contadores(sb, playbook_id: str) -> None:
@@ -296,8 +343,23 @@ def atualizar_status_tarefa(
             .execute()
         ).data or []
         for dep in dependentes:
-            if not _predecessoras_pendentes(sb, dep["tarefa_id"]):
-                liberadas.append(dep["tarefa_id"])
+            dep_id = dep["tarefa_id"]
+            if not _predecessoras_pendentes(sb, dep_id):
+                liberadas.append(dep_id)
+                # Guardrail: dependente que estava BLOQUEADA sai pro status do
+                # próprio checklist (A_FAZER/EM_ANDAMENTO/CONCLUIDA).
+                dep_row = (
+                    sb.table("tarefas")
+                    .select("id, status, playbook_id")
+                    .eq("id", dep_id)
+                    .is_("deleted_at", "null")
+                    .maybe_single()
+                    .execute()
+                )
+                if dep_row and dep_row.data and dep_row.data.get("status") == "BLOQUEADA":
+                    alvo_dep = _status_alvo_por_checklist(sb, dep_row.data)
+                    if alvo_dep and alvo_dep != "BLOQUEADA":
+                        _aplicar_status_auto(sb, dep_row.data, alvo_dep)
     return {"tarefa": atualizada, "tarefas_liberadas": liberadas}
 
 
@@ -431,6 +493,7 @@ def criar_tarefa(sb, playbook_id: str, user_id: str, campos: dict[str, Any]) -> 
         "projeto_id": pb["projeto_id"],
         "titulo": titulo,
         "descricao": (campos.get("descricao") or "").strip() or None,
+        "criterio_verificacao": (campos.get("criterio_verificacao") or "").strip() or None,
         "categoria": categoria,
         "status": "A_FAZER",
         "ordem": ordem,
@@ -461,7 +524,7 @@ def criar_tarefa(sb, playbook_id: str, user_id: str, campos: dict[str, Any]) -> 
 def editar_tarefa(sb, tarefa_id: str, user_id: str, campos: dict[str, Any]) -> dict[str, Any]:
     tarefa = _tarefa_do_usuario(sb, tarefa_id, user_id)
     permitidos = {
-        "titulo", "descricao", "categoria", "custo_planejado",
+        "titulo", "descricao", "criterio_verificacao", "categoria", "custo_planejado",
         "data_inicio", "data_prevista_conclusao", "responsavel_nome",
         "responsavel_pessoa_id",
     }
@@ -485,7 +548,7 @@ def editar_tarefa(sb, tarefa_id: str, user_id: str, campos: dict[str, Any]) -> d
             update[k] = v
         elif k == "custo_planejado":
             update[k] = int(v) if v is not None else None
-        elif k in ("descricao", "responsavel_nome"):
+        elif k in ("descricao", "criterio_verificacao", "responsavel_nome"):
             update[k] = (v or "").strip() or None
         else:
             update[k] = v
@@ -528,10 +591,20 @@ def excluir_tarefa(sb, tarefa_id: str, user_id: str) -> None:
         logger.warning("auditoria EXCLUIR_TAREFA falhou (não bloqueia)", exc_info=True)
 
 
-def adicionar_checklist_item(sb, tarefa_id: str, user_id: str, descricao: str) -> dict[str, Any]:
+def adicionar_checklist_item(
+    sb,
+    tarefa_id: str,
+    user_id: str,
+    descricao: str,
+    *,
+    criterio_aceite: Optional[str] = None,
+    responsavel_pessoa_id: Optional[str] = None,
+) -> dict[str, Any]:
     if not descricao or not descricao.strip():
         raise ValueError("Escreva o passo antes de adicionar.")
     _tarefa_do_usuario(sb, tarefa_id, user_id)
+    if responsavel_pessoa_id:
+        _pessoa_do_usuario(sb, responsavel_pessoa_id, user_id)
     ultimo = (
         sb.table("tarefa_checklist")
         .select("ordem")
@@ -544,9 +617,77 @@ def adicionar_checklist_item(sb, tarefa_id: str, user_id: str, descricao: str) -
     res = sb.table("tarefa_checklist").insert({
         "tarefa_id": tarefa_id,
         "descricao": descricao.strip(),
+        "criterio_aceite": (criterio_aceite or "").strip() or None,
+        "responsavel_pessoa_id": responsavel_pessoa_id,
         "ordem": ordem,
     }).execute()
     return res.data[0] if res.data else {}
+
+
+_BENCHMARK_SETOR_POR_CATEGORIA: dict[str, str] = {
+    "IMOBILIARIO": "Consulta de zoneamento/viabilidade na prefeitura, vistoria do imóvel, "
+                   "acessibilidade (NBR 9050), pé-direito/ventilação, contrato com cláusulas de reforma.",
+    "LEGAL": "CNPJ CNAE 9313-1/00 (Ltda — academia NÃO pode ser MEI); Alvará de Funcionamento; "
+             "AVCB/CLCB (Corpo de Bombeiros); Vigilância Sanitária + DAM; registro CREF/CONFEF "
+             "(Lei 9.696/98) com responsável técnico; PMOC se houver ar-condicionado.",
+    "OBRAS": "Projeto arquitetônico aprovado, acessibilidade NBR 9050, instalações elétrica/hidráulica, "
+             "ventilação/climatização, vestiários, saídas de emergência.",
+    "EQUIPAMENTOS": "Layout por zona (musculação/cardio/funcional), normas de segurança, "
+                    "garantia e plano de manutenção, ergonomia/espaçamento.",
+    "TECNOLOGIA": "Controle de acesso (catraca/biometria), sistema de gestão, meios de pagamento, LGPD.",
+    "RH": "Instrutores registrados no CREF, contratos, escala, treinamento e POPs de atendimento.",
+    "MARKETING": "Identidade visual, pré-venda/lista de espera, canais (Instagram/Google), parcerias locais.",
+    "FINANCEIRO": "CAPEX, capital de giro, precificação de planos, ponto de equilíbrio, fluxo de caixa.",
+    "OPERACIONAL": "Horários, POPs de limpeza/biossegurança, manutenção preventiva, gestão de fila/lotação.",
+}
+
+
+def sugerir_passos(sb, tarefa_id: str, user_id: str) -> dict[str, Any]:
+    """Sugere passos (descrição + critério de aceite) a partir do 'O que fazer'
+    da etapa, via Gemini ANCORADO no benchmark do setor (requisitos legais por
+    categoria). Não persiste — o usuário aceita/edita no frontend."""
+    import json as _json
+    tarefa = _tarefa_do_usuario(sb, tarefa_id, user_id)
+    categoria = tarefa.get("categoria") or "OUTRO"
+    benchmark = _BENCHMARK_SETOR_POR_CATEGORIA.get(categoria, "")
+    prompt = (
+        "Você é um consultor de abertura de academias no Brasil. Para a etapa abaixo, "
+        "sugira de 3 a 6 passos práticos, na ordem de execução.\n"
+        f"Etapa: {tarefa.get('titulo')}\n"
+        f"Área: {categoria}\n"
+        f"O que fazer: {tarefa.get('descricao') or 'não detalhado'}\n"
+        + (f"Requisitos do setor a considerar (não invente, use os pertinentes): {benchmark}\n" if benchmark else "")
+        + "\nPara cada passo dê: descricao (ação curta no imperativo) e criterio_aceite "
+        "(afirmação verificável do que comprova o passo concluído). Não omita exigências legais "
+        "obrigatórias quando pertinentes à etapa.\n"
+        'Responda SÓ com JSON, sem texto fora dele: '
+        '[{"descricao":"...","criterio_aceite":"..."}]'
+    )
+    try:
+        from tools._genai_client import build_genai_client, generate_content_resilient
+        client = build_genai_client()
+        resp = generate_content_resilient(
+            client,
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config={"response_mime_type": "application/json"},
+        )
+        raw = (getattr(resp, "text", None) or "").strip()
+        data = _json.loads(raw)
+        passos = [
+            {
+                "descricao": (p.get("descricao") or "").strip(),
+                "criterio_aceite": (p.get("criterio_aceite") or "").strip(),
+            }
+            for p in (data if isinstance(data, list) else [])
+            if isinstance(p, dict) and (p.get("descricao") or "").strip()
+        ][:8]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("sugerir_passos falhou: %s", e, exc_info=True)
+        raise ValueError("Não consegui sugerir passos agora. Tente novamente.")
+    if not passos:
+        raise ValueError("A IA não retornou passos. Detalhe melhor o 'O que fazer'.")
+    return {"passos": passos}
 
 
 def excluir_checklist_item(sb, item_id: str, user_id: str) -> None:
@@ -560,7 +701,11 @@ def excluir_checklist_item(sb, item_id: str, user_id: str) -> None:
     if not item or not item.data:
         raise LookupError("Item não encontrado.")
     _tarefa_do_usuario(sb, item.data["tarefa_id"], user_id)
-    sb.table("tarefa_checklist").update({"deleted_at": _agora_iso()}).eq("id", item_id).execute()
+    agora = _agora_iso()
+    sb.table("tarefa_checklist").update({"deleted_at": agora}).eq("id", item_id).execute()
+    # Excluir o passo apaga as notas de andamento vinculadas a ele (checklist é
+    # soft-delete, então a FK CASCADE não dispara — soft-delete aqui).
+    sb.table("tarefa_notas").update({"deleted_at": agora}).eq("checklist_item_id", item_id).execute()
 
 
 def criar_okr(sb, playbook_id: str, user_id: str, campos: dict[str, Any]) -> dict[str, Any]:
@@ -830,11 +975,15 @@ def marcar_checklist_item(sb, item_id: str, user_id: str, concluido: bool) -> di
     )
     if not item or not item.data:
         raise LookupError("Item não encontrado.")
-    _tarefa_do_usuario(sb, item.data["tarefa_id"], user_id)
+    tarefa = _tarefa_do_usuario(sb, item.data["tarefa_id"], user_id)
     res = (
         sb.table("tarefa_checklist")
         .update({"concluido": bool(concluido)})
         .eq("id", item_id)
         .execute()
     )
+    # Guardrail kanban: auto-transição de status pelo checklist (após o toggle).
+    alvo = _status_alvo_por_checklist(sb, tarefa)
+    if alvo and alvo != tarefa.get("status"):
+        _aplicar_status_auto(sb, tarefa, alvo)
     return res.data[0] if res.data else {}

@@ -15,6 +15,12 @@ ROOT = Path(__file__).resolve().parent.parent
 BUNDLE_DIR = ROOT / "data" / "market_bundles"
 BUNDLE_MAX_AGE_DAYS = 7
 
+# Campos da "trilha viva" (trilha 3 da arquitetura): competição e aluguel são
+# resolvidos NO RELATÓRIO (A3 competitor intel + enrichment OSM/portais), não no
+# batch semanal. Ausência no bundle batch é ESPERADA — não degrada a trilha feliz
+# nem justifica Deep Research (doc: nunca usar DR para competição/aluguel).
+LIVE_TRAIL_FIELDS = frozenset({"competicao_osm", "aluguel_medio_m2"})
+
 
 def _slug(cidade: str, bairro: str, uf: str) -> str:
     parts = [cidade.strip().lower(), (bairro or "").strip().lower(), uf.strip().upper()]
@@ -49,6 +55,18 @@ def load_market_bundle(
     bairro: str,
     uf: str,
 ) -> dict[str, Any] | None:
+    # Armazém compartilhado (Supabase) primeiro quando habilitado — prod lê fresco
+    # sem rebuild de imagem; cai pro FS local em dev/teste ou falha.
+    try:
+        from tools.market_store import fetch_bundle, supabase_enabled
+
+        if supabase_enabled():
+            remote = fetch_bundle(_slug(cidade, bairro, uf))
+            if isinstance(remote, dict):
+                return remote
+    except Exception:
+        pass
+
     path = bundle_path(cidade, bairro, uf)
     if not path.is_file():
         return None
@@ -63,6 +81,13 @@ def save_market_bundle(cidade: str, bairro: str, uf: str, bundle: dict[str, Any]
     BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
     path = bundle_path(cidade, bairro, uf)
     path.write_text(json.dumps(bundle, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Espelha no armazém compartilhado quando habilitado (best-effort).
+    try:
+        from tools.market_store import upsert_bundle
+
+        upsert_bundle(_slug(cidade, bairro, uf), bundle)
+    except Exception:
+        pass
     return path
 
 
@@ -85,7 +110,10 @@ def must_not_call_deep_research() -> bool:
 
 def compute_bundle_stale(bundle: dict[str, Any]) -> tuple[bool, list[str]]:
     """
-    Marca bundle degradado quando fontes estruturadas críticas falham.
+    Marca bundle degradado quando fontes ESTRUTURADAS de batch falham
+    (demografia/CVM/SINAPI/freshness). Competição e aluguel NÃO entram aqui —
+    são trilha viva (ver LIVE_TRAIL_FIELDS / live_trail_pending), resolvidas no
+    relatório e não devem bloquear a trilha feliz do A0.
     Relatório pode seguir com DR parcial; A0 expõe stale no briefing.
     """
     reasons: list[str] = []
@@ -106,15 +134,23 @@ def compute_bundle_stale(bundle: dict[str, Any]) -> tuple[bool, list[str]]:
     if (capex.get("fonte_obra") or "").startswith("benchmark_fixo"):
         reasons.append("sinapi_fallback")
 
+    return bool(reasons), reasons
+
+
+def live_trail_pending(bundle: dict[str, Any]) -> list[str]:
+    """
+    Campos de trilha viva ainda não preenchidos no bundle batch — informativo.
+    O relatório os resolve via A3 (competição) e enrichment (aluguel/portais);
+    NÃO disparam stale nem Deep Research.
+    """
+    pend: list[str] = []
     comp = bundle.get("competicao_local") or {}
     if comp.get("status") != "ok":
-        reasons.append("competicao_osm_ausente")
-
+        pend.append("competicao_osm")
     aluguel = bundle.get("aluguel_portais") or {}
     if not aluguel.get("n_validos"):
-        reasons.append("aluguel_portais_vazio")
-
-    return bool(reasons), reasons
+        pend.append("aluguel_medio_m2")
+    return pend
 
 
 def compress_bundle_for_llm(bundle: dict[str, Any]) -> str:
@@ -217,8 +253,14 @@ def bundle_to_briefing_md(bundle: dict[str, Any]) -> str:
     if stale_reasons:
         lines.extend(["", "## Degradação de dados", *[f"- {r}" for r in stale_reasons]])
 
-    if missing:
-        lines.extend(["", "## Campos pendentes (considerar Deep Research fallback)", *[f"- {m}" for m in missing]])
+    live_pend = [m for m in missing if m in LIVE_TRAIL_FIELDS]
+    dr_pend = [m for m in missing if m not in LIVE_TRAIL_FIELDS]
+    if live_pend:
+        lines.extend(
+            ["", "## Pendências de trilha viva (resolver no relatório via A3/enrichment — NÃO Deep Research)", *[f"- {m}" for m in live_pend]]
+        )
+    if dr_pend:
+        lines.extend(["", "## Campos pendentes (considerar Deep Research fallback)", *[f"- {m}" for m in dr_pend]])
 
     lines.append("")
     lines.append("*(Não inventar redes concorrentes a partir deste texto — usar OSM no JSON final.)*")
@@ -280,12 +322,20 @@ def inject_market_bundle_context(
     context["market_bundle_briefing_md"] = bundle_to_briefing_md(bundle)
 
     missing = bundle.get("missing_fields") or []
+    # Trilha viva (competição/aluguel) é preenchida no relatório por A3/enrichment;
+    # não conta como lacuna estrutural que exige Deep Research.
+    batch_missing = [m for m in missing if m not in LIVE_TRAIL_FIELDS]
+    live_pending = [m for m in missing if m in LIVE_TRAIL_FIELDS]
     stale = bundle.get("stale", False)
+    context["market_bundle_live_pending"] = live_pending
     if must_not_call_deep_research():
         context["skip_deep_research"] = bool(context.get("market_bundle_fresh"))
         context["a0_bundle_only"] = True
-    elif context.get("market_bundle_fresh") and not missing and not stale:
+    elif context.get("market_bundle_fresh") and not batch_missing and not stale:
+        # Trilha feliz: fatos estruturados completos → A0 sem Deep Research,
+        # mesmo com competição/aluguel pendentes (relatório resolve live).
         context["skip_deep_research"] = True
+        context["market_bundle_partial"] = bool(live_pending)
     elif context.get("market_bundle_fresh"):
         context["skip_deep_research"] = False
         context["market_bundle_partial"] = True

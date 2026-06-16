@@ -71,6 +71,13 @@ def main() -> int:
         encoding="utf-8",
     )
     print("written:", SNAPSHOT_PATH)
+    try:
+        from tools.market_store import supabase_enabled, upsert_snapshot
+
+        if supabase_enabled() and upsert_snapshot("benchmark_snapshots", payload):
+            print("supabase: market_snapshots.benchmark_snapshots atualizado")
+    except Exception as e:
+        print(f"supabase snapshot push falhou: {type(e).__name__}: {e}")
     print("setorial fonte:", setorial.get("fonte"))
     print("sector empresas:", len(sector.get("empresas") or []))
     return 0

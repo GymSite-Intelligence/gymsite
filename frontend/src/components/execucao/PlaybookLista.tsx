@@ -6,10 +6,9 @@
  * converge na ficha da etapa.
  */
 import { AlertTriangle, Calendar, Sparkles, User } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/lib/format'
 import type { Tarefa } from '@/hooks/usePlaybook'
-import { CATEGORIA_COR, CATEGORIA_LABEL, COLUNAS } from '@/components/execucao/PlaybookKanban'
+import { CategoriaBadge, COLUNAS } from '@/components/execucao/PlaybookKanban'
 
 function formatPrazo(iso: string | null): string | null {
   if (!iso) return null
@@ -48,12 +47,7 @@ export function PlaybookLista({
                     onClick={() => onAbrir(t.id)}
                     className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
                   >
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] ${CATEGORIA_COR[t.categoria] ?? CATEGORIA_COR.OUTRO}`}
-                    >
-                      {CATEGORIA_LABEL[t.categoria] ?? t.categoria}
-                    </Badge>
+                    <CategoriaBadge categoria={t.categoria} />
                     <span
                       className={`min-w-0 flex-1 truncate text-sm font-medium ${
                         t.status === 'CONCLUIDA' ? 'text-muted-foreground line-through' : ''

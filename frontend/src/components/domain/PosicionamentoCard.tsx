@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { PosicionamentoEstrategicoJSON } from '@/hooks/useRelatorioDetail'
 
-const ERRC_LABELS: { key: keyof NonNullable<PosicionamentoEstrategicoJSON['framework_errc']>; title: string; accent: string }[] = [
-  { key: 'eliminar', title: 'Eliminar', accent: 'border-red-300 bg-red-50/50' },
-  { key: 'reduzir', title: 'Reduzir', accent: 'border-amber-300 bg-amber-50/50' },
-  { key: 'aumentar', title: 'Aumentar', accent: 'border-blue-300 bg-blue-50/50' },
-  { key: 'criar', title: 'Criar', accent: 'border-emerald-300 bg-emerald-50/50' },
+const ERRC_LABELS: { key: keyof NonNullable<PosicionamentoEstrategicoJSON['framework_errc']>; title: string; color: string }[] = [
+  { key: 'eliminar', title: 'Eliminar', color: 'hsl(var(--veredito-reprovado))' },
+  { key: 'reduzir', title: 'Reduzir', color: 'hsl(var(--veredito-ressalvas))' },
+  { key: 'aumentar', title: 'Aumentar', color: 'hsl(var(--status-investigate))' },
+  { key: 'criar', title: 'Criar', color: 'hsl(var(--veredito-aprovado))' },
 ]
 
 export interface PosicionamentoCardProps {
@@ -57,15 +57,28 @@ export function PosicionamentoCard({ data, className }: PosicionamentoCardProps)
 
       {errc && (
         <div className="grid gap-3 sm:grid-cols-2">
-          {ERRC_LABELS.map(({ key, title, accent }) => {
+          {ERRC_LABELS.map(({ key, title, color }) => {
             const items = errc[key]
             if (!items?.length) return null
             return (
-              <div key={key} className={cn('rounded-lg border p-4', accent)}>
-                <h4 className="mb-2 text-sm font-semibold">{title}</h4>
-                <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
+              <div
+                key={key}
+                className="rounded-xl border border-border p-4"
+                style={{
+                  borderLeftWidth: 3,
+                  borderLeftColor: color,
+                  background: `color-mix(in oklch, ${color} 6%, var(--card))`,
+                }}
+              >
+                <h4 className="mb-2 text-sm font-semibold" style={{ color }}>
+                  {title}
+                </h4>
+                <ul className="space-y-1.5 text-sm text-muted-foreground">
                   {items.slice(0, 5).map((item, i) => (
-                    <li key={i}>{item}</li>
+                    <li key={i} className="flex gap-2">
+                      <span className="mt-1.5 size-1 shrink-0 rounded-full" style={{ background: color }} />
+                      <span>{item}</span>
+                    </li>
                   ))}
                 </ul>
               </div>

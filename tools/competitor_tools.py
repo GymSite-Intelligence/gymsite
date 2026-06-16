@@ -4,11 +4,13 @@
 import logging
 import math
 import json
+import os
 import httpx
 
 logger = logging.getLogger(__name__)
 from tools.google_maps_key import get_google_maps_api_key
 from tools.maps_tools import calcular_distancia_km, geocode_endereco
+from tools.parametros_metodologia import param
 PLACES_BASE = "https://places.googleapis.com/v1/places"
 
 
@@ -297,6 +299,136 @@ def _buscar_academias_cnpj_bairro(
         return [], {"status": "erro", "motivo": str(exc)}
 
 
+# tipo_negocio (enum do formulário) → termo natural de busca. O enum cru
+# ("crossfit_box") é ruim como query; mapa rotulado (regra de ouro, não hardcode).
+_TIPO_NEGOCIO_KW = {
+    "academia": "academias",
+    "crossfit_box": "crossfit",
+    "studio_pilates": "pilates",
+    "studio_funcional": "treinamento funcional",
+    "outro": "academias",
+}
+# Tipos do Places que contam como academia tradicional. Mata restaurante/escritório/
+# loja (validado por auditoria Maps: Vistta Rooftop, Duets Office Towers caíam fora).
+_FITNESS_TYPES = {"gym", "fitness_center"}
+
+
+def _norm_txt(s: str) -> str:
+    """lower + sem acento, p/ casar bairro dentro de endereço/nome."""
+    import re as _re
+    import unicodedata
+    s = unicodedata.normalize("NFKD", (s or "").lower()).encode("ascii", "ignore").decode()
+    return _re.sub(r"\s+", " ", s).strip()
+
+
+def _places_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
+    """Places searchText cru → lista de places (estruturado, dado do Google Maps)."""
+    api_key = get_google_maps_api_key()
+    if not api_key:
+        return []
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": (
+            "places.id,places.displayName,places.formattedAddress,places.location,"
+            "places.rating,places.userRatingCount,places.businessStatus,places.types,"
+            "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber,"
+            "places.googleMapsUri"
+        ),
+    }
+    body = {"textQuery": query, "maxResultCount": max_results,
+            "languageCode": "pt-BR", "regionCode": "BR"}
+    try:
+        # Contabiliza o custo (places:searchText = SKU places_search_new) — a âncora
+        # bairro é a principal chamada Places nova por relatório; sem isto, o custo_brl
+        # do relatório subestimaria o Places real.
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("descobrir_concorrentes_bairro", "places_search_new", 1):
+            with httpx.Client(timeout=20) as c:
+                data = c.post(f"{PLACES_BASE}:searchText", json=body, headers=headers).json()
+    except Exception as exc:
+        logger.debug("places textSearch '%s': %s", query, exc)
+        return []
+    return data.get("places") or []
+
+
+def _cross_parque_contato(out: list[dict], cidade: str, uf: str, bairro: str) -> list[dict]:
+    """Cruza o parque CNPJ: anexa cnpj/telefone aos concorrentes que casam por nome.
+
+    Auditoria Maps mostrou que o parque tem recall baixo (5/14) e ruído (loja/escritório),
+    então NÃO é a âncora — é só enrich de contato p/ o A5 (decisor) nos que o Maps achou.
+    """
+    try:
+        from tools.concorrentes_parque_tools import listar_concorrentes_parque
+
+        bloco = listar_concorrentes_parque(cidade, uf, bairro)
+    except Exception:
+        return out
+    if not isinstance(bloco, dict) or bloco.get("status") != "ok":
+        return out
+    idx: dict[str, dict] = {}
+    for c in bloco.get("concorrentes") or []:
+        nome = _norm_txt(c.get("nome") or c.get("razao_social") or "")
+        if nome:
+            idx.setdefault(nome, c)
+    for o in out:
+        c = idx.get(_norm_txt(o.get("nome") or ""))
+        if c:
+            o["cnpj"] = c.get("cnpj")
+            o["telefone"] = o.get("telefone") or c.get("telefone") or ""
+            o["fonte_busca"] = "places_textsearch+cnpj"
+    return out
+
+
+def _descobrir_concorrentes_bairro(
+    tipo_negocio: str, bairro: str, cidade: str, uf: str,
+    lat_centro: float, lng_centro: float,
+) -> list[dict]:
+    """Âncora bairro (registro-primeiro refinado, validado por auditoria Maps).
+
+    `textSearch "{tipo} {bairro} {cidade} {uf}"` → filtra bairro + types fitness →
+    cruza parque CNPJ (contato). Recall vem do Maps (auditoria: 14 reais em Cocó vs
+    parque 5); o type-filter mata escritório/restaurante/loja; o bairro-filter mata
+    bairros adjacentes que a query puxa. Mesmo shape do buscar_academias.
+    """
+    kw = _TIPO_NEGOCIO_KW.get((tipo_negocio or "").strip().lower(), "academias")
+    query = " ".join(x for x in [kw, bairro, cidade, uf] if x and x.strip())
+    places = _places_textsearch(query)
+    alvo = _norm_txt(bairro or "")
+
+    out: list[dict] = []
+    for p in places:
+        tipos = p.get("types") or []
+        if not (set(tipos) & _FITNESS_TYPES):
+            continue  # mata restaurante/escritório/loja
+        end = p.get("formattedAddress", "")
+        if alvo and alvo not in _norm_txt(end):
+            continue  # mata bairro adjacente puxado pela query (Aldeota etc.)
+        loc = p.get("location") or {}
+        plat, plng = loc.get("latitude", 0.0), loc.get("longitude", 0.0)
+        periodos = (p.get("regularOpeningHours") or {}).get("weekdayDescriptions", [])
+        out.append({
+            "place_id": p.get("id", ""),
+            "nome": (p.get("displayName") or {}).get("text") or "",
+            "endereco": end,
+            "lat": plat, "lng": plng,
+            "distancia_km": round(calcular_distancia_km(lat_centro, lng_centro, plat, plng), 2) if plat else 0.0,
+            "rating": p.get("rating"),
+            "num_avaliacoes": p.get("userRatingCount", 0),
+            "nivel_preco": "",
+            "status": p.get("businessStatus", ""),
+            "tipos": tipos,
+            "telefone": p.get("nationalPhoneNumber", ""),
+            "website": p.get("websiteUri", ""),
+            "google_maps_uri": p.get("googleMapsUri", ""),
+            "tem_24h": any("24" in h for h in periodos) if periodos else False,
+            "horarios": periodos[:3],
+            "fonte_busca": "places_textsearch",
+        })
+    return _cross_parque_contato(out, cidade, uf, bairro)
+
+
 def _buscar_academias_overpass(
     lat: float,
     lng: float,
@@ -330,6 +462,7 @@ def buscar_academias(
     cidade: str,
     raio_metros: int = 3000,
     uf: str = "",
+    tipo_negocio: str = "academia",
 ) -> dict:
     """
     Busca academias e fitness centers num raio do bairro/cidade.
@@ -372,7 +505,7 @@ def buscar_academias(
                 longitude=lng,
                 radius_meters=int(raio_metros),
                 included_types=["gym", "fitness_center"],
-                min_rating=4.2,
+                min_rating=param("benchmark_rating_bem_avaliada"),
             )
             agregados = {
                 "status": "ok" if "erro" not in base else "erro",
@@ -415,6 +548,41 @@ def buscar_academias(
         except Exception as e:
             places_ok = False
             data = {"error": str(e)}
+
+    # ── Âncora bairro (DEFAULT) ──────────────────────────────────────────────
+    # textSearch "{tipo} {bairro} {cidade} {uf}" (dado Google Maps, bairro-scoped) +
+    # filtro types fitness + filtro bairro + cross parque CNPJ (contato). Resolve o
+    # anchoring município/raio: a Nearby 3km puxava bairros adjacentes (AYO Guararapes,
+    # Max Forma/BlueFit Aldeota num relatório de Cocó). Auditoria Maps: textSearch acha
+    # 14 reais em Cocó vs parque-only 5 (recall) e sem o lixo (escritório/restaurante).
+    # `agregados` (densidade 3km) fica como contexto regional.
+    # É o DEFAULT quando há bairro; opt-out explícito (raio 3km) via
+    # CONCORRENTES_SOURCE in {radius,nearby,raio,municipio}.
+    _conc_src = os.getenv("CONCORRENTES_SOURCE", "").strip().lower()
+    _usar_ancora_bairro = _conc_src not in ("radius", "nearby", "raio", "municipio")
+    if _usar_ancora_bairro and bairro.strip():
+        base_bairro = _descobrir_concorrentes_bairro(tipo_negocio, bairro, cidade, uf, lat, lng)
+        if base_bairro:
+            base_bairro.sort(key=lambda x: -(x.get("num_avaliacoes") or 0))
+            _cnt = agregados.get("count_total") if isinstance(agregados, dict) else None
+            return {
+                "bairro": bairro, "cidade": cidade, "raio_metros": raio_metros,
+                "lat_centro": lat, "lng_centro": lng,
+                "fonte_geocode": fonte_geocode,
+                "total_encontrados": len(base_bairro),
+                "total_encontrados_nearby": len(base_bairro),
+                "total_encontrados_agregado": int(_cnt) if isinstance(_cnt, (int, float)) else None,
+                "agregados_competicao_places": agregados if isinstance(agregados, dict) else {},
+                "fonte_busca_competidores": "places_textsearch_bairro+cnpj",
+                "redes_detectadas_osm": [],
+                "concorrentes": base_bairro,
+                "nota_fonte": ("Âncora bairro: Places textSearch '{} {} {}' filtrado por "
+                               "bairro+fitness; parque CNPJ cruza contato. Densidade 3km = "
+                               "contexto regional.").format(
+                                   _TIPO_NEGOCIO_KW.get((tipo_negocio or '').strip().lower(), 'academias'),
+                                   bairro, cidade),
+            }
+        # textSearch vazio → segue no fluxo Places 3km (fallback)
 
     concorrentes: list[dict] = []
     fonte_busca = "google_places"
@@ -804,7 +972,8 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
     melhor = max(ratings_por_academia.items(), key=lambda x: x[1]) if ratings_por_academia else ("N/A", 0)
     pior = min(ratings_por_academia.items(), key=lambda x: x[1]) if ratings_por_academia else ("N/A", 0)
 
-    score_oportunidade = min(10.0, len(dores_rankeadas) * 0.8 + len(gaps_servicos) * 0.3)
+    score_oportunidade = min(10.0, len(dores_rankeadas) * param("score_oport_peso_dores")
+                             + len(gaps_servicos) * param("score_oport_peso_gaps"))
 
     # Dores dominantes COM nominação (top 5)
     dores_dominantes_nominadas = []
@@ -837,10 +1006,10 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
 def classificar_saturacao(num_concorrentes: int, raio_km: float) -> str:
     area = math.pi * raio_km ** 2
     densidade = num_concorrentes / area if area > 0 else 0
-    if densidade < 0.3:   return "BAIXO"
-    elif densidade < 0.8: return "MEDIO"
-    elif densidade < 1.5: return "ALTO"
-    else:                 return "SATURADO"
+    if densidade < param("saturacao_densidade_baixo"):   return "BAIXO"
+    elif densidade < param("saturacao_densidade_medio"): return "MEDIO"
+    elif densidade < param("saturacao_densidade_alto"):  return "ALTO"
+    else:                                                return "SATURADO"
 
 
 def panorama_saturacao(
@@ -880,9 +1049,18 @@ def panorama_saturacao(
 
 def calcular_score_concorrencia(num_concorrentes: int, rating_medio: float,
                                  saturacao: str) -> float:
-    bonus = {"BAIXO": 5.0, "MEDIO": 3.5, "ALTO": 1.5, "SATURADO": 0.0}
-    penalidade_qtd = min(num_concorrentes * 0.4, 4.0)
-    penalidade_rating = (rating_medio / 5.0) * 2.0 if rating_medio else 1.0
+    bonus = {
+        "BAIXO": param("score_conc_bonus_baixo"),
+        "MEDIO": param("score_conc_bonus_medio"),
+        "ALTO": param("score_conc_bonus_alto"),
+        "SATURADO": param("score_conc_bonus_saturado"),
+    }
+    penalidade_qtd = min(num_concorrentes * param("score_conc_penalidade_por_conc"),
+                         param("score_conc_penalidade_teto"))
+    penalidade_rating = (
+        (rating_medio / 5.0) * param("score_conc_rating_mult")
+        if rating_medio else param("score_conc_rating_default")
+    )
     score = bonus.get(saturacao, 2.0) + (10 - penalidade_qtd * 2) / 10 - penalidade_rating
     return round(max(0.0, min(10.0, score)), 2)
 
@@ -905,8 +1083,6 @@ _NOME_EXCLUSAO_KEYWORDS = (
     "futebol", "futsal", "soccer", "futbol",
     "tenis", "tênis", "tennis", "padel", "paddle",
     "vôlei", "volei", "volleyball",
-    "natação", "natacao", "swimming",
-    "hidro", "hidroginás", "hidroginas",
     "pole dance", "pole-dance",
     "escolinha de", "escola de futebol", "escola de tenis", "escola de vôlei",
     # Saúde / clínicas
@@ -917,7 +1093,10 @@ _NOME_EXCLUSAO_KEYWORDS = (
     "loja de suplement", "suplementos &", "suplemento e",
 )
 
-# Modalidades únicas: excluir SE nome não tem qualificador "academia/fit/gym"
+# Modalidades únicas: excluir SE nome não tem qualificador "academia/fit/gym".
+# Aquáticas/lutas aqui (não na exclusão forte) porque academia COM piscina/luta é
+# multiesporte (Apêndice D: flag, não exclusão). Ex.: "Academia VS Club - Musculação,
+# natação" fica (tem qualificador); "Centro de Natação X" sai (sem qualificador).
 _MODALIDADES_UNICAS = (
     "muay thai", "muaythai", "muay-thai",
     "jiu jitsu", "jiu-jitsu", "jiujitsu",
@@ -925,6 +1104,8 @@ _MODALIDADES_UNICAS = (
     "krav maga", "krav-maga",
     "ballet", "balé",
     "yoga", "ioga",
+    "natação", "natacao", "swimming",
+    "hidroginás", "hidroginas",
 )
 
 _QUALIFICADORES_ACADEMIA = (
@@ -1303,7 +1484,17 @@ def buscar_concorrentes_balanceados(
 
     Retorna dict que substitui o output do `buscar_academias` no A3a.
     """
-    busca_nearby = buscar_academias(bairro, cidade, raio_metros)
+    # tipo_negocio/uf vêm do market_context (form) — necessários p/ a âncora bairro
+    # (textSearch "{tipo} {bairro} {cidade} {uf}"). Default seguro se ausente.
+    _tn, _uf = "academia", ""
+    _st0 = getattr(tool_context, "state", None)
+    if _st0 is not None:
+        _mc0 = _parse_market_context(_st0.get("market_context"))
+        if isinstance(_mc0, dict):
+            _in0 = _mc0.get("market_context") if isinstance(_mc0.get("market_context"), dict) else _mc0
+            _tn = (_in0.get("tipo_negocio") or "academia")
+            _uf = (_in0.get("uf") or _st0.get("uf") or "")
+    busca_nearby = buscar_academias(bairro, cidade, raio_metros, uf=_uf, tipo_negocio=_tn)
     if "erro" in busca_nearby:
         return {
             **busca_nearby,
@@ -1373,10 +1564,15 @@ def buscar_concorrentes_balanceados(
     # Agora: searchText geo-fenced pelo bairro alvo. Se NENHUMA unidade da rede
     # estiver no raio expandido (default 5km), a rede vai pra `redes_nao_encontradas`
     # ao invés de ser fabricada com unidade de outra região.
+    # Modo âncora bairro (flag): NÃO faz busca expandida. A expandida (raio 5km)
+    # re-puxa redes A0 de bairros adjacentes (ex.: Gaviões Aldeota num relatório de
+    # Cocó), desfazendo o anchoring que a âncora bairro garantiu. Rede A0 sem unidade
+    # no bairro vira `não_encontrada` (sinal honesto), não é fabricada de outra região.
+    _modo_ancora_bairro = os.getenv("CONCORRENTES_SOURCE", "").strip().lower() == "parque"
     redes_nao_encontradas: list[str] = []
     for rede in redes_pendentes:
         match = None
-        if lat_alvo and lng_alvo:
+        if not _modo_ancora_bairro and lat_alvo and lng_alvo:
             match = _buscar_rede_geofenced(
                 rede, lat_alvo, lng_alvo, raio_expandido_metros
             )
@@ -1775,6 +1971,17 @@ async def analisar_concorrentes_a3a_completo(
             incluidos.append(c)
         else:
             excluidos.append({"nome": c.get("nome", "?"), "motivo": motivo})
+
+    # Cap de enriquecimento: o enrichment (reviews + Playwright Knowledge Panel +
+    # popular_times) roda SEQUENCIAL por concorrente (~30-60s cada) — é o long-pole de
+    # latência do parallel block + o maior custo de API (Places/pico) por relatório.
+    # Enriquece só os top-N mais relevantes (por nº de avaliações); os demais ficam na
+    # lista com dado básico. Paralelizar seria mais rápido mas Playwright concorrente
+    # trava no Windows (motivo do A3c desligado). N via env MAX_ENRIQUECIMENTO (default 6).
+    _max_enriq = max(1, int(os.getenv("MAX_ENRIQUECIMENTO", "6")))
+    if len(incluidos) > _max_enriq:
+        incluidos.sort(key=_avaliacoes_int, reverse=True)
+        incluidos = incluidos[:_max_enriq]
 
     # Pra cada incluído: reviews (sync) + enrichment (async)
     concorrentes_brutos: list[dict] = []

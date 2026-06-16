@@ -21,6 +21,7 @@ import { RerunPipelineButton } from '@/components/domain/RerunPipelineButton'
 import { DeleteRelatorioButton } from '@/components/domain/DeleteRelatorioButton'
 import { needsRelatorioRerun } from '@/lib/relatorio-completeness'
 import { getDashboardDataSourceLabel } from '@/lib/dashboard/data-source'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 import type { RelatorioResumo } from '@/types/domain'
 
 function fmtData(iso: string | null): string {
@@ -44,6 +45,7 @@ export function DashboardRelatoriosTable({
   onClickRow,
 }: DashboardRelatoriosTableProps) {
   const navigate = useNavigate()
+  const isAdmin = useIsAdmin()
   const [modoComparar, setModoComparar] = useState(false)
   const [selecionados, setSelecionados] = useState<string[]>([])
 
@@ -121,7 +123,8 @@ export function DashboardRelatoriosTable({
                 <TableHead>Mercado</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Score</TableHead>
-                <TableHead className="text-right">Custo</TableHead>
+                {/* Custo = economia interna; só admin (useIsAdmin). */}
+                {isAdmin && <TableHead className="text-right">Custo</TableHead>}
                 <TableHead className="w-[140px] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -188,14 +191,16 @@ export function DashboardRelatoriosTable({
                     <TableCell className="text-right font-mono tabular-nums text-sm">
                       {r.score_top1_candidato?.toFixed(1) ?? '—'}
                     </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums text-xs text-muted-foreground">
-                      {r.custo_brl != null
-                        ? r.custo_brl.toLocaleString('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          })
-                        : '—'}
-                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right font-mono tabular-nums text-xs text-muted-foreground">
+                        {r.custo_brl != null
+                          ? r.custo_brl.toLocaleString('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            })
+                          : '—'}
+                      </TableCell>
+                    )}
                     <TableCell
                       className="text-right"
                       onClick={(e) => e.stopPropagation()}

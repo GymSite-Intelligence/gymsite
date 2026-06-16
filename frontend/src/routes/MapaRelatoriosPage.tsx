@@ -881,7 +881,7 @@ function LegendaVereditos() {
 function MapaVazio({ totalResumos = 0 }: { totalResumos?: number }) {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center space-y-2 text-muted-foreground">
-      <span className="text-4xl">🗺️</span>
+      <span className="text-4xl"></span>
       <p className="text-sm">
         {totalResumos > 0
           ? `${totalResumos} relatório${totalResumos === 1 ? '' : 's'} sem coordenadas para mapear`

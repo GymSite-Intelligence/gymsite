@@ -448,8 +448,7 @@ function PropostasWorkflow({
           })}
           {!optimizacoes?.sugestoes?.length && (
             <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
-              Nenhuma oportunidade detectada no período. 🎉
-            </div>
+              Nenhuma oportunidade detectada no período.             </div>
           )}
         </div>
       ) : (

@@ -351,6 +351,28 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Startup stale recovery skip: %s", e)
 
+    # Sweep periódico: reconciliação de boot só pega órfãos quando o processo
+    # reinicia. Um pipeline que trava num processo VIVO (ex.: retry em loop) fica
+    # running indefinidamente. Este loop varre a cada PIPELINE_RECOVERY_SWEEP_MINUTES
+    # e marca como failed os running/queued sem heartbeat há > PIPELINE_ORPHAN_MINUTES.
+    async def _periodic_stale_recovery() -> None:
+        interval = max(1, int(os.getenv("PIPELINE_RECOVERY_SWEEP_MINUTES", "10"))) * 60
+        while True:
+            try:
+                await asyncio.sleep(interval)
+                n = await asyncio.to_thread(
+                    _recover_stale_running_reports, _supabase_client()
+                )
+                if n:
+                    logger.warning("Sweep periódico: %d relatório(s) órfão(s) recuperado(s)", n)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.debug("Sweep periódico stale recovery skip: %s", e)
+
+    sweep_task = asyncio.create_task(_periodic_stale_recovery())
+    _shutdown_mgr.register(sweep_task)
+
     try:
         from tools.token_telemetry import prune_tokens_csv
 
@@ -400,6 +422,7 @@ else:
 # Regex extras: localhost dev + Cloudflare Pages (preview hash.gymsite-3p0.pages.dev)
 _cors_origin_regex = (
     r"http://localhost:\d+"
+    r"|http://127\.0\.0\.1:\d+"
     r"|https://([a-z0-9-]+\.)*gymsite-3p0\.pages\.dev"
 )
 
@@ -527,6 +550,46 @@ def _is_tool_hallucination_error(exc: BaseException) -> bool:
     return msg.startswith("Tool '") and "not found" in msg
 
 
+def _supabase_writer_client():
+    url = (os.getenv("SUPABASE_URL") or "").strip()
+    key = (os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
+           or os.getenv("SUPABASE_KEY") or "").strip()
+    return create_client(url, key) if url and key else None
+
+
+def _update_demanda_row(relatorio_id: str, demanda: dict) -> bool:
+    """Atualiza relatorio_outputs.demanda_futura. True se afetou linha."""
+    cli = _supabase_writer_client()
+    if cli is None:
+        return False
+    try:
+        res = (cli.table("relatorio_outputs").update({"demanda_futura": demanda})
+               .eq("relatorio_id", relatorio_id).execute())
+        return bool(getattr(res, "data", None))
+    except Exception:
+        return False
+
+
+async def _refinar_demanda_async(relatorio_id: str, cidade: str, uf: str, bairro: str) -> None:
+    """Refino A4 auditado (grounding) FORA do hot-path; atualiza a linha quando o
+    relatorio_outputs existir (poll ~5min). Nunca quebra o pipeline."""
+    try:
+        from tools.demanda_futura_tools import demanda_futura_detalhada
+
+        det = await asyncio.to_thread(
+            demanda_futura_detalhada, cidade, uf, bairro=bairro, top_n=3
+        )
+        if not det or det.get("status") != "ok":
+            return
+        for _ in range(30):  # espera o relatório salvar a linha, então atualiza
+            await asyncio.sleep(10)
+            if await asyncio.to_thread(_update_demanda_row, relatorio_id, det):
+                logger.info("demanda_futura refinada (async) aplicada rel=%s", relatorio_id)
+                return
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("refino demanda async falhou rel=%s: %s", relatorio_id, exc)
+
+
 async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioInput) -> dict:
     """Executa o pipeline ADK e persiste custos. Retorna summary."""
     from google.adk.runners import Runner
@@ -567,6 +630,21 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
                 uf,
                 enrichment_ctx,
             )
+            # Demanda futura datada (CNO grande porte). HOT-PATH = proxy rápido
+            # (top_n=0, ZERO grounding) → não atrasa o relatório. O refino A4 auditado
+            # (site/instagram/PDF da construtora) roda ASSÍNCRONO e atualiza a linha depois.
+            try:
+                from tools.demanda_futura_tools import demanda_futura_detalhada
+
+                enrichment_ctx["demanda_futura"] = demanda_futura_detalhada(
+                    payload.cidade, uf, bairro=payload.bairro, top_n=0,
+                )
+                asyncio.create_task(
+                    _refinar_demanda_async(relatorio_id, payload.cidade, uf, payload.bairro)
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("demanda_futura falhou (segue sem): %s", exc)
+
             enrichment_cv_token = set_pipeline_enrichment_context(enrichment_ctx)
             if enrichment_ctx.get("skip_tools"):
                 logger.info(
@@ -607,6 +685,7 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
                 "market_bundle_briefing_md",
                 "skip_deep_research",
                 "market_bundle_partial",
+                "demanda_futura",
             ):
                 if key in enrichment_ctx:
                     session_state[key] = enrichment_ctx[key]
@@ -713,6 +792,14 @@ async def _run_pipeline_async_body(
             _ensure_pipeline_wall_clock(t0)
             if backoff > 0:
                 motivo = type(last_exc).__name__ if last_exc else "?"
+                # ExceptionGroup esconde a causa real — desembrulha as sub-exceções
+                # (ex.: A3a/A3b no parallel block) pra o log ser diagnosticável.
+                subs = getattr(last_exc, "exceptions", None)
+                if subs:
+                    detalhe = "; ".join(
+                        f"{type(s).__name__}: {str(s)[:160]}" for s in subs[:5]
+                    )
+                    motivo = f"{motivo}[{detalhe}]"
                 logger.warning(
                     f"pipeline {relatorio_id} erro transitório ({motivo}) — "
                     f"retry {tentativa}/{len(_RETRY_BACKOFFS_429)} em {backoff}s"
@@ -915,10 +1002,90 @@ def _build_pipeline_prompt(p: NovoRelatorioInput) -> str:
 # Endpoints
 # ════════════════════════════════════════════════════════════════════════════
 
+def _git_sha_disco() -> str | None:
+    """SHA curto do HEAD no DISCO (best-effort)."""
+    import subprocess
+    try:
+        base = os.path.dirname(os.path.abspath(__file__))
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=base,
+            capture_output=True, text=True, timeout=3,
+        ).stdout.strip()
+        return out or None
+    except Exception:
+        return None
+
+
+def _capturar_versao_boot() -> dict:
+    """Versão CONGELADA no boot = SHA do código que entrou em memória neste processo.
+
+    Lido 1× no import (não por request — senão leria o disco já avançado e mentiria).
+    Comparar com o HEAD do disco detecta processo stale: uvicorn sem --reload (bug
+    Py3.14) não recarrega; ver feedback memory restart-server-pós-código.
+
+    Precedência (cobre dev + prod Cloud Run, que não tem .git):
+      1. env GIT_SHA       — deploy `--set-env-vars GIT_SHA=$(git rev-parse --short HEAD)`
+      2. arquivo VERSION   — SHA bakeado na imagem (scripts/deploy_backend.sh)
+      3. git no disco      — ambiente de dev
+      4. K_REVISION        — revisão Cloud Run (não é git SHA, mas muda por deploy)
+    """
+    base = os.path.dirname(os.path.abspath(__file__))
+    branch = os.environ.get("GIT_BRANCH") or ""
+    sha = (os.environ.get("GIT_SHA") or "").strip()
+    fonte = "env_git_sha" if sha else ""
+    if not sha:
+        try:
+            with open(os.path.join(base, "VERSION"), encoding="utf-8") as fh:
+                sha = fh.read().strip()
+                fonte = "version_file" if sha else fonte
+        except Exception:
+            pass
+    if not sha:
+        sha = _git_sha_disco() or ""
+        if sha:
+            fonte = "git_disco"
+            import subprocess
+            try:
+                branch = branch or subprocess.run(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=base,
+                    capture_output=True, text=True, timeout=3,
+                ).stdout.strip()
+            except Exception:
+                pass
+    if not sha:
+        sha = (os.environ.get("K_REVISION") or "").strip()
+        fonte = "k_revision" if sha else "indisponivel"
+    return {
+        "commit": sha or "unknown",
+        "branch": branch or "unknown",
+        "fonte": fonte,
+        "booted_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+_VERSAO_BOOT = _capturar_versao_boot()
+logger.info("versão em execução (boot): %s", _VERSAO_BOOT)
+
+
 @app.get("/")
 def read_root() -> dict:
     """Root endpoint for health checks from Google Cloud Run."""
     return {"status": "ok", "service": "gymsite-api"}
+
+
+@app.get("/api/version")
+def version() -> dict:
+    """Versão do código EM EXECUÇÃO (SHA congelado no boot) vs HEAD do disco.
+
+    `stale=true` → o processo roda código mais velho que o disco: REINICIAR o uvicorn
+    antes de confiar em relatório gerado (sem --reload o código fica preso em memória).
+    """
+    disco = _git_sha_disco()
+    stale = bool(
+        disco and _VERSAO_BOOT["commit"] not in ("unknown", "")
+        and disco != _VERSAO_BOOT["commit"]
+    )
+    return {**_VERSAO_BOOT, "commit_disco": disco, "stale": stale}
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -2178,6 +2345,7 @@ class AssistenteChatInput(BaseModel):
 
 class AssistenteChatOutput(BaseModel):
     resposta: str
+    interacao_id: str | None = None  # referência pro feedback (FT dataset)
 
 
 @app.post("/api/assistente/chat", response_model=AssistenteChatOutput)
@@ -2209,22 +2377,60 @@ async def assistente_chat(request: Request, payload: AssistenteChatInput) -> Ass
         if intencao == "fora_de_escopo":
             return AssistenteChatOutput(resposta=_RESPOSTA_FORA_DE_ESCOPO)
 
+        meta_rag: dict = {}
         contexto = build_contexto_chat(
             user_id=user_id,
             pergunta=payload.pergunta,
             relatorio_id=payload.relatorio_id,
+            meta=meta_rag,
         )
         resposta = await chat_async(
             prompt_text=contexto,
             max_tokens=1024,
             temperature=0.7,
         )
-        return AssistenteChatOutput(resposta=resposta)
+        from services.chat_log import registrar_interacao
+
+        interacao_id = registrar_interacao(
+            user_id=user_id,
+            endpoint="chat",
+            pergunta=payload.pergunta,
+            resposta=resposta,
+            intencao=intencao,
+            kb_fontes=meta_rag.get("kb_fontes"),
+            relatorio_id=payload.relatorio_id,
+        )
+        return AssistenteChatOutput(resposta=resposta, interacao_id=interacao_id)
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Erro no Tinker Bot: %s", e)
         raise HTTPException(status_code=500, detail=f"Erro no assistente: {str(e)}")
+
+
+class AssistenteFeedbackInput(BaseModel):
+    interacao_id: str
+    rating: int  # 1 (boa) | -1 (ruim)
+    comentario: str | None = None
+    correcao: str | None = None  # resposta ideal — vira alvo no dataset de FT
+
+
+@app.post("/api/assistente/feedback")
+async def assistente_feedback(request: Request, payload: AssistenteFeedbackInput) -> dict:
+    """Feedback de resposta do chat — alimenta o dataset de fine-tuning Vertex."""
+    user_id, _ = _require_authenticated(request)
+    from services.chat_log import registrar_feedback
+
+    ok = registrar_feedback(
+        payload.interacao_id,
+        user_id=user_id,
+        rating=payload.rating,
+        comentario=payload.comentario,
+        correcao=payload.correcao,
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail="Interação não encontrada ou rating inválido.")
+    return {"ok": True}
 
 
 # ── Agente de IA Conversacional ────────────────────────────────────────────
@@ -2242,6 +2448,7 @@ class ConversarOutput(BaseModel):
     resposta: str
     relatorio_id: str | None = None
     status: str
+    interacao_id: str | None = None  # referência pro feedback admin (FT dataset)
 
 
 @app.post("/api/assistente/conversar", response_model=ConversarOutput)
@@ -2273,13 +2480,27 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
         try:
             from services.tinker_bot import chat_async
             from services.tinker_context import build_contexto_chat
+            meta_rag: dict = {}
             contexto = build_contexto_chat(
                 user_id=user_id,
                 pergunta=payload.mensagem,
                 relatorio_id=resultado.get("relatorio_id"),
+                meta=meta_rag,
             )
             resposta_qa = await chat_async(prompt_text=contexto, max_tokens=1024, temperature=0.7)
             resultado["resposta"] = resposta_qa
+            from services.chat_log import registrar_interacao
+
+            resultado["interacao_id"] = registrar_interacao(
+                user_id=user_id,
+                endpoint="conversar",
+                pergunta=payload.mensagem,
+                resposta=resposta_qa,
+                intencao=intencao,
+                session_id=resultado.get("session_id"),
+                kb_fontes=meta_rag.get("kb_fontes"),
+                relatorio_id=resultado.get("relatorio_id"),
+            )
         except Exception:
             logger.warning("Fallback QA falhou para intencao=%s", intencao)
             resultado["resposta"] = (
@@ -2337,6 +2558,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
         resposta=resultado.get("resposta", ""),
         relatorio_id=resultado.get("relatorio_id"),
         status=resultado.get("status", "coletando_slots"),
+        interacao_id=resultado.get("interacao_id"),
     )
 
 

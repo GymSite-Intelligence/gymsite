@@ -1,0 +1,29 @@
+{
+  "_doc": "Curadoria (#2 na hierarquia estruturado>curadoria>grounding>hardcode) de KPIs OPERACIONAIS de redes listadas que o CVM ITR não traz (vivem no RI/release). Preencher com números verificados do RI; deixar null gera alerta de cobertura no build. NÃO inventar — só fonte primária datada.",
+  "fonte": "RI Smart Fit / releases de resultados",
+  "url": "https://ri.smartfit.com.br/",
+  "data_coleta": "2026-06-14",
+  "empresas": {
+    "SMFT3": {
+      "periodo_ref": "1T26",
+      "kpis": {
+        "alunos_ativos": 5200000,
+        "arpu_brl": null,
+        "churn_pct": null,
+        "capex_por_unidade_brl": null
+      },
+      "contexto": {
+        "unidades_total_aprox": 2000,
+        "ticket_medio_var_pct_yoy": 12.0,
+        "alunos_por_unidade_var_pct_yoy": 8.0,
+        "margem_ebitda_ajustada_pct_1t26": 32.0
+      },
+      "fontes": {
+        "alunos_ativos": "Empiricus/Investidor10 1T25–4T25 (~5,2 mi base de clientes)",
+        "ticket_medio_var_pct_yoy": "Empiricus 1T26 (+12% academias próprias)",
+        "unidades_total_aprox": "4T25 (>2.000 academias)",
+        "pendentes": "arpu_brl, churn_pct e capex_por_unidade_brl NÃO divulgados nos releases públicos analisados — preencher do RI deck oficial"
+      }
+    }
+  }
+}

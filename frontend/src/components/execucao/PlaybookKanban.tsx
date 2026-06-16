@@ -7,14 +7,15 @@
  */
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
-import { AlertTriangle, Calendar, Sparkles, User } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { AlertTriangle, Calendar, ListChecks, Sparkles, User } from 'lucide-react'
 import { formatBRL } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { Tarefa } from '@/hooks/usePlaybook'
 
 export const COLUNAS: { status: Tarefa['status']; titulo: string }[] = [
   { status: 'A_FAZER', titulo: 'A fazer' },
   { status: 'EM_ANDAMENTO', titulo: 'Em andamento' },
+  { status: 'AGUARDANDO_APROVACAO', titulo: 'Em aprovação' },
   { status: 'BLOQUEADA', titulo: 'Bloqueadas' },
   { status: 'CONCLUIDA', titulo: 'Concluídas' },
 ]
@@ -32,17 +33,51 @@ export const CATEGORIA_LABEL: Record<string, string> = {
   OUTRO: 'Outros',
 }
 
-export const CATEGORIA_COR: Record<string, string> = {
-  IMOBILIARIO: 'bg-blue-100 text-blue-800 border-blue-200',
-  LEGAL: 'bg-red-100 text-red-800 border-red-200',
-  OBRAS: 'bg-orange-100 text-orange-800 border-orange-200',
-  EQUIPAMENTOS: 'bg-purple-100 text-purple-800 border-purple-200',
-  TECNOLOGIA: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-  RH: 'bg-green-100 text-green-800 border-green-200',
-  MARKETING: 'bg-pink-100 text-pink-800 border-pink-200',
-  FINANCEIRO: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  OPERACIONAL: 'bg-gray-100 text-gray-800 border-gray-200',
-  OUTRO: 'bg-gray-100 text-gray-700 border-gray-200',
+// Accent por categoria via tokens OKLCH (--chart-*) — theme-aware (funciona no
+// dark, ao contrário das antigas bg-*-100 só light). Dot + badge color-mix,
+// mesmo padrão dos mini-cards do report.
+export const CATEGORIA_ACCENT: Record<string, string> = {
+  IMOBILIARIO: 'var(--chart-1)',
+  LEGAL: 'var(--chart-4)',
+  OBRAS: 'var(--chart-3)',
+  EQUIPAMENTOS: 'var(--chart-5)',
+  TECNOLOGIA: 'var(--chart-2)',
+  RH: 'var(--chart-1)',
+  MARKETING: 'var(--chart-5)',
+  FINANCEIRO: 'var(--chart-4)',
+  OPERACIONAL: 'var(--chart-2)',
+  OUTRO: 'var(--muted-foreground)',
+}
+
+/** Badge de categoria theme-aware (dot + token) — reusado em Kanban/Lista/Timeline/Custos. */
+export function CategoriaBadge({
+  categoria,
+  compact = false,
+  className,
+}: {
+  categoria: string
+  /** compact = trunca o rótulo (espaços apertados, ex.: timeline). */
+  compact?: boolean
+  className?: string
+}) {
+  const accent = CATEGORIA_ACCENT[categoria] ?? CATEGORIA_ACCENT.OUTRO
+  const label = CATEGORIA_LABEL[categoria] ?? categoria
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium',
+        className,
+      )}
+      style={{
+        color: accent,
+        borderColor: `color-mix(in oklch, ${accent} 30%, transparent)`,
+        background: `color-mix(in oklch, ${accent} 12%, transparent)`,
+      }}
+    >
+      <span className="size-1.5 shrink-0 rounded-full" style={{ background: accent }} />
+      {compact ? label.slice(0, 5) : label}
+    </span>
+  )
 }
 
 function formatPrazo(iso: string | null): string | null {
@@ -54,21 +89,43 @@ function formatPrazo(iso: string | null): string | null {
 function TarefaCardInner({ tarefa }: { tarefa: Tarefa }) {
   const prazo = formatPrazo(tarefa.data_prevista_conclusao)
   const checklistFeitos = tarefa.checklist.filter((c) => c.concluido).length
+  const catAccent = CATEGORIA_ACCENT[tarefa.categoria] ?? CATEGORIA_ACCENT.OUTRO
+  // Left-accent por urgência (sinal acionável > cor arbitrária de categoria).
+  const accent = tarefa.esta_atrasada
+    ? 'hsl(var(--veredito-reprovado))'
+    : tarefa.status === 'CONCLUIDA'
+      ? 'hsl(var(--veredito-aprovado))'
+      : tarefa.status === 'AGUARDANDO_APROVACAO'
+        ? 'hsl(var(--veredito-ressalvas))'
+        : catAccent
   return (
-    <div className="rounded-lg border bg-card p-3 shadow-sm transition-shadow hover:shadow-md">
+    <div
+      className="rounded-lg border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md"
+      style={{ borderLeft: `3px solid ${accent}` }}
+    >
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        <Badge variant="outline" className={`text-[10px] ${CATEGORIA_COR[tarefa.categoria] ?? CATEGORIA_COR.OUTRO}`}>
-          {CATEGORIA_LABEL[tarefa.categoria] ?? tarefa.categoria}
-        </Badge>
+        <CategoriaBadge categoria={tarefa.categoria} />
         {tarefa.sugerida_pela_ia && (
-          <Badge variant="outline" className="gap-1 border-violet-200 bg-violet-50 text-[10px] text-violet-700">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+            style={{
+              color: 'var(--accent-foreground)',
+              background: 'var(--accent)',
+            }}
+          >
             <Sparkles className="h-3 w-3" /> Sugestão
-          </Badge>
+          </span>
         )}
         {tarefa.esta_atrasada && (
-          <Badge variant="outline" className="gap-1 border-red-200 bg-red-50 text-[10px] text-red-700">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+            style={{
+              color: 'hsl(var(--veredito-reprovado))',
+              background: 'color-mix(in oklch, hsl(var(--veredito-reprovado)) 14%, transparent)',
+            }}
+          >
             <AlertTriangle className="h-3 w-3" /> {tarefa.dias_atraso}d atrasada
-          </Badge>
+          </span>
         )}
       </div>
       <p className="text-sm font-medium leading-snug">{tarefa.titulo}</p>
@@ -87,8 +144,8 @@ function TarefaCardInner({ tarefa }: { tarefa: Tarefa }) {
           </span>
         )}
         {tarefa.checklist.length > 0 && (
-          <span>
-            ☑ {checklistFeitos}/{tarefa.checklist.length}
+          <span className="inline-flex items-center gap-1">
+            <ListChecks className="h-3 w-3" /> {checklistFeitos}/{tarefa.checklist.length}
           </span>
         )}
       </div>

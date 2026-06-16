@@ -6,10 +6,9 @@
  * ficam de fora.
  */
 import { useMemo } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { formatBRL } from '@/lib/format'
 import type { Tarefa } from '@/hooks/usePlaybook'
-import { CATEGORIA_COR, CATEGORIA_LABEL } from '@/components/execucao/PlaybookKanban'
+import { CategoriaBadge } from '@/components/execucao/PlaybookKanban'
 
 export function PlaybookCustos({ tarefas }: { tarefas: Tarefa[] }) {
   const linhas = useMemo(() => {
@@ -59,12 +58,7 @@ export function PlaybookCustos({ tarefas }: { tarefas: Tarefa[] }) {
             {linhas.map((l) => (
               <tr key={l.categoria} className="border-b last:border-b-0">
                 <td className="px-4 py-2.5">
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] ${CATEGORIA_COR[l.categoria] ?? CATEGORIA_COR.OUTRO}`}
-                  >
-                    {CATEGORIA_LABEL[l.categoria] ?? l.categoria}
-                  </Badge>
+                  <CategoriaBadge categoria={l.categoria} />
                   <span className="ml-2 text-xs text-muted-foreground">{l.etapas} etapa(s)</span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">

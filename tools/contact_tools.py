@@ -140,8 +140,11 @@ def gerar_contato_decisor_completo(tool_context) -> dict:
 
     state = getattr(tool_context, "state", {}) or {}
 
-    # Top 1 candidato (output do A1 GeoScout)
-    geo = _parse_market_context(state.get("candidatos_geoscout"))
+    # Top 1 candidato (output do A1 GeoScout) — snapshot determinístico do
+    # after_tool_callback primeiro; output_key do LLM trunca arrays grandes.
+    geo = state.get("candidatos_geoscout_pronto")
+    if not (isinstance(geo, dict) and geo.get("candidatos")):
+        geo = _parse_market_context(state.get("candidatos_geoscout"))
     candidatos = geo.get("candidatos") if isinstance(geo, dict) else []
     top1 = (candidatos or [{}])[0] if candidatos else {}
 

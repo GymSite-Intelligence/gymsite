@@ -3,6 +3,8 @@ import httpx
 import unicodedata
 from typing import Optional
 
+from tools.parametros_metodologia import param
+
 IBGE_LOCAL = "https://servicodados.ibge.gov.br/api/v1/localidades"
 IBGE_AGREGA = "https://servicodados.ibge.gov.br/api/v3/agregados"
 
@@ -229,16 +231,24 @@ def buscar_populacao(codigo_municipio: str) -> dict:
 
 
 def estimar_faixa_etaria(populacao_total: int, faixa: str = "18-45") -> dict:
-    """Estima população na faixa etária alvo."""
-    pcts = {"15-29": 0.23, "18-35": 0.26, "18-45": 0.36,
-            "20-40": 0.30, "25-50": 0.35}
-    pct = pcts.get(faixa, 0.30)
+    """Estima população na faixa etária alvo.
+
+    % da faixa = dado aberto (pirâmide etária Censo 2022); default é fallback
+    nacional via param(). Público potencial = % da faixa com interesse fitness
+    (benchmark ACAD), também via param().
+    """
+    pcts = {
+        "15-29": param("faixa_pct_15_29"), "18-35": param("faixa_pct_18_35"),
+        "18-45": param("faixa_pct_18_45"), "20-40": param("faixa_pct_20_40"),
+        "25-50": param("faixa_pct_25_50"),
+    }
+    pct = pcts.get(faixa, param("faixa_pct_default"))
     pop_faixa = int(populacao_total * pct)
     return {
         "faixa_etaria": faixa,
         "percentual": pct,
         "populacao_na_faixa": pop_faixa,
-        "publico_potencial": int(pop_faixa * 0.40),
+        "publico_potencial": int(pop_faixa * param("penetracao_potencial_fitness")),
     }
 
 
@@ -344,22 +354,24 @@ async def buscar_renda_search_grounding_async(cidade: str, uf: str) -> dict:
 
 
 def calcular_score_demografico(pop_faixa: int, renda_media: float) -> float:
-    """Score demográfico de 0 a 10."""
+    """Score demográfico de 0 a 10. Cortes via param() (calibração metodológica)."""
     score = 0.0
-    if pop_faixa >= 50000: score += 4.0
-    elif pop_faixa >= 30000: score += 3.0
-    elif pop_faixa >= 15000: score += 2.0
-    elif pop_faixa >= 5000:  score += 1.0
+    if pop_faixa >= param("score_demo_pop_alta"): score += 4.0
+    elif pop_faixa >= param("score_demo_pop_media"): score += 3.0
+    elif pop_faixa >= param("score_demo_pop_baixa"): score += 2.0
+    elif pop_faixa >= param("score_demo_pop_minima"):  score += 1.0
 
-    if renda_media >= 2500: score += 4.0
-    elif renda_media >= 1800: score += 3.0
-    elif renda_media >= 1200: score += 2.0
-    elif renda_media >= 800:  score += 1.0
+    if renda_media >= param("score_demo_renda_alta"): score += 4.0
+    elif renda_media >= param("score_demo_renda_media"): score += 3.0
+    elif renda_media >= param("score_demo_renda_baixa"): score += 2.0
+    elif renda_media >= param("score_demo_renda_minima"):  score += 1.0
 
-    return min(score + 2.0, 10.0)  # +2 base
+    return min(score + param("score_demo_base"), 10.0)
 
 
-def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> dict:
+def analise_demografica_completa(
+    cidade: str, uf: str, faixa: str = "18-45", bairro: str | None = None,
+) -> dict:
     """
     Macro-tool: executa as 5 etapas demográficas em UMA chamada.
 
@@ -384,7 +396,8 @@ def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> 
         uf_upper = (uf or "").upper()
         renda_estimada = RENDA_MEDIA_UF.get(uf_upper, RENDA_MEDIA_UF["default"])
         pop_default = 50000  # estimativa conservadora pra cidade pequena RM
-        pop_faixa_default = int(pop_default * 0.30)
+        pct_default = param("faixa_pct_default")
+        pop_faixa_default = int(pop_default * pct_default)
         score = calcular_score_demografico(pop_faixa_default, renda_estimada)
         return {
             "erro": f"Município não encontrado no IBGE: {cidade}/{uf}",
@@ -394,9 +407,9 @@ def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> 
             "uf": uf_upper,
             "populacao_total": pop_default,
             "faixa_etaria_alvo": faixa,
-            "percentual_faixa": 0.30,
+            "percentual_faixa": pct_default,
             "populacao_faixa_18_45": pop_faixa_default,
-            "publico_potencial_fitness": int(pop_faixa_default * 0.40),
+            "publico_potencial_fitness": int(pop_faixa_default * param("penetracao_potencial_fitness")),
             "renda_media_domiciliar": renda_estimada,
             "renda_uf_fonte": uf_upper,
             "score_demografico": score,
@@ -419,15 +432,42 @@ def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> 
 
     renda_data = buscar_renda(mun["codigo"])
     renda = float(renda_data["renda_media"])
+    fonte_renda = renda_data["fonte"]
+    renda_granularidade = renda_data.get("granularidade", "uf")
+    renda_bairro_bloco: dict | None = None
+
+    # Renda do BAIRRO (CKAN IDH-Renda → per capita Atlas) tem precedência sobre a
+    # municipal quando disponível: bairro alta renda (ex.: Cocó R$ 2.095 vs Fortaleza
+    # R$ 1.572) deixa de ser subdimensionado no score. Mesma fonte que o perfil A/B da
+    # demanda → relatório mãe coerente. Município vira fallback rotulado.
+    if (bairro or "").strip():
+        try:
+            from tools.bairro_renda_loader import enrich_demografia_bairro
+
+            b = (enrich_demografia_bairro({}, cidade, bairro, uf).get("bairro") or {})
+            renda_b = b.get("renda_media")
+            if renda_b:
+                renda_bairro_bloco = {
+                    "renda_bairro": float(renda_b),
+                    "idh_renda": b.get("idh_renda"),
+                    "ranking_idh": b.get("ranking_idh"),
+                    "renda_municipio_fallback": renda,
+                    "fonte": b.get("fonte") or "CKAN IDH-Renda (Atlas) por bairro",
+                }
+                renda = float(renda_b)
+                fonte_renda = renda_bairro_bloco["fonte"]
+                renda_granularidade = "bairro"
+        except Exception as exc:
+            print(f"[A2] renda do bairro indisponível ({type(exc).__name__}: {exc}) — usando municipal")
 
     # pyrefly: ignore [unnecessary-type-conversion]
     score = float(calcular_score_demografico(pop_faixa, renda))
 
-    if score >= 8.0:
+    if score >= param("demo_limiar_excelente"):
         classificacao = "EXCELENTE"
-    elif score >= 6.0:
+    elif score >= param("demo_limiar_bom"):
         classificacao = "BOM"
-    elif score >= 4.0:
+    elif score >= param("demo_limiar_regular"):
         classificacao = "REGULAR"
     else:
         classificacao = "FRACO"
@@ -446,10 +486,12 @@ def analise_demografica_completa(cidade: str, uf: str, faixa: str = "18-45") -> 
         "score_demografico": score,
         "classificacao": classificacao,
         "fonte_populacao": pop_data.get("aviso", "IBGE Censo 2022"),
-        "fonte_renda": renda_data["fonte"],
-        # Granularidade da renda: "municipal" (Censo 2022) ou "uf" (fallback)
-        # A6 usa pra avisar no relatório quando a renda é só média estadual.
-        "renda_granularidade": renda_data.get("granularidade", "uf"),
+        "fonte_renda": fonte_renda,
+        # Granularidade da renda: "bairro" (CKAN IDH), "municipal" (Censo 2022) ou "uf".
+        # A6 usa pra avisar no relatório quando a renda é só média estadual/municipal.
+        "renda_granularidade": renda_granularidade,
+        "bairro": bairro or None,
+        "renda_bairro": renda_bairro_bloco,  # null = sem CKAN do bairro (usou municipal)
     }
     # Se caiu no fallback UF, propaga o aviso pra A2/A6 sinalizarem no markdown
     if renda_data.get("aviso"):

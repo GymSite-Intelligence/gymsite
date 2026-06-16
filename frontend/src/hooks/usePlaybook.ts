@@ -14,6 +14,14 @@ export interface ChecklistItem {
   concluido: boolean
   ordem: number
   responsavel_pessoa_id: string | null
+  /** Critério de aceite do passo (SIPOC/Check granular). */
+  criterio_aceite: string | null
+}
+
+/** Passo sugerido pela IA (não persistido até o usuário aceitar). */
+export interface PassoSugerido {
+  descricao: string
+  criterio_aceite: string
 }
 
 export interface Pessoa {
@@ -58,8 +66,10 @@ export interface Tarefa {
   playbook_id: string
   titulo: string
   descricao: string | null
+  /** Critério de aceite (Check/SIPOC) — o que comprova a conclusão. */
+  criterio_verificacao: string | null
   categoria: string
-  status: 'A_FAZER' | 'EM_ANDAMENTO' | 'CONCLUIDA' | 'BLOQUEADA' | 'CANCELADA'
+  status: 'A_FAZER' | 'EM_ANDAMENTO' | 'AGUARDANDO_APROVACAO' | 'CONCLUIDA' | 'BLOQUEADA' | 'CANCELADA'
   prioridade: 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA'
   ordem: number
   custo_planejado: number | null
@@ -316,6 +326,7 @@ export function useRemoverPessoa(playbookId: string) {
 export interface NovaTarefa {
   titulo: string
   descricao?: string
+  criterio_verificacao?: string
   categoria: string
   custo_planejado?: number | null
   data_inicio?: string
@@ -362,12 +373,32 @@ export function useExcluirTarefa(playbookId: string) {
 export function useAdicionarChecklistItem(playbookId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (vars: { tarefaId: string; descricao: string }) =>
+    mutationFn: (vars: {
+      tarefaId: string
+      descricao: string
+      criterio_aceite?: string
+      responsavel_pessoa_id?: string | null
+    }) =>
       api<ChecklistItem>(`/api/execucao/tarefas/${vars.tarefaId}/checklist`, {
         method: 'POST',
-        body: JSON.stringify({ descricao: vars.descricao }),
+        body: JSON.stringify({
+          descricao: vars.descricao,
+          criterio_aceite: vars.criterio_aceite || undefined,
+          responsavel_pessoa_id: vars.responsavel_pessoa_id || undefined,
+        }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) }),
+  })
+}
+
+/** Sugere passos via IA (Gemini, ancorado no benchmark do setor). Não persiste. */
+export function useSugerirPassos() {
+  return useMutation({
+    mutationFn: (tarefaId: string) =>
+      api<{ passos: PassoSugerido[] }>(
+        `/api/execucao/tarefas/${tarefaId}/sugerir-passos`,
+        { method: 'POST', body: '{}' },
+      ),
   })
 }
 
@@ -497,7 +528,29 @@ export function useMarcarChecklist(playbookId: string) {
         method: 'PATCH',
         body: JSON.stringify({ concluido: vars.concluido }),
       }),
-    onSuccess: () => {
+    // Update OTIMISTA: o checkbox vira na hora, sem esperar o round-trip +
+    // recompute de status do guardrail. Reconcilia no onSettled.
+    onMutate: async (vars) => {
+      const key = playbookKeys.detail(playbookId)
+      await qc.cancelQueries({ queryKey: key })
+      const anterior = qc.getQueryData<PlaybookCompleto>(key)
+      if (anterior) {
+        qc.setQueryData<PlaybookCompleto>(key, {
+          ...anterior,
+          tarefas: anterior.tarefas.map((t) => ({
+            ...t,
+            checklist: t.checklist.map((c) =>
+              c.id === vars.itemId ? { ...c, concluido: vars.concluido } : c,
+            ),
+          })),
+        })
+      }
+      return { anterior }
+    },
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.anterior) qc.setQueryData(playbookKeys.detail(playbookId), ctx.anterior)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: playbookKeys.detail(playbookId) })
     },
   })

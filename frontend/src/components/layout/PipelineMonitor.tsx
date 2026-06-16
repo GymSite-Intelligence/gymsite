@@ -80,7 +80,11 @@ export function PipelineMonitor() {
 
   const active = tracked.filter((t) => {
     const row = statusQuery.data?.find((r) => r.id === t.id)
-    return !row || row.status === 'queued' || row.status === 'running'
+    // SÓ conta como ativo se a linha EXISTE e está queued/running. Antes, `!row`
+    // (linha ausente — relatório deletado, done fora da janela da query, ou sumido)
+    // contava como ativo → o banner "gerando em background" travava pra sempre mesmo
+    // após excluir. Linha ausente = não-ativo.
+    return !!row && (row.status === 'queued' || row.status === 'running')
   })
 
   if (active.length === 0) return null

@@ -2,6 +2,7 @@
 """A6: Consolidador final — relatório executivo markdown com gap + bairros alternativos + crowdsource."""
 import json
 import logging
+import os
 import re
 import time
 from datetime import datetime
@@ -13,6 +14,7 @@ from google.adk.agents import Agent
 from google.genai import types
 from tools.utils_tools import obter_data_atual
 from tools.token_telemetry import before_agent_callback as _telemetry_before
+from tools.parametros_metodologia import param
 
 # Thinking calibrado: A6 sintetiza outputs de 5 agentes anteriores, decide
 # bairros alternativos quando score_geral < 6, escolhe o veredito final
@@ -153,6 +155,38 @@ BAIRROS_ALTERNATIVOS = {
         {"bairro": "Olinda (cidade vizinha)",
          "motivo": "RMR, mercado consolidado"},
     ],
+
+    # ── RMJP (João Pessoa) ───────────────────────────────────────────
+    "joao pessoa": [
+        {"bairro": "Tambaú",
+         "motivo": "Praia nobre, alto poder aquisitivo, ticket premium viável"},
+        {"bairro": "Cabo Branco",
+         "motivo": "Praia, classe alta, baixa oferta fitness premium"},
+        {"bairro": "Miramar",
+         "motivo": "Classe média-alta consolidada, eixo orla"},
+        {"bairro": "Torre",
+         "motivo": "Comercial e residencial classe média-alta, fluxo garantido"},
+        {"bairro": "Bancários",
+         "motivo": "Público universitário UFPB + classe média, ticket médio acessível"},
+        {"bairro": "Altiplano",
+         "motivo": "Expansão imobiliária recente, renda alta, baixa concorrência"},
+        {"bairro": "Mangabeira",
+         "motivo": "Alta densidade populacional, mercado low-cost subatendido"},
+    ],
+    "cabedelo": [
+        {"bairro": "Intermares",
+         "motivo": "Praia, expansão residencial, público jovem classe média"},
+        {"bairro": "Centro Cabedelo",
+         "motivo": "Porto, comércio consolidado, fluxo garantido"},
+    ],
+    "santa rita": [
+        {"bairro": "Centro Santa Rita",
+         "motivo": "Segunda cidade da RMJP, mercado low-cost consolidado"},
+    ],
+    "bayeux": [
+        {"bairro": "Centro Bayeux",
+         "motivo": "RMJP, alta densidade urbana, ticket low-cost viável"},
+    ],
 }
 
 # Mapeia cidade → outras cidades da mesma RM (Região Metropolitana).
@@ -171,6 +205,10 @@ REGIAO_METROPOLITANA: dict[str, list[str]] = {
     "belo horizonte": ["contagem", "nova lima", "betim"],
     "salvador": ["lauro de freitas", "camaçari"],
     "recife": ["olinda", "jaboatão dos guararapes"],
+    "joao pessoa": ["cabedelo", "santa rita", "bayeux", "conde", "lucena"],
+    "cabedelo": ["joao pessoa", "santa rita"],
+    "santa rita": ["joao pessoa", "bayeux"],
+    "bayeux": ["joao pessoa", "santa rita"],
 }
 
 
@@ -261,12 +299,14 @@ def get_bairros_alternativos(cidade: str) -> list:
         if _norm_cidade(cidade_rm) in cidade_low:
             return BAIRROS_ALTERNATIVOS.get(cidade_rm, [])
 
-    # 3. Fallback genérico
+    # 3. Fallback genérico — cidade não mapeada; marcar para frontend
     return [
         {"bairro": "Centro Expandido",
-         "motivo": "Alta densidade comercial e fluxo garantido"},
+         "motivo": "Alta densidade comercial e fluxo garantido",
+         "_e_fallback": True},
         {"bairro": "Bairros em expansão imobiliária recente",
-         "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada"},
+         "motivo": "Novos empreendimentos = público novo, sem concorrência consolidada",
+         "_e_fallback": True},
     ]
 
 
@@ -398,6 +438,7 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
 
     for entry in base:
         bairro_alt = entry.get("bairro", "")
+        e_fallback = entry.get("_e_fallback", False)
         # Bairros compostos "Cocó / Guararapes" — usamos o primeiro como query
         # principal mas guardamos a lista pra fallback e label
         partes = [
@@ -568,8 +609,17 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
         elif fonte_dominante == "google_places":
             metodologia = f"{metodologia} | fonte: Google Places"
 
+        # Fallback genérico: nome de bairro vago → busca retorna 0, mas o 0
+        # não é confiável. Sinaliza explicitamente pra UI não exibir como ALTA.
+        if e_fallback:
+            metodologia = "fallback genérico — cidade não mapeada, bairro não verificável no Google Places"
+            dados_confiaveis_flag = False
+        else:
+            dados_confiaveis_flag = fonte_dominante in ("google_places", "overpass_osm", "cnpj_rfb")
+
+        row = {k: v for k, v in entry.items() if not k.startswith("_")}  # remove markers internos
         enriquecidos.append({
-            **entry,
+            **row,
             "bairro_principal_busca": bairro_principal,
             "concorrentes_no_bairro": count_total,
             "academias_existentes": academias_existentes,
@@ -577,8 +627,7 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
             "prioridade_ajustada": prioridade,
             "metodologia": metodologia,
             "fonte_busca_competidores": fonte_dominante or None,
-            "dados_confiaveis": fonte_dominante
-            in ("google_places", "overpass_osm", "cnpj_rfb"),
+            "dados_confiaveis": dados_confiaveis_flag,
         })
 
     # Reordena: ALTA > MEDIA > BAIXA. Empate → menor count.
@@ -1426,6 +1475,39 @@ def _bruto_para_detalhado(c: dict) -> dict:
     return out
 
 
+# Campos crus/pesados que NÃO entram no relatório nem no contexto do A6 — só inflam
+# token (custo). enrichment_search_grounding_text = 1k+ chars de grounding cru;
+# reviews_traduzidas = duplicata de reviews; atividade_marketing = dict raw do enrichment.
+_CONCORRENTE_CAMPOS_PESADOS = (
+    "enrichment_search_grounding_text",
+    "reviews_traduzidas",
+    "atividade_marketing",
+    "enrichment",
+)
+
+
+def _slim_concorrente(c: dict) -> dict:
+    """Enxuga 1 concorrente p/ o A6: dropa campos crus e limita reviews ao que o
+    relatório usa (rating + quote curta + categoria de dor). Corta custo de token do A6
+    sem perder o que vira markdown."""
+    if not isinstance(c, dict):
+        return c
+    s = {k: v for k, v in c.items() if k not in _CONCORRENTE_CAMPOS_PESADOS}
+    revs = s.get("reviews") or []
+    if isinstance(revs, list):
+        s["reviews"] = [
+            {
+                "rating": r.get("rating"),
+                "quote_curta": (r.get("quote_curta") or r.get("texto") or r.get("snippet") or "")[:180],
+                "categoria_dor": r.get("categoria_dor"),
+                "sinal": r.get("sinal"),
+                "data_relativa": r.get("data_relativa"),
+            }
+            for r in revs[:5] if isinstance(r, dict)
+        ]
+    return s
+
+
 def _resolver_competitividade_extracao(
     *,
     ic_raw: dict,
@@ -1471,6 +1553,10 @@ def _resolver_competitividade_extracao(
             extra={"agent": "A6", "context": "competitividade_fallback"},
         )
 
+    # Enxuga: dropa grounding cru + reviews duplicadas + cap 5 reviews/concorrente.
+    # Corta o maior contribuinte de token do A6 (R$107 acum.) sem perder o que vira report.
+    detalhados = [_slim_concorrente(c) for c in detalhados]
+
     score_conc = ic_raw.get("score_concorrencia") or inner_ic.get("score_concorrencia")
     nivel_sat = (
         ic_raw.get("nivel_saturacao")
@@ -1480,6 +1566,23 @@ def _resolver_competitividade_extracao(
     rating_medio = ic_raw.get("rating_medio_concorrentes") or inner_ic.get(
         "rating_medio_concorrentes"
     )
+
+    # Modo âncora bairro: o score/saturação do A3b podem ter vindo do raio-3km
+    # (ex.: 211 academias → SATURADO → score 0.0), contradizendo a saturação do
+    # bairro (10 concorrentes → MEDIO). Recomputa AMBOS do set analisado (bairro)
+    # pra serem COERENTES entre si — senão o resumo executivo narra "extrema
+    # saturação" a partir do score 0.0 enquanto a saturação estruturada diz MEDIO.
+    if os.getenv("CONCORRENTES_SOURCE", "").strip().lower() == "parque" and detalhados:
+        _num = len(detalhados)
+        _ratings = [
+            _safe_float(c.get("rating_geral") or c.get("rating_oficial"))
+            for c in detalhados
+        ]
+        _rok = [r for r in _ratings if r and r > 0]
+        _rmed = round(sum(_rok) / len(_rok), 2) if _rok else (_safe_float(rating_medio) or 0.0)
+        nivel_sat = classificar_saturacao(_num, 3.0)
+        score_conc = calcular_score_concorrencia(_num, _rmed, nivel_sat)
+        rating_medio = _rmed
     total_analisados = (
         ic_raw.get("total_concorrentes_analisados")
         or inner_ic.get("total_concorrentes_analisados")
@@ -1603,6 +1706,27 @@ def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
             rf"\1 {sc} ",
             md,
             count=1,
+        )
+
+    # Post-check de SATURAÇÃO (safety net p/ A6 flash): o LLM às vezes narra "extrema
+    # saturação"/"mercado SATURADO" puxando o nº do raio 3km, contradizendo o
+    # nivel_saturacao estruturado (do bairro). Quando o dado diz BAIXO/MEDIO, corrige
+    # o over-statement no texto. Determinístico — não depende da fidelidade do flash.
+    nivel = (out.get("nivel_saturacao") or "").upper()
+    _frase = {
+        "BAIXO": "baixa saturação competitiva",
+        "MEDIO": "saturação competitiva moderada",
+        "ALTO": "alta saturação competitiva",
+        "SATURADO": "mercado saturado",
+    }.get(nivel)
+    if _frase and nivel in ("BAIXO", "MEDIO"):
+        md = re.sub(r"extrema\s+satura[çc][ãa]o(\s+competitiva)?", _frase, md, flags=re.I)
+        md = re.sub(r"altamente\s+saturad[oa]", _frase, md, flags=re.I)
+        md = re.sub(r"satura[çc][ãa]o\s+(alta|extrema|elevada)", _frase, md, flags=re.I)
+        # "mercado (competitivo) (é/está) SATURADO" → frase do nível real
+        md = re.sub(
+            r"mercado(\s+competitivo)?(\s+(?:é|está|se mostra))?\s+\*{0,2}SATURAD[OA]\*{0,2}",
+            f"mercado com {_frase}", md, flags=re.I,
         )
     return md
 
@@ -1733,7 +1857,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     nivel_saturacao = comp.get("nivel_saturacao") or ""
 
     # ── Output: candidatos GeoScout (A1) ──
-    geo_raw = _parse_market_context(state.get("candidatos_geoscout"))
+    # Preferir o snapshot determinístico do after_tool_callback do A1: o LLM
+    # truncava o array `candidatos` ao copiar o JSON (run b5b0e627, 14→0).
+    geo_raw = state.get("candidatos_geoscout_pronto")
+    if not (isinstance(geo_raw, dict) and geo_raw.get("candidatos")):
+        geo_raw = _parse_market_context(state.get("candidatos_geoscout"))
     if not isinstance(geo_raw, dict):
         geo_raw = {}
     candidatos = _lista_candidatos_geoscout(geo_raw)
@@ -1783,6 +1911,26 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 extra={"agent": "A6", "context": "entrantes_cnpj_fallback"},
             )
             entrantes_block = {}
+
+    # Demanda futura datada (CNO grande porte + refino A4) — injetada no state pelo api.py.
+    demanda_futura_block = state.get("demanda_futura") or {}
+
+    # Demografia do BAIRRO (renda CKAN + população/ocupação Censo 2022) — fontes reais,
+    # determinístico (sem LLM). Persistido + renderizado em mini-cards na UI.
+    demografia_bairro_block: dict = {}
+    try:
+        from tools.demografia_bairro_tools import demografia_bairro as _demo_bairro
+
+        # cidade/uf/bairro auto-contidos (cidade_efetiva é definido em branch condicional
+        # acima — não dá pra depender dele aqui). inner_mc sempre disponível.
+        _bai = _bairro_alvo_da_busca(state)
+        _cid_raw = (inner_mc.get("cidade") if isinstance(inner_mc, dict) else "") or ""
+        _cid_ef, _ = resolver_cidade_efetiva(_cid_raw, _bai)
+        _uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or ""
+        _idm = str((inner_mc.get("codigo_ibge") or "") if isinstance(inner_mc, dict) else "") or None
+        demografia_bairro_block = _demo_bairro(_cid_ef, _uf, _bai, id_municipio=_idm)
+    except Exception:
+        logger.warning("A6 demografia_bairro falhou", exc_info=True, extra={"agent": "A6"})
 
     obras_cno_block = state.get("obras_cno_pronto") or {}
     if not isinstance(obras_cno_block, dict) or obras_cno_block.get("status") not in (
@@ -1870,17 +2018,46 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     veredito = "REPROVADO"
     score_decisao = score_top1_candidato if score_top1_candidato is not None else score_bairro
     if score_decisao is not None:
-        if score_decisao >= 8.0:
+        if score_decisao >= param("veredito_limiar_aprovado"):
             veredito = "APROVADO"
-        elif score_decisao >= 6.0:
+        elif score_decisao >= param("veredito_limiar_ressalvas"):
             veredito = "APROVADO COM RESSALVAS"
-        elif score_decisao >= 4.0:
+        elif score_decisao >= param("veredito_limiar_investigar"):
             veredito = "INVESTIGAR MAIS"
 
     # ── Guard determinístico: 0 concorrentes (P1) ──
     # Só dispara se A3b E A3a (fallback) estiverem vazios — evita falso
     # INVESTIGAR MAIS quando concorrentes_brutos existe no state.
     concorrentes_detalhados = comp.get("concorrentes_detalhados") or []
+    # Anéis competitivos (Apêndice D) — enriquece cada concorrente com anel/porte/
+    # multiesporte e calcula score PONDERADO (NO_BAIRRO 1.0 / FRONTEIRA 0.5 / REGIONAL
+    # 0.2). Corrige score puxado pelo vizinho. Centroide = média dos candidatos geocodados.
+    aneis_competitivos_resumo: dict = {}
+    try:
+        from tools.aneis_competitivos_tools import (
+            enriquecer_competidores_aneis,
+            resumo_aneis,
+        )
+
+        _xy = [
+            (_safe_float(c.get("lat")), _safe_float(c.get("lng")))
+            for c in candidatos
+            if isinstance(c, dict) and c.get("lat") and c.get("lng")
+        ]
+        _xy = [(a, b) for a, b in _xy if a is not None and b is not None]
+        _clat = sum(a for a, _ in _xy) / len(_xy) if _xy else None
+        _clng = sum(b for _, b in _xy) / len(_xy) if _xy else None
+        concorrentes_detalhados = enriquecer_competidores_aneis(
+            concorrentes_detalhados, bairro, _clat, _clng
+        )
+        aneis_competitivos_resumo = resumo_aneis(concorrentes_detalhados)
+    except Exception:
+        logger.warning(
+            "A6 anéis competitivos falhou — segue sem ponderação",
+            exc_info=True,
+            extra={"agent": "A6", "context": "aneis_competitivos"},
+        )
+
     total_concorrentes = (
         comp.get("total_concorrentes_analisados")
         or len(concorrentes_detalhados)
@@ -2046,6 +2223,15 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "entrantes_cnpj_90d": entrantes_block,
             # Schema v1.10 — obras fitness em andamento (CNO RFB)
             "obras_cno_em_curso": obras_cno_block,
+            # Schema v1.11 — demanda futura datada (obras residenciais no raio →
+            # moradores → pool/captura fitness em T+24). Refino A4 nas top obras.
+            "demanda_futura": demanda_futura_block,
+            # Schema v1.12 — anéis competitivos (Apêndice D): score PONDERADO por
+            # proximidade (NO_BAIRRO/FRONTEIRA/REGIONAL) — não infla pela força do vizinho.
+            "aneis_competitivos": aneis_competitivos_resumo,
+            # Schema v1.13 — demografia do bairro (renda CKAN + pop/ocupação Censo 2022),
+            # fontes reais por dimensão. Renderizado em mini-cards na UI.
+            "demografia_bairro": demografia_bairro_block,
         },
         "metadata_execucao": {
             # Schema v1.2: mantém só infos de execução. Dados ricos do
@@ -2393,7 +2579,11 @@ def _a6_after_agent_callback(callback_context):
 
 report_consolidator_agent = Agent(
     name="ReportConsolidator",
-    model="gemini-2.5-pro",
+    # Pro→Flash (custo): A6 era ~46% do custo LLM (R$4,82/relatório). A síntese é
+    # templada (instrução muito detalhada) sobre dados estruturados/determinísticos +
+    # contexto já enxuto (slim_concorrente) — Flash dá conta. Corta ~R$3,6/relatório.
+    # Validar qualidade da narrativa com golden case; reverter pra Pro se degradar.
+    model="gemini-2.5-flash",
     generate_content_config=_GENERATE_CONFIG,
     description=(
         "Consolida outputs dos 5 agentes em relatório executivo markdown completo, "
@@ -2572,6 +2762,13 @@ Bairros indicados pela comunidade (priorizar análise nesta ordem):
 <3-5 linhas: o mercado é viável? Estratégia recomendada (low/mid/premium)?
 Qual o melhor candidato e por quê?>
 
+**ANCHORING COMPETITIVO (OBRIGATÓRIO):** a saturação e a narrativa competitiva do resumo
+executivo DEVEM ancorar nos concorrentes DO BAIRRO (`total_concorrentes_analisados` +
+`nivel_saturacao`), NUNCA no `total_encontrados_raio` (densidade do raio 3km, que inclui
+bairros adjacentes). NÃO escreva "extrema saturação" / "211 academias no raio 3km" como
+diagnóstico do bairro. Se `nivel_saturacao` = MEDIO ou BAIXO, o texto reflete isso, mesmo
+que o raio 3km tenha centenas — o raio 3km é só contexto regional.
+
 ---
 
 ## 📈 Scores Regionais
@@ -2582,10 +2779,11 @@ Qual o melhor candidato e por quê?>
 | Competitivo | X.X | <nivel_saturacao do A3> |
 | Viabilidade financeira | X.X | <viabilidade do A4 melhor cenário> |
 
-**Transparência (OBRIGATÓRIO):** logo após a tabela acima, inclua uma linha curta:
-- `Academias no raio 3km (Aggregate): <total_encontrados_raio> | amostra analisada (reviews): <total_concorrentes_analisados>`
-Se existir `total_encontrados_raio_nearby`, adicione entre parênteses:
-`(Nearby retornou: <total_encontrados_raio_nearby>, limitado por maxResultCount)`.
+**Transparência (OBRIGATÓRIO):** logo após a tabela acima, inclua DUAS linhas curtas:
+- `Concorrentes no bairro (analisados): <total_concorrentes_analisados> — saturação <nivel_saturacao>`
+- `Densidade regional (raio 3km, contexto): <total_encontrados_raio> academias — inclui bairros adjacentes, NÃO é a saturação do bairro`
+A saturação competitiva do bairro é a do A3 (`nivel_saturacao`), ancorada nos concorrentes
+analisados DO BAIRRO — não no número do raio 3km.
 
 **ATENÇÃO — campo correto para "Competitivo":**
 Use **`score_concorrencia`** do A3 (range 0-10, onde 10 = mercado pouco saturado / favorável).
@@ -2977,21 +3175,9 @@ e recomendar levantar mais opções regionais>
 
 ---
 
-## 📞 Script de Abordagem — Top 1
-
-**Canal recomendado:** <canal do A5>
-**Melhor horário:** <timing do A5>
-
-```
-<colar literalmente o script_abordagem do ContactHunter>
-```
-
-**Próximos passos:**
-1. <ação 1>
-2. <ação 2>
-3. <ação 3>
-
----
+<!-- Script de Abordagem / contato de decisor REMOVIDO do relatório de viabilidade:
+     contatar decisor é PROSPECÇÃO (rota própria com Apollo people_search), não decisão
+     de viabilidade. NÃO gerar seção de abordagem/contato aqui. -->
 
 ## ⚠️ Alertas Globais
 <lista consolidada dos alertas dos agentes que afetam a decisão.

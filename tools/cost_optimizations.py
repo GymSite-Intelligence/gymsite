@@ -36,7 +36,7 @@ AGENTE_MODELO_SUGERIDO: dict[str, str] = {
     "a3c_competitor_mapper": "gemini-2.5-flash",
     "a4_financial_estimator": "gemini-2.5-flash",  # aritmética estruturada; Pro→Flash 12/06 (golden case pendente)
     "a5_contact_hunter": "gemini-2.5-flash",
-    "a6_report_consolidator": "gemini-2.5-pro",  # síntese final, justifica Pro
+    "a6_report_consolidator": "gemini-2.5-flash",  # Pro→Flash 15/06 (custo #1; síntese templada, golden case)
     "a7_market_research": "gemini-2.5-flash",
 }
 

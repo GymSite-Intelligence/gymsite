@@ -136,6 +136,15 @@ diagnose_imports.py
 estrutura_projeto.txt
 preview_assistente_ui.html
 
+# === Curadoria versionável (TRIGO — input curado, não cache gerado) ===
+# Inputs hand-curados que o build lê; perda degrada o relatório (renda-bairro,
+# franquias, taxas municipais, KPIs operacionais RI). Bundles/snapshots/cache de
+# rede continuam ignorados (joio — reproduzíveis no batch).
+# As pastas sob data/ são re-incluídas via `git add -f` (uma vez tracked, o ignore
+# de `data/` não as afeta): data/bairro_renda_pilot, data/franchise_curated,
+# data/legal_fees_pilot. A negação abaixo cobre o overlay sob metrics/cache.
+!metrics/cache/sector_listed_ri_overlay.json
+
 # Artefatos de execução de testes autônomos
 scripts/autonomous_test_report.md
 scripts/consolidated_report.json
@@ -144,5 +153,15 @@ scripts/consolidated_report.json
 Imobiliario/
 docs/reference/*.json
 
+# Artefatos/output que poluem git status (não são código)
+Auditoria/audit-reports/
+market_context/investigations/
+Manual ONR API/
+docs/arquitetura/*.pdf
+docs/arquitetura/*.csv
+docs/arquitetura/*.PDF
+
+# SHA carimbado no deploy (scripts/deploy_backend.sh) — artefato de build
+VERSION
 # Auditoria — relatórios de scan contêm secrets detectados
 Auditoria/audit-reports/

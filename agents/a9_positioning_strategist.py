@@ -173,8 +173,47 @@ def _a9_cache_prompt(state: dict) -> str:
     return f"positioning_a9:{rid}:{cidade}:{bairro}:{tipo}:conc_{n_conc}:{conc_hash}"
 
 
+def _resumo_demanda_futura(df: dict) -> str | None:
+    """Texto compacto da demanda futura datada para injetar no prompt do A9."""
+    if not isinstance(df, dict) or df.get("status") != "ok" or not df.get("n_obras"):
+        return None
+    jan = df.get("janela_entrega") or {}
+    linhas = []
+    for o in (df.get("obras") or [])[:5]:
+        emp = o.get("empreendimento") or o.get("construtora") or "?"
+        linhas.append(
+            f"  - {emp} ({o.get('bairro')}): {o.get('unidades_est')} un "
+            f"[{o.get('unidades_fonte')}], entrega {o.get('entrega')}, "
+            f"conf={o.get('confianca')}, fitness_amenidade={o.get('amenidade_fitness')}"
+        )
+    return (
+        "## DEMANDA FUTURA DATADA (Apêndice B — obras residenciais no raio)\n"
+        f"- obras em curso (entrega futura): {df.get('n_obras')}; "
+        f"prováveis residenciais: {df.get('provavel_residencial_n')}\n"
+        f"- captura fitness estimada (T+24): ~{df.get('captura_total_est')} alunos; "
+        f"janela de entrega: {jan.get('de')}→{jan.get('ate')}\n"
+        f"- refinadas (site/instagram/PDF da construtora, auditado): {df.get('refinadas')}\n"
+        + ("\n".join(linhas) if linhas else "")
+        + "\nUse isto para o insight de JANELA DE ENTRADA (timing de abertura antes "
+          "da entrega para capturar a migração de CEP). Rotule confiança/fonte."
+    )
+
+
+def _a9_inject_demanda_futura(state: dict, llm_request) -> None:
+    """Injeta o resumo da demanda futura no prompt do A9 (não vem na conversa A0-A6)."""
+    try:
+        resumo = _resumo_demanda_futura(state.get("demanda_futura") or {})
+        if resumo and getattr(llm_request, "contents", None) is not None:
+            llm_request.contents.append(
+                types.Content(role="user", parts=[types.Part(text=resumo)])
+            )
+    except Exception:
+        pass
+
+
 def _a9_before_model_callback(callback_context, llm_request):
     """LangCache hit → retorna LlmResponse e pula gemini-2.5-pro (~30–90s)."""
+    _a9_inject_demanda_futura(getattr(callback_context, "state", {}) or {}, llm_request)
     if not _a9_langcache_enabled():
         return None
     try:
@@ -370,6 +409,8 @@ Analisar TODOS os dados já produzidos pelo pipeline (A0–A6) e gerar um
 - analise_financeira (A4)
 - contato_decisor (A5)
 - relatorio_md (A6)
+- demanda_futura (Apêndice B — obras residenciais no raio entregando em T+24;
+  injetada como bloco "DEMANDA FUTURA DATADA" no contexto quando disponível)
 
 ## FRAMEWORK ERRC — 4 dimensões obrigatórias
 - ELIMINAR: o que NÃO fazer (guerra de preço low-cost, planos genéricos, etc.)
@@ -419,8 +460,20 @@ GAP = serviço com penetração < 3 em TODOS os concorrentes.
   },
   "veredito_posicionamento": "OCEANO_AZUL",
   "justificativa_veredito": "...",
+  "janela_de_entrada": {
+    "tem_demanda_futura": true,
+    "obras_no_raio": 5,
+    "captura_estimada_alunos": 52,
+    "janela_entrega": "2027-06 a 2028-11",
+    "recomendacao_timing": "Abrir ~6 meses antes da maior entrega para capturar a migração de CEP.",
+    "confianca": "media",
+    "fonte": "CNO/RFB + site/instagram/PDF da construtora (auditado)"
+  },
   "markdown": "# Relatório de Posicionamento Estratégico\\n\\n..."
 }
+
+Se NÃO houver bloco "DEMANDA FUTURA DATADA" no contexto, retorne
+`janela_de_entrada: {"tem_demanda_futura": false}` e NÃO invente obras.
 
 ## REGRAS
 - Use dados REAIS do pipeline. Não invente números.

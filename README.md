@@ -40,7 +40,7 @@ Backend FastAPI (api.py :8000)
 │ A1 GeoScout            → Places API + Distance Matrix +     │
 │                          listings OLX & ImovelWeb           │
 │ A2 DemoAnalyst         → IBGE Censo 2022 (BigQuery)         │
-│ A3a CompetitorSearch   → Places (Search Nearby)             │
+│ A3a CompetitorSearch   → Places textSearch (âncora bairro)  │
 │ A3b CompetitorAnalysis → LLM extrai dores das reviews ≤ 1a  │
 │ A3c CompetitorMapper   → Top 10 balanceado + horários pico  │
 │ A4 FinancialEstimator  → Aluguel mediano + CAPEX + payback  │
@@ -55,7 +55,7 @@ Supabase Postgres (RLS multi-tenant)
   cenarios_financeiros · sensibilidade · bairros_alternativos
 ```
 
-Cada agente é um `LlmAgent` do Google ADK com **macro-tools consolidadas** (A1, A3a/b/c, A4, A5) que eliminam respostas MALFORMED. Estado do pipeline persiste em `state_diagnostics.jsonl` pra debug.
+Cada agente é um `LlmAgent` do Google ADK com **macro-tools consolidadas** (A1, A3b/c, A4, A5) que eliminam respostas MALFORMED — exceção é o **A3a, hoje um `BaseAgent` determinístico (sem LLM)** que roda a macro direto. Estado do pipeline persiste em `state_diagnostics.jsonl` pra debug.
 
 ---
 
@@ -96,12 +96,14 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A3a — CompetitorSearch
 **Arquivo:** `agents/a3a_competitor_search.py`  
-**Modelo:** Gemini 2.5 Flash  
+**Modelo:** nenhum — **`BaseAgent` determinístico (sem LLM)** desde 2026-06-14  
 **Input:** coordenadas do bairro + tipo_negocio  
 **Output:** `concorrentes_brutos` (lista de academias)
 
 - Sub-agente da fase competitiva (ex-A3 monolítico). Separação evita estouro do AFC=10 do Gemini.
+- **BaseAgent determinístico:** roda a macro `analisar_concorrentes_a3a_completo` direto e grava `concorrentes_brutos` no state via `state_delta`. Substitui o antigo `LlmAgent` que só ecoava o JSON da macro de volta pelo `output_key` (economia ~83k tokens/relatório, medida em `metrics/tokens_pipeline.csv`).
 - Responsável **APENAS** por buscar academias concorrentes, processar reviews e fazer enrichment via Google Knowledge Panel + Search Grounding.
+- **Descoberta ancorada no BAIRRO** (atrás da flag `CONCORRENTES_SOURCE=parque`, função `_descobrir_concorrentes_bairro`): Places **textSearch** com query `"{tipo_negocio} {bairro} {cidade} {uf}"` + filtro de `types` fitness (`gym`/`fitness_center`) + filtro de bairro no endereço. Motivo: a antiga Places Search Nearby (raio 3km) ancorava errado e puxava academias de bairros adjacentes. A **Nearby 3km virou fallback** (e contexto de densidade regional); o **parque CNPJ virou só CROSS de contato** (cnpj/telefone), não mais base de descoberta.
 - NÃO faz análise agregada — isso é do A3b.
 - Macro-tool: `analisar_concorrentes_a3a_completo` (consolida busca + reviews + enrichment).
 
@@ -347,7 +349,7 @@ Cada agente combina dados estruturados (APIs com schema fixo) com **Search Groun
 | Renda município         | PNAD Contínua / IBGE Cidades / Atlas Brasil            | Search Grounding (LLM) | `tools/ibge_tools.py:252-341`          |
 | Benchmarks setoriais    | Panorama ACAD / IHRSA / SEBRAE                          | Search Grounding (LLM) | `tools/benchmarks_tool.py`             |
 | Aluguel mediano         | Anúncios e portais imobiliários ao vivo                 | 3 queries Search Grounding paralelas | A4 `financial_estimator`          |
-| Concorrentes            | Google Places API (New) — Search Nearby + Reviews       | API REST              | `tools/competitor_tools.py`            |
+| Concorrentes            | Google Places API (New) — **textSearch âncora bairro** + Reviews (Nearby 3km = fallback) | API REST              | `tools/competitor_tools.py`            |
 | Listings comerciais      | OLX (Lojas/Salas + Galpões) + ImovelWeb (Comerciais)    | Playwright Chromium headless (`page.evaluate`) | `tools/listing_tools.py` + `tools/imobiliaria_scraper.py` — ver [docs/listing_sources.md](docs/listing_sources.md) |
 | Investigação de imóvel   | Gemini grounded (o que opera no endereço)               | A1 pós-listings, até 5/disparo                 | [INVESTIGACAO_IMOVEL.md](docs/INVESTIGACAO_IMOVEL.md) |
 | Enriquecimento (PRD)     | CNJ Justiça Aberta (CNS) + portais comerciais           | Roadmap — ver PRD                              | [PRD-ENRIQUECIMENTO-IMOVEIS.md](docs/PRD-ENRIQUECIMENTO-IMOVEIS.md) |
@@ -400,6 +402,7 @@ Custos persistidos em `relatorios.custo_brl/tokens_total` e detalhados por agent
 - Vertex AI documentado em `VERTEX_SETUP.md` (não é o padrão de dev)
 - Horários de pico via SearchAPI (9/9 cobertura em testes)
 - Delete de relatórios `failed` direto da UI
+- A3 ancorado no bairro + A3a determinístico (2026-06-15)
 
 **Próximas issues (Linear VEC):**
 - `#120` Dockerfile + deploy Cloud Run do backend

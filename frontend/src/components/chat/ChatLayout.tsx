@@ -15,6 +15,7 @@ interface ChatLayoutProps {
   onNewSession: () => void
   onSelectSession: (id: string) => void
   onRegenerate?: (msgId: string) => void
+  onFeedback?: (interacaoId: string, rating: 1 | -1) => Promise<boolean>
 }
 
 export function ChatLayout({
@@ -27,6 +28,7 @@ export function ChatLayout({
   onNewSession,
   onSelectSession,
   onRegenerate,
+  onFeedback,
 }: ChatLayoutProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -97,6 +99,7 @@ export function ChatLayout({
                   key={msg.id}
                   msg={msg}
                   onRegenerate={onRegenerate ? () => onRegenerate(msg.id) : undefined}
+                  onFeedback={onFeedback}
                 />
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (

@@ -1,0 +1,310 @@
+"""
+Parâmetros de metodologia — REGRA DE OURO: zero hardcode.
+
+Todo fator de cálculo do enriquecimento (ocupação, penetração, market share,
+ticket, janelas) é um registro {valor, fonte, data_coleta, metodo, unidade},
+recalibrável via tabela Supabase `parametros_metodologia` (override), com default
+SÓ como fallback rotulado. Toda métrica carrega a fonte → exibida no relatório.
+
+Ver feedback memory regra-ouro-zero-hardcode-metodologia + PLANO_ENRIQUECIMENTO §1.0.
+"""
+from __future__ import annotations
+
+import os
+from typing import Any
+
+# Defaults documentados (fallback rotulado — NUNCA verdade silenciosa).
+# Cada registro: valor, fonte, data_coleta, metodo, unidade, categoria.
+#   categoria ∈ {benchmark, calibracao, aberto}
+#     benchmark  = vem de fonte setorial externa (ACAD, Sebrae, Smart Fit/CVM)
+#     calibracao = limiar/peso de metodologia GymSite (corte de score/veredito)
+#     aberto     = derivável de dado aberto (IBGE/Censo/CKAN); default é fallback
+# REGRA: estes valores são IDÊNTICOS ao código que substituíram (relocate, não
+# recalibragem). Recalibrar = editar a tabela Supabase, sem deploy.
+_HOJE = "2026-06-15"
+
+
+def _p(valor, fonte, metodo, unidade, categoria="benchmark", data=_HOJE):
+    return {"valor": valor, "fonte": fonte, "data_coleta": data,
+            "metodo": metodo, "unidade": unidade, "categoria": categoria}
+
+
+_DEFAULTS: dict[str, dict[str, Any]] = {
+    # ── Ocupação por tipologia (moradores/unidade) — IBGE média domiciliar ───
+    "ocupacao_studio":      _p(1.5, "IBGE PNAD + ajuste tipologia studio", "media_domiciliar_ajustada", "moradores/unidade", "aberto", "2026-06-14"),
+    "ocupacao_1_2_dorm":    _p(2.2, "IBGE PNAD + ajuste 1-2 dorm", "media_domiciliar_ajustada", "moradores/unidade", "aberto", "2026-06-14"),
+    "ocupacao_3_mais_dorm": _p(3.0, "IBGE PNAD + ajuste 3+ dorm", "media_domiciliar_ajustada", "moradores/unidade", "aberto", "2026-06-14"),
+    "ocupacao_default":     _p(2.8, "fallback_IBGE_media_domiciliar_BR", "media_nacional", "moradores/unidade", "aberto", "2026-06-14"),
+    "m2_por_unidade":       _p(75.0, "fallback_proxy_unidade_media+area_comum", "proxy_area_construida", "m2/unidade", "benchmark", "2026-06-14"),
+    # ── Penetração fitness (% da pop. que É MEMBRO de academia) — ACAD ───────
+    "penetracao_geral":     _p(0.045, "ACAD/Panorama Fitness Brasil", "penetracao_mercado", "fração", "benchmark", "2026-06-14"),
+    "penetracao_bairro_ab": _p(0.10, "ACAD (bairro alta renda A/B)", "penetracao_mercado_segmentada", "fração", "benchmark", "2026-06-14"),
+    # Corte de perfil A/B (define se o bairro usa penetração segmentada). Derivado da
+    # renda REAL do bairro (CKAN IDH-Renda Atlas + renda per capita), não default.
+    "perfil_ab_idh_renda_min": _p(0.800, "Atlas Brasil/PNUD (IDH-Renda 'muito alto' ≥ 0,800)", "corte_perfil_renda", "índice", "calibracao"),
+    "perfil_ab_renda_pc_min":  _p(2000.0, "IBGE classes A/B (corte renda per capita, ~2× mediana nacional)", "corte_perfil_renda", "BRL/pessoa", "calibracao"),
+    "market_share_default": _p(0.15, "fallback_conservador (A4/anéis recalibra)", "quota_raio_estimada", "fração", "calibracao", "2026-06-14"),
+    "inadimplencia_default": _p(0.06, "fallback_ACAD_com_recorrencia", "benchmark_setorial", "fração", "benchmark", "2026-06-14"),
+    "meses_entrega":        _p(30, "fallback_mediana_obra_24_36m (recalibrar CNO encerradas)", "mediana_tempo_obra", "meses", "benchmark", "2026-06-14"),
+    "janela_compra_equipamento_meses": _p(4, "fallback_3_6m_antes_entrega", "lead_time_compra", "meses", "benchmark", "2026-06-14"),
+    # ── Anéis competitivos (Apêndice D) ─────────────────────────────────────
+    "anel_peso_no_bairro":  _p(1.0, "Motor v2 Apêndice D", "peso_anel", "fator", "calibracao", "2026-06-14"),
+    "anel_peso_fronteira":  _p(0.5, "Motor v2 Apêndice D", "peso_anel", "fator", "calibracao", "2026-06-14"),
+    "anel_peso_regional":   _p(0.2, "Motor v2 Apêndice D", "peso_anel", "fator", "calibracao", "2026-06-14"),
+    "raio_fronteira_km":    _p(2.0, "Motor v2 Apêndice D (≤2km da borda)", "raio_anel", "km", "calibracao", "2026-06-14"),
+    "porte_pequena_max_avaliacoes": _p(150, "fallback_heuristica_places", "limiar_porte", "avaliacoes", "calibracao", "2026-06-14"),
+    "porte_media_max_avaliacoes":   _p(600, "fallback_heuristica_places", "limiar_porte", "avaliacoes", "calibracao", "2026-06-14"),
+
+    # ══ DEMOGRÁFICO (A2 / ibge_tools) ════════════════════════════════════════
+    # Faixa etária — % da população na faixa (pirâmide etária). DADO ABERTO:
+    # default é fallback nacional; recalibrar com Censo 2022 por município/setor.
+    "faixa_pct_15_29":      _p(0.23, "IBGE Censo 2022 pirâmide etária BR (fallback nacional)", "piramide_etaria", "fração", "aberto"),
+    "faixa_pct_18_35":      _p(0.26, "IBGE Censo 2022 pirâmide etária BR (fallback nacional)", "piramide_etaria", "fração", "aberto"),
+    "faixa_pct_18_45":      _p(0.36, "IBGE Censo 2022 pirâmide etária BR (fallback nacional)", "piramide_etaria", "fração", "aberto"),
+    "faixa_pct_20_40":      _p(0.30, "IBGE Censo 2022 pirâmide etária BR (fallback nacional)", "piramide_etaria", "fração", "aberto"),
+    "faixa_pct_25_50":      _p(0.35, "IBGE Censo 2022 pirâmide etária BR (fallback nacional)", "piramide_etaria", "fração", "aberto"),
+    "faixa_pct_default":    _p(0.30, "IBGE Censo 2022 pirâmide etária BR (fallback nacional)", "piramide_etaria", "fração", "aberto"),
+    # Público POTENCIAL fitness (% da faixa etária com interesse/aptidão — NÃO membro)
+    "penetracao_potencial_fitness": _p(0.40, "ACAD/Panorama Fitness Brasil (interesse fitness na faixa)", "publico_potencial", "fração", "benchmark"),
+    # Score demográfico — cortes de população na faixa
+    "score_demo_pop_alta":   _p(50000, "calibração metodológica GymSite v2", "limiar_score", "pessoas", "calibracao"),
+    "score_demo_pop_media":  _p(30000, "calibração metodológica GymSite v2", "limiar_score", "pessoas", "calibracao"),
+    "score_demo_pop_baixa":  _p(15000, "calibração metodológica GymSite v2", "limiar_score", "pessoas", "calibracao"),
+    "score_demo_pop_minima": _p(5000,  "calibração metodológica GymSite v2", "limiar_score", "pessoas", "calibracao"),
+    # Score demográfico — cortes de renda média (R$)
+    "score_demo_renda_alta":   _p(2500, "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
+    "score_demo_renda_media":  _p(1800, "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
+    "score_demo_renda_baixa":  _p(1200, "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
+    "score_demo_renda_minima": _p(800,  "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
+    "score_demo_base":         _p(2.0,  "calibração metodológica GymSite v2 (base aditiva)", "score_base", "pontos", "calibracao"),
+    # Limiares de classificação demográfica (EXCELENTE/BOM/REGULAR)
+    "demo_limiar_excelente": _p(8.0, "calibração metodológica GymSite v2", "limiar_classificacao", "pontos", "calibracao"),
+    "demo_limiar_bom":       _p(6.0, "calibração metodológica GymSite v2", "limiar_classificacao", "pontos", "calibracao"),
+    "demo_limiar_regular":   _p(4.0, "calibração metodológica GymSite v2", "limiar_classificacao", "pontos", "calibracao"),
+
+    # ══ VEREDITO FINAL (A6) ══════════════════════════════════════════════════
+    "veredito_limiar_aprovado":   _p(8.0, "calibração metodológica GymSite v2", "limiar_veredito", "pontos", "calibracao"),
+    "veredito_limiar_ressalvas":  _p(6.0, "calibração metodológica GymSite v2", "limiar_veredito", "pontos", "calibracao"),
+    "veredito_limiar_investigar": _p(4.0, "calibração metodológica GymSite v2", "limiar_veredito", "pontos", "calibracao"),
+
+    # ══ VIABILIDADE FINANCEIRA (financial_tools) ═════════════════════════════
+    # Score de viabilidade — cortes de payback (meses)
+    "payback_limiar_excelente": _p(18, "calibração metodológica GymSite v2", "limiar_score", "meses", "calibracao"),
+    "payback_limiar_bom":       _p(30, "calibração metodológica GymSite v2", "limiar_score", "meses", "calibracao"),
+    "payback_limiar_regular":   _p(48, "calibração metodológica GymSite v2", "limiar_score", "meses", "calibracao"),
+    "payback_limiar_fraco":     _p(60, "calibração metodológica GymSite v2", "limiar_score", "meses", "calibracao"),
+    # Score de viabilidade — cortes de ocupação no break-even
+    "ocupacao_break_otima":  _p(0.30, "calibração metodológica GymSite v2", "limiar_score", "fração", "calibracao"),
+    "ocupacao_break_boa":    _p(0.50, "calibração metodológica GymSite v2", "limiar_score", "fração", "calibracao"),
+    "ocupacao_break_limite": _p(0.70, "calibração metodológica GymSite v2", "limiar_score", "fração", "calibracao"),
+    "score_viab_base": _p(3.0, "calibração metodológica GymSite v2 (base aditiva viabilidade)", "score_base", "pontos", "calibracao"),
+    "aluguel_sustentavel_pct_faturamento": _p(0.15, "ACAD/Sebrae (aluguel sustentável < 15% do faturamento)", "limiar_risco", "fração", "benchmark"),
+    "margem_operacional_ticket_pct": _p(0.15, "benchmark setorial (margem sobre ticket bruto)", "margem_operacional", "fração", "benchmark"),
+    "fator_projecao_6m": _p(1.3, "benchmark setorial (rampa 6m sobre break-even)", "fator_rampa", "fator", "benchmark"),
+    # Classificação de viabilidade (status ALTO/MEDIO/BAIXO) — payback (meses) + margem (%)
+    "viab_payback_alto":  _p(36, "calibração metodológica GymSite v2", "limiar_classificacao", "meses", "calibracao"),
+    "viab_payback_medio": _p(60, "calibração metodológica GymSite v2", "limiar_classificacao", "meses", "calibracao"),
+    "viab_payback_baixo": _p(84, "calibração metodológica GymSite v2", "limiar_classificacao", "meses", "calibracao"),
+    "viab_margem_alto":   _p(15, "calibração metodológica GymSite v2", "limiar_classificacao", "%", "calibracao"),
+    "viab_margem_medio":  _p(10, "calibração metodológica GymSite v2", "limiar_classificacao", "%", "calibracao"),
+    "custo_capital_anual": _p(0.12, "BCB Selic + prêmio risco fitness", "custo_capital", "fração_a.a.", "benchmark"),
+    # Ticket médio por modelo (R$)
+    "ticket_low":     _p(89.90,  "ACAD/Sebrae 2024 (Smart Fit/Bluefit/Selfit)", "ticket_benchmark", "BRL/mês", "benchmark"),
+    "ticket_mid":     _p(149.90, "ACAD/Sebrae 2024 (Bodytech entry/regional)", "ticket_benchmark", "BRL/mês", "benchmark"),
+    "ticket_premium": _p(299.90, "ACAD/Sebrae 2024 (Bio Ritmo/boutique)", "ticket_benchmark", "BRL/mês", "benchmark"),
+    "ticket_medio_nacional": _p(149.90, "ACAD/Panorama Fitness 2024", "ticket_benchmark", "BRL/mês", "benchmark"),
+    "alunos_por_m2_legado":  _p(3.5, "benchmark setorial (compat v1)", "densidade_alunos", "alunos/m2", "benchmark"),
+    # Matrículas pagantes por m² — 3 calibrações × 3 modelos
+    "matr_m2_low_conservador":     _p(1.5, "ACAD 2024 + Smart Fit/Bluefit amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_low_realista":        _p(2.2, "ACAD 2024 + Smart Fit/Bluefit amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_low_agressivo":       _p(3.0, "ACAD 2024 + Smart Fit top performers", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_mid_conservador":     _p(1.0, "ACAD 2024 + Bodytech entry amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_mid_realista":        _p(1.4, "ACAD 2024 + Bodytech entry amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_mid_agressivo":       _p(1.8, "ACAD 2024 + Bodytech entry amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_premium_conservador": _p(0.4, "ACAD 2024 + Bio Ritmo amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_premium_realista":    _p(0.6, "ACAD 2024 + Bio Ritmo amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    "matr_m2_premium_agressivo":   _p(0.9, "ACAD 2024 + Bio Ritmo amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    # Capacidade física simultânea no pico (pessoas/m²)
+    "capacidade_simultanea_low":     _p(0.55, "ACAD/Sebrae 2024", "capacidade_pico", "pessoas/m2", "benchmark"),
+    "capacidade_simultanea_mid":     _p(0.40, "ACAD/Sebrae 2024", "capacidade_pico", "pessoas/m2", "benchmark"),
+    "capacidade_simultanea_premium": _p(0.25, "ACAD/Sebrae 2024", "capacidade_pico", "pessoas/m2", "benchmark"),
+    # Frequência semanal média do aluno
+    "frequencia_semanal_low":     _p(2.5, "ACAD/Panorama 2024", "frequencia_semanal", "visitas/sem", "benchmark"),
+    "frequencia_semanal_mid":     _p(2.0, "ACAD/Panorama 2024", "frequencia_semanal", "visitas/sem", "benchmark"),
+    "frequencia_semanal_premium": _p(1.8, "ACAD/Panorama 2024", "frequencia_semanal", "visitas/sem", "benchmark"),
+    "pico_share": _p(0.25, "ACAD 2024 (% no pico 18h-21h)", "pico_share", "fração", "benchmark"),
+    # Inadimplência mensal por modelo
+    "inadimplencia_low":     _p(0.06,  "Smart Fit Holdings 2023-2024 (releases investidor)", "inadimplencia", "fração", "benchmark"),
+    "inadimplencia_mid":     _p(0.04,  "Bodytech entry / média setor 2024", "inadimplencia", "fração", "benchmark"),
+    "inadimplencia_premium": _p(0.025, "boutique/premium 2024 (cliente fiel)", "inadimplencia", "fração", "benchmark"),
+    # Churn mensal por modelo
+    "churn_mensal_low":     _p(0.10, "ACAD/Smart Fit 2024", "churn_mensal", "fração", "benchmark"),
+    "churn_mensal_mid":     _p(0.07, "ACAD 2024", "churn_mensal", "fração", "benchmark"),
+    "churn_mensal_premium": _p(0.04, "ACAD 2024 (premium retém mais)", "churn_mensal", "fração", "benchmark"),
+    # Marketing % do faturamento
+    "marketing_pct_low":     _p(0.06, "ACAD/Sebrae 2024", "marketing_pct", "fração", "benchmark"),
+    "marketing_pct_mid":     _p(0.08, "ACAD/Sebrae 2024", "marketing_pct", "fração", "benchmark"),
+    "marketing_pct_premium": _p(0.12, "ACAD/Sebrae 2024", "marketing_pct", "fração", "benchmark"),
+    # Ticket sustentável como % da renda domiciliar
+    "ticket_renda_pct_low":     _p(0.08, "ACAD comportamento consumidor 2024", "ticket_renda", "fração", "benchmark"),
+    "ticket_renda_pct_mid":     _p(0.12, "ACAD comportamento consumidor 2024", "ticket_renda", "fração", "benchmark"),
+    "ticket_renda_pct_premium": _p(0.15, "ACAD comportamento consumidor 2024", "ticket_renda", "fração", "benchmark"),
+    # CAPEX por m² e fixos
+    "capex_equip_m2_low":     _p(350.0, "Sebrae/fornecedores 2024", "capex_m2", "BRL/m2", "benchmark"),
+    "capex_equip_m2_mid":     _p(500.0, "Sebrae/fornecedores 2024", "capex_m2", "BRL/m2", "benchmark"),
+    "capex_equip_m2_premium": _p(850.0, "Sebrae/fornecedores 2024", "capex_m2", "BRL/m2", "benchmark"),
+    "capex_obra_m2_low":      _p(200.0, "SINAPI/Sebrae 2024", "capex_m2", "BRL/m2", "benchmark"),
+    "capex_obra_m2_mid":      _p(350.0, "SINAPI/Sebrae 2024", "capex_m2", "BRL/m2", "benchmark"),
+    "capex_obra_m2_premium":  _p(600.0, "SINAPI/Sebrae 2024", "capex_m2", "BRL/m2", "benchmark"),
+    "capex_projeto_arquitetonico": _p(15000.0, "Sebrae 2024", "capex_fixo", "BRL", "benchmark"),
+    "capex_alvara_taxas":          _p(8000.0,  "Sebrae 2024", "capex_fixo", "BRL", "benchmark"),
+    "capex_contingencia_pct":      _p(0.10, "calibração metodológica GymSite v2", "contingencia", "fração", "calibracao"),
+    "capex_capital_giro_meses":    _p(3, "Sebrae 2024 (meses de custo fixo)", "capital_giro", "meses", "benchmark"),
+    # Custos fixos detalhados
+    "custo_condominio_pct_aluguel": _p(0.15, "benchmark setorial 2024", "custo_fixo", "fração", "benchmark"),
+    "custo_iptu_mensal_base":       _p(2000.0, "benchmark setorial (varia por município)", "custo_fixo", "BRL/mês", "benchmark"),
+    "custo_energia_por_m2":         _p(12.0, "benchmark setorial 2024", "custo_fixo", "BRL/m2", "benchmark"),
+    "custo_agua_por_m2":            _p(2.0,  "benchmark setorial 2024", "custo_fixo", "BRL/m2", "benchmark"),
+    "custo_internet_mensal":        _p(800.0, "benchmark setorial 2024", "custo_fixo", "BRL/mês", "benchmark"),
+    "folha_min_low":     _p(18000.0, "Sebrae 2024 (~6 func, autoatendimento)", "folha", "BRL/mês", "benchmark"),
+    "folha_min_mid":     _p(32000.0, "Sebrae 2024 (~10 func)", "folha", "BRL/mês", "benchmark"),
+    "folha_min_premium": _p(55000.0, "Sebrae 2024 (~16 func)", "folha", "BRL/mês", "benchmark"),
+    "custo_manutencao_pct_capex":  _p(0.005, "benchmark setorial (mensal sobre CAPEX)", "custo_fixo", "fração", "benchmark"),
+    "custo_contabilidade_mensal":  _p(1300.0, "benchmark setorial 2024", "custo_fixo", "BRL/mês", "benchmark"),
+    "custo_sistema_gestao_mensal": _p(800.0, "benchmark setorial 2024", "custo_fixo", "BRL/mês", "benchmark"),
+    "custo_seguro_pct_capex":      _p(0.002, "benchmark setorial (mensal sobre CAPEX)", "custo_fixo", "fração", "benchmark"),
+    "custo_outros_pct_receita":    _p(0.02, "calibração metodológica GymSite v2 (imprevistos)", "custo_fixo", "fração", "calibracao"),
+
+    # ══ SATURAÇÃO / CONCORRÊNCIA (competitor_tools) ══════════════════════════
+    "saturacao_densidade_baixo": _p(0.3, "benchmark densidade acad/km² (mercado)", "limiar_saturacao", "acad/km2", "benchmark"),
+    "saturacao_densidade_medio": _p(0.8, "benchmark densidade acad/km² (mercado)", "limiar_saturacao", "acad/km2", "benchmark"),
+    "saturacao_densidade_alto":  _p(1.5, "benchmark densidade acad/km² (mercado)", "limiar_saturacao", "acad/km2", "benchmark"),
+    "score_conc_bonus_baixo":    _p(5.0, "calibração metodológica GymSite v2", "peso_score", "pontos", "calibracao"),
+    "score_conc_bonus_medio":    _p(3.5, "calibração metodológica GymSite v2", "peso_score", "pontos", "calibracao"),
+    "score_conc_bonus_alto":     _p(1.5, "calibração metodológica GymSite v2", "peso_score", "pontos", "calibracao"),
+    "score_conc_bonus_saturado": _p(0.0, "calibração metodológica GymSite v2", "peso_score", "pontos", "calibracao"),
+    "score_conc_penalidade_por_conc": _p(0.4, "calibração metodológica GymSite v2", "peso_score", "pontos/conc", "calibracao"),
+    "score_conc_penalidade_teto":     _p(4.0, "calibração metodológica GymSite v2", "teto_score", "pontos", "calibracao"),
+    "score_conc_rating_mult":    _p(2.0, "calibração metodológica GymSite v2", "peso_score", "fator", "calibracao"),
+    "score_conc_rating_default": _p(1.0, "calibração metodológica GymSite v2 (sem rating)", "peso_score", "fator", "calibracao"),
+    "score_oport_peso_dores": _p(0.8, "calibração metodológica GymSite v2", "peso_score", "pontos/dor", "calibracao"),
+    "score_oport_peso_gaps":  _p(0.3, "calibração metodológica GymSite v2", "peso_score", "pontos/gap", "calibracao"),
+    "benchmark_rating_bem_avaliada": _p(4.2, "Google Places (corte rede premium)", "limiar_rating", "estrelas", "benchmark"),
+
+    # ══ ANCORAGEM (anchoring_tools) ══════════════════════════════════════════
+    "ancoragem_dist_forte_m":  _p(500,  "calibração metodológica GeoScout v2", "limiar_distancia", "metros", "calibracao"),
+    "ancoragem_dist_media_m":  _p(1000, "calibração metodológica GeoScout v2", "limiar_distancia", "metros", "calibracao"),
+    "ancoragem_dist_fraca_m":  _p(2000, "calibração metodológica GeoScout v2", "limiar_distancia", "metros", "calibracao"),
+    "ancoragem_pts_forte":     _p(3, "calibração metodológica GeoScout v2", "peso_score", "pontos", "calibracao"),
+    "ancoragem_pts_media":     _p(2, "calibração metodológica GeoScout v2", "peso_score", "pontos", "calibracao"),
+    "ancoragem_pts_fraca":     _p(1, "calibração metodológica GeoScout v2", "peso_score", "pontos", "calibracao"),
+    "geoscout_rating_baixo":   _p(3.5, "Google Places (corte rating baixo)", "limiar_rating", "estrelas", "benchmark"),
+    "geoscout_min_avaliacoes": _p(30, "calibração metodológica GeoScout v2 (amostra mínima)", "limiar_amostra", "avaliacoes", "calibracao"),
+
+    # ══ VALIDAÇÃO (a8_validator) ═════════════════════════════════════════════
+    "validacao_score_minimo_aprovado":     _p(6.0, "calibração metodológica GymSite v2", "limiar_validacao", "pontos", "calibracao"),
+    "validacao_score_concorrencia_minimo": _p(4.0, "calibração metodológica GymSite v2", "limiar_validacao", "pontos", "calibracao"),
+    "validacao_peso_critico": _p(0.40, "calibração metodológica GymSite v2", "peso_penalidade", "fração", "calibracao"),
+    "validacao_peso_alta":    _p(0.25, "calibração metodológica GymSite v2", "peso_penalidade", "fração", "calibracao"),
+    "validacao_peso_media":   _p(0.15, "calibração metodológica GymSite v2", "peso_penalidade", "fração", "calibracao"),
+    "validacao_peso_baixa":   _p(0.05, "calibração metodológica GymSite v2", "peso_penalidade", "fração", "calibracao"),
+
+    # ══ POPULAR TIMES (popular_times_tool) — perfil horário + oportunidade ════
+    "pop_spread_24h_equilibrado": _p(25, "calibração metodológica GymSite v2 (variabilidade)", "limiar_perfil", "pontos_pct", "calibracao"),
+    "pop_picos_min_multi":        _p(5, "calibração metodológica GymSite v2", "limiar_perfil", "horas", "calibracao"),
+    "pop_pct_pico_alto":          _p(70, "calibração metodológica GymSite v2 (hora cheia)", "limiar_ocupacao", "pct", "calibracao"),
+    "pop_pct_superlotado":        _p(80, "calibração metodológica GymSite v2 (hora crítica)", "limiar_ocupacao", "pct", "calibracao"),
+    "pop_pct_livre":              _p(20, "calibração metodológica GymSite v2 (hora vazia)", "limiar_ocupacao", "pct", "calibracao"),
+    "pop_pct_muito_livre":        _p(15, "calibração metodológica GymSite v2 (hora muito vazia)", "limiar_ocupacao", "pct", "calibracao"),
+    "pop_vale_midweek_max":       _p(20, "calibração metodológica GymSite v2", "limiar_ocupacao", "pct", "calibracao"),
+    "pop_dias_min_perfil":        _p(4, "calibração metodológica GymSite v2 (consenso semana)", "limiar_recomendacao", "dias", "calibracao"),
+    "pop_dias_min_vale_midweek":  _p(2, "calibração metodológica GymSite v2", "limiar_recomendacao", "dias", "calibracao"),
+    "pop_hora_manha_ini":   _p(6,  "padrão fitness Brasil (café 6-10h)", "faixa_horaria", "hora", "calibracao"),
+    "pop_hora_manha_fim":   _p(10, "padrão fitness Brasil (café 6-10h)", "faixa_horaria", "hora", "calibracao"),
+    "pop_hora_almoco_ini":  _p(11, "padrão fitness Brasil (almoço 11-15h)", "faixa_horaria", "hora", "calibracao"),
+    "pop_hora_almoco_fim":  _p(15, "padrão fitness Brasil (almoço 11-15h)", "faixa_horaria", "hora", "calibracao"),
+    "pop_hora_tarde_ini":   _p(16, "padrão fitness Brasil (saída trabalho 16-20h)", "faixa_horaria", "hora", "calibracao"),
+    "pop_hora_tarde_fim":   _p(20, "padrão fitness Brasil (saída trabalho 16-20h)", "faixa_horaria", "hora", "calibracao"),
+
+    # ══ CNO obra (cno_fitness_tools) — filtros de plausibilidade ══════════════
+    "cno_area_min_m2":         _p(80.0,    "benchmark mercado (estúdio mínimo)", "filtro_plausibilidade", "m2", "benchmark"),
+    "cno_area_max_m2":         _p(8000.0,  "benchmark mercado (academia grande)", "filtro_plausibilidade", "m2", "benchmark"),
+    "cno_duracao_min_dias":    _p(60,      "análise CNO encerradas (obra mínima)", "filtro_plausibilidade", "dias", "benchmark"),
+    "cno_duracao_max_dias":    _p(1200,    "análise CNO encerradas (obra máxima)", "filtro_plausibilidade", "dias", "benchmark"),
+    "cno_dias_por_m2_min":     _p(0.04,    "análise CNO encerradas (ritmo obra)", "filtro_plausibilidade", "dias/m2", "benchmark"),
+    "cno_dias_por_m2_max":     _p(4.0,     "análise CNO encerradas (ritmo obra)", "filtro_plausibilidade", "dias/m2", "benchmark"),
+    "cno_area_edificacao_min": _p(80.0,    "benchmark mercado (edificação mínima)", "filtro_plausibilidade", "m2", "benchmark"),
+    "cno_area_edificacao_max": _p(50000.0, "benchmark mercado (prédio multi-uso)", "filtro_plausibilidade", "m2", "benchmark"),
+}
+
+_OVERRIDE_CACHE: dict[str, dict[str, Any]] | None = None
+
+
+def _carregar_overrides() -> dict[str, dict[str, Any]]:
+    """Override recalibrável da tabela Supabase parametros_metodologia (best-effort)."""
+    global _OVERRIDE_CACHE
+    if _OVERRIDE_CACHE is not None:
+        return _OVERRIDE_CACHE
+    _OVERRIDE_CACHE = {}
+    key = (
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_SERVICE_KEY")
+        or os.environ.get("SUPABASE_KEY")
+    )
+    if not (os.environ.get("SUPABASE_URL") and key):
+        return _OVERRIDE_CACHE
+    try:
+        from tools.supabase_client import load_create_client
+
+        cli = load_create_client()(os.environ["SUPABASE_URL"], key)
+        res = cli.table("parametros_metodologia").select("*").execute()
+        for row in getattr(res, "data", None) or []:
+            nome = row.get("nome")
+            if nome and row.get("valor") is not None:
+                _OVERRIDE_CACHE[nome] = row
+    except Exception as e:
+        print(f"[parametros] override Supabase indisponível: {type(e).__name__}: {e}")
+    return _OVERRIDE_CACHE
+
+
+def param_meta(nome: str) -> dict[str, Any]:
+    """Registro completo do parâmetro (valor + fonte + metodo) — para exibir no relatório."""
+    override = _carregar_overrides().get(nome)
+    base = _DEFAULTS.get(nome)
+    if override:
+        rec = {**(base or {}), **override}
+        rec.setdefault("fonte", "supabase_override")
+        return rec
+    if base is None:
+        raise KeyError(f"parâmetro de metodologia desconhecido: {nome!r}")
+    return dict(base)
+
+
+def param(nome: str) -> float:
+    """Valor numérico do parâmetro (override Supabase > default rotulado)."""
+    return float(param_meta(nome)["valor"])
+
+
+def param_int(nome: str) -> int:
+    """Valor inteiro do parâmetro (limiares discretos: meses, pessoas, avaliações)."""
+    return int(round(param(nome)))
+
+
+def param_por_modelo(prefixo: str) -> dict[str, float]:
+    """Mapa {low, mid, premium} a partir de chaves `{prefixo}_{modelo}`.
+
+    Ex.: param_por_modelo("ticket") → {"low": .., "mid": .., "premium": ..}
+    """
+    return {m: param(f"{prefixo}_{m}") for m in ("low", "mid", "premium")}
+
+
+def ocupacao_por_tipologia(tipologia: str | None) -> str:
+    """Mapeia tipologia (do lançamento) → chave de parâmetro de ocupação."""
+    t = (tipologia or "").lower()
+    if "studio" in t or "stúdio" in t or "kit" in t:
+        return "ocupacao_studio"
+    if "3" in t or "4" in t or "alto padr" in t:
+        return "ocupacao_3_mais_dorm"
+    if "1 " in t or "2 " in t or "1-2" in t or "dorm" in t:
+        return "ocupacao_1_2_dorm"
+    return "ocupacao_default"

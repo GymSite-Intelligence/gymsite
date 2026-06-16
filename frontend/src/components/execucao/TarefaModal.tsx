@@ -43,13 +43,16 @@ import {
   useExcluirChecklistItem,
   useNotasTarefa,
   useRegistrarGasto,
+  useSugerirPassos,
   type Pessoa,
+  type PassoSugerido,
   type Tarefa,
 } from '@/hooks/usePlaybook'
 
 const STATUS_LABEL: Record<Tarefa['status'], string> = {
   A_FAZER: 'A fazer',
   EM_ANDAMENTO: 'Em andamento',
+  AGUARDANDO_APROVACAO: 'Em aprovação',
   BLOQUEADA: 'Bloqueada',
   CONCLUIDA: 'Concluída',
   CANCELADA: 'Cancelada',
@@ -109,8 +112,11 @@ export function TarefaModal({
   const registrarGasto = useRegistrarGasto(playbookId)
   const adicionarPasso = useAdicionarChecklistItem(playbookId)
   const excluirPasso = useExcluirChecklistItem(playbookId)
+  const sugerirPassos = useSugerirPassos()
   const [gastoEdit, setGastoEdit] = useState<string | null>(null)
   const [novoPasso, setNovoPasso] = useState('')
+  const [novoCriterio, setNovoCriterio] = useState('')
+  const [sugestoes, setSugestoes] = useState<PassoSugerido[]>([])
 
   useEffect(() => {
     setNovoStatus('')
@@ -149,9 +155,31 @@ export function TarefaModal({
     const texto = novoPasso.trim()
     if (!texto || !tarefa) return
     adicionarPasso.mutate(
-      { tarefaId: tarefa.id, descricao: texto },
+      { tarefaId: tarefa.id, descricao: texto, criterio_aceite: novoCriterio.trim() || undefined },
       {
-        onSuccess: () => setNovoPasso(''),
+        onSuccess: () => {
+          setNovoPasso('')
+          setNovoCriterio('')
+        },
+        onError: (e: Error) => notify.error(e.message),
+      },
+    )
+  }
+
+  function pedirSugestoes() {
+    if (!tarefa) return
+    sugerirPassos.mutate(tarefa.id, {
+      onSuccess: (r) => setSugestoes(r.passos ?? []),
+      onError: (e: Error) => notify.error(e.message),
+    })
+  }
+
+  function aceitarSugestao(p: PassoSugerido, idx: number) {
+    if (!tarefa) return
+    adicionarPasso.mutate(
+      { tarefaId: tarefa.id, descricao: p.descricao, criterio_aceite: p.criterio_aceite || undefined },
+      {
+        onSuccess: () => setSugestoes((s) => s.filter((_, i) => i !== idx)),
         onError: (e: Error) => notify.error(e.message),
       },
     )
@@ -176,16 +204,32 @@ export function TarefaModal({
     })
   }
 
+  function parseGastoCentavos(): number | null {
+    const txt = gastoReais.replace(/\./g, '').replace(',', '.').trim()
+    if (!txt) return null
+    const v = Number(txt)
+    return !Number.isNaN(v) && v >= 0 ? Math.round(v * 100) : null
+  }
+
   function salvar() {
     if (!mudou) return
-    let centavos: number | null = null
-    const txt = gastoReais.replace(/\./g, '').replace(',', '.').trim()
-    if (txt) {
-      const v = Number(txt)
-      if (!Number.isNaN(v) && v >= 0) centavos = Math.round(v * 100)
-    }
-    onMudarStatus(novoStatus as Tarefa['status'], centavos)
+    onMudarStatus(novoStatus as Tarefa['status'], parseGastoCentavos())
   }
+
+  // Aprovação (Owner): conclui de verdade. Reprovar volta pra Em andamento.
+  function aprovar() {
+    onMudarStatus('CONCLUIDA', parseGastoCentavos())
+  }
+  function reprovar() {
+    onMudarStatus('EM_ANDAMENTO', null)
+  }
+  // Do -> Check: executor envia o trabalho pro responsável aprovar (sem precisar
+  // marcar todos os checkboxes — a entrega/notas é o Output SIPOC).
+  function enviarAprovacao() {
+    onMudarStatus('AGUARDANDO_APROVACAO', null)
+  }
+  const emAprovacao = tarefa.status === 'AGUARDANDO_APROVACAO'
+  const podeEnviar = tarefa.status === 'A_FAZER' || tarefa.status === 'EM_ANDAMENTO'
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
@@ -223,6 +267,24 @@ export function TarefaModal({
         </DialogHeader>
 
         <div className="space-y-5 px-6 py-5">
+          {/* Critério de aceite (Check/SIPOC) — o responsável aprova contra isto */}
+          {(tarefa.criterio_verificacao || emAprovacao) && (
+            <div
+              className={
+                'rounded-lg border p-3 ' +
+                (emAprovacao ? 'border-accent/40 bg-accent/5' : 'border-border bg-muted/30')
+              }
+            >
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Critério de aceite{emAprovacao ? ' · verifique antes de aprovar' : ''}
+              </p>
+              <p className="text-sm leading-relaxed">
+                {tarefa.criterio_verificacao ||
+                  'Sem critério definido — avalie pelo checklist e pelas notas de andamento.'}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <Campo rotulo="Prazo">{formatData(tarefa.data_prevista_conclusao)}</Campo>
             <Campo rotulo="Responsável">
@@ -288,7 +350,58 @@ export function TarefaModal({
           )}
 
           <div className="border-t pt-4">
-            <p className="mb-2 text-xs text-muted-foreground">Passo a passo</p>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">Passo a passo</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                disabled={sugerirPassos.isPending}
+                onClick={pedirSugestoes}
+              >
+                <Sparkles className="h-3 w-3" />
+                {sugerirPassos.isPending ? 'Sugerindo…' : 'Sugerir passos'}
+              </Button>
+            </div>
+
+            {sugestoes.length > 0 && (
+              <div className="mb-3 space-y-2 rounded-lg border border-accent/40 bg-accent/5 p-3">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Sugestões da IA · aceite ou descarte
+                </p>
+                {sugestoes.map((p, i) => (
+                  <div key={i} className="flex items-start gap-2 rounded-md border border-border bg-card p-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{p.descricao}</p>
+                      {p.criterio_aceite && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Aceite: {p.criterio_aceite}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      disabled={adicionarPasso.isPending}
+                      aria-label="Aceitar passo"
+                      onClick={() => aceitarSugestao(p, i)}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-muted-foreground"
+                      aria-label="Descartar"
+                      onClick={() => setSugestoes((s) => s.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               {tarefa.checklist.map((item) => (
                 <div key={item.id} className="group flex items-start gap-2 text-sm">
@@ -298,8 +411,15 @@ export function TarefaModal({
                       onCheckedChange={(v) => onMarcarChecklist(item.id, v === true)}
                       className="mt-0.5"
                     />
-                    <span className={item.concluido ? 'text-muted-foreground line-through' : ''}>
-                      {item.descricao}
+                    <span className="min-w-0 flex-1">
+                      <span className={item.concluido ? 'text-muted-foreground line-through' : ''}>
+                        {item.descricao}
+                      </span>
+                      {item.criterio_aceite && (
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          Aceite: {item.criterio_aceite}
+                        </span>
+                      )}
                     </span>
                   </label>
                   {pessoas.length > 0 && (
@@ -338,24 +458,33 @@ export function TarefaModal({
                   </Button>
                 </div>
               ))}
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 rounded-md border border-dashed border-border p-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Novo passo…"
+                    value={novoPasso}
+                    onChange={(e) => setNovoPasso(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && adicionarPassoNovo()}
+                    className="h-9"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    disabled={!novoPasso.trim() || adicionarPasso.isPending}
+                    onClick={adicionarPassoNovo}
+                    aria-label="Adicionar passo"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Input
-                  placeholder="Novo passo…"
-                  value={novoPasso}
-                  onChange={(e) => setNovoPasso(e.target.value)}
+                  placeholder="Critério de aceite do passo (opcional)"
+                  value={novoCriterio}
+                  onChange={(e) => setNovoCriterio(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && adicionarPassoNovo()}
-                  className="h-9"
+                  className="h-8 text-xs"
                 />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  disabled={!novoPasso.trim() || adicionarPasso.isPending}
-                  onClick={adicionarPassoNovo}
-                  aria-label="Adicionar passo"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </div>
@@ -464,7 +593,7 @@ export function TarefaModal({
               </Select>
             </div>
 
-            {concluindo && (
+            {(concluindo || emAprovacao) && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
                   Quanto você gastou de fato? {custoAlto ? '' : '(se souber)'}
@@ -510,13 +639,44 @@ export function TarefaModal({
           <Button variant="outline" onClick={onFechar} className="h-10">
             Fechar
           </Button>
-          <Button
-            className="h-10"
-            disabled={!mudou || precisaGasto || salvando}
-            onClick={salvar}
-          >
-            {salvando ? 'Salvando…' : 'Salvar mudança'}
-          </Button>
+          {emAprovacao ? (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="h-10"
+                disabled={salvando}
+                onClick={reprovar}
+              >
+                Reprovar
+              </Button>
+              <Button className="h-10" disabled={precisaGasto || salvando} onClick={aprovar}>
+                {salvando ? 'Aprovando…' : 'Aprovar conclusão'}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              {mudou && (
+                <Button
+                  variant="outline"
+                  className="h-10"
+                  disabled={!mudou || precisaGasto || salvando}
+                  onClick={salvar}
+                >
+                  {salvando ? 'Salvando…' : 'Salvar mudança'}
+                </Button>
+              )}
+              {podeEnviar && (
+                <Button className="h-10" disabled={salvando} onClick={enviarAprovacao}>
+                  {salvando ? 'Enviando…' : 'Enviar para aprovação'}
+                </Button>
+              )}
+              {!podeEnviar && !mudou && (
+                <Button className="h-10" disabled onClick={salvar}>
+                  Salvar mudança
+                </Button>
+              )}
+            </div>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

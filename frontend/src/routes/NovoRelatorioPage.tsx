@@ -494,7 +494,7 @@ export function NovoRelatorioPage() {
                 : loadingMun
                   ? 'Carregando municípios do IBGE…'
                   : fonteMun === 'fallback'
-                    ? `⚠ IBGE indisponível — usando ${totalMun} municípios em cache local de ${ufSelecionada.nome}`
+                    ? `IBGE indisponível — usando ${totalMun} municípios em cache local de ${ufSelecionada.nome}`
                     : `${totalMun} municípios em ${ufSelecionada.nome} · digite pra filtrar`
             }
             error={errors.municipio?.message}

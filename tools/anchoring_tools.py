@@ -9,6 +9,7 @@ no código (LLM só consome o resultado, sem reinventar regra).
 Reusa funções de tools/maps_tools.py — não faz chamadas novas à API Google.
 """
 from tools.maps_tools import buscar_imoveis_texto, calcular_distancia_km
+from tools.parametros_metodologia import param, param_int
 
 
 CHECKLIST_DILIGENCIA = [
@@ -117,12 +118,12 @@ def calcular_score_ancoragem(candidato_lat: float, candidato_lng: float,
     score = 0.0
     for p in com_distancia:
         d = p["distancia_m"]
-        if d < 500:
-            score += 3
-        elif d < 1000:
-            score += 2
-        elif d < 2000:
-            score += 1
+        if d < param("ancoragem_dist_forte_m"):
+            score += param("ancoragem_pts_forte")
+        elif d < param("ancoragem_dist_media_m"):
+            score += param("ancoragem_pts_media")
+        elif d < param("ancoragem_dist_fraca_m"):
+            score += param("ancoragem_pts_fraca")
 
     score = min(score, 10.0)
 
@@ -259,7 +260,7 @@ def _calcular_score_geoscout_basico(c: dict, bairro_alvo_chave: str) -> float:
         score += 2
     if status in ("CLOSED_TEMPORARILY", "CLOSED_PERMANENTLY"):
         score += 2
-    if rating is not None and rating < 3.5 and num_av >= 30:
+    if rating is not None and rating < param("geoscout_rating_baixo") and num_av >= param_int("geoscout_min_avaliacoes"):
         score += 1
     if tipos_set & {"store", "shopping_mall"}:
         score += 1
@@ -626,6 +627,16 @@ def _fetch_listings_como_candidatos(
             except Exception:
                 pass
 
+        # Street view do imóvel — SÓ quando geocodificado de verdade (coords do
+        # endereço). Com fallback de centro de cidade a foto seria do centro,
+        # enganosa; nesse caso fica "" e a UI mostra "street view indisponível".
+        sv_url = ""
+        if geocoded:
+            try:
+                sv_url = obter_street_view_url(c_lat, c_lng)
+            except Exception:
+                sv_url = ""
+
         candidatos.append({
             "place_id": f"listing_{l.source}_{l.listing_id or len(candidatos)}",
             "nome": f"Imóvel anunciado · {l.area_m2}m² · {l.source.upper()}",
@@ -657,7 +668,7 @@ def _fetch_listings_como_candidatos(
             "polos_geradores": [],
             "estimativa_visibilidade": "a_confirmar_no_field",
             "avenida_principal": False,
-            "street_view_url": "",
+            "street_view_url": sv_url,
             "telefone": "",
             "website": l.listing_url,
         })

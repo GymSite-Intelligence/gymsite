@@ -1,103 +1,95 @@
 # agents/a3a_competitor_search.py
 """
-A3a — CompetitorSearch (busca + enrichment).
+A3a — CompetitorSearch (busca + enrichment) — agente DETERMINÍSTICO (sem LLM).
 
-Sub-agente especialista da fase competitiva. Responsável APENAS por buscar
-academias concorrentes, processar reviews e fazer enrichment via Google
-Knowledge Panel + Search Grounding.
+Sub-agente da fase competitiva. Busca academias concorrentes, processa reviews
+e faz enrichment. NÃO faz análise agregada — isso é do A3b.
 
-NÃO faz análise agregada — isso é do A3b. Separação evita estouro do
-AFC=10 do Gemini (era um dos bugs recorrentes do A3 monolítico).
+REFATOR custo-LLM (2026-06-14):
+Antes era um LlmAgent (gemini-2.5-flash) cujo único trabalho era chamar a macro
+determinística `analisar_concorrentes_a3a_completo` e ECOAR o JSON de volta via
+output_key. O LLM não decidia nada: re-enviava o state inteiro (~83k tokens por
+relatório, medido em metrics/tokens_pipeline.csv) só pra repetir o resultado da
+tool. Agora é um BaseAgent que roda a macro direto e grava `concorrentes_brutos`
+no state via state_delta. Mesmo resultado, zero token de LLM.
 
 REFATOR Task #48 (2026-05-09):
-Substituídas 4 tools (buscar_concorrentes_balanceados, buscar_reviews_academia,
-enriquecer_concorrente_via_google, pesquisar_no_google_grounding) por
-1 macro-tool: `analisar_concorrentes_a3a_completo`. Pipeline antes
-ocupava 9 round-trips do LLM (~244k tokens). Agora 2: macro + emit JSON.
+A macro `analisar_concorrentes_a3a_completo` consolidou 4 tools em 1 (busca +
+reconciliação A0 + reviews + enrichment + classificação de dores via Gemini batch).
+O pipeline antigo ocupava 9 round-trips do LLM (~244k tokens).
 """
-from google.adk.agents import Agent
-from tools.competitor_tools import analisar_concorrentes_a3a_completo
+from __future__ import annotations
+
+from typing import AsyncGenerator
+
+from google.adk.agents import BaseAgent
+from google.adk.agents.invocation_context import InvocationContext
+from google.adk.events import Event, EventActions
+
+from tools.competitor_tools import (
+    analisar_concorrentes_a3a_completo,
+    _parse_market_context,
+)
+
+_ERRO_VAZIO = {
+    "concorrentes_brutos": [],
+    "concorrentes_excluidos": [],
+    "redes_a0_solicitadas": [],
+    "redes_a0_cobertas": [],
+    "redes_a0_nao_encontradas": [],
+}
 
 
-competitor_search_agent = Agent(
+class _StateShim:
+    """tool_context mínimo — as tools de concorrência só leem `.state`."""
+
+    __slots__ = ("state",)
+
+    def __init__(self, state):
+        self.state = state
+
+
+def _extrair_bairro_cidade(state) -> tuple[str, str]:
+    """bairro/cidade do market_context (output do A0), com fallback de topo do state."""
+    bairro = (state.get("bairro") or "").strip()
+    cidade = (state.get("cidade") or "").strip()
+    ctx = _parse_market_context(state.get("market_context"))
+    if isinstance(ctx, dict):
+        inner = ctx.get("market_context")
+        inner = inner if isinstance(inner, dict) else ctx
+        bairro = bairro or (inner.get("bairro") or "").strip()
+        cidade = cidade or (inner.get("cidade") or "").strip()
+    return bairro, cidade
+
+
+class CompetitorSearchAgent(BaseAgent):
+    """A3a determinístico: roda a macro de busca+enrichment e grava no state."""
+
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        bairro, cidade = _extrair_bairro_cidade(state)
+        try:
+            resultado = await analisar_concorrentes_a3a_completo(
+                _StateShim(state), bairro, cidade
+            )
+        except Exception as e:  # nunca derruba o pipeline — A3b lida com lista vazia
+            print(f"[A3a determinístico] falha: {type(e).__name__}: {e}")
+            resultado = {"erro": f"{type(e).__name__}: {e}", **_ERRO_VAZIO}
+
+        yield Event(
+            author=self.name,
+            invocation_id=ctx.invocation_id,
+            actions=EventActions(state_delta={"concorrentes_brutos": resultado}),
+        )
+
+
+competitor_search_agent = CompetitorSearchAgent(
     name="CompetitorSearch",
-    model="gemini-2.5-flash",
     description=(
-        "Busca concorrentes academia (Top 5 balanceado por rede do A0), "
-        "coleta reviews + enrichment + classificação semântica de dores em "
-        "1 macro-tool. Output: concorrentes_brutos[] em session state pra A3b."
+        "A3a determinístico (sem LLM): busca + reconciliação A0 + reviews + "
+        "enrichment + classificação de dores em 1 passo Python. Grava "
+        "concorrentes_brutos no state pra A3b. Substitui o agente-eco LLM (~83k tokens)."
     ),
-    instruction="""
-agente: A3a CompetitorSearch
-papel: busca + enrichment de concorrentes academia
-regra_execucao: autonoma  # nunca pede confirmação
-
-input:
-  bairro: extraído do market_context.bairro
-  cidade: extraído do market_context.cidade
-
-fluxo_obrigatorio (2 passos APENAS):
-  - passo: 1
-    acao: analisar_concorrentes_a3a_completo(bairro, cidade)
-    nota_critica: |
-      Esta macro-tool faz TUDO em 1 chamada determinística:
-        1. Busca + reconciliação A0 (Top 5 balanceado)
-        2. Filtro semântico academia_tradicional (descarta clínicas)
-        3. Reviews via Places Details (5 por concorrente)
-        4. Enrichment Google Knowledge Panel (best-effort)
-        5. Classificação SEMÂNTICA de dores via Gemini Flash (batch único)
-
-      O algoritmo é DETERMINÍSTICO em Python — você é apenas redator.
-      NÃO chame as 4 tools antigas separadamente; elas foram consolidadas.
-
-  - passo: 2
-    acao: emitir JSON de saída final
-    instrucao: |
-      Pegue o output da macro-tool e devolva-o LITERAL como
-      `concorrentes_brutos` (já no formato esperado pelo A3b),
-      mais os metadados de cobertura A0 (redes solicitadas/cobertas/não encontradas).
-
-saida_obrigatoria_json:
-  escopo_busca: academia_tradicional
-  total_concorrentes: int
-  concorrentes_brutos:                     # da macro
-    - place_id: string
-      nome: string
-      endereco: string
-      bairro_concorrente: string
-      rating_oficial: float
-      num_avaliacoes: int
-      tem_24h: bool
-      telefone: string
-      website: string
-      origem_busca: "nearby" | "expandida_a0"
-      reviews:
-        - rating: int
-          quote_curta: string         # max 180 chars (já truncado pela tool)
-          autor: string
-          data_relativa: string
-          categoria_dor: string       # taxonomia fechada (Task #46)
-          sinal: positivo|neutro|negativo
-          confianca_classificacao: alta|media|baixa
-      horarios_pico: dict_or_null
-      pico_semanal: string_or_null
-      atividade_marketing: dict_or_null
-      enrichment_search_grounding_text: string_or_null
-  concorrentes_excluidos:                  # da macro
-    - nome: string
-      motivo: string
-  redes_a0_solicitadas: [string]           # da macro
-  redes_a0_cobertas: [string]              # da macro
-  redes_a0_nao_encontradas: [string]       # da macro
-  classificacao_dores_status: string       # "ok" ou "fallback_substring"
-
-regras_payload:
-  - NÃO chame tools além de `analisar_concorrentes_a3a_completo`.
-  - NÃO refaça classificação de dores — a macro já fez via Gemini.
-  - NÃO trunque ou enriqueça nada manualmente — tudo vem pronto.
-""",
-    tools=[
-        analisar_concorrentes_a3a_completo,
-    ],
-    output_key="concorrentes_brutos",
 )
