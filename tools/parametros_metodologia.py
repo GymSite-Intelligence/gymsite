@@ -234,6 +234,9 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     # ══ CNO obra (cno_fitness_tools) — filtros de plausibilidade ══════════════
     "cno_area_min_m2":         _p(80.0,    "benchmark mercado (estúdio mínimo)", "filtro_plausibilidade", "m2", "benchmark"),
     "cno_area_max_m2":         _p(8000.0,  "benchmark mercado (academia grande)", "filtro_plausibilidade", "m2", "benchmark"),
+    "cno_area_gp_min_m2":      _p(2000,    "gate grande porte (cno_bigquery_loader)", "filtro_plausibilidade", "m2", "benchmark", "2026-06-16"),
+    "cno_area_gp_max_m2":      _p(100000,  "gate grande porte (corta mega-infra)", "filtro_plausibilidade", "m2", "benchmark", "2026-06-16"),
+    "cutoff_obras_meses":      _p(36,      "janela retroativa busca CNO (demanda_futura)", "janela_busca", "meses", "calibracao", "2026-06-16"),
     "cno_duracao_min_dias":    _p(60,      "análise CNO encerradas (obra mínima)", "filtro_plausibilidade", "dias", "benchmark"),
     "cno_duracao_max_dias":    _p(1200,    "análise CNO encerradas (obra máxima)", "filtro_plausibilidade", "dias", "benchmark"),
     "cno_dias_por_m2_min":     _p(0.04,    "análise CNO encerradas (ritmo obra)", "filtro_plausibilidade", "dias/m2", "benchmark"),

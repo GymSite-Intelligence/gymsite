@@ -21,7 +21,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from tools.parametros_metodologia import ocupacao_por_tipologia, param, param_meta
+from tools.parametros_metodologia import ocupacao_por_tipologia, param, param_int, param_meta
 
 
 def _ticket_padrao() -> float:
@@ -127,7 +127,10 @@ def _ref_atual_ym() -> str:
     return f"{n.year:04d}-{n.month:02d}"
 
 
-def _cutoff_inicio_iso(meses_atras: int = 36) -> str:
+def _cutoff_inicio_iso(meses_atras: int | None = None) -> str:
+    # Janela retroativa recalibrável (zero-hardcode); default rotulado em _DEFAULTS.
+    if meses_atras is None:
+        meses_atras = param_int("cutoff_obras_meses")
     n = datetime.now(timezone.utc)
     idx = (n.year * 12 + (n.month - 1)) - meses_atras
     return f"{idx // 12:04d}-{idx % 12 + 1:02d}-01"
@@ -163,7 +166,7 @@ def _obras_grande_porte_municipio(cidade: str, uf: str) -> list[dict] | None:
             .table("cno_obras_grande_porte")
             .select("*")
             .eq("id_municipio", ibge)
-            .gte("data_inicio", _cutoff_inicio_iso(36))
+            .gte("data_inicio", _cutoff_inicio_iso())
             .limit(5000)
             .execute()
         )
