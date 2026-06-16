@@ -1,10 +1,14 @@
 """Testes bairro_renda_loader (piloto Fortaleza)."""
 from __future__ import annotations
 
+import tools.bairro_renda_loader as m
 from tools.bairro_renda_loader import enrich_demografia_bairro, load_pilot_catalog
 
 
-def test_pilot_meireles():
+def test_pilot_meireles(monkeypatch):
+    # Força o path piloto: desliga IBGE 2022 (renda_bairro) e CKAN, que têm precedência.
+    monkeypatch.setattr(m, "_renda_bairro_ibge", lambda c, u, b: None)
+    monkeypatch.setattr(m, "_carregar_ckan_bairros", lambda c, u: None)
     pilot = load_pilot_catalog("Fortaleza", "CE")
     assert pilot is not None
     demo = enrich_demografia_bairro(

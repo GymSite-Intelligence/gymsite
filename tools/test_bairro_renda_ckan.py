@@ -30,6 +30,7 @@ def test_enrich_usa_ckan_quando_disponivel(monkeypatch):
         }},
         "cfg": m._CKAN_DATASETS["fortaleza_ce"],
     }
+    monkeypatch.setattr(m, "_renda_bairro_ibge", lambda c, u, b: None)  # força path CKAN
     monkeypatch.setattr(m, "_carregar_ckan_bairros", lambda c, u: catalogo)
     out = m.enrich_demografia_bairro({}, "Fortaleza", "Cocó", "CE")["bairro"]
     assert out["renda_media"] == 2095.2
@@ -39,6 +40,7 @@ def test_enrich_usa_ckan_quando_disponivel(monkeypatch):
 
 
 def test_fallback_piloto_quando_ckan_vazio(monkeypatch):
+    monkeypatch.setattr(m, "_renda_bairro_ibge", lambda c, u, b: None)  # força fallback
     monkeypatch.setattr(m, "_carregar_ckan_bairros", lambda c, u: None)
     monkeypatch.setattr(m, "load_pilot_catalog", lambda c, u: {
         "fonte": "bairro_renda_pilot", "data_referencia": "2024",
