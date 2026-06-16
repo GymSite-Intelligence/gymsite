@@ -344,12 +344,11 @@ class A8ValidadorCruzado:
 
     def _validar_evidencia_oportunidade(self, state: dict) -> None:
         """score_oportunidade_mercado >= 9 sustentado por reviews vazios ('Top')."""
-        ic = state.get("inteligencia_competitiva") or {}
-        inner = (
-            ic.get("inteligencia_competitiva")
-            if isinstance(ic.get("inteligencia_competitiva"), dict)
-            else ic
-        )
+        ic = state.get("inteligencia_competitiva")
+        if not isinstance(ic, dict):
+            return
+        inner_raw = ic.get("inteligencia_competitiva")
+        inner = inner_raw if isinstance(inner_raw, dict) else ic
         if not isinstance(inner, dict):
             return
         try:

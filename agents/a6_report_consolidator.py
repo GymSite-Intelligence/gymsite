@@ -1357,6 +1357,32 @@ def _safe_float(v, default=0.0):
         return default
 
 
+def _normalizar_cenarios_aluguel(cenarios, aluguel_fallback):
+    """Garante custos_detalhados.aluguel em cada cenário antes de gravar.
+
+    A4 (gemini-2.5-flash) às vezes omite `custos_detalhados.aluguel` no echo do
+    LLM. Sem o campo, o writer gravava NULL → o front convertia em zero → KPI
+    "aluguel R$ 0" e payback fake (caso Bessa 11/06). Aqui, na consolidação
+    determinística, preenchemos do `aluguel_mensal` do output do A4 quando o
+    breakdown veio sem aluguel — fonte única de verdade pros 3 cenários.
+    """
+    if not isinstance(cenarios, dict):
+        return cenarios
+    fb = _safe_float(aluguel_fallback)
+    if not fb:
+        return cenarios
+    out = {}
+    for modelo, c in cenarios.items():
+        if isinstance(c, dict):
+            cd = c.get("custos_detalhados")
+            cd = dict(cd) if isinstance(cd, dict) else {}
+            if not cd.get("aluguel"):
+                cd["aluguel"] = fb
+                c = {**c, "custos_detalhados": cd}
+        out[modelo] = c
+    return out
+
+
 def _rank_candidatos_for_top3(candidatos: list) -> list:
     """Prioriza listings OLX/ImovelWeb antes do slice top 3."""
 
@@ -2190,7 +2216,9 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "aviso_geografico": bap.get("aviso_geografico"),
             "cidade_efetiva": bap.get("cidade_efetiva"),
             "cidade_foi_corrigida": bool(bap.get("cidade_foi_corrigida")),
-            "viabilidade_3_cenarios": inner_fin.get("cenarios", {}),
+            "viabilidade_3_cenarios": _normalizar_cenarios_aluguel(
+                inner_fin.get("cenarios", {}), inner_fin.get("aluguel_mensal")
+            ),
             "modelo_recomendado": inner_fin.get("recomendacao_modelo"),
             "aluguel_mensal": _safe_float(inner_fin.get("aluguel_mensal")),
             "aluguel_municipio_referencia": inner_fin.get("aluguel_municipio_referencia"),
