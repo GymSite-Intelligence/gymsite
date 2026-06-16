@@ -106,7 +106,13 @@ def minerar(*, dry_run: bool = False, chunk: int = 500) -> dict:
     cli = _supabase()
     for i in range(0, len(rows), chunk):
         batch = rows[i : i + chunk]
-        cli.table("cno_obras_fitness").upsert(batch, on_conflict="id_cno").execute()
+        # PRECEDÊNCIA: basedosdados é ≤2021 (backfill histórico). ignore_duplicates
+        # = INSERT ON CONFLICT DO NOTHING — só preenche id_cno ausente, NUNCA
+        # sobrescreve linha existente (que pode ter dado fresco do rfb_cno_loader
+        # mensal). Sem isso, re-rodar este loader após o RFB regredia 2026→2021.
+        cli.table("cno_obras_fitness").upsert(
+            batch, on_conflict="id_cno", ignore_duplicates=True
+        ).execute()
         out["upserted"] += len(batch)
     return out
 
@@ -204,7 +210,11 @@ def minerar_grande_porte(*, dry_run: bool = False, chunk: int = 500) -> dict:
     cli = _supabase()
     for i in range(0, len(rows), chunk):
         batch = rows[i : i + chunk]
-        cli.table("cno_obras_grande_porte").upsert(batch, on_conflict="id_cno").execute()
+        # PRECEDÊNCIA: ver minerar() — backfill histórico não sobrescreve dado
+        # fresco do rfb_cno_loader (ignore_duplicates = ON CONFLICT DO NOTHING).
+        cli.table("cno_obras_grande_porte").upsert(
+            batch, on_conflict="id_cno", ignore_duplicates=True
+        ).execute()
         out["upserted"] += len(batch)
     return out
 
