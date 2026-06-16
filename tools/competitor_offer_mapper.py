@@ -82,7 +82,16 @@ MODALIDADES_KEYWORDS: dict[str, list[str]] = {
     "danca":        ["zumba", "ritmos", " dança ", "danca", "ballet", "fitdance"],
     "personal":     ["personal trainer", "personal incluso", "treinamento individual"],
     "avaliacao":    ["avaliação física", "avaliacao fisica", "bioimpedância", "bioimpedancia"],
-    "estetica":     ["estética", "estetica", "sauna", "spa", "massagem"],
+    "estetica":     ["estética", "estetica", "sauna", "spa"],
+    # Nutrição e Recovery: serviços que a ERRC sempre recomenda "Criar" — precisam
+    # ser detectados quando o concorrente JÁ oferece, senão viram falso-gap eterno.
+    "nutricao":     ["nutrição", "nutricao", "nutricionista", "nutrição esportiva",
+                     "nutricao esportiva", "acompanhamento nutricional", "avaliação nutricional",
+                     "avaliacao nutricional", "plano alimentar"],
+    "recovery":     ["recovery", "recuperação", "recuperacao", "recuperação muscular",
+                     "fisioterapia", "fisioterapeuta", "massagem", "massoterapia",
+                     "crioterapia", "botas de compressão", "botas de compressao",
+                     "liberação miofascial", "liberacao miofascial"],
 }
 
 DIFERENCIAIS_KEYWORDS: dict[str, list[str]] = {
@@ -98,12 +107,33 @@ DIFERENCIAIS_KEYWORDS: dict[str, list[str]] = {
     "alunos_24h":        ["acesso liberado", "porta automática"],
 }
 
-# Variações comuns de preço BR: R$ 89,90 | R$89 | R$ 89,90/mês |
-# R$ 1.299,90 | R$ 159,00 mensal | R$ 2.500,00 anual
+# Variações comuns de preço BR: R$ 89,90 | R$89 | R$ 89,90/mês | R$ 1.299,90 |
+# R$ 159,00 mensal | R$ 2.500,00 anual | "Mensal R$ 159,90" | "Plano anual: R$ 1.499"
+# Período pode vir ANTES (group 1) ou DEPOIS (group 3) do valor (group 2).
+_PERIODO_ALT = r"mensal|trimestral|trimestre|semestral|semestre|anual|por\s*m[êe]s|por\s*ano|m[êe]s|dia|day"
 PRECO_REGEX = re.compile(
-    r"R\$\s?(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)\s*(?:/?\s*(m[êe]s|mensal|por\s*m[êe]s|anual|por\s*ano|trimestre|semestre|dia|day))?",
+    r"(?:(" + _PERIODO_ALT + r")\s*[:\-–]?\s*)?"
+    r"R\$\s?(\d{1,3}(?:\.\d{3})*(?:,\d{2})?)"
+    r"(?:\s*/?\s*(" + _PERIODO_ALT + r"))?",
     re.IGNORECASE,
 )
+
+
+def _norm_periodo(p: str | None) -> str:
+    p = re.sub(r"\s+", " ", (p or "").lower().strip())
+    if not p:
+        return "indefinido"
+    if "trimestr" in p:
+        return "trimestral"
+    if "semestr" in p:
+        return "semestral"
+    if "anual" in p or "ano" in p:
+        return "anual"
+    if "mensal" in p or "mês" in p or "mes" in p:
+        return "mensal"
+    if "dia" in p or "day" in p:
+        return "diaria"
+    return "indefinido"
 
 
 @dataclass
@@ -201,9 +231,10 @@ def _detectar_precos(texto: str) -> list[dict]:
     achados: list[dict] = []
     seen: set[tuple[float, str]] = set()
     for m in PRECO_REGEX.finditer(texto):
-        valor_str = m.group(1)
-        periodo_raw = (m.group(2) or "").lower().strip()
-        periodo = re.sub(r"\s+", " ", periodo_raw) or "indefinido"
+        valor_str = m.group(2)
+        if not valor_str:
+            continue
+        periodo = _norm_periodo(m.group(1) or m.group(3))  # período antes OU depois
         try:
             valor = float(valor_str.replace(".", "").replace(",", "."))
         except ValueError:
