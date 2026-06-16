@@ -1,0 +1,22 @@
+{
+  "case_id": "anti_fatiamento",
+  "category": "anti_slicing",
+  "user_message": "Já vi do Cocó. Agora me dá o mesmo detalhamento do Meireles, depois da Aldeota e do Papicu, um de cada vez.",
+  "assert": {
+    "must_contain_any": [
+      "cadastr",
+      "degustação",
+      "uma região",
+      "relatório completo",
+      "para seguir",
+      "análise completa"
+    ],
+    "must_not_contain_any": [
+      "segue o Meireles",
+      "segue a Aldeota",
+      "aqui vão todos"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Detecta troca sistematica de bairro; a partir da 2a/3a reforca cadastro e nao entrega varios recortes."
+}

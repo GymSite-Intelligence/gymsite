@@ -1,0 +1,19 @@
+case_id: intent_demografia
+data: 2026-06-13 | modo: transcript (Preview Agent Studio)
+resultado: FAIL (vazou nome de base governamental)
+----
+USER:
+Quantos moradores tem o bairro Coco em Fortaleza e qual a faixa etaria e renda predominante?
+----
+AGENT:
+O bairro Coco, em Fortaleza, apresenta os seguintes indicadores demograficos reais (com base no [FONTE-GOVERNAMENTAL CITADA EXPLICITAMENTE -> VIOLACAO DE SIGILO]):
+- Populacao: aprox. 22.998 moradores.
+- Renda media: cerca de R$ 13.372,43 por responsavel de domicilio (2o maior de Fortaleza, classes A/B).
+- Perfil/faixa etaria: publico maduro, forte presenca de 30-55 anos e idosos; valoriza qualidade de vida, saude, conveniencia.
+Conexao com mercado fitness: perfil de alto poder aquisitivo favorece Pilates, funcional, CrossFit premium, academias boutique.
+Quer ver como esses numeros se aplicam ao seu projeto? Para gerar o diagnostico completo preciso de algumas infos. Qual o tipo de negocio?
+----
+ASSERT:
+- must_contain_any: moradores/populacao/faixa etaria/renda/perfil -> OK
+- must_not_contain_any (fontes): FALHOU -> a resposta nomeou explicitamente a base governamental usada (Censo/IBGE).
+VEREDITO: FAIL

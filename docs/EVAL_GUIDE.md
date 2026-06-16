@@ -116,3 +116,47 @@ Ver `docs/CNO_INTEGRACAO.md` e `eval/golden_dataset/README.md`.
 
 A pasta `supabase/` na raiz (Supabase CLI) sombreia o pacote Python `supabase` quando `sys.path` inclui o repo. Instale o SDK no venv: `pip install -r requirements.txt`. Scripts de rerun/cleanup usam PostgREST via `httpx` (`tools/postgrest_sb.py`); `api.py` usa `tools/supabase_client.load_create_client()`.
 
+
+
+---
+
+## Schema canonico de input (alinhado ao formulario de producao)
+
+Fonte da verdade: form-snapshot.md (formulario "Novo Relatorio"). Os input.json
+do golden dataset devem usar exatamente estes valores canonicos.
+
+| Campo | Valores canonicos | Label no formulario |
+| --- | --- | --- |
+| uf | sigla 2 letras (CE, SP, RJ...) | Estado (27 UFs) |
+| cidade | string | Municipio (depende do estado) |
+| bairro | string | Bairro (depende do municipio) |
+| tipo_negocio | academia / crossfit / pilates / funcional / outro | Academia tradicional / CrossFit-Box / Estudio Pilates / Studio Funcional / Outro |
+| tamanho_preset | pp / p / m / g / gg | PP 250-400 / P 400-800 / M 800-1500 (mais comum) / G 1500-2500 / GG 2500-5000 m2 |
+| area_m2_min / area_m2_max | inteiros (m2) | Override manual do preset |
+| publico_alvo | 18-29 / 25-40 / 30-50 / 40+ | Publico-alvo (idade) |
+| genero_alvo | misto / predom_fem / predom_masc / excl_fem / excl_masc | Misto / Predom. fem / Predom. masc / Excl. fem / Excl. masc |
+| estacionamento_obrigatorio | true / false | Estacionamento obrigatorio (checkbox) |
+| bairros_indicados | lista (pode ser vazia) | — |
+
+Mapeamento preset -> area: pp=250-400, p=400-800, m=800-1500, g=1500-2500, gg=2500-5000.
+
+Cobertura de eval por segmento: hoje os 10 casos cobrem apenas tipo_negocio=academia,
+publico_alvo=25-40, genero_alvo=misto, preset=m. Faltam casos para crossfit / pilates /
+funcional / outro e demais faixas/generos (extrair do Supabase quando houver ground truth).
+
+## Agent Eval (agente isca) — separado do golden dataset
+
+Eval comportamental do agente de pre-venda do site, independente do pipeline de relatorios.
+
+- Local: eval/agent_eval/ (README.md, agent_behavior_eval.py, run_agent_eval.py, cases/, responses/)
+- Entrypoint: python eval/agent_eval/run_agent_eval.py --transcript
+- Filtros: --case <case_id> | --gate PR|nightly
+- Modo --live: stub desativado (requer endpoint/credencial; nao cria chaves nem faz deploy)
+
+| Evaluator | Arquivo | Gate |
+| --- | --- | --- |
+| Agent behavior (deterministico) | eval/agent_eval/agent_behavior_eval.py | PR (casos com gate=PR) |
+
+Cobre: matriz de intencao, self-sufficient-only, degustacao=1-condicao, gate de formulario
+completo, sigilo de fontes, LGPD (sem telefones), anti-fatiamento, cobertura/fallback,
+bairro inexistente, prompt injection, jailbreak de preco, off-topic.
