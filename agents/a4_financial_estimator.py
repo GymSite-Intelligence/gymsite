@@ -10,6 +10,40 @@ estava dando MALFORMED_FUNCTION_CALL na primeira function_call do Pro
 """
 from google.adk.agents import Agent
 from tools.financial_tools import analise_financeira_a4_completo
+from tools.parametros_metodologia import param
+
+
+def _bloco_benchmarks() -> str:
+    """Bloco de benchmarks do prompt renderizado de `parametros_metodologia` (Supabase)
+    via param() — ZERO número hardcoded. Recalibrar o DB propaga ao prompt no próximo
+    boot, mantendo a narrativa do A4 coerente com o cálculo (que já usa os mesmos params).
+    """
+    def pct(n: str) -> str:
+        return f"{param(n) * 100:.1f}".rstrip("0").rstrip(".")
+
+    return f"""## BENCHMARKS FITNESS BRASIL (ACAD/Sebrae — recalibrável via parametros_metodologia)
+Modelo financeiro distingue MATRÍCULAS PAGANTES de CAPACIDADE FÍSICA SIMULTÂNEA:
+
+- Low Cost — Smart Fit/Bluefit/Selfit
+    • Ticket: R$ {param('ticket_low'):.2f}/mês
+    • Matrículas/m²: cons {param('matr_m2_low_conservador')} / real {param('matr_m2_low_realista')} / agres {param('matr_m2_low_agressivo')}
+    • Capacidade simultânea (pico): {param('capacidade_simultanea_low')}/m²
+    • Freq. semanal aluno: {param('frequencia_semanal_low')}x | Inadimplência: {pct('inadimplencia_low')}%
+- Mid Market — Bodytech entry / regionais premium
+    • Ticket: R$ {param('ticket_mid'):.2f}/mês
+    • Matrículas/m²: cons {param('matr_m2_mid_conservador')} / real {param('matr_m2_mid_realista')} / agres {param('matr_m2_mid_agressivo')}
+    • Capacidade simultânea (pico): {param('capacidade_simultanea_mid')}/m²
+    • Freq. semanal aluno: {param('frequencia_semanal_mid')}x | Inadimplência: {pct('inadimplencia_mid')}%
+- Premium — Bodytech/Bio Ritmo/boutique
+    • Ticket: R$ {param('ticket_premium'):.2f}/mês
+    • Matrículas/m²: cons {param('matr_m2_premium_conservador')} / real {param('matr_m2_premium_realista')} / agres {param('matr_m2_premium_agressivo')}
+    • Capacidade simultânea (pico): {param('capacidade_simultanea_premium')}/m²
+    • Freq. semanal aluno: {param('frequencia_semanal_premium')}x | Inadimplência: {pct('inadimplencia_premium')}%
+
+Critérios ACAD pra viabilidade:
+- Payback ideal: {param('viab_payback_alto'):.0f} meses (ALTO) | aceitável: até {param('viab_payback_medio'):.0f} meses (MEDIO)
+- Margem líquida saudável: {param('viab_margem_alto'):.0f}%+ (ALTO)
+- Aluguel sustentável: <{pct('aluguel_sustentavel_pct_faturamento')}% do faturamento bruto"""
 
 
 def _persistir_a4_no_state(tool, args, tool_context, tool_response):
@@ -161,29 +195,9 @@ Padrão de mercado pra inferir area_m2 quando não veio explícito no prompt.
   "Modelo GG (>2500m² academia, >1500m² box, >500m² pilates) requer plano de
   expansão multi-unidade pra justificar CAPEX. Investigar marca/franquia."
 
-## BENCHMARKS FITNESS BRASIL (ACAD/Sebrae 2024) — schema v2
-Modelo financeiro distingue MATRÍCULAS PAGANTES de CAPACIDADE FÍSICA SIMULTÂNEA:
-
-- Low Cost — Smart Fit/Bluefit/Selfit
-    • Ticket: R$89,90/mês
-    • Matrículas/m²: cons 1,5 / real 2,2 / agres 3,0
-    • Capacidade simultânea (pico): 0,55/m²
-    • Freq. semanal aluno: 2,5x | Inadimplência: 6%
-- Mid Market — Bodytech entry / regionais premium
-    • Ticket: R$149,90/mês
-    • Matrículas/m²: cons 1,0 / real 1,4 / agres 1,8
-    • Capacidade simultânea (pico): 0,40/m²
-    • Freq. semanal aluno: 2,0x | Inadimplência: 4%
-- Premium — Bodytech/Bio Ritmo/boutique
-    • Ticket: R$299,90/mês
-    • Matrículas/m²: cons 0,4 / real 0,6 / agres 0,9
-    • Capacidade simultânea (pico): 0,25/m²
-    • Freq. semanal aluno: 1,8x | Inadimplência: 2,5%
-
-Critérios ACAD pra viabilidade:
-- Payback ideal: 24-36 meses (ALTO) | aceitável: até 60 meses (MEDIO)
-- Margem líquida saudável: 15-25% (ALTO)
-- Aluguel sustentável: <15% do faturamento bruto
+"""
+    + _bloco_benchmarks()
+    + """
 
 ## ALERTAS DE RISCO (determinísticos — a tool JÁ os gera, você só COPIA)
 A macro aplica estas 6 regras em código e devolve em `alertas[]`. NÃO recalcule;
