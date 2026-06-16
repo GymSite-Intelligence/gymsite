@@ -37,6 +37,6 @@ posicionamento (A9) → headroom_renda (posicionamento_renda + renda_bairro, det
 Cada folha rastreável via `tools/metodologia_explain.py` (param_meta {categoria, fonte}).
 
 ## Pendências de lineage
-- `bairro_renda_loader` (A2) ainda lê CKAN 2010 → migrar p/ `renda_bairro` 2022 (nacional).
+- ✅ FEITO: `bairro_renda_loader` (A2) usa `renda_bairro` IBGE 2022 > CKAN 2010 (commit 93bdd60).
 - Data.Rio JSON não tabelado (redundante com `renda_bairro`; manter só como cross-check ou descartar).
 - SP capital usa **distrito** (não bairro) no IBGE → `renda_bairro` não cobre; carregar `Agregados_por_Distrito` quando for prospectar SP.
