@@ -158,6 +158,8 @@ export interface DemandaFuturaObraJSON {
   entrega?: string | null
   amenidade_fitness?: boolean
   captura_est?: number | null
+  moradores_est?: number | null
+  receita_mensal_est?: number | null
   confianca?: string | null
   provavel_residencial?: boolean
   base_residencial?: string | null
@@ -171,6 +173,7 @@ export interface DemandaFuturaJSON {
   provavel_residencial_n?: number
   residencial_por_base?: Record<string, number>
   refinadas?: number
+  receita_total_mensal_est?: number
   captura_total_est?: number
   moradores_total_est?: number
   janela_entrega?: { de?: string; ate?: string } | null
@@ -212,6 +215,24 @@ export interface PosicionamentoEstrategicoJSON {
     comparativo_mercado?: Record<string, number>
   }
   veredito_posicionamento?: string
+  /** veredito original do LLM, preservado quando o headroom determinístico sobrepõe */
+  veredito_posicionamento_llm?: string
+  fonte_veredito?: string
+  /** Posicionamento determinístico por headroom de renda (IPECE Censo 2022) */
+  headroom_renda?: {
+    renda_pc?: number
+    renda_resp_domicilio?: number
+    renda_percentil?: number
+    ranking_cidade?: number
+    tier_modelo_percentil?: string
+    ticket_teto_sustentavel?: number
+    ticket_mercado?: number | null
+    headroom_premium?: number | null
+    headroom_ratio?: number | null
+    veredito_posicionamento?: string
+    fonte_renda?: string
+    ano_renda?: number
+  }
   justificativa_veredito?: string
   markdown?: string
   /** langcache | gemini — diagnóstico dev quando A9 reutiliza resposta */

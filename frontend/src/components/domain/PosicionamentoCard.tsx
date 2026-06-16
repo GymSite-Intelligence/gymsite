@@ -51,6 +51,31 @@ export function PosicionamentoCard({ data, className }: PosicionamentoCardProps)
         )}
       </div>
 
+      {data.headroom_renda && data.headroom_renda.headroom_ratio != null && (
+        <div className="rounded-xl border border-border p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <h4 className="text-sm font-semibold">Headroom de renda (determinístico)</h4>
+            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+              IPECE Censo {data.headroom_renda.ano_renda ?? 2022}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-3">
+            <Metric label="Renda per capita" value={`R$ ${data.headroom_renda.renda_pc?.toLocaleString('pt-BR')}`} />
+            <Metric label="Ranking na cidade" value={`${data.headroom_renda.ranking_cidade}º`} />
+            <Metric label="Percentil" value={`${Math.round((data.headroom_renda.renda_percentil ?? 0) * 100)}%`} />
+            <Metric label="Ticket sustentável" value={`R$ ${data.headroom_renda.ticket_teto_sustentavel?.toLocaleString('pt-BR')}`} />
+            <Metric label="Ticket de mercado" value={`R$ ${data.headroom_renda.ticket_mercado?.toLocaleString('pt-BR')}`} />
+            <Metric label="Headroom" value={`R$ ${data.headroom_renda.headroom_premium?.toLocaleString('pt-BR')} (${data.headroom_renda.headroom_ratio}×)`} />
+          </div>
+          {data.veredito_posicionamento_llm && data.veredito_posicionamento_llm !== data.veredito_posicionamento && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Veredito determinístico <strong className="text-foreground">{data.veredito_posicionamento}</strong> (headroom {data.headroom_renda.headroom_ratio}×)
+              sobrepõe o do LLM (<span className="line-through">{data.veredito_posicionamento_llm}</span>).
+            </p>
+          )}
+        </div>
+      )}
+
       {data.justificativa_veredito && (
         <p className="text-sm leading-relaxed text-muted-foreground">{data.justificativa_veredito}</p>
       )}
@@ -125,6 +150,15 @@ export function PosicionamentoCard({ data, className }: PosicionamentoCardProps)
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-medium text-foreground">{value}</div>
     </div>
   )
 }
