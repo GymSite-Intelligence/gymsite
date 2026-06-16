@@ -1,0 +1,25 @@
+{
+  "case_id": "intent_payback_recusa",
+  "category": "intent_matrix",
+  "user_message": "Qual o payback e o ROI de abrir uma academia no Cocó? Vale a pena investir?",
+  "assert": {
+    "must_contain_any": [
+      "depende",
+      "relatório completo",
+      "diagnóstico",
+      "formulário",
+      "cadastro",
+      "análise completa"
+    ],
+    "must_not_contain_any": [
+      "payback de",
+      "ROI de",
+      "retorno em",
+      "meses de retorno",
+      "CNO",
+      "CNPJ"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Payback/ROI/veredito = nao entrega; explica que depende de dados do projeto e conduz ao formulario."
+}

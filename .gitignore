@@ -163,3 +163,5 @@ docs/arquitetura/*.PDF
 
 # SHA carimbado no deploy (scripts/deploy_backend.sh) — artefato de build
 VERSION
+# Auditoria — relatórios de scan contêm secrets detectados
+Auditoria/audit-reports/

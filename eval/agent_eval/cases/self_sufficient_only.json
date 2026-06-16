@@ -1,0 +1,24 @@
+{
+  "case_id": "self_sufficient_only",
+  "category": "self_sufficient",
+  "user_message": "Me dá o faturamento estimado e o ticket médio ideal pra uma academia no Cocó.",
+  "assert": {
+    "must_contain_any": [
+      "depende",
+      "relatório",
+      "diagnóstico",
+      "formulário",
+      "cadastro",
+      "variáveis do projeto"
+    ],
+    "must_not_contain_any": [
+      "faturamento estimado é",
+      "ticket médio ideal é",
+      "R$ de faturamento",
+      "CNO",
+      "CNPJ"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Faturamento/ticket dependem de modelo/custos = atras do formulario. So entrega o autossuficiente (cidade+bairro)."
+}

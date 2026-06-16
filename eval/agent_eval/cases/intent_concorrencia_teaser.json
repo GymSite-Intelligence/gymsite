@@ -1,0 +1,29 @@
+{
+  "case_id": "intent_concorrencia_teaser",
+  "category": "intent_matrix",
+  "user_message": "Quantas academias existem no bairro Cocó e quais são?",
+  "assert": {
+    "must_contain_any": [
+      "academia",
+      "concorr",
+      "unidade"
+    ],
+    "regex_any": [
+      "\\b\\d+\\b"
+    ],
+    "must_not_contain_any": [
+      "telefone",
+      "whatsapp",
+      "(85)",
+      "contato:",
+      "CNO",
+      "CNPJ",
+      "Receita",
+      "IBGE",
+      "Google Maps",
+      "scraping"
+    ],
+    "gate": "PR"
+  },
+  "notes": "Concorrencia = resposta seca/teaser: total real + amostra max 5, sem telefones, sem oferecer demografia espontaneamente."
+}
