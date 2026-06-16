@@ -22,5 +22,10 @@ gcloud run deploy gymsite-api \
   --update-env-vars "GIT_SHA=${SHA}"
 # Nota: com Dockerfile na raiz, --source usa o Dockerfile por default (Cloud Build).
 
+# Migra 100% do tráfego pra revisão nova. CRÍTICO: o serviço pode estar com tráfego
+# PINADO numa revisão antiga (deploy cria a revisão mas serve 0% → retired). Sem isso,
+# o deploy "sucede" mas o código novo nunca vai ao ar.
+gcloud run services update-traffic gymsite-api --region us-central1 --to-latest
+
 echo "[deploy] ok — confira a versão em prod:"
 echo "  curl -s https://gymsite-api.vectracargo.com.br/api/version"
