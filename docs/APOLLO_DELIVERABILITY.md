@@ -64,3 +64,45 @@ da própria caixa é o que importa.
    `v=spf1` e terminar com `~all` (ou `-all`).
 3. Em qualquer opção: iniciar o warmup e liberar o limite diário da caixa que
    for usada; sem isso o envio continua travado em zero.
+
+
+---
+
+## Integração Cloudflare × Apollo — funções e ROI
+
+> Seção adicionada para orientar a conexão da API do Cloudflare à operação de entregabilidade no Apollo. Relaciona-se ao SPF "Revisar" de vectracargo.com.br já registrado acima.
+
+### Autenticação (recomendação)
+
+A integração nativa do Apollo pede **API Key + Email** (Global API Key legada — acesso total à conta). Recomenda-se NÃO usar esse método e sim um **API Token com escopo restrito** (Bearer).
+- Base da API: `https://api.cloudflare.com/client/v4`
+- Header: `Authorization: Bearer <token>`
+- Escopo mínimo: **Zone · DNS · Read** (e Write apenas se for aplicar correções).
+- A geração e a inserção do token são ação manual do usuário (credencial sensível).
+
+### Funções recomendadas (wrappers sobre a API do Cloudflare)
+
+| Função | Endpoint Cloudflare | O que faz |
+|---|---|---|
+| `cf_list_zones()` | `GET /zones` | Lista domínios da conta (gymsite, vectracargo) |
+| `cf_verify_email_auth(zone)` | `GET /zones/{id}/dns_records` | Valida existência/correção de SPF, DKIM, DMARC |
+| `cf_upsert_dns_record(zone,type,name,content)` | `POST`/`PATCH /zones/{id}/dns_records` | Cria/atualiza registro (aplicação requer aprovação humana) |
+| `cf_check_dmarc_reports(zone)` | relatórios rua | Agrega alinhamento/spoofing do DMARC |
+| `cf_zone_health(zone)` | orquestra as anteriores | Devolve "health score de entregabilidade" por domínio |
+
+Fluxo de **pré-voo**: rodar `cf_verify_email_auth` antes de cada campanha e cruzar com o status do Apollo (warmup, daily limit, deliverability %).
+
+### ROI
+
+O retorno vem de **entregabilidade e proteção de reputação**, não de receita nova mágica:
+
+| Vetor | Impacto |
+|---|---|
+| Inbox placement | Corrigir SPF/DKIM/DMARC reduz queda em spam → mais aberturas/respostas pelo mesmo volume |
+| Redução de trabalho manual | Pré-voo automatizado substitui checagem manual de DNS + diagnóstico Apollo |
+| Proteção de domínio | Previne "queima" de domínio (caro e lento de recuperar) |
+| Escalabilidade multi-domínio | Mesma função valida novos domínios de envio sem retrabalho |
+
+**Maior impacto isolado no cenário atual:** `cf_verify_email_auth` + correção do SPF de vectracargo.com.br (hoje "Revisar", warmup não iniciado, limite 0/50) — destrava a sequência ativa sem risco de spam.
+
+*Nota: DDL/endpoints a confirmar; nenhuma credencial é incluída. Alterações de DNS são ação manual do usuário.*
