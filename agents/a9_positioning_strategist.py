@@ -252,6 +252,92 @@ def _resumo_demanda_futura(df: dict) -> str | None:
     )
 
 
+# Bridge das chaves do _detectar_modalidades → rótulo do catálogo de serviços do A9.
+_SERVICOS_CATALOGO = {
+    "musculacao": "Musculação", "funcional": "Treino funcional/HIIT",
+    "danca": "Aulas de dança", "spinning": "Spinning", "lutas": "Artes marciais",
+    "yoga": "Yoga/Pilates", "pilates": "Yoga/Pilates", "crossfit": "Crossfit",
+    "piscina": "Natação/Hidro", "nutricao": "Nutrição integrada",
+    "avaliacao": "Avaliação física", "personal": "Personal (PT)",
+    "recovery": "Recovery/fisioterapia", "estetica": "Sauna/estética",
+    "area_kids": "Aulas/espaço kids",
+}
+
+
+def _servicos_do_concorrente(c: dict) -> set[str]:
+    """Mapeia o que o concorrente REALMENTE oferece (nome + planos_precos.inclui +
+    serviços do marketing) pros rótulos do catálogo, via _detectar_modalidades."""
+    from tools.competitor_offer_mapper import _detectar_modalidades
+
+    blob = " ".join([
+        str(c.get("nome") or ""),
+        " ".join(str(s) for s in (c.get("servicos_oferecidos") or []) if s),
+        " ".join(
+            f"{p.get('plano', '')} {' '.join(str(x) for x in (p.get('inclui') or []))}"
+            for p in (c.get("planos_precos") or []) if isinstance(p, dict)
+        ),
+    ])
+    svc = {_SERVICOS_CATALOGO[k] for k in _detectar_modalidades(blob) if k in _SERVICOS_CATALOGO}
+    # serviços já detectados nas captions do IG (A3a/cache) — chaves do catálogo
+    svc |= {_SERVICOS_CATALOGO[k] for k in (c.get("servicos_ig") or []) if k in _SERVICOS_CATALOGO}
+    return svc
+
+
+def _resumo_oferta_e_gaps(state: dict) -> str | None:
+    """Computa, do dado REAL dos concorrentes (planos_precos.inclui + modalidades),
+    o que cada um oferece + os GAPs (serviço que NENHUM oferece). Injetado no A9 pra
+    a ERRC parar de chutar 'Nutrição+Recovery' genérico — o gap vira derivado, não palpite."""
+    from collections import Counter
+
+    from tools.competitor_tools import _parse_market_context
+
+    ic = _parse_market_context(state.get("inteligencia_competitiva"))
+    inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+    concs = (inner.get("concorrentes_detalhados") if isinstance(inner, dict) else None) or []
+    concs = [c for c in concs if isinstance(c, dict)]
+    if not concs:
+        return None
+
+    pen: Counter = Counter()
+    linhas: list[str] = []
+    for c in concs:
+        svc = _servicos_do_concorrente(c)
+        for s in svc:
+            pen[s] += 1
+        precos = [
+            p.get("preco_mensal") for p in (c.get("planos_precos") or [])
+            if isinstance(p, dict) and p.get("preco_mensal")
+        ]
+        linha = f"- {c.get('nome', '?')}: {', '.join(sorted(svc)) or 'oferta não mapeada'}"
+        if precos:
+            linha += f" | planos: {', '.join(str(x) for x in precos[:3])}"
+        linhas.append(linha)
+
+    gaps = sorted(r for r in set(_SERVICOS_CATALOGO.values()) if pen.get(r, 0) == 0)
+    out = [
+        "[DADO REAL — OFERTA DOS CONCORRENTES — use pra preencher mapa_servicos e os GAPs. "
+        "NÃO invente serviço; só conte como gap o que está na lista abaixo:]",
+        *linhas,
+        "",
+        "GAPS REAIS (serviço que NENHUM concorrente oferece): "
+        + (", ".join(gaps) if gaps else "NENHUM — mercado coberto; foque em AUMENTAR/REDUZIR (qualidade), não em CRIAR serviço."),
+        "Penetração: " + ", ".join(f"{s}={n}/{len(concs)}" for s, n in pen.most_common()),
+    ]
+    return "\n".join(out)
+
+
+def _a9_inject_oferta_e_gaps(state: dict, llm_request) -> None:
+    """Injeta a oferta real + gaps computados no prompt do A9 (substrato da ERRC)."""
+    try:
+        resumo = _resumo_oferta_e_gaps(state)
+        if resumo and getattr(llm_request, "contents", None) is not None:
+            llm_request.contents.append(
+                types.Content(role="user", parts=[types.Part(text=resumo)])
+            )
+    except Exception:
+        pass
+
+
 def _a9_inject_demanda_futura(state: dict, llm_request) -> None:
     """Injeta o resumo da demanda futura no prompt do A9 (não vem na conversa A0-A6)."""
     try:
@@ -266,7 +352,9 @@ def _a9_inject_demanda_futura(state: dict, llm_request) -> None:
 
 def _a9_before_model_callback(callback_context, llm_request):
     """LangCache hit → retorna LlmResponse e pula gemini-2.5-pro (~30–90s)."""
-    _a9_inject_demanda_futura(getattr(callback_context, "state", {}) or {}, llm_request)
+    _state = getattr(callback_context, "state", {}) or {}
+    _a9_inject_oferta_e_gaps(_state, llm_request)  # oferta real dos concorrentes + gaps
+    _a9_inject_demanda_futura(_state, llm_request)
     if not _a9_langcache_enabled():
         return None
     try:
@@ -471,7 +559,9 @@ Analisar TODOS os dados já produzidos pelo pipeline (A0–A6) e gerar um
 - ELIMINAR: o que NÃO fazer (guerra de preço low-cost, planos genéricos, etc.)
 - REDUZIR: capacidade excessiva, CAC alto, complexidade operacional
 - AUMENTAR: exclusividade, atendimento, NPS, margem por aluno
-- CRIAR: nichos/serviços que ninguém oferece (nutrição, recovery, silver 50+, etc.)
+- CRIAR: nichos/serviços que NENHUM concorrente oferece — use EXCLUSIVAMENTE a lista
+  "GAPS REAIS" injetada (dado real da praça). NÃO invente "nutrição/recovery/silver"
+  por reflexo: se o bloco DADO REAL mostra que um concorrente já oferece, NÃO é gap.
 
 ## MAPEAMENTO DE SERVIÇOS (16 obrigatórios, escala 0–10 por concorrente)
 Musculação, Treino funcional/HIIT, Aulas de dança, Spinning, Artes marciais,
@@ -480,6 +570,8 @@ App/monitoramento digital, Aulas personalizadas (PT), Recovery/fisioterapia,
 Comunidade/eventos, Aulas idosos (50+), Beach tennis/esportes praia.
 
 GAP = serviço com penetração < 3 em TODOS os concorrentes.
+PREENCHA `mapa_servicos` a partir do bloco "DADO REAL — OFERTA DOS CONCORRENTES"
+injetado (não chute as notas) e use os "GAPS REAIS" computados pra a dimensão CRIAR.
 
 ## VEREDITO (um dos três)
 - OCEANO_AZUL: renda alta, baixa densidade de concorrência local, ausência de redes premium fortes, 3+ GAPs evidentes. Se houver concorrência madura/saturada, NÃO pode ser Oceano Azul.

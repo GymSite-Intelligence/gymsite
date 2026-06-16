@@ -1908,6 +1908,7 @@ def _slim_concorrente(c: dict) -> dict:
         "horarios_pico": c.get("horarios_pico"),
         "planos_precos": c.get("planos_precos"),
         "instagram_profile": c.get("instagram_profile"),
+        "servicos_ig": c.get("servicos_ig"),  # serviços detectados nas captions do IG → ERRC
         "servicos_oferecidos": (am.get("servicos_ofertados") or [])[:15] if isinstance(am, dict) else [],
         "reclamacoes_marketing": (am.get("principais_reclamacoes") or [])[:8] if isinstance(am, dict) else [],
         "is_independente": bool(c.get("is_independente")),
@@ -2088,21 +2089,34 @@ async def analisar_concorrentes_a3a_completo(
         # (b) o site oficial linka o IG no HTML (rodapé/header). Nunca chuta
         # username por nome. Substitui o scraping Playwright do A3c.
         instagram_profile: dict | None = None
+        servicos_ig: list | None = None
+        ig_metricas: dict | None = None
         try:
+            from tools.competidor_intel_cache import get_or_fetch_ig_intel
             from tools.instagram_profile import (
                 descobrir_instagram_no_site,
                 extrair_username_instagram,
-                get_instagram_profile,
             )
+            from tools.parametros_metodologia import param_int
 
             site = c.get("website") or ""
             ig_user = extrair_username_instagram(site)
             if not ig_user and site:
                 ig_user = await asyncio.to_thread(descobrir_instagram_no_site, site)
             if ig_user:
-                instagram_profile = await asyncio.to_thread(
-                    get_instagram_profile, ig_user
+                # Cache persistente (Supabase, por place_id) — reusa entre bairros/relatórios
+                # dentro do TTL; pré-processa posts + extrai serviços das captions (substrato
+                # da ERRC) + métricas de marketing. Substitui o fetch raw sem cache.
+                intel = await asyncio.to_thread(
+                    get_or_fetch_ig_intel, place_id, ig_user,
+                    cidade=cidade, bairro=(c.get("bairro_concorrente") or bairro),
+                    ttl_dias=param_int("ig_cache_ttl_dias"),
+                    planos_precos=planos_precos,
                 )
+                if isinstance(intel, dict):
+                    instagram_profile = intel.get("profile")  # shape compat (followers/bio...)
+                    ig_metricas = intel.get("metricas")
+                    servicos_ig = intel.get("servicos")  # chaves p/ a ERRC (nutricao/recovery...)
         except Exception as e:
             logger.warning(f"[A3a instagram] {nome}: {type(e).__name__}: {e}")
 
@@ -2127,6 +2141,8 @@ async def analisar_concorrentes_a3a_completo(
             "pico_semanal": pico_semanal_str,
             "planos_precos": planos_precos,
             "instagram_profile": instagram_profile,
+            "servicos_ig": servicos_ig,
+            "ig_metricas": ig_metricas,
             "atributos_sobre": atributos_sobre if atributos_sobre and "erro" not in atributos_sobre else None,
             "atividade_marketing": enrichment.get("atividade_marketing"),
             "enrichment_search_grounding_text": enrichment.get("scraping_text"),
