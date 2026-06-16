@@ -188,7 +188,12 @@ servem só pra você entender o que cada alerta significa ao redigir a justifica
     "aluguel_min_m2_observado": 0.0,
     "aluguel_mediana_m2_observado": 0.0,
     "aluguel_max_m2_observado": 0.0,
-    "aviso_metodologia": "Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae",
+    "aviso_metodologia_aluguel": "Aluguel real do mercado (mediana de 3 queries) ou benchmark ACAD/Sebrae",
+    // COPIE LITERAL da tool — A6 lê estes pra montar a seção de referência de
+    // aluguel; sem eles o gate _renderizar_secao_referencia_aluguel retorna ""
+    "aluguel_pesquisa_detalhes": { "tier": "...", "mediana_r_m2": 0.0 },
+    "aluguel_municipio_referencia": { },
+    "referencia_macro_bcb": null,
     "schema_cenarios": "v2",
     "cenarios": {
       "low": {

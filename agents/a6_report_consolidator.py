@@ -1370,6 +1370,16 @@ def _normalizar_cenarios_aluguel(cenarios, aluguel_fallback):
         return cenarios
     fb = _safe_float(aluguel_fallback)
     if not fb:
+        # Dupla-omissão: flash dropou aluguel_mensal E o breakdown de algum cenário.
+        # Antes de desistir (e regredir ao bug R$0), tenta herdar o aluguel de
+        # qualquer cenário que ainda tenha custos_detalhados.aluguel > 0.
+        for c in cenarios.values():
+            if isinstance(c, dict):
+                cand = _safe_float((c.get("custos_detalhados") or {}).get("aluguel"))
+                if cand > 0:
+                    fb = cand
+                    break
+    if not fb:
         return cenarios
     out = {}
     for modelo, c in cenarios.items():
@@ -1775,6 +1785,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
 
     state = getattr(callback_context, "state", {}) or {}
 
+    # Params reais do request (injetados por api.py em session_state["input_params"]).
+    # input_canonico DEVE refleti-los — antes hardcodava area/publico/estacionamento,
+    # corrompendo o registro canônico (auditoria/re-run/CRUD liam defaults, não o pedido).
+    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+
     # Mapeamento de ofertas (para enriquecer o competitors_set do JSON canônico)
     oferta_raw = state.get("oferta_concorrentes")
     if isinstance(oferta_raw, str):
@@ -1901,7 +1916,15 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
 
     # ── Output: análise demográfica (A2) ──
     demo = _parse_market_context(state.get("analise_demografica"))
-    score_demografico = demo.get("score_demografico") if isinstance(demo, dict) else None
+    # Unwrap do double-nesting (A2-flash às vezes embrulha {"analise_demografica": {...}}):
+    # sem isto score_demografico vinha None e o score_bairro era calculado sem a
+    # dimensão demográfica, mudando o veredito sem rastro.
+    inner_demo = (
+        demo.get("analise_demografica")
+        if isinstance(demo.get("analise_demografica"), dict)
+        else demo
+    )
+    score_demografico = inner_demo.get("score_demografico") if isinstance(inner_demo, dict) else None
 
     # ── Output: análise financeira (A4) ──
     fin_raw = _parse_market_context(state.get("analise_financeira"))
@@ -1940,6 +1963,8 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
 
     # Demanda futura datada (CNO grande porte + refino A4) — injetada no state pelo api.py.
     demanda_futura_block = state.get("demanda_futura") or {}
+    if not isinstance(demanda_futura_block, dict):
+        demanda_futura_block = {}
 
     # Demografia do BAIRRO (renda CKAN + população/ocupação Censo 2022) — fontes reais,
     # determinístico (sem LLM). Persistido + renderizado em mini-cards na UI.
@@ -2143,9 +2168,9 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         "input_canonico": {
             "cidade": cidade,
             "bairro": bairro,
-            "area_m2_min": 1000,
-            "area_m2_max": 1500,
-            "publico_alvo": "25-40",
+            "area_m2_min": ip.get("area_m2_min") or inner_mc.get("area_m2_min") or 1000,
+            "area_m2_max": ip.get("area_m2_max") or inner_mc.get("area_m2_max") or 1500,
+            "publico_alvo": ip.get("publico_alvo") or inner_mc.get("publico_alvo") or "25-40",
             # Schema v1.4: replica genero_alvo do market_context (A0) pra
             # permitir re-execução determinística e auditoria. Default "misto"
             # preserva comportamento pré-v1.4 quando o A0 não emitiu o campo.
@@ -2153,9 +2178,13 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             # Schema v1.5: tamanho preset (pp|p|m|g|gg) — informado pelo form
             # via market_context. Calibra CAPEX/custos no A4 e posicionamento
             # no A6 markdown. Default "m" (mais comum no mercado fitness BR).
-            "tamanho_preset": inner_mc.get("tamanho_preset") or "m",
-            "estacionamento_obrigatorio": True,
-            "tipo_negocio": inner_mc.get("tipo_negocio") or "academia",
+            "tamanho_preset": ip.get("tamanho_preset") or inner_mc.get("tamanho_preset") or "m",
+            "estacionamento_obrigatorio": (
+                ip["estacionamento_obrigatorio"]
+                if isinstance(ip.get("estacionamento_obrigatorio"), bool)
+                else True
+            ),
+            "tipo_negocio": ip.get("tipo_negocio") or inner_mc.get("tipo_negocio") or "academia",
         },
         "output_consolidado": {
             "veredito": veredito,
