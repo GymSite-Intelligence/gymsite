@@ -84,13 +84,13 @@ const ETAPAS_PIPELINE: {
     ],
     peso: 45,
     titulo: 'Demografia, concorrência e viabilidade (em paralelo)',
-    fontes: 'Censo/IBGE · Places + reviews reais + planos públicos · 3 cenários financeiros (benchmark CVM)',
+    fontes: 'Censo/IBGE 2022 · Google Places + reviews reais · 3 cenários financeiros (benchmark ACAD/Sebrae)',
   },
   {
     agentes: ['ContactHunter'],
     peso: 10,
-    titulo: 'Contato dos decisores',
-    fontes: 'Receita Federal (QSA) · Apollo',
+    titulo: 'Contato e abordagem',
+    fontes: 'Script de abordagem a partir do candidato #1 (GeoScout)',
   },
   {
     agentes: ['ReportConsolidator'],
@@ -102,7 +102,7 @@ const ETAPAS_PIPELINE: {
     agentes: ['PositioningStrategist'],
     peso: 10,
     titulo: 'Posicionamento estratégico (ERRC)',
-    fontes: 'gaps de serviço × dores dos concorrentes',
+    fontes: 'headroom de renda (IBGE 2022) + gaps de serviço × dores dos concorrentes',
   },
 ]
 
