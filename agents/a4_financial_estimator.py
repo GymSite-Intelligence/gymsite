@@ -233,6 +233,9 @@ servem só pra você entender o que cada alerta significa ao redigir a justifica
         "capex_detalhado": {
           "equipamentos": 437500, "obra_adaptacao": 250000,
           "projeto_arquitetonico": 15000, "alvara_e_taxas": 8000,
+          // COPIE LITERAL da tool (frete pode ser 5-10% do CAPEX fora do eixo SP/RJ)
+          "frete_equipamentos": 0, "frete_detalhes": null,
+          "fonte_equipamentos": "...", "fonte_frete": "...",
           "contingencia_pct": 0.10, "contingencia_valor": 71050, "total": 781550
         },
         "capex_total": 781550,

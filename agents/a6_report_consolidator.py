@@ -1736,7 +1736,7 @@ def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
             md,
             count=1,
         )
-    if sc is not None:
+    if sc:  # pula 0.0/None (score ausente nao sobrescreve o markdown com "0.0" fake)
         md = re.sub(
             r"(\| Competitivo \| )\s*[\d\.,]+",
             rf"\1 {sc} ",
@@ -2195,9 +2195,12 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "score_top1_candidato": score_top1_candidato,
             "score_concorrencia": _safe_float(score_concorrencia),
             "scores_regionais": {
-                "demografico": _safe_float(score_demografico),
-                "competitivo": _safe_float(score_concorrencia),
-                "viabilidade": _safe_float(score_viab),
+                # Preserva None (não fabrica 0.0): score ausente != score zero.
+                # 0 concorrentes => competitivo ALTO, não 0; _safe_float(None)=0.0
+                # virava "Competitivo: 0.0" fake no markdown e no KPI.
+                "demografico": round(float(score_demografico), 2) if score_demografico is not None else None,
+                "competitivo": round(float(score_concorrencia), 2) if score_concorrencia is not None else None,
+                "viabilidade": round(float(score_viab), 2) if score_viab is not None else None,
             },
             "nivel_saturacao": nivel_saturacao,
             "panorama_competitivo": comp.get("panorama_competitivo"),

@@ -199,8 +199,10 @@ def _fitness_cnpj_cnae_index(cidade: str, uf: str) -> dict[str, str]:
                 continue
             cnae = _normalize_cnae(row.get("cnae_principal") or row.get("cnae_fiscal_principal"))
             out[cnpj] = cnae or _CNAE_ACADEMIA
-    except Exception:
-        pass
+    except Exception as e:
+        # Sem log, uma falha aqui (timeout/auth) descartava silenciosamente o
+        # match por CNAE — obras com CNAE certo e nome atípico sumiam.
+        logger.warning("CNPJ CNAE index falhou (%s: %s); fallback vazio", type(e).__name__, e)
     return out
 
 
@@ -783,7 +785,7 @@ def _supabase_obras_fitness_municipio(
         )
         linhas = getattr(res, "data", None) or []
     except Exception as e:
-        print(f"[cno] leitura Supabase falhou ({municipio}): {type(e).__name__}: {e}")
+        logger.warning("cno leitura Supabase falhou (%s): %s: %s", municipio, type(e).__name__, e)
         return None
 
     obras: list[dict] = []

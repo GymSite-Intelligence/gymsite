@@ -2,7 +2,8 @@
 Posicionamento por headroom de renda — DETERMINÍSTICO, sourced.
 
 Spec: docs/metodologia/posicionamento_headroom_premium.md
-Fonte de renda: tabela Supabase `ipece_renda_bairro` (IPECE Informe 272, Censo 2022).
+Fonte de renda: tabela Supabase `renda_bairro` (IBGE Censo 2022 nacional, 17k bairros).
+(`ipece_renda_bairro` é legada — só Fortaleza, sem reconciliação ativa.)
 
 Métrica principal (headroom premium): quanto da capacidade de pagar do bairro NÃO está
 sendo capturada pelos concorrentes atuais → veredito OCEANO_AZUL / TRANSICAO / VERMELHO.

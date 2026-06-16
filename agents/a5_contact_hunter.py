@@ -35,6 +35,9 @@ def _a5_fallback_after_agent(callback_context):
             not current
             or (isinstance(current, str) and not current.strip())
             or (isinstance(current, dict) and not current)
+            # Drop parcial: script_abordagem é o campo de maior valor e o mais
+            # propenso a truncamento; sem ele, repopula da macro-tool determinística.
+            or (isinstance(current, dict) and not current.get("script_abordagem"))
         )
         if is_empty:
             result = gerar_contato_decisor_completo(callback_context)
