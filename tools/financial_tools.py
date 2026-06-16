@@ -612,13 +612,32 @@ def _resolver_ticket_faixa(
 
 
 def _renda_media_bairro(cidade: str, bairro: str, uf: str) -> float | None:
+    """Renda per capita do bairro p/ escolher o tier do modelo (low/mid/premium).
+
+    PRIMÁRIO: `renda_bairro` IBGE Censo 2022 (renda_pc) — MESMA fonte do A9/headroom.
+    Antes lia o CKAN 2010 (`bairro_renda_loader.renda_media`) como primário, o que
+    fazia o A4 recomendar Low Cost em bairro top-1% (ex.: Cocó: CKAN 2010 = R$2.095
+    -> tier low, enquanto IBGE 2022 = R$4.952 -> premium). Isso contradizia o
+    posicionamento OCEANO_AZUL/Premium do A9 — duas fontes de renda divergentes.
+    CKAN 2010 (per capita) fica só como FALLBACK quando o IBGE 2022 não cobre o bairro.
+    """
     if not (bairro or "").strip():
         return None
+    # Fonte 2022 (coerente com o A9)
+    try:
+        from tools.posicionamento_renda import renda_bairro_ipece
+
+        r = renda_bairro_ipece(cidade, uf or "", bairro)
+        if r and r.get("renda_pc"):
+            return float(r["renda_pc"])
+    except Exception:
+        pass
+    # Fallback CKAN 2010 — usa renda_media_per_capita (mesma ESCALA dos thresholds)
     try:
         from tools.bairro_renda_loader import enrich_demografia_bairro
 
-        demo = enrich_demografia_bairro({"bairro": {}}, cidade, bairro, uf or "")
-        val = (demo.get("bairro") or {}).get("renda_media")
+        b = enrich_demografia_bairro({"bairro": {}}, cidade, bairro, uf or "").get("bairro") or {}
+        val = b.get("renda_media_per_capita") or b.get("renda_media")
         return float(val) if val is not None else None
     except Exception:
         return None
