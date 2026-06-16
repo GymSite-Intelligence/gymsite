@@ -16,14 +16,15 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, AlertTriangle, Clock, CheckCircle2, Circle } from 'lucide-react'
+import { Loader2, AlertTriangle, Clock, CheckCircle2, Circle, Gauge, ListChecks } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { DeleteRelatorioButton } from '@/components/domain/DeleteRelatorioButton'
+import { StatusPipelineBadge } from '@/components/domain/StatusPipelineBadge'
 import { API_BASE } from '@/lib/supabase'
 import { useRerunPipeline } from '@/hooks/useRerunPipeline'
 import { trackPipeline, untrackPipeline } from '@/lib/pipeline-tracker'
-import { pipelineEtaWaitingLine } from '@/lib/pipeline-eta'
+import { pipelineEtaWaitingLine, pipelineEtaRangeLabel } from '@/lib/pipeline-eta'
 import { cn } from '@/lib/utils'
 
 interface EtapaConcluida {
@@ -136,6 +137,30 @@ function estadosEtapas(
 // Regex UUID v4 (formato Postgres). Rejeita "510dafe6..." reticências e similares.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+/**
+ * Stat — chip de resumo (mesmo padrão do DemandaFuturaCard/viewer): ícone
+ * accent + valor + label, dentro de um cartão `bg-card`.
+ */
+function Stat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Gauge
+  label: string
+  value: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2">
+      <Icon className="size-4 text-chart-1 shrink-0" />
+      <div className="min-w-0 leading-tight">
+        <div className="truncate text-sm font-semibold">{value}</div>
+        <div className="text-[11px] text-muted-foreground">{label}</div>
+      </div>
+    </div>
+  )
+}
+
 export function RelatorioAguardandoPage() {
   const { relatorioId } = useParams({ from: '/relatorios/$relatorioId/aguardando' })
   const navigate = useNavigate()
@@ -218,11 +243,12 @@ export function RelatorioAguardandoPage() {
 
   return (
     <div className="container max-w-2xl py-12 space-y-6">
-      <header className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Gerando relatório
-        </h1>
-        <p className="text-sm text-muted-foreground font-mono">
+      <header className="space-y-3 rounded-xl border border-border bg-card/40 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold tracking-tight">Gerando relatório</h1>
+          <StatusPipelineBadge status={status} />
+        </div>
+        <p className="text-xs text-muted-foreground font-mono">
           id: <span className="text-foreground">{relatorioId}</span>
         </p>
       </header>
@@ -235,14 +261,34 @@ export function RelatorioAguardandoPage() {
         const duracoes = new Map(
           (data?.etapas_concluidas ?? []).map((e) => [e.agente, e.duracao_s]),
         )
+        const nConcluidas = estados.filter((e) => e === 'concluida').length
+        const idxAtiva = estados.findIndex((e) => e === 'ativa')
+        const etapaAtivaTitulo =
+          idxAtiva >= 0 ? ETAPAS_PIPELINE[idxAtiva]!.titulo : '—'
         return (
-          <div className="rounded-lg border border-border bg-card p-8 space-y-6">
-            <div className="space-y-1 text-center">
+          <div className="rounded-xl border border-border bg-card/40 p-6 sm:p-8 space-y-6">
+            <div className="space-y-1">
               <p className="text-sm font-medium">{STATUS_LABEL[status]}</p>
-              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Clock size={12} />
                 {pipelineEtaWaitingLine()}
               </p>
+            </div>
+
+            {/* Resumo em chips — mesmo padrão Stat do viewer/DemandaFuturaCard */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Stat icon={Gauge} label="progresso" value={`${progressoPct}%`} />
+              <Stat
+                icon={Loader2}
+                label="etapa atual"
+                value={<span className="text-chart-1">{etapaAtivaTitulo}</span>}
+              />
+              <Stat
+                icon={ListChecks}
+                label="etapas concluídas"
+                value={`${nConcluidas}/${ETAPAS_PIPELINE.length}`}
+              />
+              <Stat icon={Clock} label="tempo estimado" value={pipelineEtaRangeLabel()} />
             </div>
 
             {/* Barra ponderada por duração média de cada fase */}
@@ -269,9 +315,9 @@ export function RelatorioAguardandoPage() {
                   <li key={i} className="flex items-start gap-2.5">
                     <span className="mt-0.5 shrink-0">
                       {estado === 'concluida' ? (
-                        <CheckCircle2 size={15} className="text-emerald-600" />
+                        <CheckCircle2 size={15} className="text-veredito-aprovado" />
                       ) : estado === 'ativa' ? (
-                        <Loader2 size={15} className="animate-spin text-primary" />
+                        <Loader2 size={15} className="animate-spin text-chart-1" />
                       ) : (
                         <Circle size={15} className="text-muted-foreground/30" />
                       )}
@@ -281,7 +327,7 @@ export function RelatorioAguardandoPage() {
                         className={cn(
                           'text-xs font-medium leading-tight',
                           estado === 'pendente' && 'text-muted-foreground/60',
-                          estado === 'ativa' && 'text-primary',
+                          estado === 'ativa' && 'text-chart-1',
                         )}
                       >
                         {etapa.titulo}
