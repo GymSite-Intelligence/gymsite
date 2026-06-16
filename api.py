@@ -272,24 +272,54 @@ def _recover_done_empty_reports(sb, *, relatorio_id: str | None = None) -> int:
         return 0
 
 
-async def _touch_relatorio_heartbeat(sb, relatorio_id: str) -> None:
-    """Atualiza updated_at (via trigger) enquanto o pipeline ADK está ativo."""
+async def _touch_relatorio_heartbeat(sb, relatorio_id: str) -> bool:
+    """Atualiza updated_at (heartbeat) e detecta cancelamento.
+
+    Retorna True quando o relatório foi deletado (deleted_at preenchido) ou
+    marcado cancelled/failed na UI/DB — sinal pro loop abortar o pipeline em
+    curso. O delete na UI é soft-delete direto no Supabase, então o backend só
+    descobre pollando aqui; sem isso, o run continua churning após excluído.
+    """
     try:
+        res = (
+            sb.table("relatorios")
+            .select("deleted_at, status")
+            .eq("id", relatorio_id)
+            .limit(1)
+            .execute()
+        )
+        row = (res.data or [None])[0]
+        if (
+            row is None
+            or row.get("deleted_at") is not None
+            or row.get("status") in ("cancelled", "failed")
+        ):
+            return True
         sb.table("relatorios").update({"status": "running"}).eq(
             "id", relatorio_id
         ).eq("status", "running").execute()
+        return False
     except Exception as e:
         logger.debug("heartbeat %s: %s", relatorio_id, e)
+        return False
 
 
 async def _pipeline_heartbeat_loop(
     sb,
     relatorio_id: str,
     stop: asyncio.Event,
+    adk_task: "asyncio.Task | None" = None,
 ) -> None:
     interval = max(15, _PIPELINE_HEARTBEAT_SEC)
     while not stop.is_set():
-        await _touch_relatorio_heartbeat(sb, relatorio_id)
+        aborted = await _touch_relatorio_heartbeat(sb, relatorio_id)
+        if aborted and adk_task is not None and not adk_task.done():
+            logger.warning(
+                "pipeline %s: relatório deletado/cancelado na UI — abortando run",
+                relatorio_id,
+            )
+            adk_task.cancel()
+            return
         try:
             await asyncio.wait_for(stop.wait(), timeout=float(interval))
             return
@@ -708,20 +738,27 @@ async def _executar_pipeline_uma_vez(relatorio_id: str, payload: NovoRelatorioIn
 
             sb = _supabase_client()
             hb_stop = asyncio.Event()
-            hb_task = asyncio.create_task(
-                _pipeline_heartbeat_loop(sb, relatorio_id, hb_stop)
-            )
 
-            # ADK pode ignorar asyncio.CancelledError enquanto tools síncronas /
-            # thread pool rodam — o teto global em _run_pipeline_async cancela a
-            # task; Layer 3 (_recover_stale_running_reports) corrige status no DB.
-            try:
+            async def _drain_adk() -> None:
                 async for _event in runner.run_async(
                     user_id=user_id,
                     session_id=session_id,
                     new_message=message,
                 ):
                     pass
+
+            # ADK roda como task própria pra que o heartbeat possa cancelá-la
+            # quando o relatório for deletado/cancelado na UI (heartbeat detecta
+            # deleted_at e chama adk_task.cancel()). ADK pode ignorar o cancel
+            # enquanto tools síncronas / thread pool rodam — para no próximo await
+            # entre agentes; o teto global de wall-clock segue como Layer 1 e o
+            # Layer 3 (_recover_stale_running_reports) corrige status no DB.
+            adk_task = asyncio.create_task(_drain_adk())
+            hb_task = asyncio.create_task(
+                _pipeline_heartbeat_loop(sb, relatorio_id, hb_stop, adk_task)
+            )
+            try:
+                await adk_task
             finally:
                 hb_stop.set()
                 hb_task.cancel()
@@ -775,6 +812,30 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
             err,
         )
         _mark_pipeline_failed(sb, relatorio_id, elapsed=elapsed, erro_mensagem=str(err))
+    except asyncio.CancelledError:
+        # Cancelamento intencional: relatório deletado/cancelado na UI (o
+        # heartbeat detectou deleted_at e cancelou a task ADK). NÃO marca failed
+        # — o run foi descartado de propósito; só garante status coerente e libera
+        # o worker. Engole o CancelledError no boundary do job (igual ao branch de
+        # wall-clock, que também não propaga).
+        if not body.done():
+            body.cancel()
+            try:
+                await body
+            except (asyncio.CancelledError, Exception):
+                pass
+        elapsed = int(time.time() - t0)
+        logger.info(
+            "pipeline %s cancelado após %ss (deletado/cancelado na UI)",
+            relatorio_id,
+            elapsed,
+        )
+        try:
+            sb.table("relatorios").update({"status": "cancelled"}).eq(
+                "id", relatorio_id
+            ).eq("status", "running").execute()
+        except Exception:
+            pass
 
 
 async def _run_pipeline_async_body(
