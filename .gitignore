@@ -163,5 +163,8 @@ docs/arquitetura/*.PDF
 
 # SHA carimbado no deploy (scripts/deploy_backend.sh) — artefato de build
 VERSION
+
+# zip raw do doc de melhorias BQ (versão extraída versionada em analise_melhorias_bq/)
+docs/metodologia/Analise de melhorias BQ.zip
 # Auditoria — relatórios de scan contêm secrets detectados
 Auditoria/audit-reports/

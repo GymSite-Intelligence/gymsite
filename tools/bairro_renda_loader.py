@@ -137,6 +137,30 @@ def load_pilot_catalog(cidade: str, uf: str) -> dict[str, Any] | None:
         return None
 
 
+def _renda_bairro_ibge(cidade: str, uf: str, bairro: str) -> dict | None:
+    """Renda do bairro da tabela NACIONAL `renda_bairro` (IBGE Censo 2022). best-effort."""
+    import os
+    key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+           or os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_KEY"))
+    if not (os.environ.get("SUPABASE_URL") and key):
+        return None
+    try:
+        from tools.supabase_client import load_create_client
+
+        cli = load_create_client()(os.environ["SUPABASE_URL"], key)
+        q = cli.table("renda_bairro").select("*").eq("bairro_norm", _norm(bairro))
+        if (uf or "").strip():
+            q = q.eq("uf", uf.strip().upper())
+        rows = getattr(q.limit(5).execute(), "data", None) or []
+        if not rows:
+            return None
+        cnorm = _norm(cidade)
+        return next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), rows[0])
+    except Exception as exc:
+        print(f"[bairro_renda] renda_bairro IBGE indisponível: {type(exc).__name__}: {exc}")
+        return None
+
+
 def enrich_demografia_bairro(
     demografia: dict[str, Any],
     cidade: str,
@@ -144,7 +168,8 @@ def enrich_demografia_bairro(
     uf: str,
 ) -> dict[str, Any]:
     """
-    Preenche demografia['bairro'] quando há entrada no piloto curado.
+    Preenche demografia['bairro']. Ordem: IBGE Censo 2022 (renda_bairro nacional) >
+    CKAN 2010 (Atlas IDH-Renda) > piloto curado.
     """
     out = dict(demografia)
     bairro_block = dict(out.get("bairro") or {})
@@ -154,7 +179,24 @@ def enrich_demografia_bairro(
         out["bairro"] = bairro_block
         return out
 
-    # 1. CKAN municipal (dado oficial por bairro) — primário.
+    # 0. IBGE Censo 2022 por bairro (renda_bairro nacional) — PRIMÁRIO, fresco.
+    ibge = _renda_bairro_ibge(cidade, uf, bairro)
+    if ibge and ibge.get("renda_pc"):
+        bairro_block["renda_media"] = ibge.get("renda_pc")  # per capita (compat cutoffs A2)
+        bairro_block["renda_media_per_capita"] = ibge.get("renda_pc")
+        bairro_block["renda_resp_domicilio"] = ibge.get("renda_media")
+        bairro_block["renda_percentil"] = ibge.get("percentil_municipio")
+        bairro_block["ranking_municipio"] = ibge.get("ranking_municipio")
+        bairro_block["fonte"] = ibge.get("fonte")
+        bairro_block["data_referencia"] = "2022"
+        bairro_block["nota"] = (
+            "Renda do responsável pelo domicílio por bairro (IBGE Censo 2022); "
+            "per capita = renda / (pessoas/domicílios). Fonte nacional."
+        )
+        out["bairro"] = bairro_block
+        return out
+
+    # 1. CKAN municipal (dado oficial por bairro, base Censo 2010) — fallback.
     ckan = _carregar_ckan_bairros(cidade, uf)
     if ckan:
         entry = (ckan.get("bairros") or {}).get(_norm(bairro))

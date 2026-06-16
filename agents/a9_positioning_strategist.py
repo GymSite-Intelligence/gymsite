@@ -128,6 +128,54 @@ def _resolve_location_from_state(state: dict) -> tuple[str, str]:
     return str(cidade).strip().lower(), str(bairro).strip().lower()
 
 
+def _resolve_uf_from_state(state: dict) -> str:
+    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    uf = state.get("uf") or state.get("input_uf") or ip.get("uf") or ""
+    if not uf:
+        mc = state.get("market_context") or {}
+        inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
+        if isinstance(inner, dict):
+            uf = inner.get("uf") or ""
+    return str(uf).strip()
+
+
+def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
+    """Sobrepõe veredito_posicionamento do LLM pelo HEADROOM DETERMINÍSTICO (renda real
+    IBGE 2022 × ticket dos concorrentes). LLM mantém ERRC/markdown/gaps; o veredito +
+    bloco headroom_renda viram sourced/auditáveis. Igual ao padrão do A4 (tool computa,
+    LLM narra). Não inventa: sem renda/ticket → mantém o do LLM."""
+    try:
+        from tools.posicionamento_renda import avaliar_posicionamento
+
+        cidade, bairro = _resolve_location_from_state(state)
+        uf = _resolve_uf_from_state(state)
+        if not (cidade and bairro):
+            return
+        ic = state.get("inteligencia_competitiva") or {}
+        inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+        concorrentes = (
+            (inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
+            if isinstance(inner, dict) else []
+        )
+        hr = avaliar_posicionamento(cidade, uf, bairro, concorrentes=concorrentes)
+        if hr.get("status") != "ok":
+            return
+        parsed["headroom_renda"] = hr  # renda_pc/percentil/tier sempre determinísticos
+        vd = hr.get("veredito_posicionamento")
+        if vd and vd != "INDETERMINADO":
+            llm_v = parsed.get("veredito_posicionamento")
+            if llm_v and llm_v != vd:
+                parsed["veredito_posicionamento_llm"] = llm_v
+            parsed["veredito_posicionamento"] = vd
+            parsed["fonte_veredito"] = "deterministico_headroom_renda (IBGE Censo 2022)"
+            logger.info(
+                "A9 veredito determinístico: %s (LLM dizia %s) headroom_ratio=%s",
+                vd, llm_v, hr.get("headroom_ratio"), extra={"agent": "A9"},
+            )
+    except Exception:
+        logger.warning("A9 override determinístico falhou", exc_info=True, extra={"agent": "A9"})
+
+
 def _a9_cache_prompt(state: dict) -> str:
     """
     Chave LangCache A9 — deve ser única por relatório + mercado.
@@ -315,6 +363,8 @@ def _a9_after_agent_callback(callback_context):
             parsed = _parse_json_from_text(str(raw or ""))
 
         state["relatorio_posicionamento"] = parsed
+        # Veredito DETERMINÍSTICO (headroom de renda) sobrepõe o do LLM — sourced/auditável.
+        _a9_override_veredito_deterministico(state, parsed)
         if parsed.get("markdown"):
             state["relatorio_posicionamento_md"] = parsed["markdown"]
         if state.get("_a9_langcache_hit"):
@@ -430,6 +480,11 @@ GAP = serviço com penetração < 3 em TODOS os concorrentes.
 - OCEANO_AZUL: renda alta, baixa densidade de concorrência local, ausência de redes premium fortes, 3+ GAPs evidentes. Se houver concorrência madura/saturada, NÃO pode ser Oceano Azul.
 - TRANSICAO: renda média/alta, concorrência existente e madura (mesmo que genérica), mas com espaço para nicho (1–2+ GAPs).
 - VERMELHO: mercado saturado focado em preço (low-cost), margens espremidas, 0–1 GAPs ou demanda estagnada.
+
+NOTA: o `veredito_posicionamento` final é recalculado DETERMINISTICAMENTE downstream
+(headroom = renda real do bairro IBGE 2022 × ticket dos concorrentes) e pode sobrepor o
+seu. Dê seu melhor palpite, mas escreva o markdown ancorando em ERRC/GAPs/AÇÕES (o que
+fazer), não só no rótulo do veredito — assim a narrativa não contradiz o veredito sourced.
 
 ## OUTPUT — retorne APENAS JSON válido (sem texto fora do JSON):
 
