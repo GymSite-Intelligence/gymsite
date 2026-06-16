@@ -2144,6 +2144,23 @@ def get_custos_optimizations(dias: int = 30) -> dict:
         return gerar_optimizacoes(dias=dias)
 
 
+@app.get("/api/custos/searchapi")
+def get_custos_searchapi(request: Request) -> dict:
+    """Orçamento SearchAPI (Account API, free) p/ a rota de custo + budget guard.
+
+    Fonte do gasto REAL agregado da conta. `restante = allowance - usado` é a
+    folga que de fato bloqueia; `remaining_credits_pagos` (créditos extra) pode
+    ser 0 sem travar o free tier. Analytics (Scale+) entra como best-effort.
+    """
+    _require_authenticated(request)
+    from tools.searchapi_account import get_analytics, resumo_orcamento
+
+    with span("api.custos.searchapi"):
+        orc = resumo_orcamento()
+        analytics = get_analytics(time_period="last_month")
+        return {"orcamento": orc, "analytics": analytics}
+
+
 # ── Propostas de Otimização — Governança de Custo ──────────────────────────
 
 from pydantic import BaseModel
