@@ -1302,12 +1302,7 @@ def _a6_before_model_callback(callback_context, llm_request):
                     sections_injected.append("novos_entrantes")
 
         # 4. Referência de aluguel (Tier 1 portais / Tier 2 Grounding / macro BCB)
-        fin_raw = _parse_market_context(state.get("analise_financeira"))
-        inner_fin_aluguel = (
-            fin_raw.get("analise_financeira")
-            if isinstance(fin_raw.get("analise_financeira"), dict)
-            else fin_raw
-        )
+        inner_fin_aluguel = _resolver_analise_financeira(state)
         if isinstance(inner_fin_aluguel, dict):
             markdown_aluguel = _renderizar_secao_referencia_aluguel(inner_fin_aluguel)
             if markdown_aluguel:
@@ -1391,6 +1386,35 @@ def _normalizar_cenarios_aluguel(cenarios, aluguel_fallback):
                 c = {**c, "custos_detalhados": cd}
         out[modelo] = c
     return out
+
+
+def _resolver_analise_financeira(state) -> dict:
+    """Resolve a análise financeira do A4 preferindo o SNAPSHOT determinístico.
+
+    Correção na fonte (espelha A1/candidatos_geoscout_pronto): o A4-flash às vezes
+    dropa/renomeia campos ao copiar o JSON da macro-tool pro output_key (aviso_
+    metodologia, aluguel_pesquisa_detalhes, capex frete, custos_detalhados.aluguel…).
+    O `after_tool_callback` do A4 grava o retorno CRU da tool em
+    `analise_financeira_pronto`; aqui lemos esse snapshot (números auditáveis) e só
+    enxertamos `justificativa` do echo do LLM (único campo que a tool não produz —
+    o A4 redige). Sem snapshot (runs antigos / cache), cai no echo como antes.
+    """
+    from tools.competitor_tools import _parse_market_context
+
+    echo = _parse_market_context(state.get("analise_financeira"))
+    echo_inner = (
+        echo.get("analise_financeira")
+        if isinstance(echo.get("analise_financeira"), dict)
+        else echo
+    )
+    snap = state.get("analise_financeira_pronto")
+    if isinstance(snap, dict) and snap:
+        merged = dict(snap)
+        just = echo_inner.get("justificativa") if isinstance(echo_inner, dict) else None
+        if just and not merged.get("justificativa"):
+            merged["justificativa"] = just
+        return merged
+    return echo_inner if isinstance(echo_inner, dict) else {}
 
 
 def _rank_candidatos_for_top3(candidatos: list) -> list:
@@ -1926,13 +1950,8 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     )
     score_demografico = inner_demo.get("score_demografico") if isinstance(inner_demo, dict) else None
 
-    # ── Output: análise financeira (A4) ──
-    fin_raw = _parse_market_context(state.get("analise_financeira"))
-    inner_fin = fin_raw.get("analise_financeira") if isinstance(
-        fin_raw.get("analise_financeira"), dict
-    ) else fin_raw
-    if not isinstance(inner_fin, dict):
-        inner_fin = {}
+    # ── Output: análise financeira (A4) — snapshot determinístico > echo do LLM ──
+    inner_fin = _resolver_analise_financeira(state)
 
     # ── Output: contato decisor (A5) ──
     contato_raw = _parse_market_context(state.get("contato_decisor"))
