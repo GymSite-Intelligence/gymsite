@@ -180,7 +180,15 @@ def get_or_fetch_ig_intel(
         if cached:
             return {**cached, "_fonte": "cache"}
 
-    raw = fetch_ig_searchapi(instagram_username)
+    # Cache miss → 1 search real. Rastreia o custo (SKU instagram_profile) p/ a
+    # rota de custo; hit não chega aqui, então só o miss é cobrado.
+    try:
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("competidor_ig", "searchapi_instagram_profile", 1):
+            raw = fetch_ig_searchapi(instagram_username)
+    except Exception:
+        raw = fetch_ig_searchapi(instagram_username)
     if not raw:
         return None
     profile = raw["profile"]

@@ -196,13 +196,21 @@ def compute_cost_usd(model: str | None, tokens_in: int, tokens_out: int) -> floa
     return ((tokens_in or 0) * p["input"] + (tokens_out or 0) * p["output"]) / 1_000_000.0
 
 
+# SearchAPI: cada search = 1 crédito. Plano padrão $40 / 10k = $0.004/search.
+# Antes era 0.0 → custo SearchAPI ficava INVISÍVEL na rota de custo. Override por env.
+_SEARCHAPI_USD = float(os.getenv("SEARCHAPI_USD_PER_SEARCH") or "0.004")
+
 # Compatibilidade legada Places API em USD
 PLACES_API_USD_PER_CALL: dict[str, float] = {
     "places_details_legacy": 0.017,
     "places_search_new": 0.032,
     "places_details_new": 0.020,
     "geocoding": 0.005,
-    "searchapi_popular_times": 0.0,
+    "searchapi_popular_times": _SEARCHAPI_USD,
+    "searchapi_google_light": _SEARCHAPI_USD,
+    "searchapi_instagram_profile": _SEARCHAPI_USD,
+    "searchapi_google_maps_reviews": _SEARCHAPI_USD,
+    "searchapi_locations": 0.0,  # Locations API é free
     "outscraper_popular_times": 0.003,
 }
 
