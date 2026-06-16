@@ -28,7 +28,7 @@ Toda métrica de cálculo vem de **dado com fonte** (tabela sourced) ou **benchm
 ## Tabelas de saída (pipeline → Supabase)
 `relatorio_inputs` (params do request) · `relatorios` (status/header) · `relatorio_outputs` (veredito, scores, posicionamento_estrategico+headroom, demanda_futura, demografia_bairro) · `competidores` · `candidatos` · `bairros_alternativos` · `validacoes` (saída do A8) · `relatorio_custos_agentes` (telemetria custo).
 
-> ⚠️ BQ `gymsite_analytics.relatorios_mercado` é **DEAD TABLE** (zero refs no código; pipeline grava no Supabase `relatorio_outputs`, nunca no BQ). Candidata a `DROP`.
+> BQ `gymsite_analytics.relatorios_mercado` foi **REMOVIDA** (2026-06-16) — era dead table com 3 rows dummy de cargo/logística, zero refs no código. Pipeline grava no Supabase `relatorio_outputs`, nunca no BQ. Dataset `gymsite_analytics` ficou vazio.
 
 ## Árvore determinística do veredito (folhas sourced)
 ```
