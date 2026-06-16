@@ -27,6 +27,7 @@ from google.adk.events import Event, EventActions
 
 from tools.competitor_tools import _parse_market_context
 from tools.ibge_tools import analise_demografica_completa
+from tools.parametros_metodologia import param
 
 
 def _loc_do_state(state) -> tuple[str, str, str | None]:
@@ -56,7 +57,7 @@ def _insights_deterministicos(r: dict) -> list[str]:
     if pub:
         out.append(f"Potencial de captação: ~{pub:,} alunos potenciais na faixa fitness.".replace(",", "."))
     if renda:
-        suporta = "suporta" if renda >= 1200 else "não suporta"
+        suporta = "suporta" if renda >= param("score_demo_renda_baixa") else "não suporta"
         out.append(f"Renda de R$ {renda:,.0f} {suporta} mensalidade premium.".replace(",", "."))
     if score:
         out.append(f"Score {score:.1f}/10 indica mercado {classe.lower()}.")
