@@ -84,32 +84,27 @@ WHERE pessoas > 0
 """
 
 
-def _bq_client():
-    from google.cloud import bigquery
-
-    return bigquery.Client()
-
-
 def _agregar_bq(lat: float, lng: float, raio_m: int, id_municipio: str | None) -> dict | None:
-    """Fallback BQ live (ST_DWITHIN) quando o espelho Supabase não tem o município."""
-    try:
-        from google.cloud import bigquery
+    """Fallback BQ live (ST_DWITHIN) quando o espelho Supabase não tem o município.
 
-        cli = _bq_client()
+    Passa por basedosdados_loader.run_query → billing project + maximum_bytes_billed
+    (5 GiB). Antes usava bigquery.Client() cru, sem teto: como roda POR RELATÓRIO e
+    escaneia ~1.7 GiB (tabela nacional não particionada), um scan acidental sem cap
+    faturava sem limite. O cap aborta antes de faturar, não silencioso.
+    """
+    try:
+        from tools.basedosdados_loader import run_query
+
         mf = "AND id_municipio = @id_municipio" if id_municipio else ""
-        params = [
-            bigquery.ScalarQueryParameter("lat", "FLOAT64", float(lat)),
-            bigquery.ScalarQueryParameter("lng", "FLOAT64", float(lng)),
-            bigquery.ScalarQueryParameter("raio_m", "FLOAT64", float(raio_m)),
-        ]
+        params: dict[str, Any] = {
+            "lat": float(lat),
+            "lng": float(lng),
+            "raio_m": float(raio_m),
+        }
         if id_municipio:
-            params.append(bigquery.ScalarQueryParameter("id_municipio", "STRING", str(id_municipio)))
-        job = cli.query(
-            _SQL.format(municipio_filter=mf),
-            job_config=bigquery.QueryJobConfig(query_parameters=params),
-        )
-        r = next(iter(job.result()), None)
-        return dict(r.items()) if r is not None else None
+            params["id_municipio"] = str(id_municipio)
+        rows = run_query(_SQL.format(municipio_filter=mf), params=params)
+        return rows[0] if rows else None
     except Exception as exc:
         logger.warning("censo setor BQ falhou (%s,%s): %s: %s", lat, lng, type(exc).__name__, exc)
         return None
@@ -125,7 +120,8 @@ def demografia_setor_censo(
 ) -> dict[str, Any] | None:
     """Agrega o Censo 2022 (setores num raio do ponto) → pop/domicílios/ocupação reais.
 
-    `id_municipio` (código IBGE 7 díg) acelera a query (partição); opcional.
+    `id_municipio` (código IBGE 7 díg) filtra a execução (a tabela não é
+    particionada — não reduz bytes faturados, só linhas processadas); opcional.
     `_query_fn` injetável para teste sem rede. Retorna None se BQ indisponível/sem dado.
     """
     if lat is None or lng is None:

@@ -39,11 +39,13 @@ def _supabase():
 
 def carregar(*, id_municipio: str | None = None, batch: int = 2000) -> int:
     """Lê o Censo do BQ e faz upsert no Supabase. Retorna nº de setores carregados."""
-    from google.cloud import bigquery
+    # run_query: billing project + maximum_bytes_billed (5 GiB) + parâmetro tipado
+    # (mata SQL injection do antigo f-string em id_municipio). Rota canônica BD.
+    from tools.basedosdados_loader import run_query
 
-    cli = bigquery.Client()
-    mf = f"AND id_municipio = '{id_municipio}'" if id_municipio else ""
-    rows = list(cli.query(_BQ_SQL.format(municipio_filter=mf)).result())
+    mf = "AND id_municipio = @id_municipio" if id_municipio else ""
+    params = {"id_municipio": id_municipio} if id_municipio else None
+    rows = run_query(_BQ_SQL.format(municipio_filter=mf), params=params)
     print(f"BQ retornou {len(rows)} setores{' (município ' + id_municipio + ')' if id_municipio else ' (nacional)'}")
 
     sb = _supabase()
