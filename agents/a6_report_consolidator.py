@@ -1573,6 +1573,8 @@ def _resolver_competitividade_extracao(
     ic_raw: dict,
     inner_ic: dict,
     cs_raw: Any,
+    bairro: str = "",
+    tipo_negocio: str = "",
 ) -> dict[str, Any]:
     """
     Une A3b (detalhados) com fallback A3a (concorrentes_brutos).
@@ -1616,6 +1618,19 @@ def _resolver_competitividade_extracao(
     # Enxuga: dropa grounding cru + reviews duplicadas + cap 5 reviews/concorrente.
     # Corta o maior contribuinte de token do A6 (R$107 acum.) sem perder o que vira report.
     detalhados = [_slim_concorrente(c) for c in detalhados]
+
+    # Filtro AUTORITATIVO na lista final: A3b é LLM e re-emite (+ fallback A3a cru), então
+    # o filtro dentro da tool A3b não governa. Aqui dropa vizinho (Papicu/Meireles) e
+    # off-type (CrossFit/luta em 'academia') determinístico, na lista que vira o relatório.
+    try:
+        from tools.competitor_tools import filtrar_concorrentes_bairro_tipo
+
+        if detalhados and (bairro or tipo_negocio):
+            detalhados = filtrar_concorrentes_bairro_tipo(
+                detalhados, bairro=bairro, tipo_negocio=tipo_negocio
+            )
+    except Exception:
+        logger.warning("A6 filtro bairro/tipo falhou", exc_info=True, extra={"agent": "A6"})
 
     score_conc = ic_raw.get("score_concorrencia") or inner_ic.get("score_concorrencia")
     nivel_sat = (
@@ -1788,7 +1803,52 @@ def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
             r"mercado(\s+competitivo)?(\s+(?:é|está|se mostra))?\s+\*{0,2}SATURAD[OA]\*{0,2}",
             f"mercado com {_frase}", md, flags=re.I,
         )
+
+    # Demanda futura: o bloco existe no estruturado mas o LLM do A6 não o narra (não é
+    # injetado no prompt). Append determinístico da seção quando há residenciais reais.
+    df_block = out.get("demanda_futura")
+    if isinstance(df_block, dict) and "Demanda Futura" not in md:
+        secao_df = _renderizar_md_demanda_futura(df_block)
+        if secao_df:
+            md = md.rstrip() + "\n\n" + secao_df + "\n"
     return md
+
+
+def _renderizar_md_demanda_futura(df: dict) -> str:
+    """Seção markdown da demanda futura (obras residenciais → moradores → captura T+24),
+    determinística do bloco estruturado. '' se sem residencial real."""
+    if not isinstance(df, dict) or df.get("status") != "ok":
+        return ""
+    n_res = int(df.get("provavel_residencial_n") or 0)
+    if n_res <= 0:
+        return ""
+    def _n(x) -> str:  # milhar BR (2.879), sem mexer no resto do texto
+        return f"{float(x or 0):,.0f}".replace(",", ".")
+
+    moradores = df.get("moradores_total_est") or 0
+    captura = df.get("captura_total_est") or 0
+    receita = df.get("receita_total_mensal_est") or 0
+    fonte = df.get("fonte") or "CNO/RFB (obras de grande porte) + IBGE Censo 2022"
+    linhas = [
+        "## 🏗️ Demanda Futura — Novos Moradores (T+24)",
+        "",
+        f"**{n_res} empreendimento(s) residencial(is)** em obra geram ~**{_n(moradores)} novos "
+        f"moradores**, estimando **{_n(captura)} membros captáveis** "
+        f"(~R$ {_n(receita)}/mês de receita potencial em T+24). "
+        f"Upside captável com marketing, sem CAPEX extra. _Fonte: {fonte}._",
+        "",
+        "| Empreendimento | Bairro | Unidades est. | Moradores est. | Entrega |",
+        "|---|---|---:|---:|---|",
+    ]
+    obras = [o for o in (df.get("obras") or []) if isinstance(o, dict) and o.get("provavel_residencial")]
+    for o in obras[:8]:
+        nome = _escape_md_pipe(o.get("empreendimento") or o.get("construtora") or "—")
+        linhas.append(
+            f"| {nome} | {_escape_md_pipe(o.get('bairro') or '—')} "
+            f"| {o.get('unidades_est') or '—'} | {_n(o.get('moradores_est'))} "
+            f"| {_escape_md_pipe(o.get('entrega') or '—')} |"
+        )
+    return "\n".join(linhas)
 
 
 def _extrair_relatorio_estruturado(callback_context) -> dict:
@@ -1904,10 +1964,16 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # Plugado em 2026-05-11 após fix geo-fence (#89): quando o DR pede uma rede
     # que não tem unidade local no raio alvo, A3a marca em redes_a0_nao_encontradas.
     cs_raw = _parse_market_context(state.get("concorrentes_brutos"))
+    _ip_cc = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    _tn_cc = (_ip_cc.get("tipo_negocio")
+              or (inner_mc.get("tipo_negocio") if isinstance(inner_mc, dict) else "")
+              or "academia")
     comp = _resolver_competitividade_extracao(
         ic_raw=ic_raw if isinstance(ic_raw, dict) else {},
         inner_ic=inner_ic,
         cs_raw=cs_raw,
+        bairro=_bairro_alvo_da_busca(state),
+        tipo_negocio=_tn_cc,
     )
     if comp.get("fonte_fallback"):
         inner_ic = {**inner_ic, "concorrentes_detalhados": comp["concorrentes_detalhados"]}
