@@ -148,9 +148,8 @@ _KW_RESIDENCIAL = (
     "imobiliari", "empreendimento imobiliario", "empreendimento imobiliário",
     "incorporac", "incorporaç", "morada", "reserva", "ville",
     "jardim", "torre", "vila ", "village", "parque residencial", "loteamento",
-    # SPE (Sociedade de Propósito Específico) — veículo quase sempre de incorporação
-    # imobiliária no CNO de grande porte. Tokens com espaço evitam falso-match interno.
-    "spe ", " spe",
+    # 'spe' sozinho over-classifica (SPE também é infra/energia); os SPE imobiliários
+    # reais já caem em 'imobiliari'. Mantido conservador.
 )
 # Gate grande porte recalibrável via parametros_metodologia (zero-hardcode).
 # Default rotulado (_DEFAULTS) se Supabase indisponível.

@@ -28,8 +28,10 @@ def test_residence_ingles_e_reserva():
     assert _eh_residencial("RESERVA VILA DO SOL") is True
 
 
-def test_spe_token():
-    assert _eh_residencial("SPE EN2 LTDA") is True
+def test_spe_so_residencial_com_imobiliario():
+    # 'spe' sozinho é conservador (também é infra/energia); só vira residencial com sinal real
+    assert _eh_residencial("SPE EN2 LTDA") is False
+    assert _eh_residencial("SPE EN2 EMPREENDIMENTO IMOBILIARIO LTDA") is True
 
 
 def test_comercial_e_generico_ficam_fora():
