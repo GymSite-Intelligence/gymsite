@@ -11,7 +11,8 @@ from tools.financial_tools import (
 def _prem():
     return {
         "modelo": "Premium", "modelo_key": "premium", "viabilidade": "INVIAVEL",
-        "matriculas": {"realista": 690, "agressivo": 1035},
+        # estrutura REAL do cenário: matriculas[cal] = {"valor": int, ...} (não int cru)
+        "matriculas": {"realista": {"valor": 690}, "agressivo": {"valor": 1035}},
         "receita_mensal": 201757.0, "ticket_realizado_estimado": 292.40,
         "custos_detalhados": {"outros": 6000.0}, "custos_fixos_total": 150000.0,
         "marketing_pct_faturamento": 0.12, "investimento_total": 1200000.0,

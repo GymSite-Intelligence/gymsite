@@ -681,8 +681,11 @@ def _viab_no_teto_captacao(c: dict[str, Any], fator: float) -> dict[str, Any] | 
     por `fator`) e checa o GATE FÍSICO (pico simultâneo ≤ capacidade). Receita escala c/
     matrículas; só `outros` e marketing são revenue-linked — resto é fixo. None se não dá."""
     matr = c.get("matriculas") or {}
-    base = matr.get("realista")
-    teto = matr.get("agressivo")
+
+    def _valor(x):  # matriculas[cal] é {"valor": int, ...} no cenário real; int no teste
+        return float(x.get("valor") or 0) if isinstance(x, dict) else float(x or 0)
+    base = _valor(matr.get("realista"))
+    teto = _valor(matr.get("agressivo"))
     receita0 = c.get("receita_mensal") or 0
     ticket = c.get("ticket_realizado_estimado") or 0
     if not base or not teto or fator <= 0 or receita0 <= 0 or ticket <= 0:
