@@ -4,7 +4,9 @@ Montagem do PDF com ReportLab (layout classic / executive / data_room).
 from __future__ import annotations
 
 import io
+import os
 from datetime import datetime
+from pathlib import Path
 
 # pyrefly: ignore [untyped-import]
 from reportlab.lib import colors
@@ -29,12 +31,15 @@ from pdf.theme import (
     CARD_BG,
     CHARCOAL,
     CONTENT_W,
+    LIME,
     MARGIN_B,
     MARGIN_L,
     MARGIN_R,
     MARGIN_T,
     NAVY,
     PAGE_SIZE,
+    PETROLEUM,
+    PETROLEUM_DEEP,
     ROW_ALT,
     SLATE,
     TEAL,
@@ -168,6 +173,27 @@ def _header_footer(canvas, doc, model: RelatorioPdfModel) -> None:
     canvas.restoreState()
 
 
+def _logo_path() -> str | None:
+    """Resolve o caminho do logo da marca de forma defensiva.
+
+    Procura, nesta ordem: variavel de ambiente GYMSITE_PDF_LOGO e alguns
+    caminhos convencionais do repo. Retorna None se o arquivo nao existir,
+    para que a geracao do PDF nunca quebre por falta do asset.
+    """
+    candidatos = [
+        os.environ.get("GYMSITE_PDF_LOGO"),
+        str(Path(__file__).resolve().parent / "assets" / "logo-gymsite.png"),
+        str(
+            Path(__file__).resolve().parent.parent
+            / "frontend" / "src" / "assets" / "logo-gymsite.png"
+        ),
+    ]
+    for caminho in candidatos:
+        if caminho and os.path.isfile(caminho):
+            return caminho
+    return None
+
+
 def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
     ver = model.veredito or "—"
     vc = veredito_color(model.veredito)
@@ -176,8 +202,16 @@ def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
         f"{model.tipo_negocio.replace('_', ' ')} · "
         f"público {model.publico_alvo or '—'}"
     )
+
+    # Topo da capa: logo centralizado (se existir) sobre fundo escuro.
+    logo = _logo_path()
+    if logo:
+        brand_row = [Image(logo, width=4.6 * cm, height=4.6 * cm)]
+    else:
+        brand_row = [Paragraph("GymSite Intelligence", styles["cover_title"])]
+
     cover_inner = [
-        [Paragraph("GymSite Intelligence", styles["cover_sub"])],
+        brand_row,
         [
             Paragraph(
                 f"<b>{model.bairro}</b> · {model.cidade}",
@@ -204,12 +238,19 @@ def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
     cover_tbl.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+                # Fundo escuro grafite/petroleo, espelhando o split do logo.
+                ("BACKGROUND", (0, 0), (-1, -1), CHARCOAL),
+                ("BACKGROUND", (0, 0), (-1, 0), PETROLEUM_DEEP),
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                # Faixa de acento verde-limao logo abaixo do topo da marca.
+                ("LINEBELOW", (0, 0), (-1, 0), 3, LIME),
                 ("LEFTPADDING", (0, 0), (-1, -1), 16),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 16),
-                ("TOPPADDING", (0, 0), (-1, -1), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, 0), 18),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 14),
+                ("TOPPADDING", (0, 1), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 1), (-1, -1), 10),
             ],
         ),
     )
