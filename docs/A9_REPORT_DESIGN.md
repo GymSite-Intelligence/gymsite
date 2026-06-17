@@ -2,17 +2,21 @@
 
 Estrutura de design do relatório do agente A9 (estrategista de posicionamento),
 ancorada na identidade visual real do projeto: a paleta do PDF (`pdf/theme.py`),
-a paleta do site (`gym-insight-hub/src/styles.css`) e os assets de marca.
+a paleta do site (`frontend/src/index.css`) e os assets de marca.
 
 ## Fonte da identidade visual
 
 - PDF (ReportLab): `pdf/theme.py` — paleta em HEX, fontes Helvetica/Helvetica-Bold,
   builder server-side em `pdf/builder.py` + `pdf/charts.py` + `pdf/models.py`.
-- Site (Tailwind v4): `gym-insight-hub/src/styles.css` — tema escuro
-  "corporate authority" em oklch, fonte Space Grotesk.
-- Assets: `gym-insight-hub/src/assets/logo-gymsite.png` (logo de marca: pino de
-  mapa em trilhas de circuito, metade verde-limão / metade grafite) e
-  `brazil-heatmap.jpg`.
+- Site (Tailwind): `frontend/src/index.css` — tema escuro
+  "corporate authority" em oklch, fontes DM Sans / IBM Plex Mono.
+- Assets (logo de marca: pino de mapa em trilhas de circuito, metade
+  verde-limão / metade grafite, e heatmap do Brasil). Os arquivos NÃO estão
+  versionados no repo; o builder os resolve em runtime via
+  `pdf.builder._logo_path()` / `_heatmap_path()`, nesta ordem: variável de
+  ambiente (`GYMSITE_PDF_LOGO` / `GYMSITE_PDF_HEATMAP`), depois `pdf/assets/`
+  (`logo-gymsite.png` / `brazil-heatmap.jpg`), depois
+  `frontend/src/assets/`. Se nenhum existir, a imagem é omitida sem quebrar o PDF.
 
 ## Paleta de cores (referência das cores do site)
 
@@ -41,7 +45,7 @@ Cores semânticas e de veredito (`theme.py`):
 | INVESTIGAR MAIS | #EA580C | revisar |
 | DANGER / REPROVADO | #DC2626 | risco/reprovação |
 
-Cor de marca do logo (do site, ainda NÃO no theme.py — sugerida adicionar):
+Cor de marca do logo (do site, já registrada em `theme.py`):
 
 - LIME (primário do site): oklch(0.88 0.22 135) — verde-limão da marca;
   aproximação HEX para o PDF: cerca de #A3E635 / #9ACD32.
@@ -49,23 +53,27 @@ Cor de marca do logo (do site, ainda NÃO no theme.py — sugerida adicionar):
 - PETROLEUM: oklch(0.42 0.08 210) e PETROLEUM_DEEP: oklch(0.22 0.04 215) —
   azul-petróleo, alinhado ao NAVY/TEAL do PDF.
 
-Recomendação: registrar LIME e PETROLEUM em `theme.py` para que o PDF use a
-mesma cor de marca do site (hoje o PDF usa TEAL como acento; o site usa o
-verde-limão). Assim o relatório fica visualmente coerente com a landing.
+Implementado: LIME (`#A3E635`), LIME_GLOW (`#BEF264`), PETROLEUM (`#0E5C66`) e
+PETROLEUM_DEEP (`#08323A`) já estão em `theme.py`, então o PDF usa o mesmo
+verde-limão da marca como acento (a capa e o rodapé já consomem essas cores).
 
 ## Tipografia
 
 - PDF: Helvetica / Helvetica-Bold (padrão ReportLab, já em uso).
-- Site: Space Grotesk. Se quiser fidelidade total, embutir Space Grotesk como
-  TTF no ReportLab; caso contrário, manter Helvetica como fallback corporativo.
+- Site: DM Sans (texto) / IBM Plex Mono (mono). Se quiser fidelidade total,
+  embutir DM Sans como TTF no ReportLab; caso contrário, manter Helvetica como
+  fallback corporativo (atual).
 
 ## Uso dos assets no relatório
 
-- logo-gymsite.png: marca d'água/topo da capa e rodapé de cada página.
+Status: já implementado em `pdf/builder.py` (resolução defensiva dos assets).
+
+- logo-gymsite.png: topo/rodapé de cada página (`_header_footer`) ao lado do
+  nome da marca, e centralizado na capa (`_cover_block`).
 - Capa: fundo grafite/petróleo (CHARCOAL/PETROLEUM_DEEP) com o logo centralizado
   e o verde-limão (LIME) como faixa de acento — espelhando o split do logo.
-- brazil-heatmap.jpg: imagem de contexto na seção de mercado/geografia (abertura
-  do bloco do A1/A2), com overlay escuro para legibilidade do texto.
+- brazil-heatmap.jpg: imagem de contexto na abertura da seção de mercado
+  (`_market_section`), com legenda. Se o asset não existir, é omitida.
 
 ## Estrutura de seções do PDF (preenchida pelas skills do A9)
 
