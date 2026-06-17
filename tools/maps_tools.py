@@ -146,6 +146,70 @@ def _extrair_lugar(p: dict) -> dict:
     }
 
 
+def _raio_para_zoom(raio_metros: int) -> int:
+    """raio (m) → nível de zoom do `ll` do SearchAPI google_maps."""
+    if raio_metros <= 1500:
+        return 15
+    if raio_metros <= 3500:
+        return 14
+    if raio_metros <= 7000:
+        return 13
+    return 12
+
+
+def _searchapi_maps_local(query: str, lat: float, lng: float, raio_metros: int,
+                          *, tool_name: str, max_results: int = 20) -> list[dict] | None:
+    """SearchAPI engine=google_maps com bias `ll` → adaptado p/ o shape places[] do
+    Places API (consumível por _extrair_lugar). place_id é ChIJ... (idêntico). ~4× barato.
+    None se sem key/erro → caller cai pro Places."""
+    import os as _os
+
+    key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
+    if not key:
+        return None
+    zoom = _raio_para_zoom(raio_metros)
+    try:
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call(tool_name, "searchapi_google_maps", 1):
+            with httpx.Client(timeout=25) as c:
+                data = c.get(
+                    "https://www.searchapi.io/api/v1/search",
+                    params={"engine": "google_maps", "q": query,
+                            "ll": f"@{lat},{lng},{zoom}z", "gl": "br", "hl": "pt-br"},
+                    headers={"Authorization": f"Bearer {key}"},
+                ).json()
+    except Exception as exc:
+        logger.debug("searchapi google_maps local '%s': %s", query, exc)
+        return None
+
+    places: list[dict] = []
+    for p in (data.get("local_results") or [])[:max_results]:
+        gps = p.get("gps_coordinates") or {}
+        horas = p.get("hours")
+        pid = p.get("place_id") or ""
+        places.append({
+            "id": pid,
+            "displayName": {"text": p.get("title") or ""},
+            "formattedAddress": p.get("address") or "",
+            "location": {"latitude": gps.get("latitude") or 0.0, "longitude": gps.get("longitude") or 0.0},
+            "types": p.get("types") or ([p["type"]] if p.get("type") else []),
+            "businessStatus": p.get("open_state") or "",
+            "rating": p.get("rating"),
+            "userRatingCount": p.get("reviews") or 0,
+            "nationalPhoneNumber": p.get("phone") or "",
+            "websiteUri": p.get("website") or "",
+            "googleMapsUri": f"https://www.google.com/maps/place/?q=place_id:{pid}" if pid else "",
+            "regularOpeningHours": {"weekdayDescriptions": [horas] if isinstance(horas, str) and horas else []},
+        })
+    return places
+
+
+def _imoveis_backend_searchapi() -> bool:
+    import os as _os
+    return (_os.getenv("IMOVEIS_MAPS_BACKEND") or "searchapi").strip().lower() != "places"
+
+
 def buscar_pontos_comerciais(latitude: float, longitude: float,
                               raio_metros: int = 5000) -> list[dict]:
     """Nearby Search por espaços comerciais candidatos."""
@@ -153,6 +217,14 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
     cached = _places_cache_get(cache_key)
     if cached is not None:
         return cached
+    if _imoveis_backend_searchapi():
+        res = _searchapi_maps_local(
+            "shopping centro comercial supermercado mercado", latitude, longitude,
+            raio_metros, tool_name="buscar_pontos_comerciais")
+        if res:
+            out = [_extrair_lugar(p) for p in res]
+            _places_cache_set(cache_key, out)
+            return out
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": get_google_maps_api_key(),
@@ -202,6 +274,13 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
     cached = _places_cache_get(cache_key)
     if cached is not None:
         return cached
+    if _imoveis_backend_searchapi():
+        res = _searchapi_maps_local(
+            query, latitude, longitude, raio_metros, tool_name="buscar_imoveis_texto", max_results=10)
+        if res:
+            out = [_extrair_lugar(p) for p in res]
+            _places_cache_set(cache_key, out)
+            return out
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": get_google_maps_api_key(),
