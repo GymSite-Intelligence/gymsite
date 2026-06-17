@@ -2004,8 +2004,29 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         _perfil_sx = inner_demo.get("perfil_sexo_publico") if isinstance(inner_demo, dict) else None
         if isinstance(_perfil_sx, dict) and _perfil_sx.get("total"):
             demografia_bairro_block["perfil_sexo_publico"] = _perfil_sx
+            # Override determinístico do contexto: faixa etária era 'dados_nao_disponiveis'
+            # (Deep Research). Popula com o gancho sexo×idade (Censo 2022).
+            if isinstance(slim_market_context, dict):
+                slim_market_context["faixa_etaria_predominante"] = (
+                    f"{_perfil_sx['faixa_idade']} anos · {_perfil_sx['pct_mulheres']:.0f}% mulheres / "
+                    f"{_perfil_sx['pct_homens']:.0f}% homens (Censo 2022)"
+                )
+                slim_market_context["genero_alvo"] = _perfil_sx.get("maioria") or slim_market_context.get("genero_alvo")
     except Exception:
         logger.warning("A6 demografia_bairro falhou", exc_info=True, extra={"agent": "A6"})
+
+    # Renda do contexto: Deep Research usa CKAN 2010 (defasado). Sobrepõe pela IPECE 2022
+    # (renda per capita por bairro) quando disponível — coerência com o tier do A4.
+    try:
+        if isinstance(slim_market_context, dict):
+            from tools.posicionamento_renda import renda_bairro_ipece
+
+            _r = renda_bairro_ipece(_cid_ef, _uf, _bai)
+            if isinstance(_r, dict) and _r.get("renda_pc"):
+                slim_market_context["renda_media_bairro"] = round(float(_r["renda_pc"]), 2)
+                slim_market_context["renda_media_bairro_fonte"] = "IPECE Informe 272 (Censo 2022) — renda per capita"
+    except Exception:
+        logger.warning("A6 override renda IPECE falhou", exc_info=True, extra={"agent": "A6"})
 
     obras_cno_block = state.get("obras_cno_pronto") or {}
     if not isinstance(obras_cno_block, dict) or obras_cno_block.get("status") not in (
