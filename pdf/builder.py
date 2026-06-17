@@ -214,6 +214,26 @@ def _logo_path() -> str | None:
     return None
 
 
+def _heatmap_path() -> str | None:
+    """Resolve o caminho do heatmap do Brasil de forma defensiva.
+
+    Procura GYMSITE_PDF_HEATMAP e caminhos convencionais do repo; retorna
+    None se nao existir, para nao quebrar a geracao do PDF.
+    """
+    candidatos = [
+        os.environ.get("GYMSITE_PDF_HEATMAP"),
+        str(Path(__file__).resolve().parent / "assets" / "brazil-heatmap.jpg"),
+        str(
+            Path(__file__).resolve().parent.parent
+            / "frontend" / "src" / "assets" / "brazil-heatmap.jpg"
+        ),
+    ]
+    for caminho in candidatos:
+        if caminho and os.path.isfile(caminho):
+            return caminho
+    return None
+
+
 def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
     ver = model.veredito or "—"
     vc = veredito_color(model.veredito)
@@ -309,6 +329,15 @@ def _market_section(model: RelatorioPdfModel, styles: dict) -> list:
         return []
     m = model.market
     flow = _section_title("3. Contexto de mercado", styles)
+    # Imagem de contexto geografico (heatmap do Brasil), se o asset existir.
+    heatmap = _heatmap_path()
+    if heatmap:
+        try:
+            flow.append(Image(heatmap, width=CONTENT_W, height=4.0 * cm))
+            flow.append(_para("Densidade do mercado fitness por regiao", "small", styles))
+            flow.append(Spacer(1, 6))
+        except Exception:
+            pass
     rows = [
         ["Indicador", "Valor"],
         ["Ticket mercado", m.ticket_mercado or "—"],
