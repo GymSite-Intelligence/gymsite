@@ -162,7 +162,7 @@ def _header_footer(canvas, doc, model: RelatorioPdfModel) -> None:
     canvas.drawString(
         MARGIN_L,
         0.9 * cm,
-        f"Relatório {model.relatorio_id[:8]}… · gerado {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        f"Relatório {model.relatorio_id} · gerado {datetime.now().strftime('%d/%m/%Y %H:%M')}",
     )
     canvas.drawRightString(w - MARGIN_R, 0.9 * cm, f"Página {doc.page}")
     canvas.restoreState()
@@ -662,7 +662,7 @@ def _header_footer_bala(canvas, doc, model: RelatorioPdfModel) -> None:
     canvas.drawString(
         MARGIN_L,
         0.8 * cm,
-        f"Relatório {model.relatorio_id[:8]}… · gerado {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        f"Relatório {model.relatorio_id} · gerado {datetime.now().strftime('%d/%m/%Y %H:%M')}",
     )
     canvas.drawRightString(w - MARGIN_R, 0.8 * cm, f"Página {doc.page}")
     canvas.restoreState()

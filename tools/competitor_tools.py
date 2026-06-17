@@ -2419,6 +2419,25 @@ def analisar_concorrentes_completo(tool_context) -> dict:
     slim = [_slim_concorrente(c) for c in lista if isinstance(c, dict)]
     slim = [s for s in slim if s.get("nome") != "Desconhecido" or s.get("reviews")]
 
+    # Filtro determinístico de BAIRRO: a busca balanceada usa raio 3-5km + redes do A0,
+    # que vazam bairros vizinhos (Papicu/Meireles em Cocó). O relatório é POR BAIRRO →
+    # mantém só quem é do bairro-alvo (match no bairro_concorrente OU no endereço).
+    # Salvaguarda: se sobrar <2, mantém todos (lista esparsa > lista vazia) — rotulado.
+    alvo_norm = _norm_txt(bairro or "")
+    if alvo_norm:
+        def _do_bairro(s: dict) -> bool:
+            bc = _norm_txt(s.get("bairro_concorrente") or "")
+            end = _norm_txt(s.get("endereco") or "")
+            return (alvo_norm in bc) or (bc in alvo_norm and bc != "") or (alvo_norm in end)
+        no_bairro = [s for s in slim if _do_bairro(s)]
+        fora = [s for s in slim if not _do_bairro(s)]
+        if len(no_bairro) >= 2:
+            if fora:
+                logger.info("A3a filtro bairro '%s': %d no bairro, %d vizinhos descartados (%s)",
+                            bairro, len(no_bairro), len(fora),
+                            ", ".join(s.get("nome", "?") for s in fora[:5]))
+            slim = no_bairro
+
     gap = analisar_gap_competitivo(slim, bairro)
 
     # Importação atrasada: analisar_picos_competitivos vive em outro módulo.

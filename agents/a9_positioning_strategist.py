@@ -166,6 +166,17 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
         if hr.get("status") != "ok":
             return
         parsed["headroom_renda"] = hr  # renda_pc/percentil/tier sempre determinísticos
+        # GAPs determinísticos: o PDF/relatório lê gaps_identificados (output estruturado);
+        # o LLM chutava genérico (Nutrição/Recovery/Silver). Sobrepõe pelo dado real da praça.
+        gaps_reais = _gaps_reais(state)
+        if gaps_reais is not None:
+            llm_gaps = parsed.get("gaps_identificados")
+            if llm_gaps:
+                parsed["gaps_identificados_llm"] = llm_gaps
+            parsed["gaps_identificados"] = [
+                f"{g} — nenhum concorrente da praça oferece (oportunidade de CRIAR)" for g in gaps_reais
+            ] if gaps_reais else ["Mercado coberto nos serviços-núcleo — foco em AUMENTAR/REDUZIR (qualidade/preço), não em CRIAR"]
+            parsed["fonte_gaps"] = "deterministico_oferta_concorrentes (planos+IG)"
         vd = hr.get("veredito_posicionamento")
         if vd and vd != "INDETERMINADO":
             llm_v = parsed.get("veredito_posicionamento")
@@ -281,6 +292,27 @@ def _servicos_do_concorrente(c: dict) -> set[str]:
     # serviços já detectados nas captions do IG (A3a/cache) — chaves do catálogo
     svc |= {_SERVICOS_CATALOGO[k] for k in (c.get("servicos_ig") or []) if k in _SERVICOS_CATALOGO}
     return svc
+
+
+def _gaps_reais(state: dict) -> list[str] | None:
+    """Lista determinística dos serviços que NENHUM concorrente oferece (do dado real:
+    planos_precos.inclui + modalidades + servicos_ig). É o substrato da dimensão CRIAR
+    da ERRC — usado pra SOBREPOR o gaps_identificados do LLM (que chutava genérico)."""
+    from collections import Counter
+
+    from tools.competitor_tools import _parse_market_context
+
+    ic = _parse_market_context(state.get("inteligencia_competitiva"))
+    inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+    concs = (inner.get("concorrentes_detalhados") if isinstance(inner, dict) else None) or []
+    concs = [c for c in concs if isinstance(c, dict)]
+    if not concs:
+        return None
+    pen: Counter = Counter()
+    for c in concs:
+        for s in _servicos_do_concorrente(c):
+            pen[s] += 1
+    return sorted(r for r in set(_SERVICOS_CATALOGO.values()) if pen.get(r, 0) == 0)
 
 
 def _resumo_oferta_e_gaps(state: dict) -> str | None:
