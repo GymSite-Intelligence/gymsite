@@ -320,6 +320,7 @@ def calcular_viabilidade_3_cenarios(
     fornecedor_principal: str = "default",
     capex_indices: dict | None = None,
     renda_media_bairro: float | None = None,
+    renda_percentil: float | None = None,
 ) -> dict:
     _capex_ctx = _resolve_capex_indices(uf, capex_indices)
     # Benchmarks setoriais atualizados (Panorama Fitness Brasil mais recente).
@@ -563,7 +564,7 @@ def calcular_viabilidade_3_cenarios(
             "capex_estimado": capex_detalhado["total"],
         }
 
-    melhor = _escolher_cenario_recomendado(cenarios, renda_media_bairro)
+    melhor = _escolher_cenario_recomendado(cenarios, renda_media_bairro, renda_percentil)
     alertas_benchmark = _alertas_vs_sector_listed(cenarios)
     alertas_ticket.extend(_bench.get("ticket_sanity_avisos") or [])
 
@@ -643,6 +644,77 @@ def _renda_media_bairro(cidade: str, bairro: str, uf: str) -> float | None:
         return None
 
 
+def _renda_percentil_bairro(cidade: str, bairro: str, uf: str) -> float | None:
+    """Percentil de renda do bairro (IPECE/Censo 2022). Sinal MELHOR que renda absoluta
+    p/ o teto de captação: Cocó renda_pc R$4.952 mal passa o floor premium (4.500), mas
+    percentil 0,99 = top-1% → densidade captável sobe rumo ao agressivo."""
+    if not (bairro or "").strip():
+        return None
+    try:
+        from tools.posicionamento_renda import renda_bairro_ipece
+
+        r = renda_bairro_ipece(cidade, uf or "", bairro)
+        if r and r.get("percentil") is not None:
+            return float(r["percentil"])
+    except Exception:
+        pass
+    return None
+
+
+def _fator_captacao(percentil: float | None) -> float:
+    """Quanto empurrar a densidade do realista→agressivo, por percentil de renda.
+    0 abaixo de renda_percentil_premium (bairro comum fica no realista); sobe linear
+    até 1 no percentil 1,0 (bairro top-renda alcança o teto agressivo). Auto-regula:
+    bairro pobre → fator 0 → premium NÃO é elevado → gate barra como deve."""
+    if percentil is None:
+        return 0.0
+    p0 = param("renda_percentil_premium")  # 0.75
+    if percentil <= p0:
+        return 0.0
+    return min(1.0, (percentil - p0) / max(1e-6, 1.0 - p0))
+
+
+def _viab_no_teto_captacao(c: dict[str, Any], fator: float) -> dict[str, Any] | None:
+    """Recomputa a viabilidade do cenário na densidade renda-ponderada (realista→agressivo
+    por `fator`) e checa o GATE FÍSICO (pico simultâneo ≤ capacidade). Receita escala c/
+    matrículas; só `outros` e marketing são revenue-linked — resto é fixo. None se não dá."""
+    matr = c.get("matriculas") or {}
+    base = matr.get("realista")
+    teto = matr.get("agressivo")
+    receita0 = c.get("receita_mensal") or 0
+    ticket = c.get("ticket_realizado_estimado") or 0
+    if not base or not teto or fator <= 0 or receita0 <= 0 or ticket <= 0:
+        return None
+    alvo = base + (teto - base) * fator
+    outros = (c.get("custos_detalhados") or {}).get("outros", 0)
+    outros_pct = outros / receita0 if receita0 else 0
+    mkt_pct = c.get("marketing_pct_faturamento") or 0
+    fixos_puros = (c.get("custos_fixos_total") or 0) - outros  # tira o revenue-linked
+    nova_receita = alvo * ticket
+    novo_lucro = nova_receita * (1 - outros_pct - mkt_pct) - fixos_puros
+    nova_margem = (novo_lucro / nova_receita * 100) if nova_receita > 0 else 0
+    inv = c.get("investimento_total") or 0
+    novo_payback = int(inv / novo_lucro) if novo_lucro > 0 else 999
+    # GATE FÍSICO: o pico escala linear c/ matrículas (mesmo pico_share/freq).
+    pico_base = c.get("alunos_pico_calculado") or 0
+    cap = c.get("capacidade_simultanea_pico") or 0
+    pico_alvo = pico_base * (alvo / base) if base else 0
+    pico_ok = (cap <= 0) or (pico_alvo <= cap)
+    viab = _classificar_viabilidade(novo_lucro, novo_payback, nova_margem)
+    return {
+        "matriculas_alvo": int(round(alvo)),
+        "densidade_fator": round(fator, 2),
+        "lucro_mensal": round(novo_lucro, 2),
+        "margem_percentual": round(nova_margem, 1),
+        "payback_meses": novo_payback,
+        "viabilidade": viab["status"],
+        "pico_alvo": int(round(pico_alvo)),
+        "capacidade_simultanea_pico": cap,
+        "pico_comporta": pico_ok,
+        "base": "teto de captação ACAD agressivo, ponderado por renda do bairro",
+    }
+
+
 def _tier_mercado_por_renda(renda_media_bairro: float | None) -> str:
     if not renda_media_bairro or renda_media_bairro <= 0:
         return "mid"
@@ -665,15 +737,46 @@ def _faixa_key_de_modelo(modelo: str) -> str:
 def _escolher_cenario_recomendado(
     cenarios: dict[str, Any],
     renda_media_bairro: float | None,
+    renda_percentil: float | None = None,
 ) -> dict[str, Any]:
     """
     Escolhe cenário alinhado ao tier de renda local — não só max(lucro) com ticket irreal.
+
+    DOIS GATES COMPLEMENTARES (auto-regulam):
+    1) renda-ponderado: num bairro top-renda (percentil alto), a densidade captável do tier
+       preferido sobe do realista rumo ao agressivo (teto ACAD). Bairro comum → fica no realista.
+    2) gate físico: só eleva se o pico simultâneo no teto ≤ capacidade do espaço.
+    Assim, premium INVIÁVEL no realista vira recomendável num bairro rico SE fecha no teto
+    captável E o prédio comporta — e num bairro pobre o fator é 0, premium nunca é elevado.
     """
     preferido = _tier_mercado_por_renda(renda_media_bairro)
     ordem = {"low": 0, "mid": 1, "premium": 2}
+
+    # Gate complementar: eleva o tier preferido se inviável no realista MAS viável no teto
+    # de captação (renda-ponderado) E o gate físico comporta o pico.
+    fator = _fator_captacao(renda_percentil)
+    pref_c = cenarios.get(preferido)
+    if (
+        pref_c is not None
+        and pref_c.get("viabilidade") in ("INVIAVEL", None)
+        and fator > 0
+    ):
+        teto = _viab_no_teto_captacao(pref_c, fator)
+        if teto and teto["viabilidade"] not in ("INVIAVEL", None) and teto["pico_comporta"]:
+            pref_c["recomendado_no_teto_captacao"] = teto
+            pref_c["_elegivel_teto"] = True
+            pref_c["justificativa_recomendacao"] = (
+                f"Recomendado operando no TETO DE CAPTAÇÃO ({teto['matriculas_alvo']} matrículas, "
+                f"densidade ACAD agressiva), não no realista. O bairro é top-renda (percentil "
+                f"{renda_percentil:.0%}) → sustenta a captação agressiva; o espaço comporta o pico "
+                f"({teto['pico_alvo']} ≤ {teto['capacidade_simultanea_pico']} simultâneos). "
+                f"Margem {teto['margem_percentual']:.0f}%, payback {teto['payback_meses']}m. "
+                f"No realista o modelo não fecha — o upside é captável com marketing, sem CAPEX extra."
+            )
+
     viaveis = [
         c for c in cenarios.values()
-        if c.get("viabilidade") not in ("INVIAVEL", None)
+        if c.get("viabilidade") not in ("INVIAVEL", None) or c.get("_elegivel_teto")
     ]
     pool = viaveis or list(cenarios.values())
 
@@ -1330,6 +1433,7 @@ def analise_financeira_completa(
         destino_lng=destino_lng,
         fornecedor_principal=fornecedor_principal,
         renda_media_bairro=_renda_media_bairro(cidade, bairro, uf),
+        renda_percentil=_renda_percentil_bairro(cidade, bairro, uf),
     )
 
     viabilidade["fonte_aluguel"] = fonte_aluguel
