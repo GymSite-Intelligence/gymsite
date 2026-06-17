@@ -321,7 +321,83 @@ def _norm_txt(s: str) -> str:
     return _re.sub(r"\s+", " ", s).strip()
 
 
+# Keywords PT do engine SearchAPI google_maps (type "Academia"/"Crossfit"/...) →
+# injeta "gym" no types adaptado p/ passar no filtro _FITNESS_TYPES (enum EN).
+_SEARCHAPI_FITNESS_KW = (
+    "academia", "fitness", "ginas", "crossfit", "cross training", "pilates",
+    "musculação", "musculacao", "box", "studio", "estúdio", "natação", "natacao",
+    "treinamento", "personal", "yoga", "funcional",
+)
+
+
+def _searchapi_maps_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
+    """SearchAPI engine=google_maps → adaptado p/ o MESMO shape do Places searchText
+    (places[]). place_id é `ChIJ...` (idêntico ao Places API) → cache/dedup compatíveis.
+    Custo ~4× menor. Best-effort: erro/sem key → []."""
+    import os as _os
+
+    key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
+    if not key:
+        return []
+    try:
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("descobrir_concorrentes_bairro", "searchapi_google_maps", 1):
+            with httpx.Client(timeout=25) as c:
+                data = c.get(
+                    "https://www.searchapi.io/api/v1/search",
+                    params={"engine": "google_maps", "q": query, "gl": "br", "hl": "pt-br"},
+                    headers={"Authorization": f"Bearer {key}"},
+                ).json()
+    except Exception as exc:
+        logger.debug("searchapi google_maps '%s': %s", query, exc)
+        return []
+
+    out: list[dict] = []
+    for p in (data.get("local_results") or [])[:max_results]:
+        tipos_raw = p.get("types") or ([p["type"]] if p.get("type") else [])
+        blob = _norm_txt(" ".join(tipos_raw) + " " + (p.get("title") or ""))
+        eh_fitness = any(_norm_txt(kw) in blob for kw in _SEARCHAPI_FITNESS_KW)
+        tipos = (["gym"] if eh_fitness else []) + list(tipos_raw)
+        gps = p.get("gps_coordinates") or {}
+        horas = p.get("hours")
+        weekday = ([horas] if isinstance(horas, str) and horas else
+                   list(p.get("open_hours") or {}).copy() if isinstance(p.get("open_hours"), dict)
+                   else (p.get("open_hours") if isinstance(p.get("open_hours"), list) else []))
+        pid = p.get("place_id") or ""
+        out.append({
+            "id": pid,
+            "displayName": {"text": p.get("title") or ""},
+            "formattedAddress": p.get("address") or "",
+            "location": {"latitude": gps.get("latitude") or 0.0, "longitude": gps.get("longitude") or 0.0},
+            "rating": p.get("rating"),
+            "userRatingCount": p.get("reviews") or 0,
+            "businessStatus": p.get("open_state") or "",
+            "types": tipos,
+            "regularOpeningHours": {"weekdayDescriptions": weekday},
+            "websiteUri": p.get("website") or "",
+            "nationalPhoneNumber": p.get("phone") or "",
+            "googleMapsUri": f"https://www.google.com/maps/place/?q=place_id:{pid}" if pid else "",
+        })
+    return out
+
+
 def _places_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
+    """Âncora de concorrentes. Dispatcher: SearchAPI google_maps (default, ~4× barato,
+    place_id idêntico) com fallback automático p/ Places API se vazio/erro.
+    Força via COMPETIDOR_MAPS_BACKEND=places."""
+    import os as _os
+
+    backend = (_os.getenv("COMPETIDOR_MAPS_BACKEND") or "searchapi").strip().lower()
+    if backend != "places":
+        res = _searchapi_maps_textsearch(query, max_results=max_results)
+        if res:
+            return res
+        logger.debug("searchapi google_maps vazio p/ '%s' → fallback Places", query)
+    return _places_textsearch_google(query, max_results=max_results)
+
+
+def _places_textsearch_google(query: str, *, max_results: int = 20) -> list[dict]:
     """Places searchText cru → lista de places (estruturado, dado do Google Maps)."""
     api_key = get_google_maps_api_key()
     if not api_key:
