@@ -2065,17 +2065,21 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         _uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or ""
         _idm = str((inner_mc.get("codigo_ibge") or "") if isinstance(inner_mc, dict) else "") or None
         demografia_bairro_block = _demo_bairro(_cid_ef, _uf, _bai, id_municipio=_idm)
-        # Gancho mkt: perfil sexo×idade do público fitness (município, Censo 2022/BQ).
-        # A2 já computou em analise_demografica.perfil_sexo_publico; surfacer no bloco.
-        _perfil_sx = inner_demo.get("perfil_sexo_publico") if isinstance(inner_demo, dict) else None
+        # Gancho mkt: perfil sexo×idade do público fitness. PREFERE o REAL do bairro
+        # (setor censitário, sem viés do rateio %município — Cocó rico subnotificava 60+
+        # em -37%); município (perfil_sexo_publico do A2) é fallback.
+        _perfil_bairro = demografia_bairro_block.get("perfil_idade_sexo_bairro")
+        _perfil_mun = inner_demo.get("perfil_sexo_publico") if isinstance(inner_demo, dict) else None
+        if isinstance(_perfil_mun, dict) and _perfil_mun.get("total"):
+            demografia_bairro_block["perfil_sexo_publico"] = _perfil_mun
+        _perfil_sx = _perfil_bairro if (isinstance(_perfil_bairro, dict) and _perfil_bairro.get("total")) else _perfil_mun
         if isinstance(_perfil_sx, dict) and _perfil_sx.get("total"):
-            demografia_bairro_block["perfil_sexo_publico"] = _perfil_sx
-            # Override determinístico do contexto: faixa etária era 'dados_nao_disponiveis'
-            # (Deep Research). Popula com o gancho sexo×idade (Censo 2022).
+            _real = _perfil_sx.get("granularidade", "").startswith("bairro")
+            _selo = "Censo 2022 · bairro (setor)" if _real else "Censo 2022 · município"
             if isinstance(slim_market_context, dict):
                 slim_market_context["faixa_etaria_predominante"] = (
                     f"{_perfil_sx['faixa_idade']} anos · {_perfil_sx['pct_mulheres']:.0f}% mulheres / "
-                    f"{_perfil_sx['pct_homens']:.0f}% homens (Censo 2022)"
+                    f"{_perfil_sx['pct_homens']:.0f}% homens ({_selo})"
                 )
                 slim_market_context["genero_alvo"] = _perfil_sx.get("maioria") or slim_market_context.get("genero_alvo")
     except Exception:

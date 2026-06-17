@@ -94,6 +94,18 @@ def demografia_bairro(
                 out["media_moradores"] = censo.get("media_moradores")
                 out["populacao_fonte"] = censo.get("fonte")
                 out["censo_n_setores"] = censo.get("n_setores")
+            # Pirâmide idade×sexo REAL do bairro (setor censitário) — sem o viés do rateio
+            # %município (validado: Cocó rico subnotificava 60+ em -37%). Agrega setores
+            # próximos do centróide até a pop do bairro. Granularidade bairro, dado real.
+            try:
+                from tools.perfil_sexo_idade_tools import perfil_sexo_idade_bairro
+
+                _pop = out.get("populacao") or (censo or {}).get("populacao")
+                perfil_bairro = perfil_sexo_idade_bairro(id_municipio, lat, lng, _pop)
+                if perfil_bairro:
+                    out["perfil_idade_sexo_bairro"] = perfil_bairro
+            except Exception as exc:
+                logger.warning("demografia_bairro perfil idade×sexo falhou: %s: %s", type(exc).__name__, exc)
     except Exception as exc:
         logger.warning("demografia_bairro Censo falhou: %s: %s", type(exc).__name__, exc)
 
