@@ -45,6 +45,26 @@ from pdf.theme import (
 )
 
 
+import os as _os
+
+_LOGO_PATH = _os.path.join(_os.path.dirname(__file__), "assets", "gymsite_logo.png")
+_LOGO_DIMS = (760, 424)  # w,h do asset otimizado
+
+
+def _logo_flowable(width_cm: float = 6.0):
+    """Logo GymSite Intelligence centralizado p/ capa. None se asset ausente."""
+    try:
+        if not _os.path.exists(_LOGO_PATH):
+            return None
+        w = width_cm * cm
+        h = w * (_LOGO_DIMS[1] / _LOGO_DIMS[0])
+        img = Image(_LOGO_PATH, width=w, height=h)
+        img.hAlign = "CENTER"
+        return img
+    except Exception:
+        return None
+
+
 def _brl(v: float | None) -> str:
     if v is None:
         return "—"
@@ -177,7 +197,6 @@ def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
         f"público {model.publico_alvo or '—'}"
     )
     cover_inner = [
-        [Paragraph("GymSite Intelligence", styles["cover_sub"])],
         [
             Paragraph(
                 f"<b>{model.bairro}</b> · {model.cidade}",
@@ -213,7 +232,12 @@ def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
             ],
         ),
     )
-    return [cover_tbl, Spacer(1, 16)]
+    logo = _logo_flowable(6.2)
+    out: list = []
+    if logo is not None:
+        out += [logo, Spacer(1, 10)]
+    out += [cover_tbl, Spacer(1, 16)]
+    return out
 
 
 def _scores_section(model: RelatorioPdfModel, styles: dict) -> list:
@@ -690,7 +714,6 @@ def _cover_block_bala(model: RelatorioPdfModel, styles: dict) -> list:
         ])
     )
     cover_inner = [
-        [Paragraph("GymSite Intelligence", styles["bala_cover_sub"])],
         [Paragraph(f"<b>{model.bairro}</b> · {model.cidade}", styles["bala_cover_title"])],
         [badge],
         [Paragraph(meta, styles["bala_cover_sub"])],
@@ -742,7 +765,12 @@ def _cover_block_bala(model: RelatorioPdfModel, styles: dict) -> list:
         ])
     )
 
-    return [cover_tbl, kpi_tbl, Spacer(1, 20)]
+    logo = _logo_flowable(6.2)
+    out: list = []
+    if logo is not None:
+        out += [logo, Spacer(1, 8)]
+    out += [cover_tbl, kpi_tbl, Spacer(1, 20)]
+    return out
 
 
 def _scores_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
