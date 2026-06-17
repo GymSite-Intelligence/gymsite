@@ -1999,6 +1999,11 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         _uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or ""
         _idm = str((inner_mc.get("codigo_ibge") or "") if isinstance(inner_mc, dict) else "") or None
         demografia_bairro_block = _demo_bairro(_cid_ef, _uf, _bai, id_municipio=_idm)
+        # Gancho mkt: perfil sexo×idade do público fitness (município, Censo 2022/BQ).
+        # A2 já computou em analise_demografica.perfil_sexo_publico; surfacer no bloco.
+        _perfil_sx = inner_demo.get("perfil_sexo_publico") if isinstance(inner_demo, dict) else None
+        if isinstance(_perfil_sx, dict) and _perfil_sx.get("total"):
+            demografia_bairro_block["perfil_sexo_publico"] = _perfil_sx
     except Exception:
         logger.warning("A6 demografia_bairro falhou", exc_info=True, extra={"agent": "A6"})
 
