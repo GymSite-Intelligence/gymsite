@@ -330,6 +330,43 @@ _TIPO_OFF_ACADEMIA = (
 )
 
 
+def filtrar_concorrentes_bairro_tipo(
+    concorrentes: list[dict], *, bairro: str, tipo_negocio: str
+) -> list[dict]:
+    """Filtro determinístico AUTORITATIVO (aplicado no A6, na lista final — A3b é LLM e
+    re-emite, então filtrar só dentro da tool não governa a saída).
+
+    BAIRRO: mantém quem tem o bairro-alvo no NOME ou ENDEREÇO. NÃO usa bairro_concorrente
+    (corrompível: o parser de endereço taggeia 'Cocó' p/ academia de Papicu). Salvaguarda:
+    mantém todos só se ZERO casa o bairro.
+    TIPO: tira off-type (CrossFit/Artes Marciais/Pilates num relatório de 'academia')."""
+    if not concorrentes:
+        return concorrentes
+    out = [c for c in concorrentes if isinstance(c, dict)]
+    alvo = _norm_txt(bairro or "")
+    if alvo:
+        def _do_bairro(s: dict) -> bool:
+            blob = _norm_txt((s.get("nome") or "") + " " + (s.get("endereco") or ""))
+            return alvo in blob
+        no_bairro = [s for s in out if _do_bairro(s)]
+        fora = [s for s in out if not _do_bairro(s)]
+        if no_bairro:  # mantém todos só se ZERO no bairro
+            if fora:
+                logger.info("filtro bairro '%s': %d no bairro, %d fora (%s)", bairro,
+                            len(no_bairro), len(fora), ", ".join(s.get("nome", "?") for s in fora[:5]))
+            out = no_bairro
+    tn = (tipo_negocio or "").strip().lower()
+    if tn == "academia" or tn in _TIPO_ON_KW:
+        on_tipo = [s for s in out if _tipo_relevante(s, tipo_negocio)]
+        fora_t = [s for s in out if not _tipo_relevante(s, tipo_negocio)]
+        if len(on_tipo) >= 2:
+            if fora_t:
+                logger.info("filtro tipo '%s': %d on-type, %d fora (%s)", tipo_negocio,
+                            len(on_tipo), len(fora_t), ", ".join(s.get("nome", "?") for s in fora_t[:5]))
+            out = on_tipo
+    return out
+
+
 def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
     """Bate o tipo_negocio do form pela CATEGORIA do Google (autoritativa).
     - 'academia' (genérico): fora só se a categoria é uma especialidade DIFERENTE
