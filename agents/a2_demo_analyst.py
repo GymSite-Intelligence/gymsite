@@ -77,7 +77,25 @@ class DemoAnalystAgent(BaseAgent):
                 analise_demografica_completa, cidade, uf, "18-45", bairro
             )
             if isinstance(r, dict):
-                r = {**r, "insights": _insights_deterministicos(r)}
+                insights = _insights_deterministicos(r)
+                # Gancho mkt: perfil sexo×idade do público fitness (município, Censo 2022/BQ)
+                try:
+                    from tools.perfil_sexo_idade_tools import (
+                        insight_gancho_mkt,
+                        perfil_sexo_publico_fitness,
+                    )
+
+                    perfil = await asyncio.to_thread(
+                        perfil_sexo_publico_fitness, r.get("codigo_ibge")
+                    )
+                    if perfil:
+                        r = {**r, "perfil_sexo_publico": perfil}
+                        linha = insight_gancho_mkt(perfil)
+                        if linha:
+                            insights = insights + [linha]
+                except Exception as e:
+                    print(f"[A2 gancho sexo×idade] falha (degrada): {type(e).__name__}: {e}")
+                r = {**r, "insights": insights}
         except Exception as e:  # nunca derruba o pipeline — A6 degrada com score None
             print(f"[A2 determinístico] falha: {type(e).__name__}: {e}")
             r = {"erro": f"{type(e).__name__}: {e}", "score_demografico": None}

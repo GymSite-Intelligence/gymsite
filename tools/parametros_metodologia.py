@@ -80,6 +80,8 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "score_demo_renda_alta":   _p(2500, "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
     "score_demo_renda_media":  _p(1800, "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
     "score_demo_renda_baixa":  _p(1200, "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
+    "publico_fitness_idade_min": _p(25, "Definição de produto GymSite (público-alvo fitness)", "faixa_gancho_sexo_idade", "anos", "calibracao"),
+    "publico_fitness_idade_max": _p(40, "Definição de produto GymSite (público-alvo fitness)", "faixa_gancho_sexo_idade", "anos", "calibracao"),
     "score_demo_renda_minima": _p(800,  "calibração metodológica GymSite v2", "limiar_score", "BRL", "calibracao"),
     "score_demo_base":         _p(2.0,  "calibração metodológica GymSite v2 (base aditiva)", "score_base", "pontos", "calibracao"),
     # Limiares de classificação demográfica (EXCELENTE/BOM/REGULAR)
