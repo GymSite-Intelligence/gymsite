@@ -94,6 +94,31 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
             />
           )}
       </div>
+      {block.perfil_idade_sexo_bairro?.segmentos &&
+        Object.keys(block.perfil_idade_sexo_bairro.segmentos).length > 0 && (
+          <div className="rounded-lg border bg-muted/40 px-3 py-2">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
+              <UsersRound size={12} /> público por idade × sexo (bairro real)
+            </div>
+            <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-4">
+              {(['15-24', '25-39', '40-59', '60+'] as const).map((seg) => {
+                const s = block.perfil_idade_sexo_bairro?.segmentos?.[seg]
+                if (!s || s.pct_mulheres == null) return null
+                return (
+                  <div key={seg} className="text-xs">
+                    <span className="font-mono text-muted-foreground">{seg}</span>{' '}
+                    <span className="font-semibold">{Math.round(s.pct_mulheres)}%♀</span>
+                    <span className="text-muted-foreground">/{Math.round(s.pct_homens ?? 0)}%♂</span>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-1 text-[10px] text-muted-foreground leading-tight">
+              IBGE Censo 2022 por setor (agregação dos {block.perfil_idade_sexo_bairro.n_setores ?? '—'} setores do
+              bairro). Idade real do bairro — não herdada do município.
+            </div>
+          </div>
+        )}
       <p className="text-[11px] text-muted-foreground">
         Renda: {block.renda_fonte ?? 'CKAN municipal (IDH-Renda → Atlas)'}. População/ocupação:{' '}
         {block.populacao_fonte ?? 'IBGE Censo 2022 por setor'}. Cada dimensão com fonte real do

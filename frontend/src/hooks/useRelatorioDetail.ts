@@ -156,6 +156,13 @@ export interface DemografiaBairroJSON {
     fonte?: string
     granularidade?: string
   } | null
+  perfil_idade_sexo_bairro?: {
+    granularidade?: string
+    n_setores?: number
+    pop_agregada?: number
+    fonte?: string
+    segmentos?: Record<string, { total?: number; pct_homens?: number; pct_mulheres?: number }>
+  } | null
 }
 
 export interface DemandaFuturaObraJSON {
