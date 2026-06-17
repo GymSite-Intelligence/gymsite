@@ -2297,6 +2297,10 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 inner_fin.get("cenarios", {}), inner_fin.get("aluguel_mensal")
             ),
             "modelo_recomendado": inner_fin.get("recomendacao_modelo"),
+            # Narração da escolha: quando o modelo foi recomendado no TETO DE CAPTAÇÃO
+            # (bairro top-renda, realista não fecha mas o teto agressivo sim + pico cabe).
+            "modelo_recomendado_justificativa": inner_fin.get("recomendacao_justificativa"),
+            "modelo_recomendado_no_teto_captacao": inner_fin.get("recomendacao_no_teto_captacao"),
             "aluguel_mensal": _safe_float(inner_fin.get("aluguel_mensal")),
             "aluguel_municipio_referencia": inner_fin.get("aluguel_municipio_referencia"),
             "aluguel_pesquisa_detalhes": inner_fin.get("aluguel_pesquisa_detalhes"),

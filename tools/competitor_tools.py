@@ -312,6 +312,43 @@ _TIPO_NEGOCIO_KW = {
 # loja (validado por auditoria Maps: Vistta Rooftop, Duets Office Towers caíam fora).
 _FITNESS_TYPES = {"gym", "fitness_center"}
 
+# Filtro de RELEVÂNCIA por tipo_negocio do form: _FITNESS_TYPES só garante "é fitness",
+# deixando crossfit/luta/pilates vazarem num relatório de "academia". ON = sinal genérico
+# do alvo; OFF = categorias especializadas que NÃO são o negócio. Concorrente com sinal OFF
+# e SEM sinal ON é fora-de-escopo (ex.: "REK CrossFit", "Eikō Artes Marciais" em academia).
+# ON = sinal da ESPECIALIDADE (pra alvos especializados, mantém só quem bate).
+_TIPO_ON_KW = {
+    "crossfit_box": ("crossfit", "cross training", "cross fit"),
+    "studio_pilates": ("pilates",),
+    "studio_funcional": ("funcional", "treinamento funcional", "personal", "cross training"),
+}
+# OFF (só p/ alvo genérico 'academia') = categorias especializadas que não são academia.
+_TIPO_OFF_ACADEMIA = (
+    "crossfit", "cross training", "cross fit", "artes marciais", "jiu", "muay", "boxe",
+    "judo", "karate", "taekwondo", "luta", "mma", "pilates", "yoga", "escola de danca",
+    "ballet", "dojo", "natacao",
+)
+
+
+def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
+    """Bate o tipo_negocio do form pela CATEGORIA do Google (autoritativa).
+    - 'academia' (genérico): fora só se a categoria é uma especialidade DIFERENTE
+      (CrossFit/Artes Marciais/Pilates/...). Academia comum c/ piscina fica.
+    - especializado (crossfit_box/pilates/funcional): dentro só se categoria/nome bate
+      a especialidade. 'outro'/desconhecido → sem filtro."""
+    tn = (tipo_negocio or "academia").strip().lower()
+    tipos = [t for t in (c.get("tipos") or []) if t not in ("gym", "fitness_center")]
+    tipos_blob = _norm_txt(" ".join(str(x) for x in tipos))
+    nome_blob = _norm_txt(c.get("nome") or "")
+
+    if tn == "academia":
+        # categoria especializada (ex.: "Academia de crossfit", "Artes marciais") → fora
+        return not any(_norm_txt(k) in tipos_blob for k in _TIPO_OFF_ACADEMIA)
+    on = _TIPO_ON_KW.get(tn)
+    if not on:  # 'outro' ou tipo sem regra → sem filtro
+        return True
+    return any(_norm_txt(k) in (tipos_blob + " " + nome_blob) for k in on)
+
 
 def _norm_txt(s: str) -> str:
     """lower + sem acento, p/ casar bairro dentro de endereço/nome."""
@@ -2437,6 +2474,30 @@ def analisar_concorrentes_completo(tool_context) -> dict:
                             bairro, len(no_bairro), len(fora),
                             ", ".join(s.get("nome", "?") for s in fora[:5]))
             slim = no_bairro
+
+    # Filtro de RELEVÂNCIA por tipo_negocio do form: tira off-type (CrossFit/Artes
+    # Marciais/Pilates num relatório de "academia"). Mesma salvaguarda <2.
+    tipo_negocio = ""
+    try:
+        st = getattr(tool_context, "state", {}) or {}
+        ip = st.get("input_params") if isinstance(st.get("input_params"), dict) else {}
+        tipo_negocio = (st.get("tipo_negocio") or ip.get("tipo_negocio") or "").strip()
+        if not tipo_negocio:
+            mc = _parse_market_context(st.get("market_context"))
+            inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
+            tipo_negocio = (inner.get("tipo_negocio") if isinstance(inner, dict) else "") or ""
+    except Exception:
+        tipo_negocio = ""
+    _tn_norm = (tipo_negocio or "").strip().lower()
+    if _tn_norm == "academia" or _tn_norm in _TIPO_ON_KW:
+        on_tipo = [s for s in slim if _tipo_relevante(s, tipo_negocio)]
+        fora_t = [s for s in slim if not _tipo_relevante(s, tipo_negocio)]
+        if len(on_tipo) >= 2:
+            if fora_t:
+                logger.info("A3a filtro tipo '%s': %d on-type, %d fora descartados (%s)",
+                            tipo_negocio, len(on_tipo), len(fora_t),
+                            ", ".join(s.get("nome", "?") for s in fora_t[:5]))
+            slim = on_tipo
 
     gap = analisar_gap_competitivo(slim, bairro)
 
