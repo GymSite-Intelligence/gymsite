@@ -142,9 +142,15 @@ _KW_COMERCIAL = (
 
 # Sinal POSITIVO de residencial (sobe confiança do proxy; refino A4 confirma).
 _KW_RESIDENCIAL = (
-    "residencial", "edificio", "edifício", "condominio", "condomínio", "empreendimento imobiliario",
-    "empreendimento imobiliário", "incorporac", "incorporaç", "morada", "reserva", "ville",
+    "residencial", "residence", "edificio", "edifício", "condominio", "condomínio",
+    # stem 'imobiliari' cobre empreendimento(s) imobiliario(s)/incorporacao imobiliaria —
+    # padrão dominante dos SPE de incorporação no CNO (antes só pegava o singular).
+    "imobiliari", "empreendimento imobiliario", "empreendimento imobiliário",
+    "incorporac", "incorporaç", "morada", "reserva", "ville",
     "jardim", "torre", "vila ", "village", "parque residencial", "loteamento",
+    # SPE (Sociedade de Propósito Específico) — veículo quase sempre de incorporação
+    # imobiliária no CNO de grande porte. Tokens com espaço evitam falso-match interno.
+    "spe ", " spe",
 )
 # Gate grande porte recalibrável via parametros_metodologia (zero-hardcode).
 # Default rotulado (_DEFAULTS) se Supabase indisponível.
