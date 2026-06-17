@@ -782,8 +782,73 @@ def buscar_academias(
     }
 
 
+def _processar_review_card(texto: str, rating: int, autor: str, data_rel: str) -> dict:
+    """Normaliza 1 review (qualquer fonte) p/ o card: dores/serviços/sentimento."""
+    texto = (texto or "").replace("\n", " ").strip()
+    texto_low = texto.lower()
+    return {
+        "rating": rating,
+        "quote_curta": texto[:180].strip(),
+        "sentimento": "positivo" if rating >= 4 else "negativo" if rating <= 2 else "neutro",
+        "dores_detectadas": [d for d in DORES_COMUNS if d in texto_low],
+        "servicos_mencionados": [s for s in SERVICOS_ACADEMIA if s in texto_low],
+        "autor": (autor or "Anônimo")[:60],
+        "data_relativa": (data_rel or "")[:30],
+    }
+
+
+def _reviews_searchapi_card(place_id: str, max_reviews: int = 5) -> list[dict] | None:
+    """Reviews via SearchAPI google_maps_reviews (sort lowest_rating → dores primeiro),
+    processadas no shape do card. None se sem key/erro (→ caller cai pro Places)."""
+    import os as _os
+
+    key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
+    if not key or not place_id:
+        return None
+    try:
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("buscar_reviews_academia", "searchapi_google_maps_reviews", 1):
+            with httpx.Client(timeout=45) as c:
+                data = c.get(
+                    "https://www.searchapi.io/api/v1/search",
+                    params={"engine": "google_maps_reviews", "place_id": place_id,
+                            "sort_by": "lowest_rating", "hl": "pt-br", "gl": "br"},
+                    headers={"Authorization": f"Bearer {key}"},
+                ).json()
+    except Exception:
+        return None
+
+    import re as _re_html
+
+    out: list[dict] = []
+    for rev in (data.get("reviews") or [])[:max_reviews]:
+        texto = (rev.get("text") or rev.get("snippet") or "")
+        texto = _re_html.sub(r"<br\s*/?>", " ", texto, flags=_re_html.IGNORECASE)
+        texto = _re_html.sub(r"<[^>]+>", "", texto)
+        if not texto.strip():
+            continue
+        try:
+            rating = int(float(rev.get("rating") or 3))
+        except (TypeError, ValueError):
+            rating = 3
+        out.append(_processar_review_card(
+            texto, rating, (rev.get("user") or {}).get("name") or "Anônimo", rev.get("date") or ""
+        ))
+    return out
+
+
 def buscar_reviews_academia(place_id: str, nome_academia: str = "") -> dict:
-    """Busca reviews via Places Details API (Places API New)."""
+    """Reviews do concorrente. Dispatcher: SearchAPI google_maps_reviews (default) com
+    fallback Places Details. COMPETIDOR_MAPS_BACKEND=places força o Google."""
+    import os as _os
+
+    if (_os.getenv("COMPETIDOR_MAPS_BACKEND") or "searchapi").strip().lower() != "places":
+        sa = _reviews_searchapi_card(place_id)
+        if sa:
+            return {"place_id": place_id, "nome": nome_academia, "reviews": sa,
+                    "total_reviews_analisados": len(sa), "fonte_reviews": "searchapi"}
+
     if not get_google_maps_api_key():
         return {"erro": "GOOGLE_get_google_maps_api_key() não configurada", "reviews": []}
 
