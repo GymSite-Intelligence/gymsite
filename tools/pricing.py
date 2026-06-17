@@ -208,6 +208,7 @@ PLACES_API_USD_PER_CALL: dict[str, float] = {
     "geocoding": 0.005,
     "searchapi_popular_times": _SEARCHAPI_USD,
     "searchapi_google_light": _SEARCHAPI_USD,
+    "searchapi_google_maps": _SEARCHAPI_USD,
     "searchapi_instagram_profile": _SEARCHAPI_USD,
     "searchapi_google_maps_reviews": _SEARCHAPI_USD,
     "searchapi_locations": 0.0,  # Locations API é free
