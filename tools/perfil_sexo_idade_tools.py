@@ -15,9 +15,10 @@ from tools.parametros_metodologia import param
 _BQ_TABELA = "basedosdados.br_ibge_censo_2022.populacao_idade_sexo"
 
 
-def _perfil_do_espelho_supabase(cod: str) -> Optional[dict]:
+def _perfil_do_espelho_supabase(cod: str, faixa: str) -> Optional[dict]:
     """Lê o split sexo×idade do espelho Supabase municipio_publico_sexo (mirror do BQ,
-    populado offline). Funciona em prod (Supabase) sem depender de BigQuery-runtime."""
+    populado offline) p/ a FAIXA pedida. Funciona em prod (Supabase) sem BQ-runtime.
+    A tabela tem PK (id_municipio, faixa_idade) — filtrar pela faixa é obrigatório."""
     try:
         from db.supabase_writer import _get_client
 
@@ -28,6 +29,7 @@ def _perfil_do_espelho_supabase(cod: str) -> Optional[dict]:
             sb.table("municipio_publico_sexo")
             .select("faixa_idade,homens,mulheres,total,pct_homens,pct_mulheres,fonte")
             .eq("id_municipio", cod)
+            .eq("faixa_idade", faixa)
             .limit(1)
             .execute()
         )
@@ -66,7 +68,7 @@ def perfil_sexo_publico_fitness(id_municipio: str | int | None) -> Optional[dict
 
     # PRIMÁRIO: espelho Supabase municipio_publico_sexo (funciona em prod; BQ-runtime
     # falha no Cloud Run por falta de acesso BigQuery — por isso esta tool dava None).
-    pre = _perfil_do_espelho_supabase(cod)
+    pre = _perfil_do_espelho_supabase(cod, f"{idade_min}-{idade_max}")
     if pre is not None:
         return pre
 
