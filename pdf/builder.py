@@ -152,9 +152,29 @@ def _header_footer(canvas, doc, model: RelatorioPdfModel) -> None:
     w, h = PAGE_SIZE
     canvas.setFillColor(NAVY)
     canvas.rect(0, h - 1.2 * cm, w, 1.2 * cm, fill=1, stroke=0)
+    # Faixa fina de acento verde-limao sob a barra de topo (marca).
+    canvas.setFillColor(LIME)
+    canvas.rect(0, h - 1.25 * cm, w, 0.05 * cm, fill=1, stroke=0)
+    # Logo da marca no topo (se o asset existir), seguido do nome.
+    logo = _logo_path()
+    text_x = MARGIN_L
+    if logo:
+        try:
+            canvas.drawImage(
+                logo,
+                MARGIN_L,
+                h - 1.08 * cm,
+                width=0.95 * cm,
+                height=0.95 * cm,
+                mask="auto",
+                preserveAspectRatio=True,
+            )
+            text_x = MARGIN_L + 1.15 * cm
+        except Exception:
+            text_x = MARGIN_L
     canvas.setFillColor(colors.white)
     canvas.setFont("Helvetica-Bold", 9)
-    canvas.drawString(MARGIN_L, h - 0.85 * cm, "GymSite Intelligence")
+    canvas.drawString(text_x, h - 0.85 * cm, "GymSite Intelligence")
     canvas.setFont("Helvetica", 8)
     loc = f"{model.bairro} · {model.cidade}"
     if model.uf:
