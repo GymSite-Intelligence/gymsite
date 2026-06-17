@@ -577,6 +577,8 @@ def calcular_viabilidade_3_cenarios(
         "aviso": "Schema v2 — matrículas reais (não pico). Benchmarks: ACAD/Sebrae + Smart Fit/Bluefit/Bodytech.",
         "cenarios": cenarios,
         "recomendacao": melhor["modelo"],
+        "recomendacao_justificativa": melhor.get("justificativa_recomendacao"),
+        "recomendacao_no_teto_captacao": melhor.get("recomendado_no_teto_captacao"),
         "melhor_lucro_mensal": melhor["lucro_mensal_estimado"],
         "melhor_payback_meses": melhor["payback_meses"],
         "schema_cenarios": "v2",
@@ -765,6 +767,10 @@ def _escolher_cenario_recomendado(
         if teto and teto["viabilidade"] not in ("INVIAVEL", None) and teto["pico_comporta"]:
             pref_c["recomendado_no_teto_captacao"] = teto
             pref_c["_elegivel_teto"] = True
+            # Preserva o motivo realista (auditoria) e troca a justificativa exibida pelo
+            # racional REAL da recomendação (teto de captação) — renderers leem `justificativa`.
+            pref_c["justificativa_realista"] = pref_c.get("justificativa")
+            pref_c["viabilidade_realista"] = pref_c.get("viabilidade")
             pref_c["justificativa_recomendacao"] = (
                 f"Recomendado operando no TETO DE CAPTAÇÃO ({teto['matriculas_alvo']} matrículas, "
                 f"densidade ACAD agressiva), não no realista. O bairro é top-renda (percentil "
@@ -773,6 +779,7 @@ def _escolher_cenario_recomendado(
                 f"Margem {teto['margem_percentual']:.0f}%, payback {teto['payback_meses']}m. "
                 f"No realista o modelo não fecha — o upside é captável com marketing, sem CAPEX extra."
             )
+            pref_c["justificativa"] = pref_c["justificativa_recomendacao"]
 
     viaveis = [
         c for c in cenarios.values()
