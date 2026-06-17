@@ -4,7 +4,9 @@ Montagem do PDF com ReportLab (layout classic / executive / data_room).
 from __future__ import annotations
 
 import io
+import os
 from datetime import datetime
+from pathlib import Path
 
 # pyrefly: ignore [untyped-import]
 from reportlab.lib import colors
@@ -29,12 +31,15 @@ from pdf.theme import (
     CARD_BG,
     CHARCOAL,
     CONTENT_W,
+    LIME,
     MARGIN_B,
     MARGIN_L,
     MARGIN_R,
     MARGIN_T,
     NAVY,
     PAGE_SIZE,
+    PETROLEUM,
+    PETROLEUM_DEEP,
     ROW_ALT,
     SLATE,
     TEAL,
@@ -45,20 +50,19 @@ from pdf.theme import (
 )
 
 
-import os as _os
-
-_LOGO_PATH = _os.path.join(_os.path.dirname(__file__), "assets", "gymsite_logo.png")
-_LOGO_DIMS = (760, 424)  # w,h do asset otimizado
+_LOGO_DIMS = (760, 424)  # w,h do asset otimizado (logo-gymsite.png), p/ manter o aspecto
 
 
 def _logo_flowable(width_cm: float = 6.0):
-    """Logo GymSite Intelligence centralizado p/ capa. None se asset ausente."""
+    """Logo GymSite Intelligence centralizado p/ capa (banda branca, aspecto preservado).
+    Usa o resolver defensivo _logo_path(); None se asset ausente."""
     try:
-        if not _os.path.exists(_LOGO_PATH):
+        path = _logo_path()
+        if not path:
             return None
         w = width_cm * cm
         h = w * (_LOGO_DIMS[1] / _LOGO_DIMS[0])
-        img = Image(_LOGO_PATH, width=w, height=h)
+        img = Image(path, width=w, height=h)
         img.hAlign = "CENTER"
         return img
     except Exception:
@@ -167,9 +171,29 @@ def _header_footer(canvas, doc, model: RelatorioPdfModel) -> None:
     w, h = PAGE_SIZE
     canvas.setFillColor(NAVY)
     canvas.rect(0, h - 1.2 * cm, w, 1.2 * cm, fill=1, stroke=0)
+    # Faixa fina de acento verde-limao sob a barra de topo (marca).
+    canvas.setFillColor(LIME)
+    canvas.rect(0, h - 1.25 * cm, w, 0.05 * cm, fill=1, stroke=0)
+    # Logo da marca no topo (se o asset existir), seguido do nome.
+    logo = _logo_path()
+    text_x = MARGIN_L
+    if logo:
+        try:
+            canvas.drawImage(
+                logo,
+                MARGIN_L,
+                h - 1.08 * cm,
+                width=0.95 * cm,
+                height=0.95 * cm,
+                mask="auto",
+                preserveAspectRatio=True,
+            )
+            text_x = MARGIN_L + 1.15 * cm
+        except Exception:
+            text_x = MARGIN_L
     canvas.setFillColor(colors.white)
     canvas.setFont("Helvetica-Bold", 9)
-    canvas.drawString(MARGIN_L, h - 0.85 * cm, "GymSite Intelligence")
+    canvas.drawString(text_x, h - 0.85 * cm, "GymSite Intelligence")
     canvas.setFont("Helvetica", 8)
     loc = f"{model.bairro} · {model.cidade}"
     if model.uf:
@@ -188,6 +212,47 @@ def _header_footer(canvas, doc, model: RelatorioPdfModel) -> None:
     canvas.restoreState()
 
 
+def _logo_path() -> str | None:
+    """Resolve o caminho do logo da marca de forma defensiva.
+
+    Procura, nesta ordem: variavel de ambiente GYMSITE_PDF_LOGO e alguns
+    caminhos convencionais do repo. Retorna None se o arquivo nao existir,
+    para que a geracao do PDF nunca quebre por falta do asset.
+    """
+    candidatos = [
+        os.environ.get("GYMSITE_PDF_LOGO"),
+        str(Path(__file__).resolve().parent / "assets" / "logo-gymsite.png"),
+        str(
+            Path(__file__).resolve().parent.parent
+            / "frontend" / "src" / "assets" / "logo-gymsite.png"
+        ),
+    ]
+    for caminho in candidatos:
+        if caminho and os.path.isfile(caminho):
+            return caminho
+    return None
+
+
+def _heatmap_path() -> str | None:
+    """Resolve o caminho do heatmap do Brasil de forma defensiva.
+
+    Procura GYMSITE_PDF_HEATMAP e caminhos convencionais do repo; retorna
+    None se nao existir, para nao quebrar a geracao do PDF.
+    """
+    candidatos = [
+        os.environ.get("GYMSITE_PDF_HEATMAP"),
+        str(Path(__file__).resolve().parent / "assets" / "brazil-heatmap.jpg"),
+        str(
+            Path(__file__).resolve().parent.parent
+            / "frontend" / "src" / "assets" / "brazil-heatmap.jpg"
+        ),
+    ]
+    for caminho in candidatos:
+        if caminho and os.path.isfile(caminho):
+            return caminho
+    return None
+
+
 def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
     ver = model.veredito or "—"
     vc = veredito_color(model.veredito)
@@ -196,6 +261,9 @@ def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
         f"{model.tipo_negocio.replace('_', ' ')} · "
         f"público {model.publico_alvo or '—'}"
     )
+
+    # Logo vai ACIMA do bloco navy (banda branca, aspecto correto) — ver _cover_block
+    # return. Dentro do navy a marca viraria caixa branca / distorcida (logo é wide).
     cover_inner = [
         [
             Paragraph(
@@ -223,12 +291,19 @@ def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
     cover_tbl.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+                # Fundo escuro grafite/petroleo, espelhando o split do logo.
+                ("BACKGROUND", (0, 0), (-1, -1), CHARCOAL),
+                ("BACKGROUND", (0, 0), (-1, 0), PETROLEUM_DEEP),
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                # Faixa de acento verde-limao logo abaixo do topo da marca.
+                ("LINEBELOW", (0, 0), (-1, 0), 3, LIME),
                 ("LEFTPADDING", (0, 0), (-1, -1), 16),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 16),
-                ("TOPPADDING", (0, 0), (-1, -1), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, 0), 18),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 14),
+                ("TOPPADDING", (0, 1), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 1), (-1, -1), 10),
             ],
         ),
     )
@@ -272,6 +347,15 @@ def _market_section(model: RelatorioPdfModel, styles: dict) -> list:
         return []
     m = model.market
     flow = _section_title("3. Contexto de mercado", styles)
+    # Imagem de contexto geografico (heatmap do Brasil), se o asset existir.
+    heatmap = _heatmap_path()
+    if heatmap:
+        try:
+            flow.append(Image(heatmap, width=CONTENT_W, height=4.0 * cm))
+            flow.append(_para("Densidade do mercado fitness por regiao", "small", styles))
+            flow.append(Spacer(1, 6))
+        except Exception:
+            pass
     rows = [
         ["Indicador", "Valor"],
         ["Ticket mercado", m.ticket_mercado or "—"],

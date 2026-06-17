@@ -31,6 +31,12 @@ SUCCESS = colors.HexColor("#16A34A")
 DANGER = colors.HexColor("#DC2626")
 WARNING = colors.HexColor("#CA8A04")
 
+# Cores de marca (verde-limao do logo + azul-petroleo), aproximacoes HEX do site
+LIME = colors.HexColor("#A3E635")  # verde-limao primario da marca (acento/realce)
+LIME_GLOW = colors.HexColor("#BEF264")  # variacao clara do verde-limao para realces
+PETROLEUM = colors.HexColor("#0E5C66")  # azul-petroleo (alinhado a NAVY/TEAL)
+PETROLEUM_DEEP = colors.HexColor("#08323A")  # azul-petroleo profundo (capa/dividers)
+
 VEREDITO_COLORS = {
     "APROVADO": colors.HexColor("#16A34A"),
     "APROVADO COM RESSALVAS": colors.HexColor("#CA8A04"),
