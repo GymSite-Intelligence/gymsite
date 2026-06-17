@@ -5,7 +5,7 @@
  * Censo 2022 por setor censitário. Bairro deixa de herdar o município — cada número tem
  * fonte. (Censo 2022 não tem renda por setor → renda só do CKAN.)
  */
-import { Banknote, Home, TrendingUp, Users } from 'lucide-react'
+import { Banknote, Home, TrendingUp, Users, UsersRound } from 'lucide-react'
 
 import type { DemografiaBairroJSON } from '@/hooks/useRelatorioDetail'
 
@@ -83,6 +83,16 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
             sub={block.domicilios != null ? `${_int(block.domicilios as number)} domicílios` : undefined}
           />
         )}
+        {block.perfil_sexo_publico?.total != null &&
+          block.perfil_sexo_publico.pct_mulheres != null &&
+          block.perfil_sexo_publico.pct_homens != null && (
+            <MiniCard
+              icon={UsersRound}
+              label={`público ${block.perfil_sexo_publico.faixa_idade ?? '25-40'} (sexo)`}
+              value={`${Math.round(block.perfil_sexo_publico.pct_mulheres)}% ♀ / ${Math.round(block.perfil_sexo_publico.pct_homens)}% ♂`}
+              sub={`gancho mkt · ${block.perfil_sexo_publico.granularidade === 'municipio' ? 'município' : 'bairro'} · Censo 2022`}
+            />
+          )}
       </div>
       <p className="text-[11px] text-muted-foreground">
         Renda: {block.renda_fonte ?? 'CKAN municipal (IDH-Renda → Atlas)'}. População/ocupação:{' '}

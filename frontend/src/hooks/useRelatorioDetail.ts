@@ -147,6 +147,15 @@ export interface DemografiaBairroJSON {
   media_moradores?: number | null
   populacao_fonte?: string | null
   censo_n_setores?: number | null
+  perfil_sexo_publico?: {
+    faixa_idade?: string
+    pct_homens?: number
+    pct_mulheres?: number
+    maioria?: string
+    total?: number
+    fonte?: string
+    granularidade?: string
+  } | null
 }
 
 export interface DemandaFuturaObraJSON {
