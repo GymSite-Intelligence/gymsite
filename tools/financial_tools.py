@@ -765,6 +765,14 @@ def _escolher_cenario_recomendado(
         if teto and teto["viabilidade"] not in ("INVIAVEL", None) and teto["pico_comporta"]:
             pref_c["recomendado_no_teto_captacao"] = teto
             pref_c["_elegivel_teto"] = True
+            pref_c["justificativa_recomendacao"] = (
+                f"Recomendado operando no TETO DE CAPTAÇÃO ({teto['matriculas_alvo']} matrículas, "
+                f"densidade ACAD agressiva), não no realista. O bairro é top-renda (percentil "
+                f"{renda_percentil:.0%}) → sustenta a captação agressiva; o espaço comporta o pico "
+                f"({teto['pico_alvo']} ≤ {teto['capacidade_simultanea_pico']} simultâneos). "
+                f"Margem {teto['margem_percentual']:.0f}%, payback {teto['payback_meses']}m. "
+                f"No realista o modelo não fecha — o upside é captável com marketing, sem CAPEX extra."
+            )
 
     viaveis = [
         c for c in cenarios.values()
