@@ -12,6 +12,10 @@ import {
   GoogleMapOceano,
   type MapaCamada,
 } from '@/components/maps/GoogleMapOceano'
+import {
+  LeituraTerritorio,
+  type ResumoTerritorio,
+} from '@/components/maps/LeituraTerritorio'
 import { useMapsJsConfig } from '@/hooks/useMapsJsConfig'
 import { OCEANO_FILL } from '@/lib/oceano'
 import {
@@ -73,6 +77,29 @@ export function MapaRelatoriosPage() {
     cidade: search.cidade,
     veredito: search.veredito,
   })
+
+  // R2 — resumo AGREGADO do recorte visivel (sem dados crus/PII) p/ a leitura IA.
+  const resumoTerritorio = useMemo<ResumoTerritorio | null>(() => {
+    if (!pins || pins.length === 0) return null
+    const counts: Record<string, number> = {}
+    const vereditos: Record<string, number> = {}
+    const bairros: string[] = []
+    for (const p of pins) {
+      const oc = (p as { veredito_oceano?: string }).veredito_oceano
+      if (oc) counts[oc] = (counts[oc] ?? 0) + 1
+      const vd = (p as { veredito?: string }).veredito
+      if (vd) vereditos[vd] = (vereditos[vd] ?? 0) + 1
+      const ba = (p as { bairro?: string }).bairro
+      if (ba && !bairros.includes(ba)) bairros.push(ba)
+    }
+    return {
+      cidade: search.cidade ?? '',
+      bbox: null,
+      counts,
+      top_bairros: bairros.slice(0, 12),
+      vereditos,
+    }
+  }, [pins, search.cidade])
   const { data: mapsJs, isLoading: loadingMapsJs, isError: mapsJsError } =
     useMapsJsConfig()
   const [googleMapFailed, setGoogleMapFailed] = useState(false)
@@ -468,6 +495,13 @@ export function MapaRelatoriosPage() {
             ) : (
               <LegendaVereditos />
             ))}
+
+          {/* R2 — Leitura do territorio (IA) sobre o recorte do heatmap (vista de mercado) */}
+          {lente === 'mercado' && resumoTerritorio && pins.length > 0 && (
+            <div className="absolute bottom-3 left-3 z-10 w-[260px] max-w-[80%]">
+              <LeituraTerritorio resumo={resumoTerritorio} enabled={!isLoading} />
+            </div>
+          )}
         </div>
 
         {/* Painel lateral — pin selecionado ou cluster */}
