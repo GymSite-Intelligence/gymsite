@@ -675,6 +675,25 @@ def _precompute_entrantes_cnpj(callback_context) -> dict:
     return listar_entrantes_cnpj_fitness(cidade, uf, dias=90, limit=50)
 
 
+_ALERTA_RUIDO_FIN = (
+    "fora da banda", "smft3", "ebitda smart fit", "margem ebitda",
+    "churn_pct", "capex_por_unidade", "cvm itr", "ri overlay", "overlay ri",
+    "preencher ri", "parcial (50%)", "comparação operacional smft3",
+)
+
+
+def _filtrar_alertas_ruido(alertas: list) -> list:
+    """Tira ruído interno (ticket-1375-fora-da-banda phantom, comparação EBITDA/SMFT3/CVM,
+    notas de gap de dado churn/capex/RI) dos alertas PERSISTIDOS — na origem, não só no
+    render do PDF. Mantém alertas reais de negócio (payback, margem, aluguel, matrículas)."""
+    out = []
+    for a in (alertas or []):
+        s = str(a).strip()
+        if s and not any(t in s.lower() for t in _ALERTA_RUIDO_FIN):
+            out.append(s)
+    return out
+
+
 def _sanear_insights_renda(insights: list, renda_autoritativa: float) -> tuple[list, int]:
     """Remove insights de PROSA (A0) que citam renda contraditória/defasada vs a
     estruturada (já sobreposta pela IPECE 2022). Dois sinais:
@@ -2531,7 +2550,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "tier_aluguel": (inner_fin.get("aluguel_pesquisa_detalhes") or {}).get("tier"),
             "fonte_aluguel": inner_fin.get("fonte_aluguel"),
             "aviso_metodologia_aluguel": inner_fin.get("aviso_metodologia_aluguel"),
-            "alertas_financeiros": alertas_financeiros,
+            "alertas_financeiros": _filtrar_alertas_ruido(alertas_financeiros),
             "posicionamento_recomendado": (
                 ic_raw.get("posicionamento_recomendado")
                 or inner_ic.get("posicionamento_recomendado", "")
