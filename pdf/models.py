@@ -39,6 +39,11 @@ class CandidatoPdf:
     tipo_imovel_label: str | None = None
     modalidade: str | None = None
     cartorio: dict | None = None
+    # R1 — Street View (evidencia visual do endereco-ancora); opcionais, default None
+    lat: float | None = None
+    lng: float | None = None
+    street_view_url: str | None = None
+    street_view_path: str | None = None
 
 
 @dataclass
