@@ -192,25 +192,46 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
     if not isinstance(alertas, list):
         alertas = []
 
-    # Pico/lotação agregado: soma horarios_pico de todos os competidores por hora
-    # (todos os dias) → janela de demanda do bairro. Shape competidor.horarios_pico
-    # = {dia: {"HH": ocupacao_pct}}. Top-3 horas mais cheias.
-    pico_horas: dict[int, float] = {}
+    # Janela de demanda agregada — curva típica de lotação dos concorrentes por hora.
+    # Shape competidor.horarios_pico = {dia: {"HH": ocupacao_pct}}.
+    # 3 correções (antes somava cru tudo num balde → enviesado):
+    #   1. DIAS ÚTEIS só (seg-sex) — fim de semana (pico tarde) borra o bimodal da semana
+    #   2. NORMALIZA por concorrente (0-100 pelo pico dele) — Smart Fit grande não domina
+    #   3. MÉDIA entre concorrentes (não soma) + N mínimo com dados — 1 ficha não enverga
+    _DIAS_UTEIS = {"segunda", "terca", "quarta", "quinta", "sexta"}
+    _por_hora_norm: dict[int, list[float]] = {}
+    _n_com_dados = 0
     for c in competidores_raw:
         if not isinstance(c, dict):
             continue
         hp = c.get("horarios_pico")
         if not isinstance(hp, dict):
             continue
+        # média por hora deste concorrente nos dias úteis
+        medias_c: dict[int, float] = {}
+        acc_c: dict[int, list[float]] = {}
         for _dia, horas in hp.items():
-            if not isinstance(horas, dict):
+            if _dia not in _DIAS_UTEIS or not isinstance(horas, dict):
                 continue
             for hh, val in horas.items():
                 try:
-                    h = int(hh)
-                    pico_horas[h] = pico_horas.get(h, 0.0) + float(val)
+                    acc_c.setdefault(int(hh), []).append(float(val))
                 except (TypeError, ValueError):
                     continue
+        medias_c = {h: sum(vs) / len(vs) for h, vs in acc_c.items() if vs}
+        pico_c = max(medias_c.values()) if medias_c else 0.0
+        if pico_c <= 0:
+            continue
+        for h, m in medias_c.items():
+            _por_hora_norm.setdefault(h, []).append(100.0 * m / pico_c)
+        _n_com_dados += 1
+
+    from tools.parametros_metodologia import param_int
+
+    _min_conc = param_int("janela_demanda_min_concorrentes")
+    pico_horas: dict[int, float] = {}
+    if _n_com_dados >= _min_conc:
+        pico_horas = {h: sum(vs) / len(vs) for h, vs in _por_hora_norm.items() if vs}
     pico_top = None
     if pico_horas:
         tot = sum(pico_horas.values()) or 1.0

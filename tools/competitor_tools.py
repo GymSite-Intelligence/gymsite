@@ -343,6 +343,21 @@ def filtrar_concorrentes_bairro_tipo(
     if not concorrentes:
         return concorrentes
     out = [c for c in concorrentes if isinstance(c, dict)]
+
+    # STATUS: academia fechada não é concorrente — contá-la infla saturação/aneis/ticket.
+    # Dropa CLOSED_* explícito; mantém OPERATIONAL e desconhecido/vazio (não over-filtra
+    # quando o Places não informou). Salvaguarda: só aplica se sobrar ≥1 operacional.
+    def _status(s: dict) -> str:
+        return str(s.get("status") or s.get("business_status")
+                   or s.get("businessStatus") or "").upper()
+
+    operacionais = [s for s in out if "CLOSED" not in _status(s)]
+    fechadas = [s for s in out if "CLOSED" in _status(s)]
+    if fechadas and operacionais:
+        logger.info("filtro status: %d fechada(s) descartada(s) (%s)", len(fechadas),
+                    ", ".join(f"{s.get('nome','?')}={_status(s)}" for s in fechadas[:5]))
+        out = operacionais
+
     alvo = _norm_txt(bairro or "")
     if alvo:
         def _do_bairro(s: dict) -> bool:
