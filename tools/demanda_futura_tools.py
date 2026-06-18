@@ -469,6 +469,7 @@ def demanda_futura_detalhada(
             "vagas": (refino or {}).get("vagas"),
             "preco_base": (refino or {}).get("preco_base"),
             "obra_progresso": (refino or {}).get("obra_progresso"),
+            "responsavel": (refino or {}).get("responsavel"),  # quem contatar p/ parceria
             "janela_quente": janela,            # gatilho timing/MKT (C)
             "ocupacao_fonte": e["fatores_usados"]["ocupacao"],  # auditável (B)
             # Cadeia clara pro usuário: moradores (Censo) → membros captáveis (nossa
@@ -499,7 +500,7 @@ def demanda_futura_detalhada(
         "janelas_quentes": [
             {"empreendimento": l.get("empreendimento") or l.get("construtora"),
              "obra_progresso": l.get("obra_progresso"), "fonte_url": l.get("fonte_url"),
-             "captura_est": l.get("captura_est")}
+             "responsavel": l.get("responsavel"), "captura_est": l.get("captura_est")}
             for l in linhas if l.get("janela_quente")
         ],
         "captura_total_est": round(tot["captura_est"], 1),       # membros captáveis (T+24)

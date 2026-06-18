@@ -44,6 +44,77 @@ _DOMINIOS_PORTAL = ("vivareal", "zapimoveis", "olx", "chavesnamao", "quintoandar
                     "imovelweb", "lopes.com", "loft.com", "wimoveis", "netimoveis",
                     "google.com", "wikipedia")
 
+# Agregadores regionais: hospedam o anúncio mas NÃO são o responsável (o responsável
+# é o anunciante/corretor extraído do conteúdo, não o portal). Separado de _DOMINIOS_PORTAL
+# pra não mexer no gate de fonte oficial. Recalibrável (mover p/ param quando crescer).
+_AGREGADORES = _DOMINIOS_PORTAL + ("voudeimovel", "dfimoveis", "imovelguide",
+                                   "casamineira", "mgfimoveis", "buscacuritiba", "wimoveis")
+_2NIVEL_BR = {"com", "org", "net", "gov", "edu", "ind"}
+
+
+def _dominio_registravel(url: str) -> tuple[str, str]:
+    """(dominio_registravel, raiz). Trata .com.br/.org.br. SEM hardcode de marca —
+    usa publicsuffix-lite (não `'x.com.br' in url`)."""
+    from urllib.parse import urlparse
+
+    host = (urlparse(url if "//" in url else "//" + url).netloc or "").lower().split(":")[0]
+    if host.startswith("www."):
+        host = host[4:]
+    parts = [p for p in host.split(".") if p]
+    if len(parts) >= 3 and parts[-1] == "br" and parts[-2] in _2NIVEL_BR:
+        return ".".join(parts[-3:]), parts[-3]
+    if len(parts) >= 2:
+        return ".".join(parts[-2:]), parts[-2]
+    return host, (parts[0] if parts else host)
+
+
+def _classificar_dominio(url: str) -> tuple[str, str, str]:
+    """(dominio, raiz, tipo). tipo: 'agregador' (anúncio de terceiro) | 'site_proprio'
+    (incorporadora/imobiliária dona do domínio)."""
+    dom, raiz = _dominio_registravel(url)
+    tipo = "agregador" if any(a in dom for a in _AGREGADORES) else "site_proprio"
+    return dom, raiz, tipo
+
+
+def identificar_responsavel_obra(url: str | None, ext: dict | None) -> dict | None:
+    """Determinístico: QUEM o cliente contata p/ parceria de MKT no lançamento.
+    Cruza o domínio registrável (publicsuffix) com o conteúdo extraído da página
+    (incorporadora 'Construção/Realização' + imobiliária 'Vendas/Corretora' + contato).
+    Resolve o caso 'site não diz explícito': o responsável vem do crédito/rodapé, e se
+    for site próprio sem 'vendas', a própria marca do domínio é o responsável.
+    Retorna None se não há sinal nenhum."""
+    ext = ext or {}
+    incorporadora = str(ext.get("incorporadora") or ext.get("construtora") or "").strip() or None
+    imob = str(ext.get("imobiliaria_vendas") or ext.get("corretora") or "").strip() or None
+    contato = (str(ext.get("contato_vendas") or ext.get("whatsapp") or ext.get("telefone") or "").strip()
+               or None)
+    creci = str(ext.get("creci") or "").strip() or None
+    dom = raiz = tipo = None
+    if url:
+        dom, raiz, tipo = _classificar_dominio(url)
+
+    # Quem contatar: imobiliária de vendas > incorporadora > marca do domínio próprio.
+    if imob:
+        responsavel, base = imob, "imobiliaria_vendas (página)"
+    elif tipo == "site_proprio" and (incorporadora or raiz):
+        responsavel, base = (incorporadora or raiz.title()), "site_proprio (domínio/incorporadora)"
+    elif incorporadora:
+        responsavel, base = incorporadora, "incorporadora (página)"
+    else:
+        responsavel, base = None, "nao_identificado"
+
+    if not any([responsavel, incorporadora, imob, contato]):
+        return None
+    return {
+        "responsavel_parceria": responsavel,   # ← quem o cliente procura
+        "incorporadora": incorporadora,
+        "imobiliaria_vendas": imob,
+        "contato": contato, "creci": creci,
+        "dominio": dom, "tipo_dominio": tipo,
+        "fonte_url": url, "base": base,
+    }
+
+
 
 def _extrair_fontes_grounding(resp: Any) -> list[dict]:
     """Citações REAIS do grounding (grounding_metadata) — fonte auditável.
@@ -370,8 +441,15 @@ def _extrair_do_html(html: str) -> dict | None:
         '  "amenidades": ["..."],\n'
         '  "obra": {"total_pct": <int 0-100|null>, "acabamento_pct": <int 0-100|null>,\n'
         '           "fase": "<fundacao|estrutura|alvenaria|acabamento|entregue|null>"},\n'
+        '  "incorporadora": "<construtora/realização/incorporação|null>",\n'
+        '  "imobiliaria_vendas": "<imobiliária/corretora responsável pelas vendas|null>",\n'
+        '  "contato_vendas": "<telefone/WhatsApp de vendas|null>", "creci": "<CRECI|null>",\n'
         '  "endereco": {"cep": "<digits|null>", "numero": "<str|null>", "bairro": "<str|null>"}\n'
         "}\n"
+        "RESPONSÁVEL: 'incorporadora' = quem CONSTRÓI/realiza (rótulos Construção/Realização/"
+        "Incorporação). 'imobiliaria_vendas' = quem VENDE (Vendas/Corretora/Imobiliária, mesmo "
+        "no rodapé/créditos). 'contato_vendas' = telefone ou WhatsApp de vendas. Extraia mesmo "
+        "que não esteja num cabeçalho destacado. Sem dado → null.\n"
         "REGRAS: 'unidades' = total de apartamentos do projeto inteiro (some torres se a "
         "página der por torre). 'areas_plantas' = lista das metragens privativas distintas. "
         "'obra' = se houver Acompanhamento das Obras com % de conclusão: total_pct é o % geral; "
@@ -522,6 +600,8 @@ def refinar_demanda_via_lancamento(
             "preco_base": ext.get("preco_base"),
             "previsao_entrega": ext.get("previsao_entrega"),
             "obra_progresso": _obra_progresso(ext),
+            "responsavel": identificar_responsavel_obra(
+                pagina_url or _fonte_preferida(fontes), ext),  # quem contatar p/ parceria
             "fonte_url": pagina_url or _fonte_preferida(fontes),   # citação REAL
             "instagram_url": instagram,
             "fontes": fontes,

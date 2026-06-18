@@ -255,7 +255,7 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 <div class="sec">Janela de Entrada (Demanda Futura Datada)</div>
 {% if demanda.janela_quente_n %}<div class="alert" style="background:#FFFBEB; border-color:#FCD34D; margin-bottom:10px;">
   <div style="font-weight:bold; color:#92400E; font-size:9.5pt; margin-bottom:4px;">🔥 Janela quente — {{ demanda.janela_quente_n }} obra(s) na reta final</div>
-  <div style="font-size:8.5pt; color:#78350F; line-height:1.5;">Obra em acabamento/entrega iminente. <strong>Contate a construtora/corretor AGORA</strong> para ação de marketing e capte os futuros moradores antes da concorrência.{% for j in demanda.janelas %}<br>&bull; <strong>{{ j.nome }}</strong>{% if j.total %} — obra {{ j.total }}%{% endif %}{% if j.acabamento %} · acabamento {{ j.acabamento }}%{% endif %} · ~{{ j.captura }} alunos captáveis{% endfor %}</div>
+  <div style="font-size:8.5pt; color:#78350F; line-height:1.5;">Obra em acabamento/entrega iminente. <strong>Contate a construtora/corretor AGORA</strong> para ação de marketing e capte os futuros moradores antes da concorrência.{% for j in demanda.janelas %}<br>&bull; <strong>{{ j.nome }}</strong>{% if j.total %} — obra {{ j.total }}%{% endif %}{% if j.acabamento %} · acabamento {{ j.acabamento }}%{% endif %} · ~{{ j.captura }} alunos captáveis{% if j.responsavel %}<br>&nbsp;&nbsp;&nbsp;↳ <strong>Contate:</strong> {{ j.responsavel }}{% if j.contato %} · {{ j.contato }}{% endif %}{% endif %}{% endfor %}</div>
 </div>{% endif %}
 <div class="timing">
   <div class="c"><div class="kpi-t">Obras residenciais (T+24)</div><div class="kpi-n" style="font-size:15pt;">{{ demanda.n }}</div></div>
@@ -642,10 +642,13 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             if not isinstance(j, dict):
                 continue
             prog = j.get("obra_progresso") or {}
+            resp = j.get("responsavel") or {}
             janelas.append({
                 "nome": str(j.get("empreendimento") or "—")[:34],
                 "total": prog.get("total_pct"), "acabamento": prog.get("acabamento_pct"),
                 "captura": _int(j.get("captura_est")) if j.get("captura_est") else "—",
+                "responsavel": (resp.get("responsavel_parceria") or "")[:40] or None,
+                "contato": (resp.get("contato") or "")[:30] or None,
             })
         demanda = {
             "n": int(df.get("provavel_residencial_n") or 0),
