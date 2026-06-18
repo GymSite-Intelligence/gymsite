@@ -178,6 +178,13 @@ def _a3b_filtrar_concorrentes(callback_context, *args, **kwargs):
         inner["concorrentes_detalhados"] = filtrar_concorrentes_bairro_tipo(
             lista, bairro=bairro, tipo_negocio=tipo
         )
+        # C6.2: valida o contrato de saída do A3b (leniente — loga divergência).
+        try:
+            from models.pipeline_schemas import InteligenciaCompetitiva, validar_lenient
+
+            validar_lenient(InteligenciaCompetitiva, inner, agente="A3b")
+        except Exception:
+            pass
         st["inteligencia_competitiva"] = ic
     except Exception:
         pass

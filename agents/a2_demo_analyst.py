@@ -145,6 +145,14 @@ class DemoAnalystAgent(BaseAgent):
             print(f"[A2 determinístico] falha: {type(e).__name__}: {e}")
             r = {"erro": f"{type(e).__name__}: {e}", "score_demografico": None}
 
+        # C6.2: valida o contrato de saída (leniente — loga divergência, não rejeita).
+        try:
+            from models.pipeline_schemas import AnaliseDemografica, validar_lenient
+
+            r = validar_lenient(AnaliseDemografica, r, agente="A2")
+        except Exception:
+            pass
+
         yield Event(
             author=self.name,
             invocation_id=ctx.invocation_id,

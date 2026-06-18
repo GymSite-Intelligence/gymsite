@@ -487,6 +487,15 @@ def _a9_after_agent_callback(callback_context):
         else:
             parsed = _parse_json_from_text(str(raw or ""))
 
+        # C6.2: valida o output do LLM contra o contrato (leniente — loga divergência,
+        # não rejeita). Pega malformação de campo cedo sem quebrar o pipeline tolerante.
+        try:
+            from models.pipeline_schemas import A9Output, validar_lenient
+
+            parsed = validar_lenient(A9Output, parsed, agente="A9")
+        except Exception:
+            pass
+
         state["relatorio_posicionamento"] = parsed
         # Veredito DETERMINÍSTICO (headroom de renda) sobrepõe o do LLM — sourced/auditável.
         _a9_override_veredito_deterministico(state, parsed)

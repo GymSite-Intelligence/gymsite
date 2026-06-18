@@ -14,6 +14,9 @@ from tools.agent_factory import build_llm_agent
 market_research_agent = build_llm_agent(
     name="MarketResearch",
     model="gemini-2.5-flash",
+    # C6.2/C6.4: sem output_key o resultado se perdia (não ia pro state). Agora
+    # consumidores leem state['market_research_result'] por contrato.
+    output_key="market_research_result",
     description=(
         "Pesquisa em tempo real no Google via Search Grounding. "
         "Usa quando precisar de horários de pico, custos de mercado atuais, "
