@@ -451,6 +451,10 @@ def bairros_alternativos_inteligentes(tool_context) -> dict:
 
         bairro_principal = partes[0]
         partes_chave = set(partes_bairro_alvo(bairro_alt) or [normalizar_bairro(p) for p in partes])
+        # Não recomendar o PRÓPRIO bairro-alvo como alternativa: grupos compostos
+        # ("Cocó / Guararapes") contêm o alvo (Cocó) e vazavam pra lista de vizinhos.
+        if bairro_alvo_chave and bairro_alvo_chave in partes_chave:
+            continue
         count_total = 0
         academias_existentes: list[str] = []
         place_ids_vistos: set = set()

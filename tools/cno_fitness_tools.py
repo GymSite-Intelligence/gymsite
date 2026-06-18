@@ -977,7 +977,11 @@ def slim_obras_para_relatorio(
 
     bench = benchmark_tempo or em_curso_block.get("benchmark_tempo_obra") or {}
 
+    from datetime import date as _date
+    _hoje = _date.today().isoformat()
+
     obras_ui = []
+    obras_estale = 0
     for o in em_curso_block.get("obras") or []:
         prev = o.get("previsao_encerramento")
         if not prev and bench.get("status") == "ok":
@@ -987,6 +991,13 @@ def slim_obras_para_relatorio(
                 bench,
                 faixa_porte_m2=o.get("faixa_porte_m2"),
             )
+        # CNO/RFB marca 'em_curso' por código de situação que o cartório raramente
+        # atualiza — obra com previsão de encerramento já no passado é stale (acabou
+        # ou parou), não é "concorrência futura em construção". Dropa do relatório.
+        _prev_data = (prev or {}).get("previsao_encerramento_estimada")
+        if _prev_data and str(_prev_data)[:10] < _hoje:
+            obras_estale += 1
+            continue
         obras_ui.append(
             {
                 "nome_obra": o.get("nome_obra"),
@@ -1025,6 +1036,7 @@ def slim_obras_para_relatorio(
         "total_obras_em_curso": em_curso_block.get("total_obras_em_curso"),
         "filtro_bairro": em_curso_block.get("filtro_bairro"),
         "obras": obras_ui,
+        "obras_descartadas_encerramento_passado": obras_estale or None,
         "benchmark_tempo_obra": bench_slim,
         "nota_metodologica": em_curso_block.get("nota_metodologica"),
     }
