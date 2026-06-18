@@ -46,12 +46,28 @@ def _loc_do_state(state) -> tuple[str, str, str | None]:
     return cidade, uf, (bairro or None)
 
 
+def _num_campo(v) -> float:
+    """Coage valor de campo demográfico que às vezes vem dict {valor/renda_media:..}
+    (não só número/str) — senão float()/int() levantava TypeError e derrubava o A2."""
+    if isinstance(v, dict):
+        for k in ("valor", "renda_media", "value", "media"):
+            if v.get(k) is not None:
+                v = v[k]
+                break
+        else:
+            return 0.0
+    try:
+        return float(str(v).replace(",", ".")) if v not in (None, "") else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _insights_deterministicos(r: dict) -> list[str]:
     """Os 3 insights que o LLM 'escrevia' — eram templates derivados dos números.
     Recriados em Python (determinísticos, auditáveis, zero token)."""
-    pub = int(r.get("publico_potencial_fitness") or 0)
-    renda = float(r.get("renda_bairro") or r.get("renda_media_domiciliar") or 0)
-    score = float(r.get("score_demografico") or 0)
+    pub = int(_num_campo(r.get("publico_potencial_fitness")))
+    renda = _num_campo(r.get("renda_bairro") if r.get("renda_bairro") is not None else r.get("renda_media_domiciliar"))
+    score = _num_campo(r.get("score_demografico"))
     classe = str(r.get("classificacao") or "—")
     out: list[str] = []
     if pub:
