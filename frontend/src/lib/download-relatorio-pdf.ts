@@ -8,6 +8,7 @@ export type PdfLayout = 'classic' | 'executive' | 'data_room'
 export async function downloadRelatorioPdf(
   relatorioId: string,
   layout: PdfLayout = 'classic',
+  engine: 'weasy' | 'reportlab' = 'weasy',
 ): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
@@ -16,7 +17,9 @@ export async function downloadRelatorioPdf(
     headers.Authorization = `Bearer ${token}`
   }
 
-  const url = `${API_BASE}/api/relatorios/${encodeURIComponent(relatorioId)}/pdf?layout=${layout}`
+  // engine=weasy (HTML/CSS) é o PDF de produção: 17 seções, acentos preservados,
+  // pirâmide idade×sexo, gaps rich. reportlab fica como fallback.
+  const url = `${API_BASE}/api/relatorios/${encodeURIComponent(relatorioId)}/pdf?layout=${layout}&engine=${engine}`
   const res = await fetch(url, { headers })
   if (!res.ok) {
     const text = await res.text().catch(() => '')

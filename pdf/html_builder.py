@@ -302,6 +302,24 @@ def _int(v) -> str:
         return "—"
 
 
+def _mc_money(v, sufixo: str = "") -> str | None:
+    """Valor de market_context: se for número cru ('35.71'), formata 'R$ 35,71'+sufixo;
+    se já vier com texto/unidade, devolve como está. None/'' → None."""
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    if re.fullmatch(r"\d+(?:[.,]\d+)?", s):
+        try:
+            n = float(s.replace(",", "."))
+            corpo = f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if n % 1 else f"{int(n):,}".replace(",", ".")
+            return f"R$ {corpo}{sufixo}"
+        except ValueError:
+            return s
+    return s
+
+
 def _viab_cls(v: str) -> str:
     v = (v or "").upper()
     if "INVI" in v:
@@ -458,8 +476,9 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     mercado = None
     if mkt is not None:
         mercado = {
-            "ticket": mkt.ticket_mercado, "aluguel": mkt.aluguel_m2, "renda": mkt.renda,
-            "tendencia": mkt.tendencia, "parque": _int(mkt.parque_ativo) if mkt.parque_ativo else None,
+            "ticket": _mc_money(mkt.ticket_mercado), "aluguel": _mc_money(mkt.aluguel_m2, sufixo="/m²"),
+            "renda": _mc_money(mkt.renda), "tendencia": mkt.tendencia,
+            "parque": _int(mkt.parque_ativo) if mkt.parque_ativo else None,
             "novos": mkt.novos_cnpj_90d,
         }
 
