@@ -87,13 +87,38 @@ def _score(v: float | None) -> str:
     return f"{v:.1f}"
 
 
+import re as _re_para
+
+# Tags que o ReportLab Paragraph entende e que QUEREMOS preservar (negrito/quebra/cor).
+_TAGS_OK = _re_para.compile(r"</?(?:b|i|br|font)(?:\s[^>]*)?/?>", _re_para.IGNORECASE)
+# Emoji/símbolos sem glifo na Helvetica → viravam "■■". Remove (mantém ★ · — ° º ª).
+_EMOJI = _re_para.compile(
+    "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF"
+    "\U0001F1E6-\U0001F1FF\U0000FE00-\U0000FE0F\U00002190-\U000021FF]"
+)
+
+
+def _strip_emoji(s: str) -> str:
+    return _EMOJI.sub("", s).strip()
+
+
 def _para(text: str, style: str, styles: dict) -> Paragraph:
-    safe = (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\n", "<br/>")
-    )
+    """Escapa o texto MAS preserva as tags de marcação intencionais (<b>/<br/>/<font>) —
+    antes o escape global virava '<b>' literal no PDF. Converte **negrito** markdown."""
+    text = _strip_emoji(text or "")
+
+    def _esc(s: str) -> str:
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    partes: list[str] = []
+    fim = 0
+    for m in _TAGS_OK.finditer(text):
+        partes.append(_esc(text[fim:m.start()]))
+        partes.append(m.group(0))  # tag permitida, mantém crua
+        fim = m.end()
+    partes.append(_esc(text[fim:]))
+    safe = "".join(partes).replace("\n", "<br/>")
+    safe = _re_para.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", safe)  # **x** → negrito
     return Paragraph(safe, styles[style])
 
 
@@ -174,26 +199,11 @@ def _header_footer(canvas, doc, model: RelatorioPdfModel) -> None:
     # Faixa fina de acento verde-limao sob a barra de topo (marca).
     canvas.setFillColor(LIME)
     canvas.rect(0, h - 1.25 * cm, w, 0.05 * cm, fill=1, stroke=0)
-    # Logo da marca no topo (se o asset existir), seguido do nome.
-    logo = _logo_path()
-    text_x = MARGIN_L
-    if logo:
-        try:
-            canvas.drawImage(
-                logo,
-                MARGIN_L,
-                h - 1.08 * cm,
-                width=0.95 * cm,
-                height=0.95 * cm,
-                mask="auto",
-                preserveAspectRatio=True,
-            )
-            text_x = MARGIN_L + 1.15 * cm
-        except Exception:
-            text_x = MARGIN_L
+    # Cabeçalho: só o wordmark em branco sobre o navy (o logo cheio fica na capa). O logo
+    # tem fundo branco e ficava como caixinha branca distorcida no navy — removido.
     canvas.setFillColor(colors.white)
     canvas.setFont("Helvetica-Bold", 9)
-    canvas.drawString(text_x, h - 0.85 * cm, "GymSite Intelligence")
+    canvas.drawString(MARGIN_L, h - 0.85 * cm, "GymSite Intelligence")
     canvas.setFont("Helvetica", 8)
     loc = f"{model.bairro} · {model.cidade}"
     if model.uf:
@@ -351,8 +361,12 @@ def _market_section(model: RelatorioPdfModel, styles: dict) -> list:
     heatmap = _heatmap_path()
     if heatmap:
         try:
-            flow.append(Image(heatmap, width=CONTENT_W, height=4.0 * cm))
-            flow.append(_para("Densidade do mercado fitness por regiao", "small", styles))
+            img = Image(heatmap, width=CONTENT_W * 0.5, height=3.0 * cm)
+            img.hAlign = "CENTER"
+            flow.append(img)
+            cap = _para("Densidade do mercado fitness no Brasil (referência nacional)", "small", styles)
+            cap.hAlign = "CENTER"
+            flow.append(cap)
             flow.append(Spacer(1, 6))
         except Exception:
             pass
@@ -380,31 +394,23 @@ def _candidatos_section(model: RelatorioPdfModel, styles: dict) -> list:
     if not model.candidatos:
         return []
     flow = _section_title("4. Top candidatos (imóveis)", styles)
-    data = [["#", "Nome", "Tipo ONR", "Área m²", "GeoScout", "Ancoragem", "Endereço"]]
+    data = [["#", "Nome", "Tipo", "m²", "Geo", "Ancor.", "Endereço"]]
     for c in model.candidatos:
         data.append(
             [
                 str(c.posicao),
-                c.nome[:30],
-                c.tipo_imovel_label or "—",
+                _para(c.nome[:60], "small", styles),          # Paragraph → quebra dentro da coluna
+                _para((c.tipo_imovel_label or "—")[:24], "small", styles),
                 str(int(c.area_m2)) if c.area_m2 else "—",
                 _score(c.score_geoscout),
                 _score(c.score_ancoragem),
-                c.endereco[:45],
+                _para(c.endereco[:90], "small", styles),       # quebra, não corta na borda
             ],
         )
     flow.append(
         _table(
             data,
-            [
-                0.8 * cm,
-                3.8 * cm,
-                2.2 * cm,
-                1.5 * cm,
-                1.5 * cm,
-                1.5 * cm,
-                CONTENT_W - 11.3 * cm,
-            ],
+            [0.7 * cm, 3.4 * cm, 1.9 * cm, 1.1 * cm, 1.0 * cm, 1.2 * cm, CONTENT_W - 9.3 * cm],
         ),
     )
     for c in model.candidatos:
@@ -644,17 +650,17 @@ def _extras_section(model: RelatorioPdfModel, styles: dict) -> list:
 
     if model.bairros_alternativos:
         flow.extend(_section_title("8. Bairros alternativos", styles))
-        data = [["Bairro", "Prioridade", "Concorrentes", "Motivo"]]
+        data = [["Bairro", "Prior.", "Conc.", "Motivo"]]
         for b in model.bairros_alternativos[:6]:
             data.append(
                 [
-                    b.bairro[:25],
+                    _para(b.bairro[:40], "small", styles),
                     b.prioridade or "—",
                     str(b.concorrentes) if b.concorrentes is not None else "—",
-                    b.motivo[:80],
+                    _para(b.motivo[:120], "small", styles),
                 ],
             )
-        flow.append(_table(data, [3 * cm, 2 * cm, 2 * cm, CONTENT_W - 7 * cm]))
+        flow.append(_table(data, [4 * cm, 1.6 * cm, 1.4 * cm, CONTENT_W - 7 * cm]))
 
     if model.alertas:
         flow.extend(_section_title("9. Alertas e ressalvas", styles))
