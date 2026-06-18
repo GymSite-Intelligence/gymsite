@@ -183,6 +183,13 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </table>
 <div class="note">Planos públicos coletados via SearchAPI (busca web) por academia. Referência para o posicionamento tarifário vs concorrência.</div>{% endif %}
 
+{% if ticket_segmentos %}
+<div class="sec">Ticket por segmento e serviços entregues</div>
+<table class="d"><tr><th>Segmento</th><th>Faixa de ticket</th><th>Planos</th><th>Serviços entregues</th><th>Academias</th></tr>
+{% for s in ticket_segmentos %}<tr><td>{{ s.segmento }}</td><td>{{ s.faixa }}</td><td>{{ s.n }}</td><td style="font-size:8pt;">{{ s.servicos }}</td><td style="font-size:8pt;">{{ s.academias }}</td></tr>{% endfor %}
+</table>
+<div class="note">Segmentos por tertil dos preços reais do mercado (recalibrável). Mostra o que se ENTREGA em cada faixa de ticket — base do posicionamento: subir de faixa exige os serviços da faixa.</div>{% endif %}
+
 {% if aneis %}
 <div class="sec">Anéis Competitivos (score ponderado por distância)</div>
 <div class="kpis">
@@ -526,6 +533,63 @@ def _filtrar_alertas(alertas) -> list[str]:
     return out
 
 
+def _preco_num(v) -> float | None:
+    """'R$ 129,90' → 129.9. None se não parsear."""
+    if v is None:
+        return None
+    s = re.sub(r"[^\d,.]", "", str(v))
+    if not s:
+        return None
+    # pt-BR: vírgula decimal; ponto de milhar
+    s = s.replace(".", "").replace(",", ".") if "," in s else s
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def _ticket_segmentos(competidores) -> list[dict] | None:
+    """Quadro ticket × segmento × SERVIÇOS entregues por plano (dado de posicionamento).
+    Bandas por TERTIL dos preços reais coletados (market-derived, recalibrável, sem
+    hardcode). Cada segmento agrega os serviços (inclui dos planos) — mostra o que se
+    entrega em cada faixa de ticket."""
+    planos = []
+    for c in (competidores or []):
+        for p in (getattr(c, "planos_precos", None) or []):
+            if not isinstance(p, dict):
+                continue
+            preco = _preco_num(p.get("preco_mensal"))
+            if preco and preco > 0:
+                planos.append((preco, p.get("inclui") or [], c.nome, p.get("plano")))
+    if len(planos) < 2:
+        return None
+    precos = sorted(pp[0] for pp in planos)
+    n = len(precos)
+    t1, t2 = precos[max(0, n // 3 - 1)], precos[min(n - 1, 2 * n // 3)]
+    segs: dict[str, list] = {"Econômico": [], "Intermediário": [], "Premium": []}
+    for preco, inclui, nome, _plano in planos:
+        k = "Econômico" if preco <= t1 else ("Premium" if preco > t2 else "Intermediário")
+        segs[k].append((preco, inclui, nome))
+    rows = []
+    for k, items in segs.items():
+        if not items:
+            continue
+        ps = [i[0] for i in items]
+        svc: list[str] = []
+        for _, inc, _ in items:
+            for s in (inc or []):
+                s = str(s).strip()
+                if s and s.lower() not in [x.lower() for x in svc]:
+                    svc.append(s)
+        faixa = f"R$ {_brl(min(ps))}" if min(ps) == max(ps) else f"R$ {_brl(min(ps))}–{_brl(max(ps))}"
+        rows.append({
+            "segmento": k, "faixa": faixa, "n": len(items),
+            "academias": ", ".join(sorted({i[2][:18] for i in items}))[:40],
+            "servicos": "; ".join(svc[:5])[:90] or "—",
+        })
+    return rows or None
+
+
 def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     pos = model.posicionamento_estrategico if isinstance(model.posicionamento_estrategico, dict) else {}
     meta = model.metadata if isinstance(model.metadata, dict) else {}
@@ -768,7 +832,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         },
         "mercado": mercado, "panorama": panorama, "demografia": demografia,
         "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
-        "competidores": competidores, "planos": planos[:12], "pico": meta.get("pico"),
+        "competidores": competidores, "planos": planos[:12],
+        "ticket_segmentos": _ticket_segmentos(model.competidores), "pico": meta.get("pico"),
         "aneis": _aneis(meta.get("aneis_competitivos")),
         "cobertura": _cobertura(meta.get("cobertura_redes_a0")),
         "obras": _obras(meta.get("obras_cno_em_curso")),
