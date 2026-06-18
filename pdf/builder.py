@@ -5,6 +5,9 @@ from __future__ import annotations
 
 import io
 import os
+import hashlib
+import tempfile
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -26,6 +29,7 @@ from reportlab.platypus import (
 from pdf.charts import chart_capex_stacked, chart_lucro_cenarios, chart_scores_bar
 from pdf.models import LayoutId, RelatorioPdfModel
 from tools.telemetry import span
+from tools.maps_street_view import build_street_view_google_url
 from pdf.theme import (
     BORDER,
     CARD_BG,
@@ -263,6 +267,39 @@ def _heatmap_path() -> str | None:
     return None
 
 
+
+def _street_view_path(lat: float | None, lng: float | None) -> str | None:
+    """Baixa (1x, com cache em disco) a foto Street View do ponto e retorna o caminho.
+
+    Reaproveita o builder de URL do servidor (chave SERVER, nunca exposta ao cliente).
+    Defensivo: retorna None em qualquer falha (sem cobertura, rede, billing), para
+    que a geracao do PDF nunca quebre por causa da imagem (padrao _logo_path/_heatmap_path).
+    """
+    if lat is None or lng is None:
+        return None
+    try:
+        cache_dir = Path(tempfile.gettempdir()) / "gymsite_streetview"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        chave = hashlib.md5(f"{lat:.6f},{lng:.6f}".encode("utf-8")).hexdigest()
+        destino = cache_dir / f"sv_{chave}.jpg"
+        if destino.is_file() and destino.stat().st_size > 0:
+            return str(destino)
+        url = build_street_view_google_url(float(lat), float(lng), width=640, height=400)
+        if not url:
+            return None
+        req = urllib.request.Request(url, headers={"User-Agent": "gymsite-pdf"})
+        with urllib.request.urlopen(req, timeout=8) as resp:  # noqa: S310 (URL do Google)
+            if getattr(resp, "status", 200) != 200:
+                return None
+            dados = resp.read()
+        # Google devolve um placeholder cinza minusculo quando nao ha cobertura.
+        if not dados or len(dados) < 3000:
+            return None
+        destino.write_bytes(dados)
+        return str(destino)
+    except Exception:
+        return None
+
 def _cover_block(model: RelatorioPdfModel, styles: dict) -> list:
     ver = model.veredito or "—"
     vc = veredito_color(model.veredito)
@@ -413,6 +450,29 @@ def _candidatos_section(model: RelatorioPdfModel, styles: dict) -> list:
             [0.7 * cm, 3.4 * cm, 1.9 * cm, 1.1 * cm, 1.0 * cm, 1.2 * cm, CONTENT_W - 9.3 * cm],
         ),
     )
+    # R1 — Street View (evidencia visual): foto de rua dos top-N candidatos.
+    # Limite de N para conter custo/latencia; cache em disco reutiliza chamadas.
+    _SV_TOP_N = 3
+    _sv_render = []
+    for c in model.candidatos[:_SV_TOP_N]:
+        _sv_img = _street_view_path(getattr(c, "lat", None), getattr(c, "lng", None))
+        if _sv_img:
+            _sv_render.append((c, _sv_img))
+    if _sv_render:
+        flow.extend(_section_title("Vista da rua (Street View)", styles))
+        for c, _sv_img in _sv_render:
+            try:
+                flow.append(Image(_sv_img, width=8 * cm, height=5 * cm))
+            except Exception:
+                continue
+            flow.append(
+                _para(
+                    f"<b>Cand. {c.posicao}:</b> {c.endereco[:120]}",
+                    "small",
+                    styles,
+                ),
+            )
+            flow.append(Spacer(1, 0.3 * cm))
     for c in model.candidatos:
         if c.motivo:
             flow.append(
