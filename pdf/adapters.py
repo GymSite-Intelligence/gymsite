@@ -45,6 +45,16 @@ def _int(v: Any) -> int | None:
     return int(round(n))
 
 
+def _faixa_horas(horas: list[int]) -> str:
+    """['17','18','19'] contíguas → '17h–19h'; senão lista as horas."""
+    if not horas:
+        return "—"
+    hs = sorted(horas)
+    if hs[-1] - hs[0] == len(hs) - 1:
+        return f"{hs[0]:02d}h–{hs[-1]:02d}h"
+    return ", ".join(f"{h:02d}h" for h in hs)
+
+
 def extract_resumo_from_markdown(markdown: str | None) -> str | None:
     if not markdown or not str(markdown).strip():
         return None
@@ -177,6 +187,54 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
     if not isinstance(alertas, list):
         alertas = []
 
+    # Pico/lotação agregado: soma horarios_pico de todos os competidores por hora
+    # (todos os dias) → janela de demanda do bairro. Shape competidor.horarios_pico
+    # = {dia: {"HH": ocupacao_pct}}. Top-3 horas mais cheias.
+    pico_horas: dict[int, float] = {}
+    for c in competidores_raw:
+        if not isinstance(c, dict):
+            continue
+        hp = c.get("horarios_pico")
+        if not isinstance(hp, dict):
+            continue
+        for _dia, horas in hp.items():
+            if not isinstance(horas, dict):
+                continue
+            for hh, val in horas.items():
+                try:
+                    h = int(hh)
+                    pico_horas[h] = pico_horas.get(h, 0.0) + float(val)
+                except (TypeError, ValueError):
+                    continue
+    pico_top = None
+    if pico_horas:
+        tot = sum(pico_horas.values()) or 1.0
+        ordenado = sorted(pico_horas.items(), key=lambda kv: kv[1], reverse=True)
+        topn = ordenado[:3]
+        pico_top = {
+            "horas": [f"{h:02d}h" for h, _ in topn],
+            "faixa": _faixa_horas([h for h, _ in topn]),
+            "barras": [
+                {"hora": f"{h:02d}h", "pct": round(100 * v / max(pico_horas.values()))}
+                for h, v in sorted(pico_horas.items())
+                if h >= 5
+            ],
+            "concentracao_pct": round(100 * sum(v for _, v in topn) / tot),
+        }
+
+    # Panorama competitivo SINTETIZADO (não há coluna): saturação + rating + total.
+    panorama = None
+    rating_medio = _num(out.get("rating_medio_concorrentes"))
+    nivel_sat = str(out.get("nivel_saturacao") or "") or None
+    tot_conc = _int(out.get("total_concorrentes_analisados"))
+    if nivel_sat or rating_medio or tot_conc:
+        panorama = {
+            "saturacao": nivel_sat,
+            "rating_medio": rating_medio,
+            "total": tot_conc,
+            "raio": _int(out.get("total_encontrados_raio")),
+        }
+
     cenarios = [_map_cenario_row(c) for c in cenarios_raw if isinstance(c, dict)]
     order = {"low": 0, "mid": 1, "premium": 2}
     cenarios.sort(key=lambda c: order.get(c.modelo, 9))
@@ -249,6 +307,15 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
             # p/ o builder WeasyPrint (HTML): demanda futura datada + perfil idade×sexo.
             "demanda_futura": out.get("demanda_futura") if isinstance(out.get("demanda_futura"), dict) else None,
             "demografia_bairro": out.get("demografia_bairro") if isinstance(out.get("demografia_bairro"), dict) else None,
+            # Blocos ricos pra paridade com a UI (só renderizam se presentes).
+            "aneis_competitivos": out.get("aneis_competitivos") if isinstance(out.get("aneis_competitivos"), dict) else None,
+            "cobertura_redes_a0": out.get("cobertura_redes_a0") if isinstance(out.get("cobertura_redes_a0"), dict) else None,
+            "obras_cno_em_curso": out.get("obras_cno_em_curso") if isinstance(out.get("obras_cno_em_curso"), dict) else None,
+            "entrantes_cnpj_90d": out.get("entrantes_cnpj_90d") if isinstance(out.get("entrantes_cnpj_90d"), dict) else None,
+            "panorama": panorama,
+            "pico": pico_top,
+            "veredito_oceano": (out.get("posicionamento_estrategico") or {}).get("veredito_posicionamento")
+            if isinstance(out.get("posicionamento_estrategico"), dict) else None,
         },
     )
 

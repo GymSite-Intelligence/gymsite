@@ -6,14 +6,17 @@ insights estruturados. Garante conformidade financeira (número vem da variável
 memória do LLM) e mata a classe de bug do markdown-do-LLM (<b> literal, financeiro
 divergente, seção não-narrada, gaps genéricos).
 
-Relatório completo: sumário+scores, contexto de mercado, demografia+pirâmide idade×sexo,
-concorrentes, viabilidade financeira (3 cenários), posicionamento ERRC, GAPs+ticket,
-demanda futura datada, top candidatos, alertas. Layout/marca do mockup aprovado.
+Paridade com a UI (RelatorioViewerPage): veredito dual, scores 3-dim, resumo executivo,
+panorama, demografia+pirâmide, competitiva, pico/lotação, anéis competitivos, cobertura
+Deep Research, viabilidade (KPI strip + 3 cenários + capex), ERRC, dores/GAPs, posicionamento,
+novas unidades, obras CNO, demanda futura, bairros vizinhos, candidatos, alertas.
+Toda seção é data-driven: só renderiza se o dado existe.
 WeasyPrint precisa libs de sistema (pango/cairo) — no Dockerfile; em dev `gerar_html` roda.
 """
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from pdf.models import RelatorioPdfModel
@@ -34,17 +37,23 @@ body { margin:0; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:
 .doc-sub { font-size:9pt; color:#64748B; margin:0; }
 .meta { font-size:8pt; color:#475569; margin-bottom:16px; text-align:right; }
 .tag { background:#F8FAFC; border:1px solid #E2E8F0; padding:3px 8px; border-radius:4px; margin-left:5px; color:#334155; }
-.veredito { background:#FAFAF9; border:1px solid #E5E7EB; border-left:4px solid {{ vc }}; padding:14px 18px; margin-bottom:18px; }
+.veredito { background:#FAFAF9; border:1px solid #E5E7EB; border-left:4px solid {{ vc }}; padding:14px 18px; margin-bottom:8px; }
 .veredito .lbl { font-size:7.5pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px; }
 .veredito .val { font-size:14pt; color:{{ vc }}; font-weight:bold; margin-bottom:6px; text-transform:uppercase; }
 .veredito p { font-size:9pt; color:#334155; margin:0; line-height:1.55; }
+.duo { display:table; width:100%; border-collapse:separate; border-spacing:8px 0; margin:0 -8px 16px; }
+.duo .c { display:table-cell; width:50%; padding:10px 14px; border:1px solid #E2E8F0; background:#F8FAFC; }
+.duo .l { font-size:7pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; }
+.duo .v { font-size:11pt; font-weight:bold; margin-top:3px; }
 .sec { font-size:11pt; font-weight:bold; color:#0E5C66; border-bottom:1px solid #CBD5E1; padding-bottom:6px; margin:22px 0 12px; text-transform:uppercase; letter-spacing:0.5px; page-break-after:avoid; }
 .intro { color:#475569; margin-bottom:12px; text-align:justify; }
+.prose { color:#334155; margin-bottom:10px; text-align:justify; line-height:1.6; }
 .kpis { display:table; width:100%; border:1px solid #E2E8F0; background:#F8FAFC; margin-bottom:6px; }
 .kpis .c { display:table-cell; padding:11px 8px; border-right:1px solid #E2E8F0; text-align:center; }
 .kpis .c:last-child { border-right:none; }
 .kpi-t { font-size:7.5pt; color:#64748B; text-transform:uppercase; font-weight:bold; margin-bottom:3px; }
 .kpi-n { font-size:17pt; font-weight:bold; color:#0E5C66; }
+.kpi-s { font-size:7.5pt; color:#94A3B8; margin-top:2px; }
 .errc { width:100%; border-collapse:separate; border-spacing:8px; margin:0 -8px; }
 .errc td { width:50%; padding:13px; background:#F8FAFC; border:1px solid #E2E8F0; vertical-align:top; }
 .errc .h { font-weight:bold; font-size:9.5pt; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid rgba(0,0,0,.05); padding-bottom:5px; }
@@ -64,7 +73,18 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 .bar { height:100%; background:#0E5C66; opacity:.35; }
 .bar-row .num { width:60px; text-align:right; font-weight:bold; }
 .bar-row .sx { width:74px; text-align:right; color:#64748B; }
+.pico { display:flex; align-items:flex-end; gap:3px; height:46px; margin:8px 0 4px; }
+.pico .col { flex:1; background:#0E5C66; opacity:.30; border-radius:2px 2px 0 0; min-height:2px; }
+.pico .col.hot { opacity:.7; background:#A3E635; }
+.pico-x { display:flex; gap:3px; font-size:6pt; color:#94A3B8; }
+.pico-x span { flex:1; text-align:center; }
 .note { font-size:8pt; color:#64748B; margin-top:6px; line-height:1.4; }
+.gapc { border:1px solid #E2E8F0; border-left:3px solid #16A34A; background:#F8FAFC; padding:9px 12px; margin-bottom:7px; }
+.gapc .t { font-weight:bold; font-size:9pt; color:#0F172A; }
+.gapc .d { font-size:8pt; color:#475569; margin-top:2px; line-height:1.45; }
+.gapc .m { font-size:7.5pt; color:#166534; font-weight:bold; margin-top:3px; }
+.chips span { display:inline-block; background:#ECFEFF; border:1px solid #A5F3FC; color:#155E75; padding:2px 9px; border-radius:10px; font-size:8pt; margin:0 4px 4px 0; }
+.chips span.ghost { background:#FEF2F2; border-color:#FECACA; color:#991B1B; }
 .timing { display:table; width:100%; border:1px solid #E2E8F0; background:#F8FAFC; }
 .timing .c { display:table-cell; width:33.33%; padding:12px; border-right:1px solid #E2E8F0; text-align:center; }
 .timing .c:last-child { border-right:none; }
@@ -85,8 +105,12 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 
 {% if veredito %}<div class="veredito"><div class="lbl">Veredito do Headroom de Renda (Censo IBGE 2022 × Concorrentes)</div>
   <div class="val">{{ veredito }}</div>{% if justificativa %}<p>{{ justificativa }}</p>{% endif %}</div>{% endif %}
+{% if veredito or veredito_oceano %}<div class="duo">
+  <div class="c"><div class="l">Viabilidade (demanda × concorrência)</div><div class="v" style="color:{{ vc }};">{{ veredito or '—' }}</div></div>
+  <div class="c"><div class="l">Oceano (estratégia de posicionamento)</div><div class="v" style="color:{{ voc }};">{{ veredito_oceano or '—' }}</div></div>
+</div>{% endif %}
 
-<div class="sec">1. Sumário de Scores</div>
+<div class="sec">Sumário de Scores</div>
 <div class="kpis">
   <div class="c"><div class="kpi-t">Score Bairro</div><div class="kpi-n">{{ scores.bairro }}</div></div>
   <div class="c"><div class="kpi-t">Top Candidato</div><div class="kpi-n">{{ scores.top1 }}</div></div>
@@ -94,20 +118,32 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
   <div class="c"><div class="kpi-t">Concorrentes</div><div class="kpi-n">{{ scores.concorrentes }}</div></div>
   {% if modelo_recomendado %}<div class="c"><div class="kpi-t">Modelo</div><div class="kpi-n" style="font-size:12pt; padding-top:3px; color:#1B2A4A;">{{ modelo_recomendado }}</div></div>{% endif %}
 </div>
+{% if scores_dim %}<div class="kpis" style="margin-top:6px;">
+  <div class="c"><div class="kpi-t">Demográfico</div><div class="kpi-n" style="font-size:14pt;">{{ scores_dim.demografico }}</div></div>
+  <div class="c"><div class="kpi-t">Competitivo</div><div class="kpi-n" style="font-size:14pt;">{{ scores_dim.competitivo }}</div></div>
+  <div class="c"><div class="kpi-t">Viabilidade</div><div class="kpi-n" style="font-size:14pt;">{{ scores_dim.viabilidade }}</div></div>
+</div>{% endif %}
 
-{% if mercado %}
-<div class="sec">2. Contexto de Mercado</div>
+{% if resumo %}
+<div class="sec">Resumo Executivo</div>
+{% for p in resumo %}<p class="prose">{{ p }}</p>{% endfor %}{% endif %}
+
+{% if mercado or panorama %}
+<div class="sec">Contexto e Panorama de Mercado</div>
 <table class="d"><tr><th>Indicador</th><th>Valor</th></tr>
-  {% if mercado.ticket %}<tr><td>Ticket médio local</td><td>{{ mercado.ticket }}</td></tr>{% endif %}
-  {% if mercado.aluguel %}<tr><td>Aluguel comercial</td><td>{{ mercado.aluguel }}</td></tr>{% endif %}
-  {% if mercado.renda %}<tr><td>Renda do bairro</td><td>{{ mercado.renda }}</td></tr>{% endif %}
-  {% if mercado.tendencia %}<tr><td>Tendência</td><td>{{ mercado.tendencia }}</td></tr>{% endif %}
-  {% if mercado.parque %}<tr><td>Parque ativo (CNPJ)</td><td>{{ mercado.parque }}</td></tr>{% endif %}
-  {% if mercado.novos %}<tr><td>Novos CNPJ fitness (90d)</td><td>{{ mercado.novos }}</td></tr>{% endif %}
+  {% if mercado and mercado.ticket %}<tr><td>Ticket médio local</td><td>{{ mercado.ticket }}</td></tr>{% endif %}
+  {% if mercado and mercado.aluguel %}<tr><td>Aluguel comercial</td><td>{{ mercado.aluguel }}</td></tr>{% endif %}
+  {% if mercado and mercado.renda %}<tr><td>Renda do bairro</td><td>{{ mercado.renda }}</td></tr>{% endif %}
+  {% if mercado and mercado.tendencia %}<tr><td>Tendência</td><td>{{ mercado.tendencia }}</td></tr>{% endif %}
+  {% if mercado and mercado.parque %}<tr><td>Parque ativo (CNPJ)</td><td>{{ mercado.parque }}</td></tr>{% endif %}
+  {% if mercado and mercado.novos %}<tr><td>Novos CNPJ fitness (90d)</td><td>{{ mercado.novos }}</td></tr>{% endif %}
+  {% if panorama and panorama.saturacao %}<tr><td>Nível de saturação</td><td>{{ panorama.saturacao }}</td></tr>{% endif %}
+  {% if panorama and panorama.rating_medio %}<tr><td>Rating médio dos concorrentes</td><td>{{ panorama.rating_medio }} ★</td></tr>{% endif %}
+  {% if panorama and panorama.total %}<tr><td>Concorrentes analisados</td><td>{{ panorama.total }}{% if panorama.raio %} (de {{ panorama.raio }} no raio){% endif %}</td></tr>{% endif %}
 </table>{% endif %}
 
 {% if demografia %}
-<div class="sec">3. Demografia do Bairro</div>
+<div class="sec">Demografia do Bairro</div>
 {% if demografia.renda or demografia.pop %}<table class="d"><tr><th>Dimensão</th><th>Valor (fonte real do bairro)</th></tr>
   {% if demografia.renda %}<tr><td>Renda per capita</td><td>{{ demografia.renda }}</td></tr>{% endif %}
   {% if demografia.pop %}<tr><td>População</td><td>{{ demografia.pop }}</td></tr>{% endif %}
@@ -125,20 +161,54 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 {% endif %}{% endif %}
 
 {% if competidores %}
-<div class="sec">4. Inteligência Competitiva</div>
+<div class="sec">Inteligência Competitiva</div>
 <table class="d"><tr><th>Concorrente</th><th>Rating</th><th>Avaliações</th><th>Bairro</th><th>24h</th></tr>
 {% for c in competidores %}<tr><td>{{ c.nome }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td></tr>{% endfor %}
-</table>{% endif %}
+</table>
+{% if pico %}
+<div style="margin-top:12px; font-size:8pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Janela de demanda — lotação agregada dos concorrentes por hora</div>
+<div class="pico">{% for b in pico.barras %}<div class="col {{ 'hot' if b.hora in pico.horas }}" style="height:{{ b.pct }}%;"></div>{% endfor %}</div>
+<div class="pico-x">{% for b in pico.barras %}<span>{{ b.hora[:2] }}</span>{% endfor %}</div>
+<div class="note">Pico de movimento: <strong>{{ pico.faixa }}</strong> ({{ pico.concentracao_pct }}% da lotação nas 3 horas de topo). Janela de maior disputa — e de maior demanda capturável.</div>
+{% endif %}{% endif %}
 
-{% if cenarios %}
-<div class="sec">5. Viabilidade Financeira (3 Cenários)</div>
-<table class="d"><tr><th>Modelo</th><th>Ticket</th><th>Receita/mês</th><th>Lucro/mês</th><th>Margem</th><th>Payback</th><th>Viabilidade</th></tr>
-{% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}{{ ' ★' if c.recomendado }}</td><td>{{ c.ticket }}</td><td>{{ c.receita }}</td><td>{{ c.lucro }}</td><td>{{ c.margem }}</td><td>{{ c.payback }}</td>
+{% if aneis %}
+<div class="sec">Anéis Competitivos (score ponderado por distância)</div>
+<div class="kpis">
+  <div class="c"><div class="kpi-t">No bairro</div><div class="kpi-n">{{ aneis.no_bairro }}</div></div>
+  <div class="c"><div class="kpi-t">Fronteira</div><div class="kpi-n">{{ aneis.fronteira }}</div></div>
+  <div class="c"><div class="kpi-t">Regional</div><div class="kpi-n">{{ aneis.regional }}</div></div>
+  <div class="c"><div class="kpi-t">Score ponderado</div><div class="kpi-n" style="color:#1B2A4A;">{{ aneis.score }}</div></div>
+</div>
+{% if aneis.portes %}<div class="note">No bairro por porte: {{ aneis.portes }}. Peso por anel — bairro 1.0, fronteira 0.5, regional 0.2 (concorrente distante pressiona menos).</div>{% endif %}{% endif %}
+
+{% if cobertura %}
+<div class="sec">Cobertura Deep Research (redes-alvo)</div>
+<div class="chips">{% for r in cobertura.cobertas %}<span>{{ r }} ✓</span>{% endfor %}{% for r in cobertura.faltantes %}<span class="ghost">{{ r }} ✗</span>{% endfor %}</div>
+<div class="note">{{ cobertura.cobertas|length }} de {{ cobertura.solicitadas }} redes solicitadas foram localizadas e analisadas no entorno.{% if cobertura.fantasma %} ⚠ Redes-fantasma detectadas (citadas mas não encontradas no terreno).{% endif %}</div>{% endif %}
+
+{% if kpi_fin or cenarios %}
+<div class="sec">Viabilidade Financeira</div>
+{% if kpi_fin %}<div class="kpis">
+  <div class="c"><div class="kpi-t">Área alvo</div><div class="kpi-n" style="font-size:13pt;">{{ kpi_fin.area }}</div><div class="kpi-s">m²</div></div>
+  {% if kpi_fin.aluguel %}<div class="c"><div class="kpi-t">Aluguel/mês</div><div class="kpi-n" style="font-size:13pt;">R$ {{ kpi_fin.aluguel }}</div></div>{% endif %}
+  {% if kpi_fin.capex %}<div class="c"><div class="kpi-t">CAPEX (mid)</div><div class="kpi-n" style="font-size:13pt;">R$ {{ kpi_fin.capex }}</div></div>{% endif %}
+  {% if kpi_fin.payback %}<div class="c"><div class="kpi-t">Payback (mid)</div><div class="kpi-n" style="font-size:13pt;">{{ kpi_fin.payback }}</div></div>{% endif %}
+</div>{% endif %}
+{% if cenarios %}<table class="d" style="margin-top:6px;"><tr><th>Modelo</th><th>Ticket</th><th>Receita/mês</th><th>Lucro/mês</th><th>Margem</th><th>Payback</th><th>Alunos</th><th>Viabilidade</th></tr>
+{% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}{{ ' ★' if c.recomendado }}</td><td>{{ c.ticket }}</td><td>{{ c.receita }}</td><td>{{ c.lucro }}</td><td>{{ c.margem }}</td><td>{{ c.payback }}</td><td>{{ c.alunos }}</td>
   <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span></td></tr>{% endfor %}
 </table>{% endif %}
+{% if capex %}
+<div style="margin-top:12px; font-size:8pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Composição do investimento — cenário {{ capex.modelo }}</div>
+<div style="margin-top:6px;">
+{% for r in capex.itens %}<div class="bar-row"><span class="lab">{{ r.label }}</span>
+  <div class="bar-wrap"><div class="bar" style="width:{{ r.pct }}%; opacity:.5;"></div></div>
+  <span class="num">R$ {{ r.valor }}</span><span class="sx">{{ r.pct }}%</span></div>{% endfor %}
+</div>{% endif %}{% endif %}
 
 {% if errc %}
-<div class="sec">6. Posicionamento Estratégico — Framework ERRC</div>
+<div class="sec">Posicionamento Estratégico — Framework ERRC</div>
 <p class="intro">Diretrizes derivadas da oferta real dos concorrentes e das dores coletadas na praça:</p>
 <table class="errc">
   <tr><td style="border-top:3px solid #DC2626;"><div class="h" style="color:#991B1B;">Eliminar</div><ul>{% for i in errc.eliminar %}<li>{{ i }}</li>{% endfor %}</ul></td>
@@ -148,21 +218,41 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </table>{% endif %}
 
 {% if gaps or ticket_rec %}
-<div class="sec">7. GAPs Reais e Proposta Tarifária</div>
+<div class="sec">Dores do Mercado e Proposta Tarifária</div>
 <table style="width:100%; border-collapse:collapse;"><tr>
   <td style="width:35%; vertical-align:top; padding-right:12px;"><div class="card" style="height:100%;">
     <div class="kpi-t">Posicionamento Tarifário</div><div class="kpi-n">{{ ticket_rec or '—' }}<span style="font-size:10pt; color:#64748B;"> /mês</span></div>
     {% if ticket_banda %}<div style="font-size:8pt; color:#64748B; margin:5px 0 9px; border-bottom:1px solid #E2E8F0; padding-bottom:8px;">Banda viável: {{ ticket_banda }}</div>{% endif %}
     {% if benchmarks %}<div style="font-size:8pt; color:#475569; line-height:1.5;"><strong>Ancoragem:</strong><br>{% for b in benchmarks %}&bull; {{ b }}<br>{% endfor %}</div>{% endif %}
   </div></td>
-  <td style="width:65%; vertical-align:top;"><div class="card" style="height:100%; padding:0;">
-    <table class="d"><tr><th>Serviço (GAP no mercado)</th></tr>
-    {% for g in gaps %}<tr><td>{{ g }}</td></tr>{% endfor %}{% if not gaps %}<tr><td style="color:#64748B;">Mercado coberto nos serviços-núcleo — foco em qualidade/preço.</td></tr>{% endif %}</table>
-  </div></td>
+  <td style="width:65%; vertical-align:top;">
+    {% for g in gaps %}<div class="gapc"><div class="t">{{ g.titulo }}</div>{% if g.desc %}<div class="d">{{ g.desc }}</div>{% endif %}{% if g.potencial %}<div class="m">Potencial: {{ g.potencial }}{% if g.dificuldade %} · implementação {{ g.dificuldade }}{% endif %}</div>{% endif %}</div>{% endfor %}
+    {% if not gaps %}<div class="card" style="color:#64748B;">Mercado coberto nos serviços-núcleo — foco em qualidade/preço.</div>{% endif %}
+  </td>
 </tr></table>{% endif %}
 
+{% if posicionamento_txt %}
+<div class="sec">Posicionamento Recomendado</div>
+{% for p in posicionamento_txt %}<p class="prose">{{ p }}</p>{% endfor %}{% endif %}
+
+{% if novas_unidades %}
+<div class="sec">Novas Unidades (90 dias)</div>
+<div class="timing">
+  <div class="c"><div class="kpi-t">Aberturas no município</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.total }}</div></div>
+  <div class="c"><div class="kpi-t">Janela</div><div class="kpi-n" style="font-size:13pt; padding-top:2px;">{{ novas_unidades.dias }} dias</div></div>
+  <div class="c"><div class="kpi-t">Cidade</div><div class="kpi-n" style="font-size:12pt; padding-top:3px;">{{ novas_unidades.cidade }}</div></div>
+</div>
+<div class="timing-d">Aberturas de CNPJ fitness (RFB) nos últimos {{ novas_unidades.dias }} dias — sinal de aquecimento/entrada de concorrência no município. <em>Fonte: RFB CNPJ Aberto.</em></div>{% endif %}
+
+{% if obras %}
+<div class="sec">Obras Fitness em Andamento (CNO)</div>
+<table class="d"><tr><th>Obra</th><th>Bairro</th><th>Área (m²)</th><th>Início</th></tr>
+{% for o in obras %}<tr><td>{{ o.nome }}</td><td>{{ o.bairro }}</td><td>{{ o.area }}</td><td>{{ o.inicio }}</td></tr>{% endfor %}
+</table>
+<div class="note">Obras de academias registradas no Cadastro Nacional de Obras (RFB) — concorrência futura em construção. Fonte: CNO/RFB.</div>{% endif %}
+
 {% if demanda %}
-<div class="sec">8. Janela de Entrada (Demanda Futura Datada)</div>
+<div class="sec">Janela de Entrada (Demanda Futura Datada)</div>
 <div class="timing">
   <div class="c"><div class="kpi-t">Obras residenciais (T+24)</div><div class="kpi-n" style="font-size:15pt;">{{ demanda.n }}</div></div>
   <div class="c"><div class="kpi-t">Captura estimada</div><div class="kpi-n" style="font-size:15pt;">~{{ demanda.captura }} alunos</div></div>
@@ -170,14 +260,21 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </div>
 <div class="timing-d"><strong>Diretriz de timing:</strong> {{ demanda.moradores }} novos moradores em obra. Upside captável com marketing, sem CAPEX extra. <em>Fonte: CNO/RFB + IBGE Censo 2022.</em></div>{% endif %}
 
+{% if bairros_viz %}
+<div class="sec">Bairros Vizinhos Recomendados</div>
+<table class="d"><tr><th>Bairro</th><th>Concorrentes</th><th>Prioridade</th><th>Por quê</th></tr>
+{% for b in bairros_viz %}<tr><td><strong>{{ b.bairro }}</strong></td><td>{{ b.concorrentes }}</td><td>{% if b.prioridade %}<span class="pill {{ b.prio_cls }}">{{ b.prioridade }}</span>{% else %}—{% endif %}</td><td style="font-size:8pt;">{{ b.motivo }}</td></tr>{% endfor %}
+</table>
+<div class="note">Praças alternativas no mesmo município com perfil de público similar e menor disputa — opções caso o bairro-alvo esteja saturado ou sem imóvel.</div>{% endif %}
+
 {% if candidatos %}
-<div class="sec">9. Top Candidatos (Imóveis)</div>
+<div class="sec">Top Candidatos (Imóveis)</div>
 <table class="d"><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Geo</th><th>Ancor.</th><th>Endereço</th></tr>
 {% for c in candidatos %}<tr><td>{{ c.pos }}</td><td>{{ c.nome }}</td><td>{{ c.tipo }}</td><td>{{ c.geo }}</td><td>{{ c.ancor }}</td><td style="font-size:8pt;">{{ c.endereco }}</td></tr>{% endfor %}
 </table>{% endif %}
 
 {% if alertas %}
-<div class="sec">10. Alertas e Ressalvas</div>
+<div class="sec">Alertas e Ressalvas</div>
 <div class="alert"><ul>{% for a in alertas %}<li>{{ a }}</li>{% endfor %}</ul></div>{% endif %}
 
 </body></html>
@@ -214,6 +311,36 @@ def _viab_cls(v: str) -> str:
     return "mid"
 
 
+def _prio_cls(v: str) -> str:
+    v = (v or "").upper()
+    if "ALTA" in v:
+        return "ok"
+    if "BAIXA" in v:
+        return "no"
+    return "mid"
+
+
+def _limpar_md(texto: str | None, max_paragrafos: int = 3) -> list[str]:
+    """Markdown do A6 → parágrafos de texto plano (tira #, **, listas, links)."""
+    if not texto or not str(texto).strip():
+        return []
+    t = str(texto)
+    t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)          # **bold** → bold
+    t = re.sub(r"`([^`]+)`", r"\1", t)               # `code`
+    t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)   # [txt](url) → txt
+    paras = []
+    for bloco in re.split(r"\n\s*\n", t):
+        linha = " ".join(
+            l.strip().lstrip("#").lstrip("-").lstrip("*").strip()
+            for l in bloco.splitlines()
+        ).strip()
+        if linha:
+            paras.append(linha)
+        if len(paras) >= max_paragrafos:
+            break
+    return paras
+
+
 def _piramide(demo_bairro: dict) -> dict | None:
     perfil = (demo_bairro or {}).get("perfil_idade_sexo_bairro")
     segs = (perfil or {}).get("segmentos") if isinstance(perfil, dict) else None
@@ -241,6 +368,70 @@ def _piramide(demo_bairro: dict) -> dict | None:
     }
 
 
+def _gaps_rich(pos: dict) -> list[dict]:
+    """gaps_identificados pode ser list[str] OU list[{gap, descricao, potencial_ticket, ...}]."""
+    out = []
+    for g in (pos.get("gaps_identificados") or [])[:6]:
+        if isinstance(g, dict):
+            out.append({
+                "titulo": str(g.get("gap") or g.get("titulo") or g.get("nome") or "").strip(),
+                "desc": str(g.get("descricao") or "").strip() or None,
+                "potencial": str(g.get("potencial_ticket") or g.get("potencial") or "").strip() or None,
+                "dificuldade": str(g.get("dificuldade_implementacao") or g.get("dificuldade") or "").strip() or None,
+            })
+        elif str(g).strip():
+            out.append({"titulo": str(g).strip(), "desc": None, "potencial": None, "dificuldade": None})
+    return [g for g in out if g["titulo"]]
+
+
+def _aneis(a: dict) -> dict | None:
+    if not isinstance(a, dict):
+        return None
+    pa = a.get("por_anel") or {}
+    porte = a.get("no_bairro_por_porte") or {}
+    portes_txt = ", ".join(f"{v} {k}" for k, v in porte.items() if v) if isinstance(porte, dict) else ""
+    return {
+        "no_bairro": pa.get("NO_BAIRRO", a.get("concorrentes_no_bairro", "—")),
+        "fronteira": pa.get("FRONTEIRA", "—"),
+        "regional": pa.get("REGIONAL", "—"),
+        "score": (f"{float(a['score_competitivo_ponderado']):.1f}"
+                  if a.get("score_competitivo_ponderado") is not None else "—"),
+        "portes": portes_txt or None,
+    }
+
+
+def _cobertura(c: dict) -> dict | None:
+    if not isinstance(c, dict):
+        return None
+    cobertas = [str(r) for r in (c.get("redes_cobertas") or [])]
+    solicitadas = [str(r) for r in (c.get("redes_solicitadas") or [])]
+    if not cobertas and not solicitadas:
+        return None
+    faltantes = [r for r in solicitadas if r not in cobertas]
+    return {
+        "cobertas": cobertas, "faltantes": faltantes,
+        "solicitadas": len(solicitadas) or len(cobertas),
+        "fantasma": bool(c.get("tem_redes_fantasma")),
+    }
+
+
+def _obras(o: dict) -> list[dict]:
+    obras = (o or {}).get("obras") if isinstance(o, dict) else None
+    if not isinstance(obras, list):
+        return []
+    rows = []
+    for ob in obras[:8]:
+        if not isinstance(ob, dict):
+            continue
+        rows.append({
+            "nome": str(ob.get("nome_obra") or "—")[:34],
+            "bairro": str(ob.get("bairro") or "—")[:18],
+            "area": _brl(ob.get("area_m2")) if ob.get("area_m2") else "—",
+            "inicio": str(ob.get("data_inicio") or "—")[:10],
+        })
+    return rows
+
+
 def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     pos = model.posicionamento_estrategico if isinstance(model.posicionamento_estrategico, dict) else {}
     meta = model.metadata if isinstance(model.metadata, dict) else {}
@@ -260,6 +451,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
 
     veredito = pos.get("veredito_posicionamento") or model.veredito
     vc = _VEREDITO_COR.get(str(veredito or "").upper().strip(), "#0E5C66")
+    veredito_oceano = meta.get("veredito_oceano")
+    voc = _VEREDITO_COR.get(str(veredito_oceano or "").upper().strip(), "#0E5C66")
 
     mkt = model.market
     mercado = None
@@ -268,6 +461,15 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "ticket": mkt.ticket_mercado, "aluguel": mkt.aluguel_m2, "renda": mkt.renda,
             "tendencia": mkt.tendencia, "parque": _int(mkt.parque_ativo) if mkt.parque_ativo else None,
             "novos": mkt.novos_cnpj_90d,
+        }
+
+    pano = meta.get("panorama") if isinstance(meta.get("panorama"), dict) else None
+    panorama = None
+    if pano:
+        panorama = {
+            "saturacao": pano.get("saturacao"),
+            "rating_medio": f"{float(pano['rating_medio']):.1f}" if pano.get("rating_medio") else None,
+            "total": pano.get("total"), "raio": pano.get("raio"),
         }
 
     demo_b = meta.get("demografia_bairro") if isinstance(meta.get("demografia_bairro"), dict) else {}
@@ -282,18 +484,59 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             **(pir or {}),
         }
 
+    # Scores 3-dim (model.scores: Demográfico/Competitivo/Viabilidade)
+    sc_map = {s.label.lower(): s.value for s in (model.scores or []) if s.value is not None}
+    scores_dim = None
+    if sc_map:
+        def _s(k):
+            v = sc_map.get(k)
+            return f"{v:.1f}" if isinstance(v, (int, float)) else "—"
+        if any(k in sc_map for k in ("demográfico", "competitivo", "viabilidade")):
+            scores_dim = {"demografico": _s("demográfico"), "competitivo": _s("competitivo"), "viabilidade": _s("viabilidade")}
+
     cenarios = []
     rec_norm = (model.modelo_recomendado or "").strip().lower()
+    mid_cen = None
     for c in (model.cenarios or []):
+        is_rec = bool(rec_norm) and ((c.modelo or "").lower() == rec_norm or (c.label or "").lower() == rec_norm)
         cenarios.append({
             "modelo": c.label or c.modelo, "ticket": f"R$ {_brl(c.ticket_medio)}",
             "receita": f"R$ {_brl(c.receita_mensal)}" if c.receita_mensal else "—",
             "lucro": f"R$ {_brl(c.lucro_mensal)}" if c.lucro_mensal is not None else "—",
             "margem": f"{c.margem_pct:.0f}%" if c.margem_pct is not None else "—",
             "payback": f"{c.payback_meses}m" if c.payback_meses else "—",
+            "alunos": _int(c.matriculas_realista) if c.matriculas_realista else "—",
             "viab": c.viabilidade or "—", "viab_cls": _viab_cls(c.viabilidade or ""),
-            "recomendado": bool(rec_norm) and (c.modelo or "").lower() == rec_norm or (c.label or "").lower() == rec_norm,
+            "recomendado": is_rec,
         })
+        if (c.modelo or "").lower() == "mid":
+            mid_cen = c
+    # KPI strip financeiro: área + aluguel + capex/payback do cenário mid
+    kpi_fin = None
+    if mid_cen is not None or model.aluguel_mensal:
+        kpi_fin = {
+            "area": f"{model.area_m2_min}–{model.area_m2_max}",
+            "aluguel": _brl(model.aluguel_mensal) if model.aluguel_mensal else None,
+            "capex": _brl(mid_cen.capex_total) if mid_cen and mid_cen.capex_total else None,
+            "payback": f"{mid_cen.payback_meses}m" if mid_cen and mid_cen.payback_meses else None,
+        }
+    # Capex breakdown do cenário recomendado (ou mid)
+    capex = None
+    cap_cen = next((c for c in (model.cenarios or [])
+                    if (c.modelo or "").lower() == rec_norm or (c.label or "").lower() == rec_norm), mid_cen)
+    if cap_cen is not None:
+        itens_raw = [
+            ("Obra/adaptação", cap_cen.capex_obra),
+            ("Equipamentos", cap_cen.capex_equipamentos),
+            ("Contingência", cap_cen.capex_contingencia),
+        ]
+        itens_raw = [(lab, float(v)) for lab, v in itens_raw if v]
+        tot = sum(v for _, v in itens_raw)
+        if tot > 0:
+            capex = {
+                "modelo": cap_cen.label or cap_cen.modelo,
+                "itens": [{"label": lab, "valor": _brl(v), "pct": round(100 * v / tot)} for lab, v in itens_raw],
+            }
 
     competidores = [{
         "nome": c.nome[:38], "rating": c.rating if c.rating is not None else "—",
@@ -308,6 +551,13 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "endereco": (c.endereco or "—")[:60],
     } for c in (model.candidatos or [])]
 
+    bairros_viz = [{
+        "bairro": b.bairro or "—",
+        "concorrentes": b.concorrentes if b.concorrentes is not None else "—",
+        "prioridade": b.prioridade, "prio_cls": _prio_cls(b.prioridade or ""),
+        "motivo": (b.motivo or "—")[:120],
+    } for b in (model.bairros_alternativos or []) if b.bairro]
+
     demanda = None
     df = meta.get("demanda_futura")
     if isinstance(df, dict) and df.get("status") == "ok" and (df.get("provavel_residencial_n") or 0) > 0:
@@ -318,6 +568,15 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "moradores": _brl(df.get("moradores_total_est")),
         }
 
+    # Novas unidades 90d
+    ent = meta.get("entrantes_cnpj_90d")
+    novas_unidades = None
+    if isinstance(ent, dict) and (ent.get("total") or 0) > 0:
+        novas_unidades = {
+            "total": _int(ent.get("total")), "dias": ent.get("dias") or 90,
+            "cidade": str(ent.get("cidade") or "—")[:20],
+        }
+
     return {
         "bairro": model.bairro, "cidade": model.cidade, "uf": model.uf,
         "tipo": (model.tipo_negocio or "").replace("_", " "),
@@ -325,19 +584,29 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "data": model.data_execucao or "—", "ref": (model.relatorio_id or "")[:8],
         "rodape": "Confidencial · GymSite Intelligence · valores estimados (validar em due diligence)",
         "veredito": str(veredito).upper() if veredito else None,
+        "veredito_oceano": str(veredito_oceano).upper().replace("_", " ") if veredito_oceano else None,
         "justificativa": pos.get("justificativa_recomendacao") or pos.get("justificativa"),
-        "vc": vc, "errc": errc, "modelo_recomendado": model.modelo_recomendado,
-        "gaps": [str(g) for g in (pos.get("gaps_identificados") or [])][:6],
+        "vc": vc, "voc": voc, "errc": errc, "modelo_recomendado": model.modelo_recomendado,
+        "gaps": _gaps_rich(pos),
         "ticket_rec": ticket_rec, "ticket_banda": ticket_banda,
         "benchmarks": [c["nome"][:26] + (f" ({c['bairro']})" if c["bairro"] != "—" else "") for c in competidores[:4]],
+        "resumo": _limpar_md(model.resumo_executivo),
+        "posicionamento_txt": _limpar_md(model.posicionamento),
+        "scores_dim": scores_dim,
         "scores": {
             "bairro": f"{model.score_bairro:.1f}" if model.score_bairro is not None else "—",
             "top1": f"{model.score_top1:.1f}" if model.score_top1 is not None else "—",
             "saturacao": model.nivel_saturacao or "—",
             "concorrentes": model.total_concorrentes if model.total_concorrentes is not None else "—",
         },
-        "mercado": mercado, "demografia": demografia, "cenarios": cenarios,
-        "competidores": competidores, "candidatos": candidatos, "demanda": demanda,
+        "mercado": mercado, "panorama": panorama, "demografia": demografia,
+        "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
+        "competidores": competidores, "pico": meta.get("pico"),
+        "aneis": _aneis(meta.get("aneis_competitivos")),
+        "cobertura": _cobertura(meta.get("cobertura_redes_a0")),
+        "obras": _obras(meta.get("obras_cno_em_curso")),
+        "novas_unidades": novas_unidades,
+        "candidatos": candidatos, "bairros_viz": bairros_viz, "demanda": demanda,
         "alertas": [str(a) for a in (model.alertas or [])][:12],
     }
 
