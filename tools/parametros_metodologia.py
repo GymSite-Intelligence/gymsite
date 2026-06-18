@@ -46,6 +46,8 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "saturacao_bairro_alto_min":     _p(6, "≥6 academias no bairro = saturação ALTO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
     "saturacao_bairro_saturado_min": _p(10, "≥10 academias no bairro = SATURADO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
     "nominatim_intervalo_seg":       _p(1.1, "intervalo mínimo entre chamadas Nominatim (ToS 1 req/s)", "rate_limit", "segundos", "calibracao", "2026-06-18"),
+    "zoneamento_penal_restrito":     _p(2.0, "penalidade no score do top candidato em zona RESTRITO (LUOS)", "penalidade_zoneamento", "pontos", "calibracao", "2026-06-18"),
+    "zoneamento_penal_condicionado": _p(1.0, "penalidade no score em zona CONDICIONADO (LUOS)", "penalidade_zoneamento", "pontos", "calibracao", "2026-06-18"),
     # ── Penetração fitness (% da pop. que É MEMBRO de academia) — ACAD ───────
     "penetracao_geral":     _p(0.045, "ACAD/Panorama Fitness Brasil", "penetracao_mercado", "fração", "benchmark", "2026-06-14"),
     "penetracao_bairro_ab": _p(0.10, "ACAD (bairro alta renda A/B)", "penetracao_mercado_segmentada", "fração", "benchmark", "2026-06-14"),

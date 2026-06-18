@@ -2356,6 +2356,27 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         if alerta_zero_conc not in alertas_financeiros:
             alertas_financeiros.append(alerta_zero_conc)
 
+    # ── P3: zoneamento afeta o veredito/score, não só exibe (VEC-378) ──
+    # Candidato em zona RESTRITO (LUOS) é inviável legal → penaliza o score do top
+    # candidato + rebaixa veredito positivo + alerta. CONDICIONADO penaliza menos.
+    if isinstance(zoneamento_block, dict):
+        _zc = (zoneamento_block.get("compatibilidade") or "").upper()
+        _zsig = zoneamento_block.get("zona_sigla") or "—"
+        if _zc in ("RESTRITO", "CONDICIONADO"):
+            _pen = param("zoneamento_penal_restrito" if _zc == "RESTRITO"
+                         else "zoneamento_penal_condicionado")
+            if score_top1_candidato is not None:
+                score_top1_candidato = max(0.0, round(_safe_float(score_top1_candidato) - _pen, 1))
+            if _zc == "RESTRITO" and veredito in ("APROVADO", "APROVADO COM RESSALVAS",
+                                                  "OCEANO_AZUL", "OCEANO AZUL"):
+                veredito = "INVESTIGAR MAIS"
+            _alerta_z = (
+                f"Zoneamento {_zsig}: atividade de academia {'INADEQUADA (vedada)' if _zc=='RESTRITO' else 'condicionada a restrições'} "
+                f"no top candidato — score ajustado -{_pen:.0f}. Validar adequabilidade locacional (CAL Fortaleza) antes de fechar."
+            )
+            if _alerta_z not in alertas_financeiros:
+                alertas_financeiros.append(_alerta_z)
+
     # ── Guard financeiro: ticket Premium fora da banda local ──
     modelo_recomendado = (inner_fin.get("recomendacao_modelo") or "").strip()
     cenarios = inner_fin.get("cenarios") or {}
