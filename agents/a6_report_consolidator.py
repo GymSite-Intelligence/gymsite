@@ -2086,12 +2086,29 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 logger.warning("A6 geocode Nominatim falhou", exc_info=True, extra={"agent": "A6"})
         _cand_geo = next((c for c in top_3 if isinstance(c, dict)
                           and c.get("lat") is not None and c.get("lng") is not None), None)
-        if _cz_cid and _cand_geo:
+        # Zoneamento é do BAIRRO, não do imóvel: sem candidato-âncora (todos fora de
+        # spec/bairro), cai no CENTROIDE do bairro p/ o mapa de polígono + a compat
+        # LUOS renderizarem mesmo assim. O furo regulatório do bairro independe de
+        # ter listing in-spec disponível agora.
+        _zlat = _zlon = None
+        _zend = None
+        if _cand_geo:
+            _zlat, _zlon = float(_cand_geo["lat"]), float(_cand_geo["lng"])
+            _zend = _cand_geo.get("endereco")
+        elif _cz_cid and _cz_bai:
+            try:
+                from tools.nominatim_geocoder import nominatim_geocode
+
+                _gc = nominatim_geocode(f"{_cz_bai}, {_cz_cid}, {_cz_uf}, Brasil")
+                if _gc:
+                    _zlat, _zlon, _zend = _gc["lat"], _gc["lon"], _gc.get("display_name")
+            except Exception:
+                logger.warning("A6 geocode centroide bairro falhou", exc_info=True, extra={"agent": "A6"})
+        if _cz_cid and _zlat is not None and _zlon is not None:
             _z = analisar_zoneamento_candidato(
-                _cz_cid, _cz_bai, _cz_uf,
-                float(_cand_geo["lat"]), float(_cand_geo["lng"]),
-                endereco=_cand_geo.get("endereco"))
+                _cz_cid, _cz_bai, _cz_uf, float(_zlat), float(_zlon), endereco=_zend)
             if isinstance(_z, dict) and _z.get("status") in ("ok", "fora_de_zona"):
+                _z["ancora"] = "imovel" if _cand_geo else "centroide_bairro"
                 zoneamento_block = _z
     except Exception:
         logger.warning("A6 zoneamento falhou", exc_info=True, extra={"agent": "A6"})

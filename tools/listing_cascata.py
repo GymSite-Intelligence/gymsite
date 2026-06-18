@@ -95,20 +95,97 @@ def buscar_listings_searchapi(cidade: str, bairro: str, uf: str, **kw) -> list[d
     return out
 
 
-def geocodar_candidatos(candidatos: list[dict], cidade: str, bairro: str, uf: str) -> list[dict]:
-    """Nominatim preenche lat/lon nos candidatos sem coordenada (habilita zoneamento)."""
-    from tools.nominatim_geocoder import nominatim_geocode
+import math
+import unicodedata
 
+
+def _norm_bairro(s: str) -> str:
+    s = unicodedata.normalize("NFKD", str(s or "").lower()).encode("ascii", "ignore").decode()
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def extrair_bairro_anuncio(titulo: str, snippet: str = "") -> str | None:
+    """Bairro embutido no anúncio OLX. Formato típico: 'Apartamento à venda -
+    Meireles, Fortaleza - CE 123'. Pega o token entre o 1º ' - ' e a vírgula.
+    É o sinal mais forte e barato de bairro real (sem geocode)."""
+    blob = f"{titulo or ''}"
+    m = re.search(r"-\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\s]{2,40}?)\s*,", blob)
+    if m:
+        cand = m.group(1).strip()
+        # descarta capturas óbvias de tipo de imóvel (não é bairro)
+        if not re.search(r"\b(apartamento|casa|sala|loja|galp|terreno|ponto|quarto|comercial)\b",
+                         _norm_bairro(cand)):
+            return cand
+    return None
+
+
+def filtrar_por_bairro(candidatos: list[dict], cidade: str, bairro: str, uf: str) -> list[dict]:
+    """Descarta listings que NÃO caem no bairro alvo (vazamento do SearchAPI: traz
+    anúncio de Meireles/Guararapes/Caucaia numa busca de Cocó). Dois sinais:
+      1) bairro textual do título OLX ≠ alvo → dropa (barato, sem API);
+      2) geocode do anúncio: suburb/neighbourhood do Nominatim ≠ alvo, OU distância
+         ao centroide do bairro > raio (param) → dropa.
+    Sobreviventes ficam com lat/lon REAL do anúncio (não centroide do bairro)."""
+    from tools.nominatim_geocoder import nominatim_geocode
+    from tools.parametros_metodologia import param
+
+    alvo = _norm_bairro(bairro)
+    if not alvo:
+        return candidatos
+    raio = param("cascata_raio_bairro_km") or 2.0
+
+    # Centroide do bairro alvo (uma vez) p/ a checagem de raio.
+    cen = nominatim_geocode(f"{bairro}, {cidade}, {uf}, Brasil")
+    clat = cen["lat"] if cen else None
+    clon = cen["lon"] if cen else None
+
+    out: list[dict] = []
     for c in candidatos:
-        if c.get("latitude") is not None and c.get("longitude") is not None:
-            continue
-        end = c.get("endereco") or f"{c.get('bairro') or bairro}, {cidade}, {uf}, Brasil"
-        geo = nominatim_geocode(end)
+        # (1) bairro textual do título
+        bt = extrair_bairro_anuncio(c.get("titulo") or "", c.get("snippet") or "")
+        if bt:
+            btn = _norm_bairro(bt)
+            if btn and btn != alvo and alvo not in btn and btn not in alvo:
+                c["descarte_motivo"] = f"bairro do anúncio '{bt}' ≠ '{bairro}'"
+                continue
+
+        # (2) geocode real do anúncio (rua/bairro do título), checa suburb + raio
+        consulta = c.get("endereco") or (
+            f"{bt}, {cidade}, {uf}, Brasil" if bt else f"{bairro}, {cidade}, {uf}, Brasil")
+        geo = nominatim_geocode(consulta)
         if geo:
             c["latitude"], c["longitude"] = geo["lat"], geo["lon"]
             c["endereco"] = c.get("endereco") or geo.get("display_name")
             c["geocode_fonte"] = "nominatim"
-    return candidatos
+            addr = geo.get("address") or {}
+            sub = _norm_bairro(addr.get("suburb") or addr.get("neighbourhood")
+                               or addr.get("city_district") or "")
+            if sub and sub != alvo and alvo not in sub and sub not in alvo:
+                c["descarte_motivo"] = f"suburb geocode '{sub}' ≠ '{bairro}'"
+                continue
+            if clat is not None and clon is not None:
+                dist = _haversine_km(geo["lat"], geo["lon"], clat, clon)
+                if dist > raio:
+                    c["descarte_motivo"] = f"{dist:.1f}km do centroide > {raio}km"
+                    continue
+        out.append(c)
+    return out
+
+
+def geocodar_candidatos(candidatos: list[dict], cidade: str, bairro: str, uf: str) -> list[dict]:
+    """Filtra por bairro (descarta vazamento) E preenche lat/lon real do anúncio.
+    Substitui o geocode-no-centroide ingênuo, que dava o mesmo ponto pra todo
+    anúncio e deixava Meireles passar por Cocó."""
+    return filtrar_por_bairro(candidatos, cidade, bairro, uf)
 
 
 def rankear_candidatos(candidatos: list[dict], area_min: int, area_max: int) -> list[dict]:
