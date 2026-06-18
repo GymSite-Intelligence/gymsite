@@ -176,6 +176,13 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 <div class="note">Pico de movimento: <strong>{{ pico.faixa }}</strong> ({{ pico.concentracao_pct }}% da lotação nas 3 horas de topo). Janela de maior disputa — e de maior demanda capturável.</div>
 {% endif %}{% endif %}
 
+{% if planos %}
+<div class="sec">Planos e preços da concorrência</div>
+<table class="d"><tr><th>Academia</th><th>Plano</th><th>Preço/mês</th><th>Fidelidade</th><th>Inclui</th></tr>
+{% for p in planos %}<tr><td>{{ p.academia }}</td><td>{{ p.plano }}</td><td>{{ p.preco }}</td><td>{{ p.fidelidade }}</td><td style="font-size:8pt;">{{ p.inclui }}</td></tr>{% endfor %}
+</table>
+<div class="note">Planos públicos coletados via SearchAPI (busca web) por academia. Referência para o posicionamento tarifário vs concorrência.</div>{% endif %}
+
 {% if aneis %}
 <div class="sec">Anéis Competitivos (score ponderado por distância)</div>
 <div class="kpis">
@@ -644,6 +651,20 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "bairro": c.bairro or "—", "h24": "sim" if c.tem_24h else "—",
     } for c in (model.competidores or [])]
 
+    # Quadro planos × preços da concorrência (SearchAPI). Só com dado real.
+    planos = []
+    for c in (model.competidores or []):
+        for p in (c.planos_precos or [])[:2]:
+            if isinstance(p, dict) and p.get("preco_mensal"):
+                inclui = p.get("inclui") or []
+                planos.append({
+                    "academia": (c.nome or "—")[:24],
+                    "plano": str(p.get("plano") or "—")[:24],
+                    "preco": str(p.get("preco_mensal") or "—")[:14],
+                    "fidelidade": str(p.get("fidelidade") or "—")[:16],
+                    "inclui": ", ".join(str(x) for x in inclui[:2])[:46] if isinstance(inclui, list) else "—",
+                })
+
     # Candidato fora do bairro/cidade-alvo: GeoScout às vezes devolve imóvel de outra
     # praça (sem vago no bairro). Flag espelha o aviso da UI — o referencial de
     # viabilidade é do bairro-alvo; o imóvel é só ponto de partida físico.
@@ -747,7 +768,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         },
         "mercado": mercado, "panorama": panorama, "demografia": demografia,
         "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
-        "competidores": competidores, "pico": meta.get("pico"),
+        "competidores": competidores, "planos": planos[:12], "pico": meta.get("pico"),
         "aneis": _aneis(meta.get("aneis_competitivos")),
         "cobertura": _cobertura(meta.get("cobertura_redes_a0")),
         "obras": _obras(meta.get("obras_cno_em_curso")),

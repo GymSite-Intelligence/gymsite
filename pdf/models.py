@@ -71,6 +71,7 @@ class CompetidorPdf:
     num_avaliacoes: int | None
     bairro: str | None
     tem_24h: bool | None
+    planos_precos: list | None = None
 
 
 @dataclass

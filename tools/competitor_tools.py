@@ -2075,6 +2075,68 @@ def _reviews_baixa_nota_searchapi(place_id: str, max_reviews: int = 10) -> list[
     return out
 
 
+def _planos_precos_searchapi(nome: str, bairro: str, cidade: str) -> list | None:
+    """Planos × preços via SearchAPI (engine=google_light): puxa os organic_results
+    (título/snippet/link) e EXTRAI o JSON de planos com Gemini. Determinístico na coleta
+    (SearchAPI, não LLM-grounding que vinha None), barato. None se sem key/resultado."""
+    import os as _os
+
+    key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
+    if not key:
+        return None
+    q = f'{nome} planos preço mensalidade {bairro or cidade} {cidade}'
+    try:
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("planos_precos", "searchapi_google_light", 1):
+            with httpx.Client(timeout=25) as c:
+                data = c.get(
+                    "https://www.searchapi.io/api/v1/search",
+                    params={"engine": "google_light", "q": q, "gl": "br", "hl": "pt-br"},
+                    headers={"Authorization": f"Bearer {key}"},
+                ).json()
+    except Exception as exc:
+        logger.debug("searchapi google_light planos '%s': %s", nome, exc)
+        return None
+
+    orgs = data.get("organic_results") or []
+    blob = "\n".join(
+        f"{o.get('title','')} — {o.get('snippet','')} ({o.get('link','')})"
+        for o in orgs[:8] if isinstance(o, dict)
+    ).strip()
+    # KB de respostas (some engines retornam 'answer_box'/'knowledge_graph')
+    if isinstance(data.get("answer_box"), dict):
+        blob = str(data["answer_box"].get("answer") or "") + "\n" + blob
+    if not blob or "R$" not in blob and "plano" not in blob.lower():
+        return None
+    try:
+        import json as _json
+
+        from tools._genai_client import build_genai_client, generate_content_resilient
+
+        prompt = (
+            "Resultados de busca sobre planos/mensalidades de uma academia. Extraia em "
+            "JSON array PURO (sem markdown), até 4 planos REAIS achados no texto:\n"
+            '[{"plano":"<nome>","preco_mensal":"R$ X","inclui":["..."],'
+            '"fidelidade":"<12 meses|sem fidelidade|null>"}]\n'
+            "Use SÓ preços/planos explícitos no texto. NÃO invente. Sem preço confiável → [].\n\n"
+            f"ACADEMIA: {nome} ({cidade})\nBUSCA:\n{blob[:6000]}"
+        )
+        client = build_genai_client()
+        resp = generate_content_resilient(
+            client, model="gemini-2.5-flash", contents=[prompt], max_retries=2, base_delay=3.0)
+        txt = (resp.text or "").strip()
+        ini = txt.find("[")
+        if ini < 0:
+            return None
+        arr, _ = _json.JSONDecoder().raw_decode(txt[ini:])
+        if isinstance(arr, list) and arr:
+            return [p for p in arr[:4] if isinstance(p, dict) and p.get("preco_mensal")] or None
+    except Exception as exc:
+        logger.debug("planos searchapi extração '%s': %s", nome, exc)
+    return None
+
+
 async def _planos_precos_grounding(nome: str, bairro: str, cidade: str) -> list | None:
     """Planos × preços públicos da academia via Gemini Search Grounding.
 
@@ -2361,9 +2423,14 @@ async def analisar_concorrentes_a3a_completo(
         # é decisão de posicionamento — sem preço confiável, fica None.
         planos_precos: list | None = None
         try:
-            planos_precos = await _planos_precos_grounding(
-                nome, c.get("bairro_concorrente") or bairro, cidade
-            )
+            # SearchAPI (google_light) PRIMEIRO — coleta determinística do JSON da busca;
+            # o grounding-LLM vinha None demais. Fallback pro grounding se SearchAPI vazio.
+            import asyncio as _asyncio
+
+            _bai = c.get("bairro_concorrente") or bairro
+            planos_precos = await _asyncio.to_thread(_planos_precos_searchapi, nome, _bai, cidade)
+            if not planos_precos:
+                planos_precos = await _planos_precos_grounding(nome, _bai, cidade)
         except Exception as e:
             logger.warning(f"[A3a planos_precos] {nome}: {type(e).__name__}: {e}")
 

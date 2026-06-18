@@ -126,6 +126,7 @@ def _map_competidor(row: dict[str, Any]) -> CompetidorPdf:
         num_avaliacoes=_int(row.get("num_avaliacoes")),
         bairro=str(row.get("bairro_concorrente") or "") or None,
         tem_24h=bool(row.get("tem_24h")) if row.get("tem_24h") is not None else None,
+        planos_precos=row.get("planos_precos") if isinstance(row.get("planos_precos"), list) else None,
     )
 
 
