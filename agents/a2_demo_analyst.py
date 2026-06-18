@@ -19,6 +19,7 @@ fix a4-renda-2022). Migrar p/ IBGE 2022 é fix à parte (muda score_demografico)
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import AsyncGenerator
 
 from google.adk.agents import BaseAgent
@@ -111,6 +112,34 @@ class DemoAnalystAgent(BaseAgent):
                             insights = insights + [linha]
                 except Exception as e:
                     print(f"[A2 gancho sexo×idade] falha (degrada): {type(e).__name__}: {e}")
+                # Cross-query de SETOR (#5 Apontamento 1, forma prod-viável): densidade
+                # populacional no raio do bairro via espelho censo_setor (não BQ-runtime,
+                # que falha em prod). Flag A2_FONTE: 'espelho' (default) liga, 'rest' pula.
+                # Enriquece só (renda/faixa seguem das fontes atuais); degrada limpo.
+                if os.getenv("A2_FONTE", "espelho").strip().lower() != "rest":
+                    try:
+                        from tools.censo_setor_tools import demografia_setor_censo
+                        from tools.nominatim_geocoder import nominatim_geocode
+
+                        _lat = r.get("latitude") or r.get("lat")
+                        _lng = r.get("longitude") or r.get("lng")
+                        if _lat is None or _lng is None:
+                            _g = await asyncio.to_thread(
+                                nominatim_geocode, f"{bairro}, {cidade}, {uf}, Brasil"
+                            )
+                            if _g:
+                                _lat, _lng = _g["lat"], _g["lon"]
+                        if _lat is not None and _lng is not None:
+                            setor = await asyncio.to_thread(
+                                lambda la, lo, idm: demografia_setor_censo(
+                                    la, lo, id_municipio=idm),
+                                float(_lat), float(_lng),
+                                str(r.get("codigo_ibge") or "") or None,
+                            )
+                            if isinstance(setor, dict) and setor.get("populacao"):
+                                r = {**r, "densidade_setor": setor}
+                    except Exception as e:
+                        print(f"[A2 densidade setor] falha (degrada): {type(e).__name__}: {e}")
                 r = {**r, "insights": insights}
         except Exception as e:  # nunca derruba o pipeline — A6 degrada com score None
             print(f"[A2 determinístico] falha: {type(e).__name__}: {e}")
