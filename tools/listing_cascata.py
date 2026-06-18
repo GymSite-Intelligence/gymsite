@@ -59,6 +59,10 @@ def extrair_dados_listing(result: dict) -> dict | None:
             preco = float(t)
         except ValueError:
             preco = None
+        # Sanity: aluguel comercial mensal ~R$1k–100k. >100k = preço de VENDA misturado
+        # no snippet (não é aluguel) → descarta o preço, mantém o imóvel.
+        if preco is not None and not (1000 <= preco <= 100000):
+            preco = None
     return {
         "fonte": "SearchAPI_OLX", "url": url, "titulo": titulo[:120], "snippet": snippet[:300],
         "area_m2": area, "preco": preco, "bairro": None,

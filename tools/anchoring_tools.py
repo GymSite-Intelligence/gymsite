@@ -580,6 +580,37 @@ def _fetch_listings_como_candidatos(
     area_min = int(params.get("area_m2_min", 500))
     area_max = int(params.get("area_m2_max", 5000))
 
+    # ── Cascata P1 (bairro-scoped): busca imóvel NO BAIRRO-alvo (não city-wide) ──
+    # O scrape OLX/ImovelWeb é city-level ('cidade-e-regiao') → vinha imóvel de
+    # Maracanaú num relatório de Cocó. A cascata usa query otimizada por bairro
+    # (anúncio individual) + Nominatim (lat/lng grátis). Candidato bairro-correto.
+    casc_cands: list[dict] = []
+    _bai = (params.get("bairro") or "").strip()
+    if _bai and _bai != "(cidade inteira)":
+        try:
+            from tools.listing_cascata import buscar_candidatos_cascata
+
+            for i, c in enumerate(buscar_candidatos_cascata(cidade, _bai, uf, area_min, area_max)[:10]):
+                if not c.get("area_m2"):
+                    continue
+                casc_cands.append({
+                    "place_id": f"cascata_olx_{i}",
+                    "nome": f"Imóvel anunciado · {c.get('area_m2')}m² · OLX",
+                    "endereco": c.get("endereco") or f"{_bai}, {cidade}, {uf}",
+                    "lat": c.get("latitude") or lat_fallback,
+                    "lng": c.get("longitude") or lng_fallback,
+                    "tipos": ["imovel_anunciado", "comercial", "olx"],
+                    "area_estimada_m2": c.get("area_m2"),
+                    "score_geoscout": 8.5, "qualidade_sinal": "direto-listing-bairro",
+                    "fonte": "cascata", "source": "olx_cascata",
+                    "listing_url": c.get("url"), "price_raw": (f"R$ {c.get('preco'):.0f}" if c.get("preco") else None),
+                    "modalidade": "locacao", "geocoded": c.get("latitude") is not None,
+                    "score_ancoragem": 0.0, "polos_geradores": [],
+                    "motivo": f"Imóvel anunciado em {_bai} (OLX, busca por bairro). Acessar listing_url.",
+                })
+        except Exception as e:
+            log.warning("cascata P1 falhou — %s", e)
+
     # Importa só agora pra evitar custo de import (playwright) quando A1 não
     # usa listings (ex: testes unitários focados em âncoras).
     try:
@@ -587,7 +618,7 @@ def _fetch_listings_como_candidatos(
         from tools.maps_tools import geocode_endereco
     except Exception as e:
         log.warning("listings: imports falharam — %s", e)
-        return []
+        return casc_cands
 
     def _runner():
         loop = asyncio.new_event_loop()
@@ -603,10 +634,10 @@ def _fetch_listings_como_candidatos(
             listings = ex.submit(_runner).result(timeout=180)
     except Exception as e:
         log.warning("listings: scraper falhou — %s", e)
-        return []
+        return casc_cands
 
     if not listings:
-        return []
+        return casc_cands
 
     # Limita aos top 15 por área pra controlar custo de geocode
     listings = listings[:15]
@@ -673,4 +704,7 @@ def _fetch_listings_como_candidatos(
             "website": l.listing_url,
         })
 
+    # Cascata (bairro-correto) primeiro; scrape city-level depois. Dedup por listing_url.
+    _urls = {c.get("listing_url") for c in casc_cands if c.get("listing_url")}
+    candidatos = casc_cands + [c for c in candidatos if c.get("listing_url") not in _urls]
     return candidatos
