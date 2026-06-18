@@ -128,6 +128,82 @@ def _classificar(zona_sigla: str) -> dict:
             "descricao": "Atividade inadequada/vedada na zona. Necessita análise técnica."}
 
 
+_COR_ZONA = {
+    "ZEDUS": "#16A34A", "ZOC": "#16A34A", "ZEU": "#16A34A",  # comerciais → permissivo
+    "ZEIS": "#DC2626", "ZEA": "#DC2626",                      # restritivos
+    "ZEPH": "#D97706", "ZEPO": "#D97706", "ZEI": "#D97706", "AEA": "#D97706",
+}
+
+
+def _cor_de_sigla(s: str) -> str:
+    s = (s or "").upper()
+    for k, v in _COR_ZONA.items():
+        if s.startswith(k):
+            return v
+    return "#64748B"
+
+
+def _svg_mapa_zonas(lat: float, lon: float, polygons: list, *, raio: float = 0.025) -> str | None:
+    """SVG self-contained dos POLÍGONOS de zona perto do candidato (não marcador de
+    imóvel): cada zona colorida por tipo + ponto do candidato. Sem Google/key. Embutível
+    inline no PDF (WeasyPrint) e na UI. raio em graus (~2,5 km)."""
+    prox = []
+    for p in (polygons or []):
+        poly = p.get("polygon")
+        if not poly:
+            continue
+        if any(abs(lo - lon) <= raio and abs(la - lat) <= raio for lo, la in poly):
+            prox.append(p)
+    if not prox:
+        return None
+    xs = [lo for p in prox for lo, _ in p["polygon"]] + [lon]
+    ys = [la for p in prox for _, la in p["polygon"]] + [lat]
+    minx, maxx, miny, maxy = min(xs), max(xs), min(ys), max(ys)
+    W, H, pad = 560.0, 300.0, 8.0
+    dx, dy = (maxx - minx) or 1e-6, (maxy - miny) or 1e-6
+    sc = min((W - 2 * pad) / dx, (H - 2 * pad) / dy)
+
+    def _px(lo, la):
+        return (pad + (lo - minx) * sc, pad + (maxy - la) * sc)  # flip y (lat sobe)
+
+    partes = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W:.0f} {H:.0f}" '
+              f'style="width:100%;border:1px solid #E2E8F0;border-radius:4px;background:#F8FAFC;">']
+    for p in prox[:40]:
+        poly = p["polygon"]
+        step = max(1, len(poly) // 50)  # amostra ~50 vértices/polígono (tamanho do SVG)
+        poly = poly[::step]
+        pts = " ".join(f"{x:.1f},{y:.1f}" for x, y in (_px(lo, la) for lo, la in poly))
+        cor = _cor_de_sigla(p.get("sigla_zona") or p.get("tipo_zona") or p.get("folder") or "")
+        partes.append(f'<polygon points="{pts}" fill="{cor}" fill-opacity="0.22" stroke="{cor}" stroke-width="1"/>')
+    cx, cy = _px(lon, lat)
+    partes.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="5" fill="#0F172A" stroke="#fff" stroke-width="2"/>')
+    partes.append('</svg>')
+    return "".join(partes)
+
+
+def _mapa_estatico_url(lat: float, lon: float, polygon: list | None, compat: str) -> str | None:
+    """URL do mapa estático (Google Maps Static API): candidato (marcador) + polígono da
+    zona (quando há), colorido pela compatibilidade. None se sem key. Embutível no PDF/UI.
+    (Maps Static API habilitada no projeto; a key serve server-side como o Street View.)"""
+    try:
+        from tools.google_maps_key import get_google_maps_api_key
+
+        key = get_google_maps_api_key()
+    except Exception:
+        key = ""
+    if not key:
+        return None
+    cor = {"PERMISSIVO": "0x16A34A", "CONDICIONADO": "0xD97706", "RESTRITO": "0xDC2626"}.get(compat, "0x0E5C66")
+    parts = [f"center={lat},{lon}", "zoom=15", "size=560x230", "scale=2", "language=pt-BR",
+             f"markers=color:red%7C{lat},{lon}"]
+    if polygon and len(polygon) >= 3:
+        step = max(1, len(polygon) // 40)  # Static Maps limita o tamanho da URL
+        pts = polygon[::step]
+        path = "%7C".join(f"{la},{lo}" for lo, la in pts)  # polygon = (lon,lat)
+        parts.append(f"path=color:{cor}A0%7Cfillcolor:{cor}30%7Cweight:2%7C{path}")
+    return f"https://maps.googleapis.com/maps/api/staticmap?{'&'.join(parts)}&key={key}"
+
+
 def _zedus_params(nome_geo: str) -> dict:
     from tools.catalogos import catalogo
 
@@ -172,6 +248,7 @@ def analisar_zoneamento_candidato(cidade: str, bairro: str, uf: str,
                 "zona_sigla": "USO GERAL", "nome_geo": bairro,
                 "descricao": "Fora de zona especial — uso geral (ZOC/ZEU), academia permitida.",
                 "restricoes": [], "alerta": None,
+                "mapa_svg": _svg_mapa_zonas(latitude, longitude, polys),
                 "fonte_dados": f"CKAN_{cidade.upper()}"}
 
     sigla = (zona.get("sigla_zona") or zona.get("tipo_zona") or "").strip()
@@ -186,6 +263,7 @@ def analisar_zoneamento_candidato(cidade: str, bairro: str, uf: str,
         **cls,
         "ia_maximo": params.get("ia_max"), "taxa_ocupacao": params.get("tx_ocup"),
         "altura_max": params.get("altura_max"), "restricoes": [], "alerta": None,
+        "mapa_svg": _svg_mapa_zonas(latitude, longitude, polys),
         "fonte_dados": f"CKAN_{cidade.upper()}",
         "fonte_url": f"https://dados.fortaleza.ce.gov.br/dataset/{cfg.get('dataset_zonas')}",
     }

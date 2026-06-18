@@ -67,7 +67,8 @@ table.d td { padding:7px 9px; font-size:8.5pt; color:#1E293B; border-bottom:1px 
 table.d th:first-child, table.d td:first-child { text-align:left; }
 table.d tr { page-break-inside:avoid; }
 table.d tr:nth-child(even) td { background:#F8FAFC; }
-.kpis, .timing, .errc, .duo, .veredito, .gapc, .alert, .pico { page-break-inside:avoid; }
+.kpis, .timing, .errc, .duo, .veredito, .gapc, .alert, .pico { page-break-inside:avoid; break-inside:avoid; }
+table.d thead { display:table-header-group; }
 .rec td { background:#ECFDF5 !important; font-weight:bold; }
 .pill { display:inline-block; padding:1px 7px; border-radius:9px; font-size:7.5pt; font-weight:bold; }
 .pill.ok { background:#DCFCE7; color:#166534; } .pill.no { background:#FEE2E2; color:#991B1B; } .pill.mid { background:#FEF9C3; color:#854D0E; }
@@ -319,6 +320,7 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 {% if zoneamento %}
 <div style="page-break-inside:avoid;">
 <div class="sec">Análise de zoneamento urbano</div>
+{% if zoneamento.mapa_svg %}<div style="margin-bottom:10px;">{{ zoneamento.mapa_svg | safe }}<div class="note" style="margin-top:2px;">Polígonos das zonas especiais (Plano Diretor) no entorno · verde = comercial/permissivo · vermelho = ZEIS/ZEA restritivo · âmbar = ZEPH/patrimônio · ponto = candidato.</div></div>{% endif %}
 <div class="duo" style="margin-bottom:10px;">
   <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Zona identificada</div><div class="v">{{ zoneamento.zona }}</div></div>
   <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Compatibilidade — CNAE {{ zoneamento.cnae }}</div><div class="v" style="color:{{ zoneamento.cor }};">{{ zoneamento.compat }}</div><div style="font-size:8pt; color:#64748B;">Subgrupo {{ zoneamento.subgrupo }} · Classe {{ zoneamento.classe }}</div></div>
@@ -333,12 +335,16 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 <div class="note">Fonte: {{ zoneamento.fonte }} · Plano Diretor / LUOS 236/2017. Camada de viabilidade regulatória — valida se a zona permite academia antes do financeiro.</div>
 </div>{% endif %}
 
+{% if candidatos or candidatos_descartados %}
+<div class="sec">Top Candidatos (Imóveis em {{ bairro }})</div>
 {% if candidatos %}
-<div class="sec">Top Candidatos (Imóveis)</div>
-{% if candidatos_algum_fora %}<div class="note" style="background:#FEF2F2; border:1px solid #FECACA; border-radius:5px; padding:8px 12px; color:#7F1D1D; margin-bottom:6px;">⚠ Imóveis marcados <strong>(fora)</strong> estão em bairro/cidade vizinha — o GeoScout não achou vago em {{ bairro }}. O referencial de viabilidade (demografia, concorrência, aluguel) é de <strong>{{ bairro }}</strong> e independe do imóvel; trate-os como ponto de partida físico, não como o veredito do bairro.</div>{% endif %}
-<table class="d"><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Local</th><th>Geo</th><th>Ancor.</th><th>Endereço</th></tr>
-{% for c in candidatos %}<tr><td>{{ c.pos }}</td><td>{{ c.nome }}</td><td>{{ c.tipo }}</td><td>{% if c.fora %}<span class="pill no">fora</span>{% else %}<span class="pill ok">bairro</span>{% endif %}</td><td>{{ c.geo }}</td><td>{{ c.ancor }}</td><td style="font-size:8pt;">{{ c.endereco }}</td></tr>{% endfor %}
-</table>{% endif %}
+<table class="d"><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Geo</th><th>Ancor.</th><th>Endereço</th></tr>
+{% for c in candidatos %}<tr><td>{{ c.pos }}</td><td>{{ c.nome }}</td><td>{{ c.tipo }}</td><td>{{ c.geo }}</td><td>{{ c.ancor }}</td><td style="font-size:8pt;">{{ c.endereco }}</td></tr>{% endfor %}
+</table>
+{% else %}
+<div class="alert" style="background:#FEF2F2; border-color:#FECACA;"><div style="font-size:8.5pt; color:#7F1D1D;">Nenhum imóvel anunciado dentro das especificações ({{ bairro }}, {{ area }}) passou no filtro. {{ candidatos_descartados }} fora do bairro/faixa foram descartados — não exibimos imóvel incorreto. O referencial de viabilidade (demografia, concorrência, aluguel) é do bairro e independe de imóvel específico.</div></div>
+{% endif %}
+{% if candidatos and candidatos_descartados %}<div class="note">{{ candidatos_descartados }} imóvel(is) fora do bairro/faixa descartado(s) — só candidatos em {{ bairro }} dentro da especificação.</div>{% endif %}{% endif %}
 
 {% if alertas %}
 <div class="sec">Alertas e Ressalvas</div>
@@ -810,21 +816,25 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     # Candidato fora do bairro/cidade-alvo: GeoScout às vezes devolve imóvel de outra
     # praça (sem vago no bairro). Flag espelha o aviso da UI — o referencial de
     # viabilidade é do bairro-alvo; o imóvel é só ponto de partida físico.
+    # GATE de spec (regra do usuário): NÃO renderizar imóvel fora das especificações —
+    # bairro-alvo no endereço E área dentro da faixa. Imóvel errado não vira sugestão.
     _alvo_b = _norm_txt(model.bairro)
     candidatos = []
-    algum_fora = False
+    _descartados_fora = 0
     for c in (model.candidatos or []):
         end_norm = _norm_txt(c.endereco or "")
-        # Espelha a UI: fora = bairro-alvo não aparece no endereço (mesmo na mesma cidade).
-        fora = bool(_alvo_b) and _alvo_b not in end_norm
-        if fora:
-            algum_fora = True
+        no_bairro = (not _alvo_b) or (_alvo_b in end_norm)
+        area_ok = (c.area_m2 is None) or (model.area_m2_min <= (c.area_m2 or 0) <= model.area_m2_max * 1.25)
+        if not (no_bairro and area_ok):
+            _descartados_fora += 1
+            continue
         candidatos.append({
-            "pos": c.posicao, "nome": c.nome[:34], "tipo": (c.tipo_imovel_label or "—")[:18],
+            "pos": len(candidatos) + 1, "nome": c.nome[:34], "tipo": (c.tipo_imovel_label or "—")[:18],
             "geo": f"{c.score_geoscout:.1f}" if c.score_geoscout is not None else "—",
             "ancor": f"{c.score_ancoragem:.1f}" if c.score_ancoragem is not None else "—",
-            "endereco": (c.endereco or "—")[:60], "fora": fora,
+            "endereco": (c.endereco or "—")[:60],
         })
+    algum_fora = _descartados_fora > 0
 
     bairros_viz = [{
         "bairro": b.bairro or "—",
@@ -848,6 +858,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "ia": zm.get("ia_maximo"), "tx": zm.get("taxa_ocupacao"), "alt": zm.get("altura_max"),
             "restricoes": [str(r) for r in (zm.get("restricoes") or [])][:4],
             "alerta": zm.get("alerta"),
+            "mapa_svg": zm.get("mapa_svg"),
             "fonte": zm.get("fonte_dados") or "CKAN", "cnae": zm.get("cnae") or "9313-1/00",
         }
 
@@ -935,7 +946,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "cobertura": _cobertura(meta.get("cobertura_redes_a0")),
         "obras": _obras(meta.get("obras_cno_em_curso")),
         "novas_unidades": novas_unidades,
-        "candidatos": candidatos, "candidatos_algum_fora": algum_fora,
+        "candidatos": candidatos, "candidatos_descartados": _descartados_fora,
         "zoneamento": zoneamento,
         "bairros_viz": bairros_viz, "demanda": demanda,
         "alertas": _filtrar_alertas(model.alertas)[:12],
