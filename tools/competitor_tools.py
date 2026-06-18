@@ -379,8 +379,15 @@ def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
     nome_blob = _norm_txt(c.get("nome") or "")
 
     if tn == "academia":
-        # categoria especializada (ex.: "Academia de crossfit", "Artes marciais") → fora
-        return not any(_norm_txt(k) in tipos_blob for k in _TIPO_OFF_ACADEMIA)
+        # categoria especializada (ex.: "Academia de crossfit", "Artes marciais") → fora.
+        # Também checa o NOME (o A3b-LLM às vezes dropa `tipos`; REK/Eikō trazem a
+        # especialidade no nome). Off-list do nome SEM 'natacao' (academia c/ piscina fica).
+        if any(_norm_txt(k) in tipos_blob for k in _TIPO_OFF_ACADEMIA):
+            return False
+        _OFF_NOME = ("crossfit", "cross training", "cross fit", "artes marciais", "jiu",
+                     "muay", "boxe", "judo", "karate", "taekwondo", "mma", "pilates",
+                     "ballet", "dojo", "luta livre", "escola de danca")
+        return not any(_norm_txt(k) in nome_blob for k in _OFF_NOME)
     on = _TIPO_ON_KW.get(tn)
     if not on:  # 'outro' ou tipo sem regra → sem filtro
         return True

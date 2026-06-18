@@ -145,3 +145,42 @@ regras_payload:
     ],
     output_key="inteligencia_competitiva",
 )
+
+
+def _a3b_filtrar_concorrentes(callback_context, *args, **kwargs):
+    """Filtro AUTORITATIVO pós-A3b: o LLM re-emite a lista (e às vezes dropa `tipos`);
+    aqui dropamos vizinho-de-bairro + off-type (CrossFit/Artes Marciais em 'academia')
+    DETERMINISTICAMENTE no inteligencia_competitiva — governa a tabela competidores, os
+    cards do A6 e o markdown (todos leem essa chave). Best-effort, nunca derruba."""
+    try:
+        from tools.competitor_tools import (
+            _parse_market_context,
+            filtrar_concorrentes_bairro_tipo,
+        )
+
+        st = callback_context.state
+        ic = st.get("inteligencia_competitiva")
+        ic = ic if isinstance(ic, dict) else _parse_market_context(ic)
+        if not isinstance(ic, dict):
+            return None
+        inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+        lista = inner.get("concorrentes_detalhados") if isinstance(inner, dict) else None
+        if not isinstance(lista, list) or not lista:
+            return None
+        mc = _parse_market_context(st.get("market_context"))
+        mci = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
+        ip = st.get("input_params") if isinstance(st.get("input_params"), dict) else {}
+        bairro = (st.get("bairro") or ip.get("bairro")
+                  or (mci.get("bairro") if isinstance(mci, dict) else "") or "")
+        tipo = (ip.get("tipo_negocio") or (mci.get("tipo_negocio") if isinstance(mci, dict) else "")
+                or "academia")
+        inner["concorrentes_detalhados"] = filtrar_concorrentes_bairro_tipo(
+            lista, bairro=bairro, tipo_negocio=tipo
+        )
+        st["inteligencia_competitiva"] = ic
+    except Exception:
+        pass
+    return None
+
+
+competitor_analysis_agent.after_agent_callback = _a3b_filtrar_concorrentes

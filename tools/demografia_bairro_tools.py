@@ -86,6 +86,16 @@ def demografia_bairro(
 
         geo = geocode_endereco(f"{bairro}, {cidade}, Brasil")
         lat, lng = geo.get("lat"), geo.get("lng")
+        # id_municipio às vezes não chega do A6 (market_context sem codigo_ibge) — sem ele o
+        # perfil idade×sexo por setor vinha None. Resolve via IBGE (cidade, uf).
+        if not id_municipio:
+            try:
+                from tools.ibge_tools import buscar_municipio
+
+                _mun = buscar_municipio(cidade, uf or "")
+                id_municipio = (_mun or {}).get("codigo") or id_municipio
+            except Exception:
+                pass
         if lat is not None and lng is not None:
             censo = demografia_setor_censo(lat, lng, id_municipio=id_municipio)
             if censo:
