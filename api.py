@@ -129,6 +129,10 @@ _STALE_MSG = (
 # Não substitui resume parcial do ADK — apenas evita runs de 50+ min.
 _PIPELINE_MAX_WALL_SEC = int(os.getenv("PIPELINE_MAX_WALL_SEC", "1800"))
 _PIPELINE_HEARTBEAT_SEC = int(os.getenv("PIPELINE_HEARTBEAT_SEC", "60"))
+# Teto de CUSTO por execução (CONSTITUTION C9.3 — hard limit de gasto LLM). Um run
+# típico custa ~R$4; default R$20 = ~5x headroom. O retry 429 re-roda o pipeline
+# (até 3x) → sem teto, um pico de quota podia multiplicar o gasto. Recalibrável via env.
+_PIPELINE_MAX_CUSTO_BRL = float(os.getenv("PIPELINE_MAX_CUSTO_BRL", "20.0"))
 
 
 class PipelineWallTimeoutError(TimeoutError):
@@ -140,6 +144,32 @@ class PipelineWallTimeoutError(TimeoutError):
             f"Pipeline excedeu o tempo máximo ({max_min} min). "
             "Use «Gerar novamente»; fora do horário de pico costuma ser mais rápido."
         )
+
+
+class PipelineBudgetExceededError(Exception):
+    """Custo acumulado do run passou de PIPELINE_MAX_CUSTO_BRL (C9.3) — aborta o retry
+    pra não multiplicar gasto num pico de quota."""
+
+    def __init__(self, gasto: float, teto: float) -> None:
+        self.gasto = gasto
+        self.teto = teto
+        super().__init__(
+            f"Custo do run R$ {gasto:.2f} excedeu o teto R$ {teto:.2f} — "
+            "execução abortada para proteger o gasto. Ajuste PIPELINE_MAX_CUSTO_BRL se necessário."
+        )
+
+
+def _custo_acumulado_brl(sb, relatorio_id: str) -> float:
+    """Soma read-only do custo já gasto neste relatório (agentes LLM + APIs externas).
+    Cumulativo entre retries (o DB acumula por relatorio_id). Best-effort — 0.0 se falhar."""
+    total = 0.0
+    for tabela in ("relatorio_custos_agentes", "relatorio_api_calls"):
+        try:
+            res = sb.table(tabela).select("custo_brl").eq("relatorio_id", relatorio_id).execute()
+            total += sum(float(r.get("custo_brl") or 0.0) for r in (res.data or []))
+        except Exception:
+            pass
+    return round(total, 4)
 
 
 def _pipeline_wall_remaining_sec(t0: float) -> float:
@@ -897,6 +927,15 @@ async def _run_pipeline_async_body(
                     or _is_tool_hallucination_error(e)
                 ):
                     last_exc = e
+                    # C9.3: antes de re-rodar o pipeline (caro), checa o teto de custo.
+                    # Sem isso, um pico de 429 podia re-executar tudo 3x e multiplicar o gasto.
+                    _gasto = _custo_acumulado_brl(sb, relatorio_id)
+                    if _gasto > _PIPELINE_MAX_CUSTO_BRL:
+                        logger.error(
+                            "pipeline %s ABORTADO por custo: R$ %.2f > teto R$ %.2f (C9.3)",
+                            relatorio_id, _gasto, _PIPELINE_MAX_CUSTO_BRL,
+                        )
+                        raise PipelineBudgetExceededError(_gasto, _PIPELINE_MAX_CUSTO_BRL) from e
                     continue  # tenta de novo após backoff
                 raise  # outros erros não fazem retry
 
@@ -939,7 +978,7 @@ async def _run_pipeline_async_body(
     except BaseException as e:
         logger.error(f"pipeline {relatorio_id} falhou: {e}\n{traceback.format_exc()}")
         elapsed = int(time.time() - t0)
-        if isinstance(e, PipelineWallTimeoutError):
+        if isinstance(e, (PipelineWallTimeoutError, PipelineBudgetExceededError)):
             erro_amigavel = str(e)
         elif _is_429_error(e):
             erro_amigavel = (
