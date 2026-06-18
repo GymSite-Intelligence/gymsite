@@ -1864,6 +1864,17 @@ def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
             f"mercado com {_frase}", md, flags=re.I,
         )
 
+    # Resumo executivo: substitui o corpo escrito pelo LLM (que descasca — narra raio
+    # 3km / candidato fora-bairro) pelo determinístico já montado no estruturado. O md
+    # passa a bater com o resto do relatório. Mesma fonte do weasy/UI.
+    rexec = (out.get("contato_decisor") or {}).get("resumo_executivo")
+    if rexec:
+        md = re.sub(
+            r"(##[^\n]*Resumo Executivo[^\n]*\n)(.*?)(?=\n##\s|\Z)",
+            lambda m: f"{m.group(1)}\n{rexec}\n",
+            md, count=1, flags=re.S,
+        )
+
     # Demanda futura: o bloco existe no estruturado mas o LLM do A6 não o narra (não é
     # injetado no prompt). Append determinístico da seção quando há residenciais reais.
     df_block = out.get("demanda_futura")
@@ -1909,6 +1920,95 @@ def _renderizar_md_demanda_futura(df: dict) -> str:
             f"| {_escape_md_pipe(o.get('entrega') or '—')} |"
         )
     return "\n".join(linhas)
+
+
+def _resumo_executivo_deterministico(
+    *, cidade: str, bairro: str, veredito: str, modelo_recomendado: str,
+    cenarios: dict, nivel_saturacao: str, total_concorrentes,
+    top_3: list, zoneamento: dict | None,
+) -> str:
+    """Resumo executivo montado dos MESMOS campos estruturados do corpo — NÃO pelo
+    LLM. O LLM ignora o prompt e narra densidade do raio 3km / candidato fora-bairro,
+    descasando do relatório. Aqui a fonte é única: saturação do BAIRRO, candidato já
+    gated, veredito, modelo + payback + margem. Impossível contradizer o corpo."""
+    def _g(d, *ks):
+        for k in ks:
+            v = (d or {}).get(k)
+            if v not in (None, ""):
+                return v
+        return None
+
+    bairro = bairro or "bairro alvo"
+    loc = f"{bairro}, {cidade}" if cidade else bairro
+    rec = None
+    mnorm = (modelo_recomendado or "").strip().lower()
+    for c in (cenarios or {}).values():
+        if isinstance(c, dict) and (c.get("modelo") or "").strip().lower() == mnorm:
+            rec = c
+            break
+    payback = _g(rec, "payback_meses", "payback_meses_realista", "payback")
+    margem = _g(rec, "margem_liquida_pct", "margem_pct", "margem")
+
+    partes: list[str] = []
+    vere = (veredito or "indeterminado").strip()
+    if modelo_recomendado:
+        frase = f"{loc}: veredito {vere}. Modelo recomendado {modelo_recomendado}"
+        det = []
+        if payback is not None:
+            try:
+                det.append(f"payback {int(round(float(payback)))} meses")
+            except (TypeError, ValueError):
+                pass
+        if margem is not None:
+            try:
+                det.append(f"margem {int(round(float(margem)))}%")
+            except (TypeError, ValueError):
+                pass
+        frase += f" ({', '.join(det)})." if det else "."
+        partes.append(frase)
+    else:
+        partes.append(f"{loc}: veredito {vere}.")
+
+    # Saturação SEMPRE do bairro (contagem gated) — NUNCA densidade do raio 3km.
+    try:
+        n = int(total_concorrentes) if total_concorrentes is not None else None
+    except (TypeError, ValueError):
+        n = None
+    sat = (nivel_saturacao or "indeterminada").strip()
+    if n is not None:
+        partes.append(
+            f"Saturação do bairro: {sat} ({n} concorrente{'s' if n != 1 else ''} "
+            f"analisado{'s' if n != 1 else ''} no bairro)."
+        )
+    else:
+        partes.append(f"Saturação do bairro: {sat}.")
+
+    # Zoneamento (viabilidade regulatória do bairro), quando disponível.
+    if isinstance(zoneamento, dict):
+        sig = zoneamento.get("zona_sigla") or zoneamento.get("zona_nome")
+        comp = (zoneamento.get("compatibilidade") or "").upper()
+        if sig and comp:
+            verbo = {"PERMISSIVO": "permitida", "CONDICIONADO": "condicionada",
+                     "RESTRITO": "vedada/restrita"}.get(comp, comp.lower())
+            partes.append(f"Zoneamento {sig}: atividade de academia {verbo}.")
+
+    # Candidato: só nomeia se gated (top_3 já filtrado por bairro+spec). Senão, é
+    # honesto — referencial é do bairro, não inventa imóvel fora-bairro.
+    cand = next((c for c in (top_3 or []) if isinstance(c, dict)), None)
+    if cand:
+        nome = cand.get("endereco") or cand.get("titulo") or cand.get("nome") or "candidato"
+        area = cand.get("area_m2") or cand.get("area")
+        area_txt = f" ({int(area)}m²)" if area else ""
+        partes.append(
+            f"Candidato prioritário: {str(nome)[:90]}{area_txt} — validar in loco antes de fechar."
+        )
+    else:
+        partes.append(
+            "Nenhum imóvel anunciado dentro da especificação foi encontrado no bairro; "
+            "o referencial de viabilidade (demografia, concorrência, aluguel) é do bairro "
+            "e independe de imóvel específico."
+        )
+    return " ".join(partes)
 
 
 def _extrair_relatorio_estruturado(callback_context) -> dict:
@@ -2462,6 +2562,17 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 alertas_financeiros.append(alerta_ticket)
             if veredito == "APROVADO":
                 veredito = "APROVADO COM RESSALVAS"
+
+    # Resumo executivo DETERMINÍSTICO — sobrescreve o do LLM (que descasca do corpo:
+    # narra "211 academias no raio 3km" / candidato fora-bairro). Montado dos MESMOS
+    # campos estruturados → coerência garantida com o resto do relatório.
+    if isinstance(contato, dict):
+        contato["resumo_executivo"] = _resumo_executivo_deterministico(
+            cidade=cidade, bairro=bairro, veredito=veredito,
+            modelo_recomendado=modelo_recomendado, cenarios=cenarios,
+            nivel_saturacao=nivel_saturacao, total_concorrentes=total_concorrentes,
+            top_3=top_3, zoneamento=zoneamento_block,
+        )
 
     return {
         "id": f"rpt_{int(time.time())}",
