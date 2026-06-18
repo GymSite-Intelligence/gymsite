@@ -1978,9 +1978,16 @@ def get_relatorio_pdf(relatorio_id: str, layout: str = "classic", engine: str = 
 
     model = relatorio_from_api_payload(payload)
     if (engine or "").strip().lower() == "weasy":
-        from pdf.html_builder import gerar_pdf_weasy
+        try:
+            from pdf.html_builder import gerar_pdf_weasy
 
-        pdf_bytes = gerar_pdf_weasy(model)
+            pdf_bytes = gerar_pdf_weasy(model)
+        except ImportError:
+            # weasyprint exige libs de sistema (pango/cairo) ausentes em dev local
+            # Windows — degrada pro ReportLab em vez de 500. Em prod (Docker) as
+            # libs existem e o weasy roda normalmente.
+            logger.warning("weasyprint indisponível (ImportError) — fallback ReportLab")
+            pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
     else:
         pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
     slug = f"gymsite-{model.bairro}-{model.cidade}".replace(" ", "-")
