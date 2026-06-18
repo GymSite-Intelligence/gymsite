@@ -316,6 +316,23 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </table>
 <div class="note">Praças alternativas no mesmo município com perfil de público similar e menor disputa — opções caso o bairro-alvo esteja saturado ou sem imóvel.</div>{% endif %}
 
+{% if zoneamento %}
+<div style="page-break-inside:avoid;">
+<div class="sec">Análise de zoneamento urbano</div>
+<div class="duo" style="margin-bottom:10px;">
+  <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Zona identificada</div><div class="v">{{ zoneamento.zona }}</div></div>
+  <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Compatibilidade — CNAE {{ zoneamento.cnae }}</div><div class="v" style="color:{{ zoneamento.cor }};">{{ zoneamento.compat }}</div><div style="font-size:8pt; color:#64748B;">Subgrupo {{ zoneamento.subgrupo }} · Classe {{ zoneamento.classe }}</div></div>
+</div>
+<table class="d"><tr><th>Parâmetro</th><th>Valor</th><th>Impacto</th></tr>
+  <tr><td>Compatibilidade (LUOS)</td><td><span class="pill {{ zoneamento.compat_cls }}">{{ zoneamento.compat_raw }}</span></td><td style="font-size:8pt;">{{ zoneamento.descricao }}</td></tr>
+  {% if zoneamento.ia %}<tr><td>Índice de aproveitamento máx.</td><td>{{ zoneamento.ia }}</td><td style="font-size:8pt;">Potencial de área construída</td></tr>{% endif %}
+  {% if zoneamento.tx %}<tr><td>Taxa de ocupação</td><td>{{ zoneamento.tx }}%</td><td style="font-size:8pt;">Percentual do terreno construível</td></tr>{% endif %}
+  {% if zoneamento.alt %}<tr><td>Altura máxima</td><td>{{ zoneamento.alt }} m</td><td style="font-size:8pt;">Limita pavimentos</td></tr>{% endif %}
+</table>
+{% if zoneamento.alerta %}<div class="alert" style="background:#FFFBEB; border-color:#FCD34D; margin-top:8px;"><div style="font-weight:bold; color:#92400E; font-size:9pt;">Atenção</div><div style="font-size:8.5pt; color:#78350F; line-height:1.5;">{{ zoneamento.alerta }}</div></div>{% endif %}
+<div class="note">Fonte: {{ zoneamento.fonte }} · Plano Diretor / LUOS 236/2017. Camada de viabilidade regulatória — valida se a zona permite academia antes do financeiro.</div>
+</div>{% endif %}
+
 {% if candidatos %}
 <div class="sec">Top Candidatos (Imóveis)</div>
 {% if candidatos_algum_fora %}<div class="note" style="background:#FEF2F2; border:1px solid #FECACA; border-radius:5px; padding:8px 12px; color:#7F1D1D; margin-bottom:6px;">⚠ Imóveis marcados <strong>(fora)</strong> estão em bairro/cidade vizinha — o GeoScout não achou vago em {{ bairro }}. O referencial de viabilidade (demografia, concorrência, aluguel) é de <strong>{{ bairro }}</strong> e independe do imóvel; trate-os como ponto de partida físico, não como o veredito do bairro.</div>{% endif %}
@@ -816,6 +833,24 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "motivo": (b.motivo or "—")[:120],
     } for b in (model.bairros_alternativos or []) if b.bairro]
 
+    zm = meta.get("zoneamento") if isinstance(meta.get("zoneamento"), dict) else None
+    zoneamento = None
+    if zm and zm.get("compatibilidade"):
+        _zcor = {"PERMISSIVO": "#16A34A", "CONDICIONADO": "#D97706", "RESTRITO": "#DC2626"}
+        zoneamento = {
+            "zona": f"{zm.get('zona_sigla') or '—'} · {zm.get('nome_geo') or '—'}",
+            "compat": zm.get("compatibilidade"),
+            "cor": _zcor.get(zm.get("compatibilidade"), "#0E5C66"),
+            "compat_raw": zm.get("compat_raw") or "—",
+            "compat_cls": {"A": "ok", "P": "mid"}.get(zm.get("compat_raw"), "no"),
+            "subgrupo": zm.get("subgrupo") or "SE", "classe": zm.get("classe") or 1,
+            "descricao": zm.get("descricao") or "",
+            "ia": zm.get("ia_maximo"), "tx": zm.get("taxa_ocupacao"), "alt": zm.get("altura_max"),
+            "restricoes": [str(r) for r in (zm.get("restricoes") or [])][:4],
+            "alerta": zm.get("alerta"),
+            "fonte": zm.get("fonte_dados") or "CKAN", "cnae": zm.get("cnae") or "9313-1/00",
+        }
+
     demanda = None
     df = meta.get("demanda_futura")
     if isinstance(df, dict) and df.get("status") == "ok" and (df.get("provavel_residencial_n") or 0) > 0:
@@ -901,6 +936,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "obras": _obras(meta.get("obras_cno_em_curso")),
         "novas_unidades": novas_unidades,
         "candidatos": candidatos, "candidatos_algum_fora": algum_fora,
+        "zoneamento": zoneamento,
         "bairros_viz": bairros_viz, "demanda": demanda,
         "alertas": _filtrar_alertas(model.alertas)[:12],
     }

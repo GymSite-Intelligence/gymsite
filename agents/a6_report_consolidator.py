@@ -2039,6 +2039,28 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     candidatos = _lista_candidatos_geoscout(geo_raw)
     ranked = _rank_candidatos_for_top3(candidatos)  # pyright: ignore[reportArgumentType]
     top_3 = [_enriquecer_candidato_investigacao(c) for c in (ranked[:3] if ranked else [])]
+
+    # Zoneamento (VEC-378): viabilidade REGULATÓRIA do top candidato (lat/lon) — valida
+    # se a zona permite academia (CNAE 9313 × LUOS). Pega o furo: candidato bom em zona
+    # restrita (ZEIS/ZEPH/ZEA) é inviável legal. Best-effort; só Fortaleza por ora.
+    zoneamento_block = None
+    try:
+        from tools.zoneamento_tools import analisar_zoneamento_candidato
+
+        _cz_cid = (inner_mc.get("cidade") if isinstance(inner_mc, dict) else "") or ""
+        _cz_uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or "CE"
+        _cz_bai = _bairro_alvo_da_busca(state) or ""
+        _cand_geo = next((c for c in top_3 if isinstance(c, dict)
+                          and c.get("lat") is not None and c.get("lng") is not None), None)
+        if _cz_cid and _cand_geo:
+            _z = analisar_zoneamento_candidato(
+                _cz_cid, _cz_bai, _cz_uf,
+                float(_cand_geo["lat"]), float(_cand_geo["lng"]),
+                endereco=_cand_geo.get("endereco"))
+            if isinstance(_z, dict) and _z.get("status") in ("ok", "fora_de_zona"):
+                zoneamento_block = _z
+    except Exception:
+        logger.warning("A6 zoneamento falhou", exc_info=True, extra={"agent": "A6"})
     investigacoes_resumo = (
         geo_raw.get("investigacoes_imoveis")
         if isinstance(geo_raw.get("investigacoes_imoveis"), dict)
@@ -2424,6 +2446,8 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 comp.get("rating_medio_concorrentes")
             ),
             "top_3_candidatos": top_3,
+            # VEC-378 — viabilidade regulatória (zoneamento LUOS) do top candidato.
+            "zoneamento": zoneamento_block,
             "investigacoes_imoveis": investigacoes_resumo,
             # Diagnóstico GeoScout (A1) — UI usa pra banner sem hardcode REQUEST_DENIED
             "coleta_geografica": {

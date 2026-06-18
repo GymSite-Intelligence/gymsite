@@ -52,7 +52,7 @@ def catalogo(nome: str) -> list[dict[str, Any]]:
 
             cli = load_create_client()(os.environ["SUPABASE_URL"], key)
             res = cli.table("catalogos_metodologia").select(
-                "chave,valor,sinonimos").eq("catalogo", nome).execute()
+                "chave,valor,sinonimos,metadata").eq("catalogo", nome).execute()
             rows = [r for r in (getattr(res, "data", None) or []) if r.get("valor")]
         except Exception as e:
             print(f"[catalogos] Supabase indisponível ({nome}): {type(e).__name__}: {e}")

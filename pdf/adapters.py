@@ -319,6 +319,7 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
             "entrantes_cnpj_90d": out.get("entrantes_cnpj_90d") if isinstance(out.get("entrantes_cnpj_90d"), dict) else None,
             "panorama": panorama,
             "pico": pico_top,
+            "zoneamento": out.get("zoneamento") if isinstance(out.get("zoneamento"), dict) else None,
             "dores_consolidadas": _agg_dores_consolidadas(competidores_raw),
             "veredito_oceano": (out.get("posicionamento_estrategico") or {}).get("veredito_posicionamento")
             if isinstance(out.get("posicionamento_estrategico"), dict) else None,
