@@ -1982,11 +1982,12 @@ def get_relatorio_pdf(relatorio_id: str, layout: str = "classic", engine: str = 
             from pdf.html_builder import gerar_pdf_weasy
 
             pdf_bytes = gerar_pdf_weasy(model)
-        except ImportError:
-            # weasyprint exige libs de sistema (pango/cairo) ausentes em dev local
-            # Windows — degrada pro ReportLab em vez de 500. Em prod (Docker) as
-            # libs existem e o weasy roda normalmente.
-            logger.warning("weasyprint indisponível (ImportError) — fallback ReportLab")
+        except (ImportError, OSError) as exc:
+            # weasyprint exige libs de sistema (pango/cairo/gobject) ausentes em dev
+            # local Windows: ImportError (pacote ausente) OU OSError (pacote instalado
+            # mas .write_pdf não carrega libgobject) — degrada pro ReportLab em vez de
+            # 500. Em prod (Docker) as libs existem e o weasy roda normalmente.
+            logger.warning("weasyprint indisponível (%s) — fallback ReportLab", type(exc).__name__)
             pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
     else:
         pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
