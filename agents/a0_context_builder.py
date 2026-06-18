@@ -17,7 +17,8 @@ _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=1024),
 )
 
-context_builder_agent = Agent(
+from tools.agent_factory import build_llm_agent
+context_builder_agent = build_llm_agent(
     name="ContextBuilder",
     model="gemini-2.5-flash",
     generate_content_config=_GENERATE_CONFIG,

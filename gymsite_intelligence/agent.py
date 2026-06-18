@@ -92,9 +92,14 @@ def _attach_telemetry(*agents):
             )
             # after_model_callback só existe em LlmAgent. BaseAgent determinístico
             # (A3a) não chama modelo — pular sem abortar o resto do attach.
+            # ENCADEIA (não pula) — agente que já tem after_model_callback próprio (ex:
+            # A9 _a9_after_model_callback) ficava CEGO pra tokens (C7.2). Chain garante
+            # telemetria + callback do agente. _chain_callbacks deduplica por identidade.
             _tem_model_cb = "after_model_callback" in getattr(type(ag), "model_fields", {})
-            if _tem_model_cb and getattr(ag, "after_model_callback", None) is None:
-                ag.after_model_callback = _telemetry_after_model
+            if _tem_model_cb:
+                ag.after_model_callback = _chain_callbacks(
+                    getattr(ag, "after_model_callback", None), _telemetry_after_model
+                )
             ag.after_agent_callback = _chain_callbacks(
                 getattr(ag, "after_agent_callback", None), _otel_after
             )

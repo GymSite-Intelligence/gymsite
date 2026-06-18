@@ -68,7 +68,8 @@ def _persistir_a4_no_state(tool, args, tool_context, tool_response):
 # pra aritmética que o Pro resolve direto — run inteiro morto. O corte de
 # custo (~R$ 200/mês) não paga pipeline instável. Re-tentar Flash só com
 # prompt anti-code-execution endurecido e teste isolado.
-financial_estimator_agent = Agent(
+from tools.agent_factory import build_llm_agent
+financial_estimator_agent = build_llm_agent(
     name="FinancialEstimator",
     # Pro→Flash (AUDITORIA_CUSTO_LLM_PIPELINE rec#1, mapa cost_optimizations): o A4 é
     # aritmética estruturada (tools fazem a conta em 3 cenários), Flash basta. Corta o

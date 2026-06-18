@@ -40,7 +40,8 @@ from tools.competitor_tools import analisar_concorrentes_completo
 # macro e adiciona `posicionamento_recomendado` + `resumo_executivo`.
 _GENERATE_CONFIG = types.GenerateContentConfig()
 
-competitor_analysis_agent = Agent(
+from tools.agent_factory import build_llm_agent
+competitor_analysis_agent = build_llm_agent(
     name="CompetitorAnalysis",
     model="gemini-2.5-flash-lite",
     generate_content_config=_GENERATE_CONFIG,

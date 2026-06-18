@@ -43,7 +43,8 @@ def _persistir_macro_no_state(tool, args, tool_context, tool_response):
         tool_context.state["candidatos_geoscout_pronto"] = tool_response
     return None
 
-geoscout_agent = Agent(
+from tools.agent_factory import build_llm_agent
+geoscout_agent = build_llm_agent(
     name="GeoScout",
     model="gemini-2.5-flash",
     generate_content_config=_GENERATE_CONFIG,

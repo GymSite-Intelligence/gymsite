@@ -10,7 +10,8 @@ horários de pico do Knowledge Panel.
 from google.adk.agents import Agent
 from google.adk.tools import google_search
 
-market_research_agent = Agent(
+from tools.agent_factory import build_llm_agent
+market_research_agent = build_llm_agent(
     name="MarketResearch",
     model="gemini-2.5-flash",
     description=(

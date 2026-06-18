@@ -555,7 +555,8 @@ def _a9_after_agent_callback(callback_context):
         )
 
 
-positioning_strategist_agent = Agent(
+from tools.agent_factory import build_llm_agent
+positioning_strategist_agent = build_llm_agent(
     name="PositioningStrategist",
     model="gemini-2.5-pro",
     description=(

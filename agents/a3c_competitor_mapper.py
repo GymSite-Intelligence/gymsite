@@ -129,7 +129,8 @@ _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=1024),
 )
 
-competitor_mapper_agent = Agent(
+from tools.agent_factory import build_llm_agent
+competitor_mapper_agent = build_llm_agent(
     name="CompetitorMapper",
     model="gemini-2.5-flash",
     generate_content_config=_GENERATE_CONFIG,

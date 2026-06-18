@@ -11,6 +11,7 @@ from typing import Any
 logger = logging.getLogger("gymsite.a6")
 from pathlib import Path
 from google.adk.agents import Agent
+from tools.agent_factory import build_llm_agent
 from google.genai import types
 from tools.utils_tools import obter_data_atual
 from tools.token_telemetry import before_agent_callback as _telemetry_before
@@ -3070,7 +3071,7 @@ def _a6_after_agent_callback(callback_context):
         )
 
 
-report_consolidator_agent = Agent(
+report_consolidator_agent = build_llm_agent(
     name="ReportConsolidator",
     # Pro→Flash (custo): A6 era ~46% do custo LLM (R$4,82/relatório). A síntese é
     # templada (instrução muito detalhada) sobre dados estruturados/determinísticos +
