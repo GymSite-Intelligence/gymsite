@@ -42,6 +42,9 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     # avisar p/ ação de MKT com construtora/corretor antes da concorrência.
     "obra_acabamento_threshold_pct": _p(50, "obra em fase de acabamento ≥50% = entrega <12m (recalibrar c/ CNO)", "limiar_timing_obra", "%", "calibracao", "2026-06-18"),
     "obra_total_threshold_pct":      _p(85, "obra ≥85% concluída = reta final/entrega iminente", "limiar_timing_obra", "%", "calibracao", "2026-06-18"),
+    "saturacao_bairro_medio_min":    _p(3, "≥3 academias no bairro = saturação MEDIO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
+    "saturacao_bairro_alto_min":     _p(6, "≥6 academias no bairro = saturação ALTO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
+    "saturacao_bairro_saturado_min": _p(10, "≥10 academias no bairro = SATURADO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
     # ── Penetração fitness (% da pop. que É MEMBRO de academia) — ACAD ───────
     "penetracao_geral":     _p(0.045, "ACAD/Panorama Fitness Brasil", "penetracao_mercado", "fração", "benchmark", "2026-06-14"),
     "penetracao_bairro_ab": _p(0.10, "ACAD (bairro alta renda A/B)", "penetracao_mercado_segmentada", "fração", "benchmark", "2026-06-14"),

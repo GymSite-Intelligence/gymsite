@@ -2307,6 +2307,14 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             if cross_check_concorrentes.get("status") == "ok" and _gated > (_safe_float(total_concorrentes) or 0):
                 cross_check_concorrentes["total_anterior"] = total_concorrentes
                 total_concorrentes = _gated  # autoritativo: gate bairro+tipo
+                # Saturação pela CONTAGEM no bairro (gate), não densidade no raio 3km que
+                # diluía (20 no raio → BAIXO). Corrige a contradição 'BAIXO com 20'.
+                from tools.competitor_tools import classificar_saturacao_bairro
+
+                _sat_novo = classificar_saturacao_bairro(_gated)
+                cross_check_concorrentes["nivel_saturacao_anterior"] = nivel_saturacao
+                cross_check_concorrentes["nivel_saturacao_bairro"] = _sat_novo
+                nivel_saturacao = _sat_novo
             # Persiste aninhado no bloco de anéis (coluna jsonb existente).
             if isinstance(aneis_competitivos_resumo, dict) and cross_check_concorrentes:
                 aneis_competitivos_resumo["cross_check"] = cross_check_concorrentes

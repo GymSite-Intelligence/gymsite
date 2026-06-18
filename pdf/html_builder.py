@@ -403,6 +403,8 @@ def _limpar_md(texto: str | None, max_paragrafos: int = 3) -> list[str]:
     t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)          # **bold** → bold
     t = re.sub(r"`([^`]+)`", r"\1", t)               # `code`
     t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)   # [txt](url) → txt
+    for pat, repl in _RESUMO_FIELDNAMES.items():     # field-name cru → termo legível
+        t = re.sub(pat, repl, t, flags=re.IGNORECASE)
     paras = []
     for bloco in re.split(r"\n\s*\n", t):
         linha = " ".join(
@@ -524,7 +526,20 @@ def _obras(o: dict) -> list[dict]:
 _ALERTA_RUIDO = (
     "churn_pct", "capex_por_unidade", "cvm itr", "overlay ri", "ri overlay",
     "preencher ri", "parcial (50%)", "parcial (",
+    # Ruído interno de benchmark/sanity: o sistema já caiu no fallback correto.
+    "fora da banda", "smft3", "ebitda smart fit", "margem ebitda",
 )
+
+# Field-names crus que a prosa do LLM às vezes vaza no resumo (ex.: 'score_concorrencia
+# de 0.0'). Trocar por termo legível — não expor nome de campo interno ao cliente.
+_RESUMO_FIELDNAMES = {
+    r"\bscore_concorrencia\b": "competitividade",
+    r"\bscore_demografico\b": "perfil demográfico",
+    r"\bscore_viabilidade\b": "viabilidade",
+    r"\bscore_bairro\b": "score do bairro",
+    r"\bnivel_saturacao\b": "saturação",
+    r"\bmarket_share\b": "fatia de mercado",
+}
 
 
 def _filtrar_alertas(alertas) -> list[str]:
@@ -611,22 +626,23 @@ def _ticket_segmentos(competidores) -> list[dict] | None:
     for preco, inclui, nome, _plano in planos:
         k = "Econômico" if preco <= t1 else ("Premium" if preco > t2 else "Intermediário")
         segs[k].append((preco, inclui, nome))
+    from tools.catalogos import normalizar_servicos
+
     rows = []
     for k, items in segs.items():
         if not items:
             continue
         ps = [i[0] for i in items]
-        svc: list[str] = []
+        # Serviços = CATEGORIAS limpas do catálogo (não a prosa de marketing do `inclui`).
+        textos = []
         for _, inc, _ in items:
-            for s in (inc or []):
-                s = str(s).strip()
-                if s and s.lower() not in [x.lower() for x in svc]:
-                    svc.append(s)
+            textos.extend(str(x) for x in (inc or []))
+        svc = normalizar_servicos(textos)
         faixa = f"R$ {_brl(min(ps))}" if min(ps) == max(ps) else f"R$ {_brl(min(ps))}–{_brl(max(ps))}"
         rows.append({
             "segmento": k, "faixa": faixa, "n": len(items),
             "academias": ", ".join(sorted({i[2][:18] for i in items}))[:40],
-            "servicos": "; ".join(svc[:5])[:90] or "—",
+            "servicos": ", ".join(svc[:6]) or "—",
         })
     return rows or None
 

@@ -10,7 +10,7 @@ import httpx
 logger = logging.getLogger(__name__)
 from tools.google_maps_key import get_google_maps_api_key
 from tools.maps_tools import calcular_distancia_km, geocode_endereco
-from tools.parametros_metodologia import param
+from tools.parametros_metodologia import param, param_int
 PLACES_BASE = "https://places.googleapis.com/v1/places"
 
 
@@ -1294,6 +1294,17 @@ def classificar_saturacao(num_concorrentes: int, raio_km: float) -> str:
     elif densidade < param("saturacao_densidade_medio"): return "MEDIO"
     elif densidade < param("saturacao_densidade_alto"):  return "ALTO"
     else:                                                return "SATURADO"
+
+
+def classificar_saturacao_bairro(num_no_bairro: int) -> str:
+    """Saturação pela CONTAGEM de concorrentes NO BAIRRO (cross-check gate), não pela
+    densidade no raio 3km (que dilui — 20 no raio virava BAIXO). Bandas recalibráveis.
+    Ex.: 7 academias num bairro = ALTO."""
+    n = int(num_no_bairro or 0)
+    if n >= param_int("saturacao_bairro_saturado_min"):  return "SATURADO"
+    if n >= param_int("saturacao_bairro_alto_min"):      return "ALTO"
+    if n >= param_int("saturacao_bairro_medio_min"):     return "MEDIO"
+    return "BAIXO"
 
 
 def panorama_saturacao(
