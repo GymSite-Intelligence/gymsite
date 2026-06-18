@@ -2050,6 +2050,21 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         _cz_cid = (inner_mc.get("cidade") if isinstance(inner_mc, dict) else "") or ""
         _cz_uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or "CE"
         _cz_bai = _bairro_alvo_da_busca(state) or ""
+        # Wire P1 (cascata): candidato sem lat/lng → Nominatim (grátis) preenche, p/ o
+        # zoneamento point-in-polygon rodar mesmo nos listings que não trazem coordenada.
+        if _cz_cid:
+            try:
+                from tools.nominatim_geocoder import nominatim_geocode
+
+                for _c in top_3:
+                    if isinstance(_c, dict) and (_c.get("lat") is None or _c.get("lng") is None):
+                        _end = _c.get("endereco") or f"{_c.get('bairro') or _cz_bai}, {_cz_cid}, {_cz_uf}, Brasil"
+                        _g = nominatim_geocode(_end)
+                        if _g:
+                            _c["lat"], _c["lng"] = _g["lat"], _g["lon"]
+                            _c["geocode_fonte"] = "nominatim"
+            except Exception:
+                logger.warning("A6 geocode Nominatim falhou", exc_info=True, extra={"agent": "A6"})
         _cand_geo = next((c for c in top_3 if isinstance(c, dict)
                           and c.get("lat") is not None and c.get("lng") is not None), None)
         if _cz_cid and _cand_geo:
