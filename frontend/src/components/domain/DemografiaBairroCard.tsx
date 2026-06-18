@@ -94,31 +94,58 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
             />
           )}
       </div>
-      {block.perfil_idade_sexo_bairro?.segmentos &&
-        Object.keys(block.perfil_idade_sexo_bairro.segmentos).length > 0 && (
+      {(() => {
+        const segs = block.perfil_idade_sexo_bairro?.segmentos
+        if (!segs) return null
+        const labels = ['15-24', '25-39', '40-59', '60+'] as const
+        const nomes: Record<string, string> = {
+          '15-24': 'Jovem', '25-39': 'Core', '40-59': 'Maduro', '60+': 'Silver',
+        }
+        const rows = labels
+          .map((l) => ({ l, s: segs[l] }))
+          .filter((r) => r.s?.total != null && (r.s.total as number) > 0)
+        if (rows.length === 0) return null
+        const maxTotal = Math.max(...rows.map((r) => r.s!.total as number))
+        const dominante = rows.reduce((a, b) => ((b.s!.total as number) > (a.s!.total as number) ? b : a))
+        const pctM = dominante.s!.pct_mulheres ?? 50
+        const tendencia = pctM >= 55 ? 'majoritariamente feminino' : pctM <= 45 ? 'majoritariamente masculino' : 'equilibrado'
+        return (
           <div className="rounded-lg border bg-muted/40 px-3 py-2">
             <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-mono text-muted-foreground">
               <UsersRound size={12} /> público por idade × sexo (bairro real)
             </div>
-            <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-4">
-              {(['15-24', '25-39', '40-59', '60+'] as const).map((seg) => {
-                const s = block.perfil_idade_sexo_bairro?.segmentos?.[seg]
-                if (!s || s.pct_mulheres == null) return null
+            <div className="mt-1.5 space-y-1">
+              {rows.map(({ l, s }) => {
+                const total = s!.total as number
+                const pm = Math.round(s!.pct_mulheres ?? 0)
+                const ph = Math.round(s!.pct_homens ?? 0)
                 return (
-                  <div key={seg} className="text-xs">
-                    <span className="font-mono text-muted-foreground">{seg}</span>{' '}
-                    <span className="font-semibold">{Math.round(s.pct_mulheres)}%♀</span>
-                    <span className="text-muted-foreground">/{Math.round(s.pct_homens ?? 0)}%♂</span>
+                  <div key={l} className="flex items-center gap-2 text-xs">
+                    <span className="w-24 shrink-0 font-mono text-muted-foreground">
+                      {l} <span className="text-[10px]">{nomes[l]}</span>
+                    </span>
+                    <div className="relative h-3.5 flex-1 overflow-hidden rounded bg-muted">
+                      <div className="h-full bg-primary/25" style={{ width: `${(total / maxTotal) * 100}%` }} />
+                    </div>
+                    <span className="w-16 shrink-0 text-right font-semibold tabular-nums">{_int(total)}</span>
+                    <span className="w-16 shrink-0 text-right text-muted-foreground tabular-nums">
+                      {pm}♀/{ph}♂
+                    </span>
                   </div>
                 )
               })}
             </div>
-            <div className="mt-1 text-[10px] text-muted-foreground leading-tight">
-              IBGE Censo 2022 por setor (agregação dos {block.perfil_idade_sexo_bairro.n_setores ?? '—'} setores do
-              bairro). Idade real do bairro — não herdada do município.
+            <div className="mt-1.5 text-[11px]">
+              Público predominante: <span className="font-semibold">{dominante.l} ({nomes[dominante.l]})</span> ·
+              perfil <span className="font-semibold">{tendencia}</span>.
+            </div>
+            <div className="mt-0.5 text-[10px] text-muted-foreground leading-tight">
+              IBGE Censo 2022 por setor ({block.perfil_idade_sexo_bairro?.n_setores ?? '—'} setores agregados) — idade
+              real do bairro, não herdada do município.
             </div>
           </div>
-        )}
+        )
+      })()}
       <p className="text-[11px] text-muted-foreground">
         Renda: {block.renda_fonte ?? 'CKAN municipal (IDH-Renda → Atlas)'}. População/ocupação:{' '}
         {block.populacao_fonte ?? 'IBGE Censo 2022 por setor'}. Cada dimensão com fonte real do
