@@ -143,6 +143,40 @@ def _unidades_do_extraido(ext: dict) -> float | None:
     return None
 
 
+def _areas_plantas(ext: dict) -> list[float]:
+    """Lista limpa de áreas privativas (m²) das plantas. Vazia se ausente."""
+    raw = ext.get("areas_plantas")
+    out: list[float] = []
+    if isinstance(raw, list):
+        for v in raw:
+            try:
+                a = float(str(v).replace(",", ".")) if not isinstance(v, (int, float)) else float(v)
+            except (TypeError, ValueError):
+                continue
+            if 15 <= a <= 1000:  # planta residencial plausível
+                out.append(round(a, 2))
+    return out
+
+
+def _obra_progresso(ext: dict) -> dict | None:
+    """Normaliza o bloco de acompanhamento de obra (% total + acabamento + fase)."""
+    o = ext.get("obra")
+    if not isinstance(o, dict):
+        return None
+    def _pct(v):
+        try:
+            n = float(str(v).split("-")[-1].replace("%", "").strip())
+            return int(max(0, min(100, n)))
+        except (TypeError, ValueError):
+            return None
+    total = _pct(o.get("total_pct"))
+    acab = _pct(o.get("acabamento_pct"))
+    fase = str(o.get("fase") or "").strip().lower() or None
+    if total is None and acab is None and not fase:
+        return None
+    return {"total_pct": total, "acabamento_pct": acab, "fase": fase}
+
+
 def _tem_amenidade_fitness(ext: dict) -> bool:
     blob = " ".join(str(a) for a in (ext.get("amenidades") or [])).lower()
     return any(k in blob for k in _AMENIDADE_FITNESS)
@@ -330,11 +364,19 @@ def _extrair_do_html(html: str) -> dict | None:
         '  "torres": <int|null>, "andares": <int|null>, "unidades": <int total|null>,\n'
         '  "unidades_por_torre": <int|null>,\n'
         '  "tipologia": "<studio|1-2 dorm|3+ dorm|comercial|misto|null>",\n'
+        '  "areas_plantas": [<m² privativo de CADA planta/tipologia, número>],\n'
+        '  "dormitorios": <int|null>, "suites": "<str ex: 1 ou 2|null>", "vagas": "<str|null>",\n'
+        '  "preco_base": <número R$ a partir de|null>, "previsao_entrega": "<AAAA-MM|null>",\n'
         '  "amenidades": ["..."],\n'
+        '  "obra": {"total_pct": <int 0-100|null>, "acabamento_pct": <int 0-100|null>,\n'
+        '           "fase": "<fundacao|estrutura|alvenaria|acabamento|entregue|null>"},\n'
         '  "endereco": {"cep": "<digits|null>", "numero": "<str|null>", "bairro": "<str|null>"}\n'
         "}\n"
-        "REGRA: 'unidades' = total de apartamentos do projeto inteiro (some torres se a "
-        "página der por torre). Use SÓ o que está no texto. NÃO invente. Sem dado → null.\n\n"
+        "REGRAS: 'unidades' = total de apartamentos do projeto inteiro (some torres se a "
+        "página der por torre). 'areas_plantas' = lista das metragens privativas distintas. "
+        "'obra' = se houver Acompanhamento das Obras com % de conclusão: total_pct é o % geral; "
+        "acabamento_pct é o % da etapa de acabamento/pintura; fase é a etapa de maior peso em "
+        "andamento. Use SÓ o que está no texto. NÃO invente. Sem dado → null.\n\n"
         "PÁGINA:\n" + texto
     )
     resp = generate_content_resilient(
@@ -468,9 +510,18 @@ def refinar_demanda_via_lancamento(
         aplica_unidades = confianca == "alta" or fonte_tipo == "pagina_lancamento"
         return {
             "unidades_exatas": unidades if aplica_unidades else None,
+            "torres": ext.get("torres"),
             "andares": ext.get("andares"),
             "tipologia": ext.get("tipologia"),
             "amenidade_fitness": _tem_amenidade_fitness(ext),
+            # Ficha técnica ampliada (A) — só quando veio da página/PDF.
+            "areas_plantas": _areas_plantas(ext) or None,
+            "dormitorios": ext.get("dormitorios"),
+            "suites": ext.get("suites"),
+            "vagas": ext.get("vagas"),
+            "preco_base": ext.get("preco_base"),
+            "previsao_entrega": ext.get("previsao_entrega"),
+            "obra_progresso": _obra_progresso(ext),
             "fonte_url": pagina_url or _fonte_preferida(fontes),   # citação REAL
             "instagram_url": instagram,
             "fontes": fontes,

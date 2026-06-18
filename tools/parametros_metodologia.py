@@ -36,6 +36,11 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "ocupacao_3_mais_dorm": _p(3.0, "IBGE PNAD + ajuste 3+ dorm", "media_domiciliar_ajustada", "moradores/unidade", "aberto", "2026-06-14"),
     "ocupacao_default":     _p(2.8, "fallback_IBGE_media_domiciliar_BR", "media_nacional", "moradores/unidade", "aberto", "2026-06-14"),
     "m2_por_unidade":       _p(75.0, "fallback_proxy_unidade_media+area_comum", "proxy_area_construida", "m2/unidade", "benchmark", "2026-06-14"),
+    "m2_por_morador":       _p(25.0, "IBGE área privativa média por morador (2 dorm ~25 m²/pessoa)", "densidade_ocupacao", "m2/morador", "benchmark", "2026-06-18"),
+    # Gatilho 'janela quente' (demanda futura): obra na reta final → entrega iminente →
+    # avisar p/ ação de MKT com construtora/corretor antes da concorrência.
+    "obra_acabamento_threshold_pct": _p(50, "obra em fase de acabamento ≥50% = entrega <12m (recalibrar c/ CNO)", "limiar_timing_obra", "%", "calibracao", "2026-06-18"),
+    "obra_total_threshold_pct":      _p(85, "obra ≥85% concluída = reta final/entrega iminente", "limiar_timing_obra", "%", "calibracao", "2026-06-18"),
     # ── Penetração fitness (% da pop. que É MEMBRO de academia) — ACAD ───────
     "penetracao_geral":     _p(0.045, "ACAD/Panorama Fitness Brasil", "penetracao_mercado", "fração", "benchmark", "2026-06-14"),
     "penetracao_bairro_ab": _p(0.10, "ACAD (bairro alta renda A/B)", "penetracao_mercado_segmentada", "fração", "benchmark", "2026-06-14"),

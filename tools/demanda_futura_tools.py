@@ -46,6 +46,7 @@ def estimar_demanda_obra(
     market_share: float | None = None,
     ticket_brl: float | None = None,
     ocupacao_censo: float | None = None,
+    areas_plantas: list[float] | None = None,
 ) -> dict[str, Any]:
     """Núcleo PURO — cadeia corrigida, fatores via FONTE real > param fallback.
 
@@ -59,8 +60,22 @@ def estimar_demanda_obra(
     m2_un = param("m2_por_unidade")
     unidades = float(unidades_exatas) if unidades_exatas else (area / m2_un if m2_un else 0.0)
 
+    # Moradores/unidade: prioriza a ÁREA-MÉDIA real das plantas (plantas variadas →
+    # média confrontada com benchmark m²/morador), pois a tipologia textual é grossa.
+    # Censo setor é fallback (média do bairro); param tipologia é último fallback.
     ocup_key = ocupacao_por_tipologia(tipologia)
-    if ocupacao_censo and float(ocupacao_censo) > 0:
+    _areas = [float(a) for a in (areas_plantas or []) if isinstance(a, (int, float)) and a > 0]
+    if _areas:
+        area_media = sum(_areas) / len(_areas)
+        m2_por_morador = param("m2_por_morador")
+        ocupacao = max(1.0, area_media / m2_por_morador) if m2_por_morador else param(ocup_key)
+        ocup_fonte = {
+            "valor": round(ocupacao, 2),
+            "fonte": "área-média das plantas ÷ benchmark m²/morador",
+            "metodo": f"média de {len(_areas)} plantas = {area_media:.1f} m² ÷ {param('m2_por_morador')} m²/morador",
+            "m2_por_morador": param_meta("m2_por_morador"),
+        }
+    elif ocupacao_censo and float(ocupacao_censo) > 0:
         ocupacao = float(ocupacao_censo)
         ocup_fonte = {
             "valor": round(ocupacao, 2),
@@ -96,6 +111,32 @@ def estimar_demanda_obra(
             "ticket_brl": {"valor": ticket, "fonte": "benchmark_setorial_canal2"},
             "m2_por_unidade": param_meta("m2_por_unidade"),
         },
+    }
+
+
+def _janela_quente(obra_prog: dict | None) -> dict | None:
+    """Gatilho de timing/MKT (C): obra na reta final → entrega iminente → avisar o
+    cliente p/ contatar construtora/corretor antes da concorrência. Thresholds em param."""
+    if not isinstance(obra_prog, dict):
+        return None
+    total = obra_prog.get("total_pct")
+    acab = obra_prog.get("acabamento_pct")
+    fase = (obra_prog.get("fase") or "").strip().lower()
+    th_acab = param_int("obra_acabamento_threshold_pct")
+    th_total = param_int("obra_total_threshold_pct")
+    quente = (
+        (isinstance(acab, (int, float)) and acab >= th_acab)
+        or (isinstance(total, (int, float)) and total >= th_total)
+        or fase in ("acabamento", "entregue")
+    )
+    if not quente:
+        return None
+    return {
+        "ativo": True, "total_pct": total, "acabamento_pct": acab, "fase": fase or None,
+        "diretriz": (
+            "Obra na reta final (entrega iminente) — contate a construtora/corretor AGORA "
+            "para ação de marketing e capte os futuros moradores antes da concorrência."
+        ),
     }
 
 
@@ -396,11 +437,14 @@ def demanda_futura_detalhada(
         refino = refino_fn(o) if i < top_n else None
         unid_exatas = (refino or {}).get("unidades_exatas")
         tipologia = (refino or {}).get("tipologia")
+        areas_plantas = (refino or {}).get("areas_plantas")
         e = estimar_demanda_obra(
             float(o.get("area_m2") or 0), unidades_exatas=unid_exatas, tipologia=tipologia,
             perfil_bairro=perfil_bairro, market_share=market_share, ticket_brl=ticket_brl,
-            ocupacao_censo=ocupacao_censo,
+            ocupacao_censo=ocupacao_censo, areas_plantas=areas_plantas,
         )
+        janela = _janela_quente((refino or {}).get("obra_progresso"))
+        entrega = (refino or {}).get("previsao_entrega") or _meses_para_entrega(o.get("data_inicio"))
         residencial, base_res, conf_res = _classificar_residencial(o.get("nome") or "", refino)
         # Gate residencial: prédio comercial/infra/ambíguo não gera morador → não soma
         # demanda. Mantém a obra na lista (transparência) mas fora dos totais (Apêndice A).
@@ -414,8 +458,19 @@ def demanda_futura_detalhada(
             "bairro": o.get("bairro"),
             "unidades_est": e["unidades_est"],
             "unidades_fonte": e["unidades_fonte"],
-            "entrega": _meses_para_entrega(o.get("data_inicio")),
+            "entrega": entrega,
             "amenidade_fitness": (refino or {}).get("amenidade_fitness", False),
+            # Ficha técnica ampliada (A) — só quando o refino leu a página/PDF.
+            "areas_plantas": (refino or {}).get("areas_plantas"),
+            "area_privativa_media": (round(sum(areas_plantas) / len(areas_plantas), 1)
+                                     if areas_plantas else None),
+            "dormitorios": (refino or {}).get("dormitorios"),
+            "suites": (refino or {}).get("suites"),
+            "vagas": (refino or {}).get("vagas"),
+            "preco_base": (refino or {}).get("preco_base"),
+            "obra_progresso": (refino or {}).get("obra_progresso"),
+            "janela_quente": janela,            # gatilho timing/MKT (C)
+            "ocupacao_fonte": e["fatores_usados"]["ocupacao"],  # auditável (B)
             # Cadeia clara pro usuário: moradores (Censo) → membros captáveis (nossa
             # fatia) → receita/mês. Tudo 0 em obra não-residencial (fora do gate).
             "moradores_est": e["moradores_est"] if residencial else 0.0,
@@ -439,6 +494,14 @@ def demanda_futura_detalhada(
             for base in ("refino_tipologia", "nome_residencial")
         },
         "obras": linhas[:max(top_n, 10)],
+        # Janela quente (C): obras na reta final → gatilho de MKT pro cliente.
+        "janela_quente_n": sum(1 for l in linhas if l.get("janela_quente")),
+        "janelas_quentes": [
+            {"empreendimento": l.get("empreendimento") or l.get("construtora"),
+             "obra_progresso": l.get("obra_progresso"), "fonte_url": l.get("fonte_url"),
+             "captura_est": l.get("captura_est")}
+            for l in linhas if l.get("janela_quente")
+        ],
         "captura_total_est": round(tot["captura_est"], 1),       # membros captáveis (T+24)
         "moradores_total_est": round(tot["moradores_est"], 1),   # moradores novos (Censo)
         "receita_total_mensal_est": round(tot["receita_est"], 2),  # R$/mês de receita futura

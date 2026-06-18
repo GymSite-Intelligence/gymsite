@@ -253,12 +253,21 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 
 {% if demanda %}
 <div class="sec">Janela de Entrada (Demanda Futura Datada)</div>
+{% if demanda.janela_quente_n %}<div class="alert" style="background:#FFFBEB; border-color:#FCD34D; margin-bottom:10px;">
+  <div style="font-weight:bold; color:#92400E; font-size:9.5pt; margin-bottom:4px;">🔥 Janela quente — {{ demanda.janela_quente_n }} obra(s) na reta final</div>
+  <div style="font-size:8.5pt; color:#78350F; line-height:1.5;">Obra em acabamento/entrega iminente. <strong>Contate a construtora/corretor AGORA</strong> para ação de marketing e capte os futuros moradores antes da concorrência.{% for j in demanda.janelas %}<br>&bull; <strong>{{ j.nome }}</strong>{% if j.total %} — obra {{ j.total }}%{% endif %}{% if j.acabamento %} · acabamento {{ j.acabamento }}%{% endif %} · ~{{ j.captura }} alunos captáveis{% endfor %}</div>
+</div>{% endif %}
 <div class="timing">
   <div class="c"><div class="kpi-t">Obras residenciais (T+24)</div><div class="kpi-n" style="font-size:15pt;">{{ demanda.n }}</div></div>
   <div class="c"><div class="kpi-t">Captura estimada</div><div class="kpi-n" style="font-size:15pt;">~{{ demanda.captura }} alunos</div></div>
   <div class="c"><div class="kpi-t">Receita/mês T+24</div><div class="kpi-n" style="font-size:13pt; padding-top:2px;">R$ {{ demanda.receita }}</div></div>
 </div>
-<div class="timing-d"><strong>Diretriz de timing:</strong> {{ demanda.moradores }} novos moradores em obra. Upside captável com marketing, sem CAPEX extra. <em>Fonte: CNO/RFB + IBGE Censo 2022.</em></div>{% endif %}
+<div class="timing-d"><strong>Diretriz de timing:</strong> {{ demanda.moradores }} novos moradores em obra. Upside captável com marketing, sem CAPEX extra. <em>Fonte: CNO/RFB + IBGE Censo 2022.</em></div>
+{% if demanda.obras %}
+<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Planta</th><th>Entrega</th><th>Fitness</th><th>Captura</th></tr>
+{% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}{% if o.real %} <span class="pill ok">real</span>{% else %} <span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>~{{ o.captura }}</td></tr>{% endfor %}
+</table>
+<div class="note">Unidades <strong>real</strong> = lidas da página do lançamento; <strong>proxy</strong> = estimativa área÷m². Moradores por área-média das plantas × benchmark m²/morador.</div>{% endif %}{% endif %}
 
 {% if bairros_viz %}
 <div class="sec">Bairros Vizinhos Recomendados</div>
@@ -612,11 +621,40 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     demanda = None
     df = meta.get("demanda_futura")
     if isinstance(df, dict) and df.get("status") == "ok" and (df.get("provavel_residencial_n") or 0) > 0:
+        # Ficha por obra (A) — top empreendimentos residenciais com dado real.
+        obras_ficha = []
+        for ob in (df.get("obras") or []):
+            if not isinstance(ob, dict) or not ob.get("provavel_residencial"):
+                continue
+            obras_ficha.append({
+                "nome": str(ob.get("empreendimento") or ob.get("construtora") or "—")[:30],
+                "unidades": _int(ob.get("unidades_est")),
+                "real": (ob.get("unidades_fonte") == "lancamento_exato"),
+                "area": f"{ob.get('area_privativa_media')} m²" if ob.get("area_privativa_media") else "—",
+                "entrega": str(ob.get("entrega") or "—")[:7],
+                "fitness": bool(ob.get("amenidade_fitness")),
+                "captura": _int(ob.get("captura_est")) if ob.get("captura_est") else "—",
+                "quente": bool(ob.get("janela_quente")),
+            })
+        # Janela quente (C) — obras na reta final → diretriz de contato/MKT.
+        janelas = []
+        for j in (df.get("janelas_quentes") or []):
+            if not isinstance(j, dict):
+                continue
+            prog = j.get("obra_progresso") or {}
+            janelas.append({
+                "nome": str(j.get("empreendimento") or "—")[:34],
+                "total": prog.get("total_pct"), "acabamento": prog.get("acabamento_pct"),
+                "captura": _int(j.get("captura_est")) if j.get("captura_est") else "—",
+            })
         demanda = {
             "n": int(df.get("provavel_residencial_n") or 0),
             "captura": int(float(df.get("captura_total_est") or 0)),
             "receita": _brl(df.get("receita_total_mensal_est")),
             "moradores": _brl(df.get("moradores_total_est")),
+            "obras": obras_ficha[:6],
+            "janela_quente_n": int(df.get("janela_quente_n") or 0),
+            "janelas": janelas[:4],
         }
 
     # Novas unidades 90d
