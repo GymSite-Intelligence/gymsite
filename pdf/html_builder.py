@@ -184,7 +184,20 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
   <div class="c"><div class="kpi-t">Regional</div><div class="kpi-n">{{ aneis.regional }}</div></div>
   <div class="c"><div class="kpi-t">Score ponderado</div><div class="kpi-n" style="color:#1B2A4A;">{{ aneis.score }}</div></div>
 </div>
-{% if aneis.portes %}<div class="note">No bairro por porte: {{ aneis.portes }}. Peso por anel — bairro 1.0, fronteira 0.5, regional 0.2 (concorrente distante pressiona menos).</div>{% endif %}{% endif %}
+{% if aneis.portes %}<div class="note">No bairro por porte: {{ aneis.portes }}. Peso por anel — bairro 1.0, fronteira 0.5, regional 0.2 (concorrente distante pressiona menos).</div>{% endif %}
+{% if aneis.cross %}
+<div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Cross-check da contagem (Google Maps · termos do formulário + gate bairro+tipo)</div>
+<div class="kpis" style="margin-top:6px;">
+  <div class="c"><div class="kpi-t">Google mostra</div><div class="kpi-n" style="font-size:14pt;">{{ aneis.cross.google_n }}</div></div>
+  <div class="c"><div class="kpi-t">No bairro + tipo</div><div class="kpi-n" style="font-size:14pt; color:#1B2A4A;">{{ aneis.cross.gated_n }}</div></div>
+  <div class="c"><div class="kpi-t">Analisados a fundo</div><div class="kpi-n" style="font-size:14pt;">{{ aneis.cross.deep_n }}</div></div>
+  <div class="c"><div class="kpi-t">Mapeados (novos)</div><div class="kpi-n" style="font-size:14pt;">{{ aneis.cross.novos_n }}</div></div>
+</div>
+{% if aneis.cross.lista %}
+<table class="d" style="margin-top:6px;"><tr><th>Concorrente no bairro</th><th>Rating</th><th>Avaliações</th><th>Status</th></tr>
+{% for c in aneis.cross.lista %}<tr><td>{{ c.nome }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td><span class="pill {{ 'ok' if c.status=='analisado' else 'mid' }}">{{ c.status }}</span></td></tr>{% endfor %}
+</table>{% endif %}
+<div class="note">Contagem autoritativa de concorrentes no bairro = <strong>{{ aneis.cross.gated_n }}</strong> (gate bairro+tipo sobre a busca do formulário). Google lista {{ aneis.cross.google_n }} (inclui vizinhos/off-tipo); destes, {{ aneis.cross.deep_n }} já tinham reviews analisados e {{ aneis.cross.novos_n }} entram como mapeados.</div>{% endif %}{% endif %}
 
 {% if cobertura %}
 <div class="sec">Cobertura Deep Research (redes-alvo)</div>
@@ -430,6 +443,19 @@ def _aneis(a: dict) -> dict | None:
     pa = a.get("por_anel") or {}
     porte = a.get("no_bairro_por_porte") or {}
     portes_txt = ", ".join(f"{v} {k}" for k, v in porte.items() if v) if isinstance(porte, dict) else ""
+    cc = a.get("cross_check") if isinstance(a.get("cross_check"), dict) else None
+    cross = None
+    if cc and cc.get("status") == "ok":
+        cross = {
+            "google_n": cc.get("google_n"), "gated_n": cc.get("gated_n"),
+            "deep_n": cc.get("ja_no_set_n"), "novos_n": len(cc.get("novos") or []),
+            "lista": [{
+                "nome": str(x.get("nome") or "—")[:32],
+                "rating": x.get("rating") if x.get("rating") is not None else "—",
+                "aval": _int(x.get("num_avaliacoes")) if x.get("num_avaliacoes") else "—",
+                "status": "analisado" if x.get("deep") else "mapeado",
+            } for x in (cc.get("no_bairro") or [])[:12]],
+        }
     return {
         "no_bairro": pa.get("NO_BAIRRO", a.get("concorrentes_no_bairro", "—")),
         "fronteira": pa.get("FRONTEIRA", "—"),
@@ -437,6 +463,7 @@ def _aneis(a: dict) -> dict | None:
         "score": (f"{float(a['score_competitivo_ponderado']):.1f}"
                   if a.get("score_competitivo_ponderado") is not None else "—"),
         "portes": portes_txt or None,
+        "cross": cross,
     }
 
 

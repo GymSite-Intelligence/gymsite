@@ -2287,6 +2287,32 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         comp.get("total_concorrentes_analisados")
         or len(concorrentes_detalhados)
     )
+
+    # ── Cross-check da contagem (gate bairro+tipo) ──────────────────────────────
+    # Google Maps pelos TERMOS DO FORM + gate → contagem real de concorrentes-no-bairro.
+    # Corrige sub-coleta (report mostrava ~3 deep-analisados; gate acha ~6-7). A contagem
+    # gated vira autoritativa de total_concorrentes (alimenta saturação/narrativa). Novos
+    # entram no quadro como 'mapeado, não analisado'.
+    cross_check_concorrentes = None
+    try:
+        from tools.competitor_tools import cross_check_concorrentes_bairro
+
+        _cc_cid = (inner_mc.get("cidade") if isinstance(inner_mc, dict) else "") or ""
+        _cc_uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or ""
+        _cc_bai = _bairro_alvo_da_busca(state) or ""
+        if _cc_cid and _cc_bai:
+            cross_check_concorrentes = cross_check_concorrentes_bairro(
+                _cc_cid, _cc_uf, _cc_bai, _tn_cc, existentes=concorrentes_detalhados)
+            _gated = cross_check_concorrentes.get("gated_n", 0) or 0
+            if cross_check_concorrentes.get("status") == "ok" and _gated > (_safe_float(total_concorrentes) or 0):
+                cross_check_concorrentes["total_anterior"] = total_concorrentes
+                total_concorrentes = _gated  # autoritativo: gate bairro+tipo
+            # Persiste aninhado no bloco de anéis (coluna jsonb existente).
+            if isinstance(aneis_competitivos_resumo, dict) and cross_check_concorrentes:
+                aneis_competitivos_resumo["cross_check"] = cross_check_concorrentes
+    except Exception:
+        logger.warning("A6 cross-check concorrentes falhou", exc_info=True, extra={"agent": "A6"})
+
     alertas_financeiros = list(inner_fin.get("alertas", []) or [])
     sem_concorrentes = (not concorrentes_detalhados) and _safe_float(total_concorrentes) == 0
     if sem_concorrentes:

@@ -410,6 +410,68 @@ _SEARCHAPI_FITNESS_KW = (
     "treinamento", "personal", "yoga", "funcional",
 )
 
+# Termo PT do tipo do formulário p/ a query do cross-check (Google entende melhor PT).
+_TIPO_QUERY_PT = {
+    "academia": "academia", "crossfit_box": "crossfit", "studio_pilates": "pilates",
+    "studio_funcional": "treinamento funcional", "outro": "academia",
+}
+
+
+def cross_check_concorrentes_bairro(
+    cidade: str, uf: str, bairro: str, tipo_negocio: str,
+    *, existentes: list[dict] | None = None,
+) -> dict:
+    """Cross-check da contagem de concorrentes: busca Google Maps pelos TERMOS DO FORM
+    ('{tipo} {bairro} {cidade} {uf}') e aplica o GATE bairro+tipo. Reconcilia o que o
+    Google mostra vs o que o pipeline capturou — a contagem gated vira a autoritativa de
+    'concorrentes_no_bairro' (satura/score). Dedup por place_id (ChIJ idêntico ao Places).
+
+    Retorna {status, query, google_n, gated_n, no_bairro[], novos[], ja_no_set_n}.
+    no_bairro[] = academias gated (place_id, nome, endereco, rating, num_avaliacoes, deep).
+    Best-effort: sem key/erro → status indisponivel."""
+    termo = _TIPO_QUERY_PT.get((tipo_negocio or "").strip().lower(), "academia")
+    query = " ".join(p for p in (termo, bairro, cidade, uf) if p)
+    raw = _searchapi_maps_textsearch(query, max_results=40)
+    if not raw:
+        return {"status": "indisponivel", "query": query, "google_n": 0, "gated_n": 0,
+                "no_bairro": [], "novos": [], "ja_no_set_n": 0}
+
+    # Adapta pro shape do filtro (nome/endereco/tipos) preservando place_id + métricas.
+    adap = [{
+        "place_id": r.get("id") or "",
+        "nome": (r.get("displayName") or {}).get("text") or "",
+        "endereco": r.get("formattedAddress") or "",
+        "tipos": r.get("types") or [],
+        "rating": r.get("rating"),
+        "num_avaliacoes": r.get("userRatingCount") or 0,
+    } for r in raw]
+    gated = filtrar_concorrentes_bairro_tipo(adap, bairro=bairro, tipo_negocio=tipo_negocio)
+
+    # Dedup vs o set já capturado (place_id). Os que já estão = 'deep' (têm reviews);
+    # os novos entram como 'mapeado, não analisado'.
+    ids_exist = {
+        (c.get("place_id") or c.get("id") or "")
+        for c in (existentes or []) if isinstance(c, dict)
+    }
+    ids_exist.discard("")
+    no_bairro, novos = [], []
+    for g in gated:
+        pid = g.get("place_id") or ""
+        deep = bool(pid and pid in ids_exist)
+        item = {"place_id": pid, "nome": g.get("nome"), "endereco": g.get("endereco"),
+                "rating": g.get("rating"), "num_avaliacoes": g.get("num_avaliacoes"),
+                "deep": deep}
+        no_bairro.append(item)
+        if not deep:
+            novos.append(item)
+    return {
+        "status": "ok", "query": query, "google_n": len(raw), "gated_n": len(no_bairro),
+        "no_bairro": no_bairro, "novos": novos, "ja_no_set_n": len(no_bairro) - len(novos),
+        "fonte": "SearchAPI google_maps (termos do formulário) + gate bairro+tipo",
+        "nota": ("Contagem autoritativa de concorrentes no bairro = gated_n. Google mostra "
+                 "google_n; gate remove vizinhos/off-tipo; ja_no_set = já analisados a fundo."),
+    }
+
 
 def _searchapi_maps_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
     """SearchAPI engine=google_maps → adaptado p/ o MESMO shape do Places searchText
