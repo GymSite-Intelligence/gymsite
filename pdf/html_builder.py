@@ -246,6 +246,7 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </div>{% endif %}{% endif %}
 
 {% if errc %}
+<div style="page-break-inside:avoid;">
 <div class="sec">Posicionamento Estratégico — Framework ERRC</div>
 <p class="intro">Diretrizes derivadas da oferta real dos concorrentes e das dores coletadas na praça:</p>
 <table class="errc">
@@ -253,7 +254,7 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
       <td style="border-top:3px solid #D97706;"><div class="h" style="color:#92400E;">Reduzir</div><ul>{% for i in errc.reduzir %}<li>{{ i }}</li>{% endfor %}</ul></td></tr>
   <tr><td style="border-top:3px solid #2563EB;"><div class="h" style="color:#1E40AF;">Aumentar</div><ul>{% for i in errc.aumentar %}<li>{{ i }}</li>{% endfor %}</ul></td>
       <td style="border-top:3px solid #16A34A;"><div class="h" style="color:#166534;">Criar</div><ul>{% for i in errc.criar %}<li>{{ i }}</li>{% endfor %}</ul></td></tr>
-</table>{% endif %}
+</table></div>{% endif %}
 
 {% if gaps or ticket_rec %}
 <div class="sec">Dores do Mercado e Proposta Tarifária</div>
@@ -318,8 +319,8 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 {% if candidatos %}
 <div class="sec">Top Candidatos (Imóveis)</div>
 {% if candidatos_algum_fora %}<div class="note" style="background:#FEF2F2; border:1px solid #FECACA; border-radius:5px; padding:8px 12px; color:#7F1D1D; margin-bottom:6px;">⚠ Imóveis marcados <strong>(fora)</strong> estão em bairro/cidade vizinha — o GeoScout não achou vago em {{ bairro }}. O referencial de viabilidade (demografia, concorrência, aluguel) é de <strong>{{ bairro }}</strong> e independe do imóvel; trate-os como ponto de partida físico, não como o veredito do bairro.</div>{% endif %}
-<table class="d"><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Geo</th><th>Ancor.</th><th>Endereço</th></tr>
-{% for c in candidatos %}<tr><td>{{ c.pos }}</td><td>{{ c.nome }}{% if c.fora %} <span class="pill no">fora</span>{% endif %}</td><td>{{ c.tipo }}</td><td>{{ c.geo }}</td><td>{{ c.ancor }}</td><td style="font-size:8pt;">{{ c.endereco }}</td></tr>{% endfor %}
+<table class="d"><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Local</th><th>Geo</th><th>Ancor.</th><th>Endereço</th></tr>
+{% for c in candidatos %}<tr><td>{{ c.pos }}</td><td>{{ c.nome }}</td><td>{{ c.tipo }}</td><td>{% if c.fora %}<span class="pill no">fora</span>{% else %}<span class="pill ok">bairro</span>{% endif %}</td><td>{{ c.geo }}</td><td>{{ c.ancor }}</td><td style="font-size:8pt;">{{ c.endereco }}</td></tr>{% endfor %}
 </table>{% endif %}
 
 {% if alertas %}
@@ -560,6 +561,19 @@ def _dores_quadro(dores_cons) -> list[dict] | None:
     return out or None
 
 
+def _limpar_bairro(b: str | None) -> str:
+    """'Lojas 2/3/12/13 - Cocó' → 'Cocó'. Tira prefixo de loja/sala/quadra/lote do
+    endereço que o parser às vezes deixa no campo bairro."""
+    s = str(b or "").strip()
+    if not s:
+        return "—"
+    # se houver ' - ', o bairro real costuma ser o ÚLTIMO segmento
+    if " - " in s:
+        s = s.split(" - ")[-1].strip()
+    s = re.sub(r"(?i)^(lojas?|salas?|quadra|lote|bloco|s/n)\b[\s\d/.,-]*", "", s).strip()
+    return s or "—"
+
+
 def _preco_num(v) -> float | None:
     """'R$ 129,90' → 129.9. None se não parsear."""
     if v is None:
@@ -684,7 +698,11 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     rec_norm = (model.modelo_recomendado or "").strip().lower()
     mid_cen = rec_cen = None
     for c in (model.cenarios or []):
-        is_rec = bool(rec_norm) and ((c.modelo or "").lower() == rec_norm or (c.label or "").lower() == rec_norm)
+        # Não marcar ★/recomendado num cenário INVIÁVEL (contradição que o usuário pegou:
+        # 'Premium ★ ... INVIAVEL'). Recomendado só se bate o modelo E é viável.
+        is_rec = (bool(rec_norm)
+                  and ((c.modelo or "").lower() == rec_norm or (c.label or "").lower() == rec_norm)
+                  and "INVI" not in (c.viabilidade or "").upper())
         cenarios.append({
             "modelo": c.label or c.modelo, "ticket": f"R$ {_brl(c.ticket_medio)}",
             "receita": f"R$ {_brl(c.receita_mensal)}" if c.receita_mensal else "—",
@@ -739,7 +757,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     competidores = [{
         "nome": c.nome[:38], "rating": c.rating if c.rating is not None else "—",
         "aval": _int(c.num_avaliacoes) if c.num_avaliacoes else "—",
-        "bairro": c.bairro or "—", "h24": "sim" if c.tem_24h else "—",
+        "bairro": _limpar_bairro(c.bairro), "h24": "sim" if c.tem_24h else "—",
     } for c in (model.competidores or [])]
 
     # Quadro planos × preços da concorrência (SearchAPI). Só com dado real.
@@ -872,11 +890,28 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     }
 
 
+# Emoji/símbolos: PDF de produção NÃO leva emoji (regra). Funcionais viram texto;
+# o resto (⚠ 🔥 e pictográficos) é removido.
+_SUBST_SIMBOLO = {
+    "♀": "F", "♂": "M", "✓": "Sim", "✗": "—", "★": " (recom.)", "↳": "->",
+    "🔥": "", "⚠": "", "⚠️": "",
+}
+_EMOJI_RE = re.compile(
+    "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF\U0000FE00-\U0000FE0F\U00002190-\U000021FF]"
+)
+
+
+def _sem_emoji(html: str) -> str:
+    for k, v in _SUBST_SIMBOLO.items():
+        html = html.replace(k, v)
+    return _EMOJI_RE.sub("", html)
+
+
 def gerar_html(model: RelatorioPdfModel) -> str:
-    """HTML do relatório completo (testável sem WeasyPrint)."""
+    """HTML do relatório completo (testável sem WeasyPrint). Sem emoji (regra PDF)."""
     from jinja2 import Template
 
-    return Template(_TEMPLATE).render(**_contexto(model))
+    return _sem_emoji(Template(_TEMPLATE).render(**_contexto(model)))
 
 
 def gerar_pdf_weasy(model: RelatorioPdfModel) -> bytes:
