@@ -40,6 +40,7 @@ import {
   type MunicipioIBGE,
 } from '@/hooks/useMunicipioAutocomplete'
 import { useBairrosDoMunicipio } from '@/hooks/useBairrosDoMunicipio'
+import { useBairroAutocomplete } from '@/hooks/useBairroAutocomplete'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { UFS_BRASIL, type UF } from '@/data/ufs-brasil'
@@ -161,22 +162,37 @@ export function NovoRelatorioPage() {
     municipioSelecionado?.uf ?? '',
   )
 
-  // Filtro client-side por texto digitado (caller ainda pode digitar pra refinar)
+  // Autocomplete AO VIVO da query digitada — a lista pré-carregada usa prefixos de
+  // 1 letra e o Places dá só 5/chamada, então bairros fora do top-5 (ex: Cocó em
+  // 'c', atrás de Centro/Cidade dos Funcionários) não entram. A busca ao vivo por
+  // 'coc' traz o que falta. Merge com a pré-carregada (ao vivo primeiro).
+  const debouncedBairro = useDebounce(bairroQuery, 250)
+  const { data: bairrosLive = [] } = useBairroAutocomplete({
+    input: debouncedBairro,
+    municipio: municipioSelecionado?.nome ?? '',
+    uf: municipioSelecionado?.uf ?? '',
+  })
+
+  // Filtro client-side por texto digitado + merge com o autocomplete ao vivo.
   const bairrosSugeridos = useMemo(() => {
-    const q = bairroQuery
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .toLowerCase()
-      .trim()
-    if (!q) return bairrosDoMunicipio
-    return bairrosDoMunicipio.filter((b) =>
-      b.bairro
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
-        .toLowerCase()
-        .includes(q),
-    )
-  }, [bairrosDoMunicipio, bairroQuery])
+    const _norm = (s: string) =>
+      s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+    const q = _norm(bairroQuery)
+    const filtrados = q
+      ? bairrosDoMunicipio.filter((b) => _norm(b.bairro).includes(q))
+      : bairrosDoMunicipio
+    // ao vivo primeiro (acha o que falta na pré-carregada), dedup
+    const visto = new Set<string>()
+    const out: typeof bairrosDoMunicipio = []
+    for (const b of [...bairrosLive, ...filtrados]) {
+      const key = b.placeId || b.textoCompleto || b.bairro
+      if (!visto.has(key)) {
+        visto.add(key)
+        out.push(b)
+      }
+    }
+    return out
+  }, [bairrosDoMunicipio, bairrosLive, bairroQuery])
 
   const {
     register,
