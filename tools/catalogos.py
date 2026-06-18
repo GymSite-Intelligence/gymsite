@@ -62,6 +62,34 @@ def catalogo(nome: str) -> list[dict[str, Any]]:
     return rows
 
 
+def catalogo_lista(nome: str) -> list[str]:
+    """Catálogo como lista de valores (ex.: padrões, keywords)."""
+    return [c.get("valor") for c in catalogo(nome) if c.get("valor")]
+
+
+def catalogo_map(nome: str) -> dict[str, str]:
+    """Catálogo como dict chave→valor (ex.: olx_subdominio_uf, tipo_query_pt)."""
+    return {c.get("chave"): c.get("valor") for c in catalogo(nome) if c.get("chave")}
+
+
+def catalogo_num(nome: str) -> dict[str, float]:
+    """Catálogo numérico: chave→metadata.valor (float). Para pesos/boosts."""
+    out: dict[str, float] = {}
+    for c in catalogo(nome):
+        k = c.get("chave")
+        v = (c.get("metadata") or {}).get("valor")
+        if v is None:
+            try:
+                v = float(c.get("valor"))
+            except (TypeError, ValueError):
+                continue
+        try:
+            out[k] = float(v)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def normalizar_servicos(textos) -> list[str]:
     """Texto(s) bruto(s) de plano/oferta (marketing) → categorias de serviço LIMPAS
     (labels do catálogo 'servicos'), via match de sinônimos. Sem prosa de marketing."""
