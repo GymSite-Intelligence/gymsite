@@ -111,6 +111,10 @@ def _map_candidato(row: dict[str, Any], pos: int) -> CandidatoPdf:
         tipo_imovel_label=str(row.get("tipo_imovel_label")) if row.get("tipo_imovel_label") is not None else None,
         modalidade=str(row.get("modalidade")) if row.get("modalidade") is not None else None,
         cartorio=row.get("cartorio") if isinstance(row.get("cartorio"), dict) else None,
+        # R1 — Street View: coordenadas + URL relativa do proxy (ja vem do pipeline)
+        lat=_num(row.get("lat")),
+        lng=_num(row.get("lng")),
+        street_view_url=str(row.get("street_view_url")) if row.get("street_view_url") is not None else None,
     )
 
 
