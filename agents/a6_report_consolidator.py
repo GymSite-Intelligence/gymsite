@@ -671,6 +671,43 @@ def _precompute_entrantes_cnpj(callback_context) -> dict:
     return listar_entrantes_cnpj_fitness(cidade, uf, dias=90, limit=50)
 
 
+def _sanear_insights_renda(insights: list, renda_autoritativa: float) -> tuple[list, int]:
+    """Remove insights de PROSA (A0) que citam renda contraditória/defasada vs a
+    estruturada (já sobreposta pela IPECE 2022). Dois sinais:
+      - fonte velha explícita (Censo 2010 / CKAN Desenvolvimento Humano por Bairro);
+      - valor de renda plausível (R$ 1.000–50.000) divergindo >15% da autoritativa.
+    Ticket/aluguel (valores baixos) não disparam — faixa plausível evita falso-positivo.
+    Retorna (lista_limpa, n_dropados)."""
+    import re
+
+    fontes_velhas = ("censo 2010", "desenvolvimento humano por bairro")
+    limpos: list = []
+    drop = 0
+    for it in insights:
+        low = str(it).lower()
+        if "renda" not in low:
+            limpos.append(it)
+            continue
+        fonte_velha = any(f in low for f in fontes_velhas)
+        vals = []
+        for m in re.findall(r"r\$\s*([\d][\d.\s]*(?:,\d+)?)", low):
+            t = m.strip().replace(" ", "")
+            t = t.replace(".", "").replace(",", ".") if "," in t else t
+            try:
+                vals.append(float(t))
+            except ValueError:
+                pass
+        renda_divergente = any(
+            1000 <= v <= 50000 and abs(v - renda_autoritativa) / renda_autoritativa > 0.15
+            for v in vals
+        )
+        if fonte_velha or renda_divergente:
+            drop += 1
+            continue
+        limpos.append(it)
+    return limpos, drop
+
+
 def _precompute_obras_cno(callback_context) -> dict:
     """Obras fitness em andamento (CNO) — nome, m², bairro, data início."""
     import os
@@ -2087,16 +2124,34 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
 
     # Renda do contexto: Deep Research usa CKAN 2010 (defasado). Sobrepõe pela IPECE 2022
     # (renda per capita por bairro) quando disponível — coerência com o tier do A4.
+    _renda_autoritativa = None
     try:
         if isinstance(slim_market_context, dict):
             from tools.posicionamento_renda import renda_bairro_ipece
 
             _r = renda_bairro_ipece(_cid_ef, _uf, _bai)
             if isinstance(_r, dict) and _r.get("renda_pc"):
-                slim_market_context["renda_media_bairro"] = round(float(_r["renda_pc"]), 2)
+                _renda_autoritativa = round(float(_r["renda_pc"]), 2)
+                slim_market_context["renda_media_bairro"] = _renda_autoritativa
                 slim_market_context["renda_media_bairro_fonte"] = "IPECE Informe 272 (Censo 2022) — renda per capita"
     except Exception:
         logger.warning("A6 override renda IPECE falhou", exc_info=True, extra={"agent": "A6"})
+
+    # Sanitiza insights de PROSA do A0 (Deep Research) que citem renda contraditória:
+    # a renda estruturada já foi sobreposta pela IPECE 2022, mas o LLM às vezes narra
+    # "renda média R$ 2.095 (CKAN Censo 2010)" — número defasado que conflita com o
+    # estruturado. Dropa o insight quando cita renda divergente >15% ou fonte velha
+    # (CKAN renda / Censo 2010 / Desenvolvimento Humano por Bairro). Mata o leak no
+    # dado bruto (o produto weasy nem renderiza insights, mas o reportlab/DB sim).
+    try:
+        ins = slim_market_context.get("insights_estrategicos") if isinstance(slim_market_context, dict) else None
+        if _renda_autoritativa and isinstance(ins, list):
+            limpos, dropados = _sanear_insights_renda(ins, _renda_autoritativa)
+            if dropados:
+                slim_market_context["insights_estrategicos"] = limpos
+                logger.info("A6 saneou %d insight(s) de renda defasada", dropados, extra={"agent": "A6"})
+    except Exception:
+        logger.warning("A6 sanitização de insights falhou", exc_info=True, extra={"agent": "A6"})
 
     obras_cno_block = state.get("obras_cno_pronto") or {}
     if not isinstance(obras_cno_block, dict) or obras_cno_block.get("status") not in (
