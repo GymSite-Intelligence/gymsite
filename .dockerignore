@@ -32,7 +32,6 @@ debug/
 metrics/
 prints/
 data/
-pdf/
 prospecting/
 eval/
 scratch/
@@ -45,3 +44,8 @@ audit-reports/
 *.zip
 *.html
 Prints/
+
+# pdf/ é pacote Python do produto (PDF do relatório) — NÃO excluir.
+# Os *.png/*.jpg globais acima removeriam os assets; re-incluir explicitamente.
+!pdf/assets/logo-gymsite.png
+!pdf/assets/brazil-heatmap.jpg
