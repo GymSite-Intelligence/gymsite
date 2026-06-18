@@ -15,7 +15,7 @@
  * payload entregue ao pipeline tem (UF, Município, Bairro) sempre consistentes
  * e elimina ambiguidades como "Eusébio como bairro de Fortaleza".
  */
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, useEffect, type FormEvent } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -41,6 +41,11 @@ import {
 } from '@/hooks/useMunicipioAutocomplete'
 import { useBairrosDoMunicipio } from '@/hooks/useBairrosDoMunicipio'
 import { useBairroAutocomplete } from '@/hooks/useBairroAutocomplete'
+import {
+  usePublicoFaixas,
+  faixasParaRange,
+  rangeParaFaixas,
+} from '@/hooks/usePublicoFaixas'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import { UFS_BRASIL, type UF } from '@/data/ufs-brasil'
@@ -73,7 +78,11 @@ const formSchema = z
       .int()
       .min(200)
       .max(5000),
-    publicoAlvo: z.enum(['18-29', '25-40', '30-50', '40+']),
+    // Range envolvente (ex: "25-59" | "60+") derivado dos segmentos marcados.
+    // É o que o pipeline consome (publico_alvo).
+    publicoAlvo: z.string().regex(/^\d{1,3}(-\d{1,3}|\+)$/, 'Público-alvo inválido'),
+    // Segmentos marcados (Jovem/Core/Maduro/Silver) — MESMA taxonomia do relatório.
+    publicoFaixas: z.array(z.string()).min(1, 'Selecione ao menos um segmento'),
     generoAlvo: z.enum([
       'misto',
       'predominantemente_feminino',
@@ -210,7 +219,10 @@ export function NovoRelatorioPage() {
       bairro: retryEraCidadeInteira ? '' : (retrySearch.bairro ?? ''),
       areaMin: retrySearch.area_m2_min ?? 800,
       areaMax: retrySearch.area_m2_max ?? 1500,
-      publicoAlvo: (retrySearch.publico_alvo as FormData['publicoAlvo']) ?? '25-40',
+      // Default Core (25-39) ≈ público-alvo típico de academia. Retry reconcilia
+      // os segmentos a partir do range salvo via efeito (precisa do catálogo).
+      publicoAlvo: (retrySearch.publico_alvo as string) ?? '25-39',
+      publicoFaixas: ['25-39'],
       generoAlvo: (retrySearch.genero_alvo as FormData['generoAlvo']) ?? 'misto',
       tipoNegocio: (retrySearch.tipo_negocio as FormData['tipoNegocio']) ?? 'academia',
       tamanho: (retrySearch.tamanho_preset as FormData['tamanho']) ?? 'm',
@@ -227,6 +239,39 @@ export function NovoRelatorioPage() {
 
   const watchedBairro = watch('bairro')
   const watchedTipoNegocio = watch('tipoNegocio') as ModeloNegocio
+  const watchedPublicoFaixas = watch('publicoFaixas')
+
+  // Segmentos de público-alvo do catálogo (Jovem/Core/Maduro/Silver) — MESMA
+  // fonte do relatório. Multi-seleção → range envolvente p/ o pipeline.
+  const { data: publicoFaixasCatalogo = [] } = usePublicoFaixas()
+
+  // Retry/edição: reconcilia os segmentos a partir do range salvo, uma vez que
+  // o catálogo carrega (precisa dos limites min/max de cada faixa).
+  useEffect(() => {
+    if (!veioDeRetry || !retrySearch.publico_alvo || !publicoFaixasCatalogo.length)
+      return
+    const faixas = rangeParaFaixas(retrySearch.publico_alvo, publicoFaixasCatalogo)
+    if (faixas.length) setValue('publicoFaixas', faixas, { shouldDirty: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicoFaixasCatalogo])
+
+  // Mantém publicoAlvo (range que o pipeline consome) em sincronia com os
+  // segmentos marcados. Single source: os chips.
+  useEffect(() => {
+    const range = faixasParaRange(watchedPublicoFaixas || [], publicoFaixasCatalogo)
+    if (range) setValue('publicoAlvo', range, { shouldValidate: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPublicoFaixas, publicoFaixasCatalogo])
+
+  function toggleFaixa(faixa: string) {
+    const atuais = watchedPublicoFaixas || []
+    const proximas = atuais.includes(faixa)
+      ? atuais.filter((f) => f !== faixa)
+      : [...atuais, faixa]
+    // Não deixa esvaziar — ao menos 1 segmento.
+    if (!proximas.length) return
+    setValue('publicoFaixas', proximas, { shouldValidate: true, shouldDirty: true })
+  }
   const watchedTamanho = watch('tamanho')
   const watchedAreaMin = watch('areaMin')
   const watchedAreaMax = watch('areaMax')
@@ -734,17 +779,34 @@ export function NovoRelatorioPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Público-alvo (idade)" error={errors.publicoAlvo?.message}>
-              <SelectGrouped
-                value={watch('publicoAlvo')}
-                onChange={(v) => setValue('publicoAlvo', v as FormData['publicoAlvo'], { shouldDirty: true })}
-                options={[
-                  { value: '18-29', label: '18–29 anos' },
-                  { value: '25-40', label: '25–40 anos' },
-                  { value: '30-50', label: '30–50 anos' },
-                  { value: '40+', label: '40+ anos' },
-                ]}
-              />
+            <Field
+              label="Público-alvo (segmentos)"
+              hint={`Marque 1+ · cobre idade ${watch('publicoAlvo') || '—'}`}
+              error={errors.publicoFaixas?.message || errors.publicoAlvo?.message}
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {publicoFaixasCatalogo.map((f) => {
+                  const ativo = (watchedPublicoFaixas || []).includes(f.faixa)
+                  return (
+                    <button
+                      type="button"
+                      key={f.faixa}
+                      onClick={() => toggleFaixa(f.faixa)}
+                      className={cn(
+                        'rounded-md border px-2 py-2 text-left transition-colors',
+                        ativo
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50 hover:bg-muted/40',
+                      )}
+                    >
+                      <div className="text-sm font-semibold">{f.nome}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono leading-tight">
+                        {f.faixa.includes('+') ? `${f.min}+` : `${f.min}–${f.max}`} anos
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </Field>
             <Field
               label="Gênero alvo"

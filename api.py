@@ -1292,6 +1292,29 @@ def maps_js_config_endpoint() -> dict:
     return maps_js_config()
 
 
+@app.get("/api/config/publico-faixas")
+def publico_faixas_endpoint() -> dict:
+    """Segmentos de público-alvo (idade) do catálogo — MESMA fonte do relatório
+    (catalogos_metodologia 'publico_faixa'). Form e relatório falam a mesma língua."""
+    from tools.catalogos import catalogo
+
+    faixas = sorted(
+        (
+            {
+                "faixa": c.get("chave"),
+                "nome": c.get("valor"),
+                "min": (c.get("metadata") or {}).get("min"),
+                "max": (c.get("metadata") or {}).get("max"),
+                "ordem": (c.get("metadata") or {}).get("ordem", 0),
+            }
+            for c in catalogo("publico_faixa")
+            if c.get("chave")
+        ),
+        key=lambda x: x["ordem"],
+    )
+    return {"faixas": faixas}
+
+
 @app.post("/api/places-autocomplete")
 def places_autocomplete_endpoint(body: PlacesAutocompleteInput) -> dict:
     """

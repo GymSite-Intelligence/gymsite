@@ -358,7 +358,21 @@ _VEREDITO_COR = {
     "TRANSICAO": "#EA580C", "INVESTIGAR MAIS": "#EA580C", "TRANSIÇÃO": "#EA580C",
     "OCEANO_VERMELHO": "#DC2626", "REPROVADO": "#DC2626",
 }
-_NOME_FAIXA = {"15-24": "Jovem", "25-39": "Core", "40-59": "Maduro", "60+": "Silver"}
+def _nome_faixa_map() -> dict:
+    """Nomes dos segmentos do catálogo (publico_faixa) — MESMA fonte do form.
+    Fallback rotulado se a tabela falhar (nada hardcoded como source of truth)."""
+    try:
+        from tools.catalogos import catalogo_map
+
+        m = catalogo_map("publico_faixa")
+        if m:
+            return m
+    except Exception:
+        pass
+    return {"15-24": "Jovem", "25-39": "Core", "40-59": "Maduro", "60+": "Silver"}
+
+
+_NOME_FAIXA = _nome_faixa_map()
 
 
 def _brl(v) -> str:
