@@ -515,6 +515,15 @@ class PlacesAutocompleteInput(BaseModel):
     lng: Optional[float] = None
 
 
+class TerritorioReadInput(BaseModel):
+    """Resumo AGREGADO do recorte visivel do mapa (R2). Sem dados crus/PII."""
+    cidade: str = ""
+    bbox: Optional[dict[str, float]] = None
+    counts: dict[str, int] = Field(default_factory=dict)
+    top_bairros: list[str] = Field(default_factory=list)
+    vereditos: dict[str, int] = Field(default_factory=dict)
+
+
 class CanalProbeInput(BaseModel):
     """Parâmetros mínimos para probes Run now (formulário novo relatório)."""
     cidade: str
@@ -1250,6 +1259,26 @@ def maps_street_view_proxy(
         raise
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/maps/territorio-read")
+def maps_territorio_read(body: TerritorioReadInput) -> dict:
+    """R2 — leitura do territorio (IA) a partir do recorte agregado do mapa.
+
+    Recebe so agregados (sem PII). Defensivo: o tool nunca levanta excecao;
+    em erro/timeout/quota devolve um fallback estatico. Cache + debounce (front)
+    contem custo.
+    """
+    from tools.territorio_read_tool import ler_territorio
+
+    resumo = {
+        "cidade": body.cidade,
+        "bbox": body.bbox,
+        "counts": body.counts,
+        "top_bairros": body.top_bairros[:20],
+        "vereditos": body.vereditos,
+    }
+    return ler_territorio(resumo)
 
 
 @app.get("/api/config/maps-js")
@@ -2661,4 +2690,3 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
 @app.options("/{path:path}")
 async def preflight_catchall(path: str) -> None:
     return None
-
