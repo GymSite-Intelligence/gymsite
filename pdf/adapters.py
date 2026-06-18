@@ -246,6 +246,9 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
         metadata={
             "schema_version": header.get("schema_version"),
             "status": header.get("status"),
+            # p/ o builder WeasyPrint (HTML): demanda futura datada + perfil idade×sexo.
+            "demanda_futura": out.get("demanda_futura") if isinstance(out.get("demanda_futura"), dict) else None,
+            "demografia_bairro": out.get("demografia_bairro") if isinstance(out.get("demografia_bairro"), dict) else None,
         },
     )
 

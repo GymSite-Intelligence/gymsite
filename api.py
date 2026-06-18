@@ -1951,8 +1951,8 @@ def post_sync_apollo_pendentes(request: Request, limite: int = 20) -> dict:
 
 
 @app.get("/api/relatorios/{relatorio_id}/pdf")
-def get_relatorio_pdf(relatorio_id: str, layout: str = "classic") -> Any:
-    """PDF estruturado do relatório (ReportLab + gráficos)."""
+def get_relatorio_pdf(relatorio_id: str, layout: str = "classic", engine: str = "reportlab") -> Any:
+    """PDF estruturado do relatório. engine=reportlab (default) | weasy (HTML/CSS, produção)."""
     from fastapi.responses import Response
 
     from pdf import LayoutId, generate_relatorio_pdf
@@ -1977,7 +1977,12 @@ def get_relatorio_pdf(relatorio_id: str, layout: str = "classic") -> Any:
         )
 
     model = relatorio_from_api_payload(payload)
-    pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
+    if (engine or "").strip().lower() == "weasy":
+        from pdf.html_builder import gerar_pdf_weasy
+
+        pdf_bytes = gerar_pdf_weasy(model)
+    else:
+        pdf_bytes = generate_relatorio_pdf(model, layout=layout_id)
     slug = f"gymsite-{model.bairro}-{model.cidade}".replace(" ", "-")
     slug = "".join(c if c.isalnum() or c in "-_" else "" for c in slug)[:48] or "relatorio"
     # ASCII-safe fallback + RFC 5987 encoding for non-ASCII chars
