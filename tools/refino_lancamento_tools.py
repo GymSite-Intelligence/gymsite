@@ -463,13 +463,19 @@ def _extrair_do_html(html: str) -> dict | None:
 
 
 def _refino_via_pagina(url: str, obra: dict) -> dict | None:
-    """Baixa a página do lançamento e extrai unidades reais. None se falhar."""
+    """Baixa a página do lançamento e extrai a ficha. Retorna o ext se trouxe QUALQUER
+    sinal útil (unidades OU áreas OU obra% OU responsável) — não exige unidades: páginas
+    como a da Colmeia têm áreas+obra+construtora mas omitem o total (units fica proxy,
+    mas a ficha/B/C/responsável vêm). None só se a página não deu nada."""
     html = _baixar_html(url)
     if not html:
         return None
     try:
         ext = _extrair_do_html(html)
-        if ext and _unidades_do_extraido(ext):
+        if ext and (
+            _unidades_do_extraido(ext) or _areas_plantas(ext) or _obra_progresso(ext)
+            or ext.get("incorporadora") or ext.get("imobiliaria_vendas")
+        ):
             ext["_pagina_url"] = url
             return ext
     except Exception as e:
@@ -566,22 +572,31 @@ def refinar_demanda_via_lancamento(
             cand_url = _melhor_fonte_url(fontes, ext)
             pag_fn = _pagina_fn or _refino_via_pagina
             pag = pag_fn(cand_url, obra) if cand_url else None
-            if pag and _unidades_do_extraido(pag):
+            if pag:
                 from tools.bairro_normalize import normalizar_bairro
 
                 end_p = pag.get("endereco") or {}
                 b_o = normalizar_bairro(obra.get("bairro") or "")
                 b_p = normalizar_bairro(end_p.get("bairro") or "")
-                if b_o and b_o == b_p:
-                    cep_o, cep_p = _digits(obra.get("cep")), _digits(end_p.get("cep"))
-                    num_o, num_p = _digits(obra.get("numero_logradouro")), _digits(end_p.get("numero"))
-                    casou_endereco = bool(cep_o and cep_o == cep_p and num_o and num_o == num_p)
-                    unidades = _unidades_do_extraido(pag)
+                bairro_ok = bool(b_o) and b_o == b_p
+                un_pag = _unidades_do_extraido(pag)
+                # Bairro confere (ou unidades exatas) → a ficha da página é confiável:
+                # mescla áreas/obra/dorm/responsável SEMPRE (B/C/parceria), mesmo sem total.
+                if bairro_ok or un_pag:
                     ext = {**ext, **{k: v for k, v in pag.items() if v is not None}}
-                    confianca = "alta" if casou_endereco else "media"
-                    metodo = "pagina_cep_numero" if casou_endereco else "pagina_bairro"
-                    fonte_tipo = "pagina_lancamento"
                     pagina_url = pag.get("_pagina_url") or cand_url
+                    if un_pag and bairro_ok:
+                        cep_o, cep_p = _digits(obra.get("cep")), _digits(end_p.get("cep"))
+                        num_o, num_p = _digits(obra.get("numero_logradouro")), _digits(end_p.get("numero"))
+                        casou_endereco = bool(cep_o and cep_o == cep_p and num_o and num_o == num_p)
+                        unidades = un_pag
+                        confianca = "alta" if casou_endereco else "media"
+                        metodo = "pagina_cep_numero" if casou_endereco else "pagina_bairro"
+                        fonte_tipo = "pagina_lancamento"
+                    else:
+                        # Ficha veio mas sem total de unidades → mantém proxy nas unidades,
+                        # mas a página alimenta áreas (B), obra% (C) e responsável.
+                        fonte_tipo = fonte_tipo or "pagina_ficha"
 
         # Unidades da PÁGINA são observadas → aplicam mesmo em "media"; do snippet,
         # só em "alta" (gate conservador original, evita adotar número de snippet ruim).

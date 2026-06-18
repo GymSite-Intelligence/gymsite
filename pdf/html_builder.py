@@ -33,37 +33,41 @@ body { margin:0; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:
 .logo { font-weight:900; font-size:20pt; letter-spacing:-0.5px; color:#1B2A4A; line-height:1; }
 .logo .a { color:#A3E635; }
 .logo-sub { display:block; font-weight:500; font-size:7.5pt; color:#64748B; letter-spacing:2.5px; text-transform:uppercase; margin-top:3px; }
-.doc-title { font-size:14pt; font-weight:bold; color:#0F172A; margin:0 0 3px; text-transform:uppercase; letter-spacing:0.5px; }
+.doc-title { font-size:14pt; font-weight:bold; color:#0F172A; margin:0 0 3px; letter-spacing:0.3px; }
 .doc-sub { font-size:9pt; color:#64748B; margin:0; }
 .meta { font-size:8pt; color:#475569; margin-bottom:16px; text-align:right; }
 .tag { background:#F8FAFC; border:1px solid #E2E8F0; padding:3px 8px; border-radius:4px; margin-left:5px; color:#334155; }
 .veredito { background:#FAFAF9; border:1px solid #E5E7EB; border-left:4px solid {{ vc }}; padding:14px 18px; margin-bottom:8px; }
-.veredito .lbl { font-size:7.5pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px; }
+.veredito .lbl { font-size:7.5pt; color:#64748B; font-weight:bold; letter-spacing:0.3px; margin-bottom:4px; }
 .veredito .val { font-size:14pt; color:{{ vc }}; font-weight:bold; margin-bottom:6px; text-transform:uppercase; }
 .veredito p { font-size:9pt; color:#334155; margin:0; line-height:1.55; }
 .duo { display:table; width:100%; border-collapse:separate; border-spacing:8px 0; margin:0 -8px 16px; }
 .duo .c { display:table-cell; width:50%; padding:10px 14px; border:1px solid #E2E8F0; background:#F8FAFC; }
-.duo .l { font-size:7pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; }
+.duo .l { font-size:7pt; color:#64748B; font-weight:bold; letter-spacing:0.3px; }
 .duo .v { font-size:11pt; font-weight:bold; margin-top:3px; }
-.sec { font-size:11pt; font-weight:bold; color:#0E5C66; border-bottom:1px solid #CBD5E1; padding-bottom:6px; margin:22px 0 12px; text-transform:uppercase; letter-spacing:0.5px; page-break-after:avoid; }
+.sec { font-size:11pt; font-weight:bold; color:#0E5C66; border-bottom:1px solid #CBD5E1; padding-bottom:6px; margin:22px 0 12px; page-break-after:avoid; }
 .intro { color:#475569; margin-bottom:12px; text-align:justify; }
 .prose { color:#334155; margin-bottom:10px; text-align:justify; line-height:1.6; }
 .kpis { display:table; width:100%; border:1px solid #E2E8F0; background:#F8FAFC; margin-bottom:6px; }
 .kpis .c { display:table-cell; padding:11px 8px; border-right:1px solid #E2E8F0; text-align:center; }
 .kpis .c:last-child { border-right:none; }
-.kpi-t { font-size:7.5pt; color:#64748B; text-transform:uppercase; font-weight:bold; margin-bottom:3px; }
+.kpi-t { font-size:7.5pt; color:#64748B; font-weight:bold; margin-bottom:3px; }
 .kpi-n { font-size:17pt; font-weight:bold; color:#0E5C66; }
 .kpi-s { font-size:7.5pt; color:#94A3B8; margin-top:2px; }
 .errc { width:100%; border-collapse:separate; border-spacing:8px; margin:0 -8px; }
 .errc td { width:50%; padding:13px; background:#F8FAFC; border:1px solid #E2E8F0; vertical-align:top; }
-.errc .h { font-weight:bold; font-size:9.5pt; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; border-bottom:1px solid rgba(0,0,0,.05); padding-bottom:5px; }
+.errc .h { font-weight:bold; font-size:9.5pt; margin-bottom:8px; letter-spacing:0.3px; border-bottom:1px solid rgba(0,0,0,.05); padding-bottom:5px; }
 .errc ul { margin:0; padding-left:14px; font-size:8.5pt; color:#334155; }
 .errc li { margin-bottom:5px; line-height:1.4; }
 .card { border:1px solid #E2E8F0; padding:14px; background:#fff; }
-table.d { width:100%; border-collapse:collapse; }
-table.d th { text-align:left; padding:7px 9px; font-size:8pt; font-weight:bold; color:#fff; background:#0E5C66; text-transform:uppercase; }
-table.d td { padding:7px 9px; font-size:8.5pt; color:#1E293B; border-bottom:1px solid #F1F5F9; }
+table.d { width:100%; border-collapse:collapse; page-break-inside:avoid; }
+table.d th { text-align:center; padding:7px 9px; font-size:8pt; font-weight:bold; color:#fff; background:#0E5C66; }
+table.d td { padding:7px 9px; font-size:8.5pt; color:#1E293B; border-bottom:1px solid #F1F5F9; text-align:center; }
+/* 1ª coluna (rótulo/nome) à esquerda — é label, não dado numérico */
+table.d th:first-child, table.d td:first-child { text-align:left; }
+table.d tr { page-break-inside:avoid; }
 table.d tr:nth-child(even) td { background:#F8FAFC; }
+.kpis, .timing, .errc, .duo, .veredito, .gapc, .alert, .pico { page-break-inside:avoid; }
 .rec td { background:#ECFDF5 !important; font-weight:bold; }
 .pill { display:inline-block; padding:1px 7px; border-radius:9px; font-size:7.5pt; font-weight:bold; }
 .pill.ok { background:#DCFCE7; color:#166534; } .pill.no { background:#FEE2E2; color:#991B1B; } .pill.mid { background:#FEF9C3; color:#854D0E; }
@@ -149,7 +153,7 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
   {% if demografia.pop %}<tr><td>População</td><td>{{ demografia.pop }}</td></tr>{% endif %}
 </table>{% endif %}
 {% if demografia.piramide %}
-<div style="margin-top:10px; font-size:8pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Público por idade × sexo (bairro real, Censo 2022 por setor)</div>
+<div style="margin-top:10px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Público por idade × sexo (bairro real, Censo 2022 por setor)</div>
 <div style="margin-top:6px;">
 {% for p in demografia.piramide %}
   <div class="bar-row"><span class="lab">{{ p.faixa }} · {{ p.nome }}</span>
@@ -166,7 +170,7 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 {% for c in competidores %}<tr><td>{{ c.nome }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td></tr>{% endfor %}
 </table>
 {% if pico %}
-<div style="margin-top:12px; font-size:8pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Janela de demanda — lotação agregada dos concorrentes por hora</div>
+<div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Janela de demanda — lotação agregada dos concorrentes por hora</div>
 <div class="pico">{% for b in pico.barras %}<div class="col {{ 'hot' if b.hora in pico.horas }}" style="height:{{ b.pct }}%;"></div>{% endfor %}</div>
 <div class="pico-x">{% for b in pico.barras %}<span>{{ b.hora[:2] }}</span>{% endfor %}</div>
 <div class="note">Pico de movimento: <strong>{{ pico.faixa }}</strong> ({{ pico.concentracao_pct }}% da lotação nas 3 horas de topo). Janela de maior disputa — e de maior demanda capturável.</div>
@@ -200,7 +204,7 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
   <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span></td></tr>{% endfor %}
 </table>{% endif %}
 {% if capex %}
-<div style="margin-top:12px; font-size:8pt; color:#64748B; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Composição do investimento — cenário {{ capex.modelo }}</div>
+<div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Composição do investimento — cenário {{ capex.modelo }}</div>
 <div style="margin-top:6px;">
 {% for r in capex.itens %}<div class="bar-row"><span class="lab">{{ r.label }}</span>
   <div class="bar-wrap"><div class="bar" style="width:{{ r.pct }}%; opacity:.5;"></div></div>
@@ -264,9 +268,9 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </div>
 <div class="timing-d"><strong>Diretriz de timing:</strong> {{ demanda.moradores }} novos moradores em obra. Upside captável com marketing, sem CAPEX extra. <em>Fonte: CNO/RFB + IBGE Censo 2022.</em></div>
 {% if demanda.obras %}
-<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Planta</th><th>Entrega</th><th>Fit</th><th>Moradores</th><th>Leads</th><th>Receita/mês</th></tr>
-{% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}{% if o.real %} <span class="pill ok">real</span>{% else %} <span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>{{ o.moradores }}</td><td>~{{ o.captura }}</td><td>R$ {{ o.receita }}</td></tr>{% endfor %}
-<tr class="rec"><td>TOTAL (residenciais)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ demanda.moradores }}</td><td>~{{ demanda.captura }}</td><td>R$ {{ demanda.receita }}</td></tr>
+<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Fonte</th><th>Planta</th><th>Entrega</th><th>Fitness</th><th>Moradores</th><th>Leads</th><th>Receita/mês</th></tr>
+{% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}</td><td>{% if o.real %}<span class="pill ok">real</span>{% else %}<span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>{{ o.moradores }}</td><td>~{{ o.captura }}</td><td>R$ {{ o.receita }}</td></tr>{% endfor %}
+<tr class="rec"><td>Total (residenciais)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ demanda.moradores }}</td><td>~{{ demanda.captura }}</td><td>R$ {{ demanda.receita }}</td></tr>
 </table>
 <div class="note">Cadeia: moradores (área-média ÷ m²/morador, clamp teto IBGE) → leads = moradores × penetração fitness × market share → receita/mês. Unidades <strong>real</strong> = página do lançamento; <strong>proxy</strong> = área÷m².</div>{% endif %}{% endif %}
 
@@ -466,6 +470,26 @@ def _obras(o: dict) -> list[dict]:
             "inicio": str(ob.get("data_inicio") or "—")[:10],
         })
     return rows
+
+
+_ALERTA_RUIDO = (
+    "churn_pct", "capex_por_unidade", "cvm itr", "overlay ri", "ri overlay",
+    "preencher ri", "parcial (50%)", "parcial (",
+)
+
+
+def _filtrar_alertas(alertas) -> list[str]:
+    """Tira ruído interno de cobertura de dado (gaps regulatórios CVM/RI, placeholders
+    churn_pct/capex_por_unidade) — não é alerta de negócio pro cliente."""
+    out = []
+    for a in (alertas or []):
+        s = str(a).strip()
+        if not s:
+            continue
+        if any(t in s.lower() for t in _ALERTA_RUIDO):
+            continue
+        out.append(s)
+    return out
 
 
 def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
@@ -703,7 +727,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "novas_unidades": novas_unidades,
         "candidatos": candidatos, "candidatos_algum_fora": algum_fora,
         "bairros_viz": bairros_viz, "demanda": demanda,
-        "alertas": [str(a) for a in (model.alertas or [])][:12],
+        "alertas": _filtrar_alertas(model.alertas)[:12],
     }
 
 
