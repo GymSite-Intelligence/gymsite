@@ -68,12 +68,19 @@ def estimar_demanda_obra(
     if _areas:
         area_media = sum(_areas) / len(_areas)
         m2_por_morador = param("m2_por_morador")
-        ocupacao = max(1.0, area_media / m2_por_morador) if m2_por_morador else param(ocup_key)
+        # Relação área→moradores é SUB-linear: apto grande tem mais m² POR pessoa, não
+        # proporcionalmente mais gente. Linear puro estourava (191 m² → 7,6 moradores).
+        # Clampa no teto IBGE (max_moradores_por_unidade) e piso 1,0.
+        teto = param("max_moradores_por_unidade")
+        bruto = (area_media / m2_por_morador) if m2_por_morador else param(ocup_key)
+        ocupacao = max(1.0, min(bruto, teto))
         ocup_fonte = {
             "valor": round(ocupacao, 2),
-            "fonte": "área-média das plantas ÷ benchmark m²/morador",
-            "metodo": f"média de {len(_areas)} plantas = {area_media:.1f} m² ÷ {param('m2_por_morador')} m²/morador",
+            "fonte": "área-média das plantas ÷ benchmark m²/morador (clamp teto IBGE)",
+            "metodo": (f"média de {len(_areas)} plantas = {area_media:.1f} m² ÷ {m2_por_morador} "
+                       f"m²/morador = {bruto:.1f} → clamp [1,0; {teto}]"),
             "m2_por_morador": param_meta("m2_por_morador"),
+            "max_moradores_por_unidade": param_meta("max_moradores_por_unidade"),
         }
     elif ocupacao_censo and float(ocupacao_censo) > 0:
         ocupacao = float(ocupacao_censo)

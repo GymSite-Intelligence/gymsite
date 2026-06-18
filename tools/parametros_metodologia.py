@@ -37,6 +37,7 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "ocupacao_default":     _p(2.8, "fallback_IBGE_media_domiciliar_BR", "media_nacional", "moradores/unidade", "aberto", "2026-06-14"),
     "m2_por_unidade":       _p(75.0, "fallback_proxy_unidade_media+area_comum", "proxy_area_construida", "m2/unidade", "benchmark", "2026-06-14"),
     "m2_por_morador":       _p(25.0, "IBGE área privativa média por morador (2 dorm ~25 m²/pessoa)", "densidade_ocupacao", "m2/morador", "benchmark", "2026-06-18"),
+    "max_moradores_por_unidade": _p(4.5, "teto IBGE moradores/domicílio urbano (apto grande não escala linear)", "limite_ocupacao", "moradores/unidade", "calibracao", "2026-06-18"),
     # Gatilho 'janela quente' (demanda futura): obra na reta final → entrega iminente →
     # avisar p/ ação de MKT com construtora/corretor antes da concorrência.
     "obra_acabamento_threshold_pct": _p(50, "obra em fase de acabamento ≥50% = entrega <12m (recalibrar c/ CNO)", "limiar_timing_obra", "%", "calibracao", "2026-06-18"),

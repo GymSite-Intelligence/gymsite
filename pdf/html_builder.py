@@ -264,10 +264,11 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </div>
 <div class="timing-d"><strong>Diretriz de timing:</strong> {{ demanda.moradores }} novos moradores em obra. Upside captável com marketing, sem CAPEX extra. <em>Fonte: CNO/RFB + IBGE Censo 2022.</em></div>
 {% if demanda.obras %}
-<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Planta</th><th>Entrega</th><th>Fitness</th><th>Captura</th></tr>
-{% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}{% if o.real %} <span class="pill ok">real</span>{% else %} <span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>~{{ o.captura }}</td></tr>{% endfor %}
+<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Planta</th><th>Entrega</th><th>Fit</th><th>Moradores</th><th>Leads</th><th>Receita/mês</th></tr>
+{% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}{% if o.real %} <span class="pill ok">real</span>{% else %} <span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>{{ o.moradores }}</td><td>~{{ o.captura }}</td><td>R$ {{ o.receita }}</td></tr>{% endfor %}
+<tr class="rec"><td>TOTAL (residenciais)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ demanda.moradores }}</td><td>~{{ demanda.captura }}</td><td>R$ {{ demanda.receita }}</td></tr>
 </table>
-<div class="note">Unidades <strong>real</strong> = lidas da página do lançamento; <strong>proxy</strong> = estimativa área÷m². Moradores por área-média das plantas × benchmark m²/morador.</div>{% endif %}{% endif %}
+<div class="note">Cadeia: moradores (área-média ÷ m²/morador, clamp teto IBGE) → leads = moradores × penetração fitness × market share → receita/mês. Unidades <strong>real</strong> = página do lançamento; <strong>proxy</strong> = área÷m².</div>{% endif %}{% endif %}
 
 {% if bairros_viz %}
 <div class="sec">Bairros Vizinhos Recomendados</div>
@@ -627,13 +628,15 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             if not isinstance(ob, dict) or not ob.get("provavel_residencial"):
                 continue
             obras_ficha.append({
-                "nome": str(ob.get("empreendimento") or ob.get("construtora") or "—")[:30],
+                "nome": str(ob.get("empreendimento") or ob.get("construtora") or "—")[:28],
                 "unidades": _int(ob.get("unidades_est")),
                 "real": (ob.get("unidades_fonte") == "lancamento_exato"),
                 "area": f"{ob.get('area_privativa_media')} m²" if ob.get("area_privativa_media") else "—",
                 "entrega": str(ob.get("entrega") or "—")[:7],
                 "fitness": bool(ob.get("amenidade_fitness")),
-                "captura": _int(ob.get("captura_est")) if ob.get("captura_est") else "—",
+                "moradores": _int(ob.get("moradores_est")) if ob.get("moradores_est") else "—",
+                "captura": (round(float(ob.get("captura_est"))) if ob.get("captura_est") else "—"),
+                "receita": _brl(ob.get("receita_mensal_est")) if ob.get("receita_mensal_est") else "—",
                 "quente": bool(ob.get("janela_quente")),
             })
         # Janela quente (C) — obras na reta final → diretriz de contato/MKT.
