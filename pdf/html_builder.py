@@ -190,6 +190,13 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 </table>
 <div class="note">Segmentos por tertil dos preços reais do mercado (recalibrável). Mostra o que se ENTREGA em cada faixa de ticket — base do posicionamento: subir de faixa exige os serviços da faixa.</div>{% endif %}
 
+{% if dores_quadro %}
+<div class="sec">Dores dominantes do mercado (gaps = oportunidade)</div>
+<table class="d"><tr><th>Dor (categoria)</th><th>Menções</th><th>Academias que sofrem</th></tr>
+{% for d in dores_quadro %}<tr><td>{{ d.categoria }}</td><td>{{ d.mencoes }}</td><td style="font-size:8pt;">{{ d.academias }}</td></tr>{% endfor %}
+</table>
+<div class="note">Reclamações dos reviews consolidadas por categoria (sem texto literal). Cada dor frequente = um GAP a explorar no posicionamento.</div>{% endif %}
+
 {% if aneis %}
 <div class="sec">Anéis Competitivos (score ponderado por distância)</div>
 <div class="kpis">
@@ -533,6 +540,26 @@ def _filtrar_alertas(alertas) -> list[str]:
     return out
 
 
+def _dores_quadro(dores_cons) -> list[dict] | None:
+    """Quadro de dores consolidadas: categoria + menções + academias (sem texto literal)."""
+    if not isinstance(dores_cons, list) or not dores_cons:
+        return None
+    out = []
+    for d in dores_cons:
+        if not isinstance(d, dict) or not d.get("categoria"):
+            continue
+        acs = d.get("academias") or []
+        out.append({
+            "categoria": str(d.get("categoria")).replace("_", " ").capitalize(),
+            "mencoes": d.get("mencoes"),
+            "academias": ", ".join(
+                f"{str(a.get('nome') or '')[:16]} (×{a.get('vezes')})"
+                for a in acs[:4] if isinstance(a, dict)
+            ) or "—",
+        })
+    return out or None
+
+
 def _preco_num(v) -> float | None:
     """'R$ 129,90' → 129.9. None se não parsear."""
     if v is None:
@@ -833,7 +860,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "mercado": mercado, "panorama": panorama, "demografia": demografia,
         "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
         "competidores": competidores, "planos": planos[:12],
-        "ticket_segmentos": _ticket_segmentos(model.competidores), "pico": meta.get("pico"),
+        "ticket_segmentos": _ticket_segmentos(model.competidores),
+        "dores_quadro": _dores_quadro(meta.get("dores_consolidadas")), "pico": meta.get("pico"),
         "aneis": _aneis(meta.get("aneis_competitivos")),
         "cobertura": _cobertura(meta.get("cobertura_redes_a0")),
         "obras": _obras(meta.get("obras_cno_em_curso")),

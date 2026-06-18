@@ -319,10 +319,42 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
             "entrantes_cnpj_90d": out.get("entrantes_cnpj_90d") if isinstance(out.get("entrantes_cnpj_90d"), dict) else None,
             "panorama": panorama,
             "pico": pico_top,
+            "dores_consolidadas": _agg_dores_consolidadas(competidores_raw),
             "veredito_oceano": (out.get("posicionamento_estrategico") or {}).get("veredito_posicionamento")
             if isinstance(out.get("posicionamento_estrategico"), dict) else None,
         },
     )
+
+
+def _agg_dores_consolidadas(competidores_raw: list) -> list | None:
+    """Consolida dores dos reviews por CATEGORIA (taxonomia) — sem texto literal:
+    categoria + nº de menções + academias (com contagem por academia). Espelha
+    analisar_gap_competitivo (categorias_dor + categorias_por_academia)."""
+    cats: dict[str, int] = {}
+    cat_acad: dict[str, dict[str, int]] = {}
+    for c in (competidores_raw or []):
+        if not isinstance(c, dict):
+            continue
+        nome = str(c.get("nome") or "—")
+        for r in (c.get("reviews") or []):
+            if not isinstance(r, dict):
+                continue
+            cat = (r.get("categoria_dor") or "").strip()
+            if not cat or cat.lower() in ("outra", "outras", ""):
+                continue
+            cats[cat] = cats.get(cat, 0) + 1
+            cat_acad.setdefault(cat, {})
+            cat_acad[cat][nome] = cat_acad[cat].get(nome, 0) + 1
+    if not cats:
+        return None
+    rows = []
+    for cat, cnt in sorted(cats.items(), key=lambda x: -x[1])[:8]:
+        acads = sorted(cat_acad[cat].items(), key=lambda x: -x[1])
+        rows.append({
+            "categoria": cat, "mencoes": cnt,
+            "academias": [{"nome": a, "vezes": v} for a, v in acads[:5]],
+        })
+    return rows
 
 
 def relatorio_from_nested_json(data: dict[str, Any]) -> RelatorioPdfModel:
