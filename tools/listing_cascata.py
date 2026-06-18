@@ -118,9 +118,12 @@ def extrair_bairro_anuncio(titulo: str, snippet: str = "") -> str | None:
     Meireles, Fortaleza - CE 123'. Pega o token entre o 1º ' - ' e a vírgula.
     É o sinal mais forte e barato de bairro real (sem geocode)."""
     blob = f"{titulo or ''}"
-    m = re.search(r"-\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'\s]{2,40}?)\s*,", blob)
+    # `.` no char class captura bairro com abreviação (ex: "Eng. Luciano Cavalcante",
+    # "Pe. Cícero") — sem isso o regex parava no ponto e devolvia None, deixando o
+    # listing passar só pelo raio (vazava bairro adjacente, ex: Eng. Luciano em Cocó).
+    m = re.search(r"-\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'.\s]{2,40}?)\s*,", blob)
     if m:
-        cand = m.group(1).strip()
+        cand = m.group(1).strip(" .")
         # descarta capturas óbvias de tipo de imóvel (não é bairro)
         if not re.search(r"\b(apartamento|casa|sala|loja|galp|terreno|ponto|quarto|comercial)\b",
                          _norm_bairro(cand)):
