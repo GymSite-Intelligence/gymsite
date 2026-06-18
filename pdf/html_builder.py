@@ -269,8 +269,9 @@ table.d tr:nth-child(even) td { background:#F8FAFC; }
 
 {% if candidatos %}
 <div class="sec">Top Candidatos (Imóveis)</div>
+{% if candidatos_algum_fora %}<div class="note" style="background:#FEF2F2; border:1px solid #FECACA; border-radius:5px; padding:8px 12px; color:#7F1D1D; margin-bottom:6px;">⚠ Imóveis marcados <strong>(fora)</strong> estão em bairro/cidade vizinha — o GeoScout não achou vago em {{ bairro }}. O referencial de viabilidade (demografia, concorrência, aluguel) é de <strong>{{ bairro }}</strong> e independe do imóvel; trate-os como ponto de partida físico, não como o veredito do bairro.</div>{% endif %}
 <table class="d"><tr><th>#</th><th>Nome</th><th>Tipo</th><th>Geo</th><th>Ancor.</th><th>Endereço</th></tr>
-{% for c in candidatos %}<tr><td>{{ c.pos }}</td><td>{{ c.nome }}</td><td>{{ c.tipo }}</td><td>{{ c.geo }}</td><td>{{ c.ancor }}</td><td style="font-size:8pt;">{{ c.endereco }}</td></tr>{% endfor %}
+{% for c in candidatos %}<tr><td>{{ c.pos }}</td><td>{{ c.nome }}{% if c.fora %} <span class="pill no">fora</span>{% endif %}</td><td>{{ c.tipo }}</td><td>{{ c.geo }}</td><td>{{ c.ancor }}</td><td style="font-size:8pt;">{{ c.endereco }}</td></tr>{% endfor %}
 </table>{% endif %}
 
 {% if alertas %}
@@ -300,6 +301,13 @@ def _int(v) -> str:
         return f"{int(v):,}".replace(",", ".")
     except (TypeError, ValueError):
         return "—"
+
+
+def _norm_txt(s: str) -> str:
+    """Normaliza p/ comparação tolerante a acento/caixa (bairro vs endereço)."""
+    import unicodedata
+    t = unicodedata.normalize("NFKD", str(s or ""))
+    return "".join(c for c in t if not unicodedata.combining(c)).lower().strip()
 
 
 def _mc_money(v, sufixo: str = "") -> str | None:
@@ -515,7 +523,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
 
     cenarios = []
     rec_norm = (model.modelo_recomendado or "").strip().lower()
-    mid_cen = None
+    mid_cen = rec_cen = None
     for c in (model.cenarios or []):
         is_rec = bool(rec_norm) and ((c.modelo or "").lower() == rec_norm or (c.label or "").lower() == rec_norm)
         cenarios.append({
@@ -530,6 +538,18 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         })
         if (c.modelo or "").lower() == "mid":
             mid_cen = c
+        if is_rec:
+            rec_cen = c
+
+    # Ticket: prioriza pos.ticket (A9); fallback pro ticket do cenário recomendado
+    # (senão "— /mês" quando A9 não emitiu banda). Banda = low↔premium dos cenários.
+    if ticket_rec is None:
+        base_cen = rec_cen or mid_cen
+        if base_cen is not None and base_cen.ticket_medio:
+            ticket_rec = f"R$ {_brl(base_cen.ticket_medio)}"
+            ticks = sorted(c.ticket_medio for c in (model.cenarios or []) if c.ticket_medio)
+            if len(ticks) >= 2 and ticks[0] != ticks[-1]:
+                ticket_banda = f"R$ {_brl(ticks[0])} a R$ {_brl(ticks[-1])}"
     # KPI strip financeiro: área + aluguel + capex/payback do cenário mid
     kpi_fin = None
     if mid_cen is not None or model.aluguel_mensal:
@@ -563,12 +583,24 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "bairro": c.bairro or "—", "h24": "sim" if c.tem_24h else "—",
     } for c in (model.competidores or [])]
 
-    candidatos = [{
-        "pos": c.posicao, "nome": c.nome[:34], "tipo": (c.tipo_imovel_label or "—")[:18],
-        "geo": f"{c.score_geoscout:.1f}" if c.score_geoscout is not None else "—",
-        "ancor": f"{c.score_ancoragem:.1f}" if c.score_ancoragem is not None else "—",
-        "endereco": (c.endereco or "—")[:60],
-    } for c in (model.candidatos or [])]
+    # Candidato fora do bairro/cidade-alvo: GeoScout às vezes devolve imóvel de outra
+    # praça (sem vago no bairro). Flag espelha o aviso da UI — o referencial de
+    # viabilidade é do bairro-alvo; o imóvel é só ponto de partida físico.
+    _alvo_b = _norm_txt(model.bairro)
+    candidatos = []
+    algum_fora = False
+    for c in (model.candidatos or []):
+        end_norm = _norm_txt(c.endereco or "")
+        # Espelha a UI: fora = bairro-alvo não aparece no endereço (mesmo na mesma cidade).
+        fora = bool(_alvo_b) and _alvo_b not in end_norm
+        if fora:
+            algum_fora = True
+        candidatos.append({
+            "pos": c.posicao, "nome": c.nome[:34], "tipo": (c.tipo_imovel_label or "—")[:18],
+            "geo": f"{c.score_geoscout:.1f}" if c.score_geoscout is not None else "—",
+            "ancor": f"{c.score_ancoragem:.1f}" if c.score_ancoragem is not None else "—",
+            "endereco": (c.endereco or "—")[:60], "fora": fora,
+        })
 
     bairros_viz = [{
         "bairro": b.bairro or "—",
@@ -625,7 +657,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "cobertura": _cobertura(meta.get("cobertura_redes_a0")),
         "obras": _obras(meta.get("obras_cno_em_curso")),
         "novas_unidades": novas_unidades,
-        "candidatos": candidatos, "bairros_viz": bairros_viz, "demanda": demanda,
+        "candidatos": candidatos, "candidatos_algum_fora": algum_fora,
+        "bairros_viz": bairros_viz, "demanda": demanda,
         "alertas": [str(a) for a in (model.alertas or [])][:12],
     }
 
