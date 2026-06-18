@@ -784,21 +784,34 @@ def _escolher_cenario_recomendado(
             )
             pref_c["justificativa"] = pref_c["justificativa_recomendacao"]
 
-    viaveis = [
-        c for c in cenarios.values()
-        if c.get("viabilidade") not in ("INVIAVEL", None) or c.get("_elegivel_teto")
-    ]
+    # GATE DE VIABILIDADE (regra do produto): NUNCA recomendar modelo INVIÁVEL no
+    # realista. O teto-de-captação (renda agressiva) vira UPSIDE anotado, não a
+    # recomendação — recomendar Premium-inviável num relatório de viabilidade é
+    # auto-contradição (VPL negativo, quebra em todo stress test).
+    viaveis = [c for c in cenarios.values() if c.get("viabilidade") not in ("INVIAVEL", None)]
     pool = viaveis or list(cenarios.values())
+    so_inviaveis = not viaveis
 
     def _rank(c: dict[str, Any]) -> tuple[float, float, float]:
         faixa = _faixa_key_de_modelo(c.get("modelo", ""))
         tier_gap = abs(ordem.get(faixa, 1) - ordem.get(preferido, 1))
         lucro = float(c.get("lucro_mensal_estimado") or 0)
         payback = float(c.get("payback_meses") or 999)
-        # Prioriza tier de mercado, depois lucro, depois payback menor.
-        return (-tier_gap, lucro, -payback)
+        # Entre VIÁVEIS: maior tier viável (alinha à renda), depois lucro, payback.
+        # Se só há inviáveis: lucro manda (o menos-pior), tier é secundário.
+        return (-tier_gap, lucro, -payback) if not so_inviaveis else (lucro, -tier_gap, -payback)
 
-    return max(pool, key=_rank)
+    escolhido = max(pool, key=_rank)
+    # Se o tier preferido pela renda (ex.: premium em bairro rico) ficou de FORA por ser
+    # inviável, anota no escolhido que o premium é aspiracional mas não fecha — transparência.
+    pref_c2 = cenarios.get(preferido)
+    if (pref_c2 is not None and pref_c2 is not escolhido
+            and pref_c2.get("viabilidade") in ("INVIAVEL", None)
+            and _faixa_key_de_modelo(escolhido.get("modelo", "")) != preferido):
+        escolhido.setdefault("nota_recomendacao",
+            f"Renda do bairro suportaria o tier {preferido.upper()}, mas ele é INVIÁVEL "
+            f"no cenário realista (não fecha conta) — recomendado o melhor modelo viável.")
+    return escolhido
 
 
 def _alertas_vs_sector_listed(cenarios: dict[str, Any]) -> list[str]:
