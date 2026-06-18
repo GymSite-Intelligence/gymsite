@@ -1992,9 +1992,23 @@ def _resumo_executivo_deterministico(
                      "RESTRITO": "vedada/restrita"}.get(comp, comp.lower())
             partes.append(f"Zoneamento {sig}: atividade de academia {verbo}.")
 
-    # Candidato: só nomeia se gated (top_3 já filtrado por bairro+spec). Senão, é
-    # honesto — referencial é do bairro, não inventa imóvel fora-bairro.
-    cand = next((c for c in (top_3 or []) if isinstance(c, dict)), None)
+    # Candidato: só nomeia se ESTÁ no bairro alvo (mesmo gate do html). Candidato de
+    # bairro adjacente (ex: Eng. Luciano Cavalcante num relatório de Cocó) — vindo do
+    # GeoScout Places sem título OLX, dentro do raio — NÃO pode ser narrado como #1.
+    import unicodedata as _ud
+
+    def _nrm(s: str) -> str:
+        return _ud.normalize("NFKD", str(s or "").lower()).encode("ascii", "ignore").decode()
+
+    _alvo_n = _nrm(bairro)
+
+    def _no_bairro(c: dict) -> bool:
+        if not _alvo_n or _alvo_n == "bairro alvo":
+            return True
+        blob = _nrm(f"{c.get('bairro','')} {c.get('endereco','')} {c.get('titulo','')}")
+        return _alvo_n in blob
+
+    cand = next((c for c in (top_3 or []) if isinstance(c, dict) and _no_bairro(c)), None)
     if cand:
         nome = cand.get("endereco") or cand.get("titulo") or cand.get("nome") or "candidato"
         area = cand.get("area_m2") or cand.get("area")

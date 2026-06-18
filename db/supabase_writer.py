@@ -210,6 +210,10 @@ def _row_outputs(rel: dict, relatorio_id: str) -> dict:
             out, "contato_decisor", "resumo_analise_financeira", "justificativa"
         ),
         "contato_decisor": out.get("contato_decisor") or {},
+        # VEC-378: viabilidade regulatória (zoneamento LUOS) — A6 computa em
+        # output_consolidado.zoneamento mas o writer não persistia → coluna ficava
+        # None enquanto o resumo já narrava "USO GERAL". Agora persiste (coerência).
+        "zoneamento": out.get("zoneamento"),
         # Schema v1.2: market_context COMPLETO do A0 (ticket, renda, faixa
         # etária, insights, regulamentação). Em v1.1 ficava só metadata.
         # Fallback pra metadata_execucao garante compat com JSONs v1.1 antigos.
