@@ -274,11 +274,107 @@ def _refino_via_pdf(pdf_url: str, obra: dict) -> dict | None:
     return None
 
 
+# ── Refino v3: FETCH da página do lançamento (listing/site) → extração exata ───
+# O grounding acha a fonte (ex: voudeimovel) mas o snippet raramente traz a contagem
+# de unidades. Aqui baixamos a PÁGINA e extraímos torres×unidades reais do conteúdo —
+# fonte primária ≈ PDF. Aplica mesmo em "media" (nome+bairro), pois o número agora é
+# observado na página, não proxy área÷m².
+
+def _baixar_html(url: str, *, max_kb: int = 900) -> str | None:
+    """Baixa HTML público (UA de browser, segue redirect — inclui redirect de
+    atribuição do Vertex). None se inválido/não-HTML."""
+    if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
+        return None
+    try:
+        with httpx.Client(timeout=25.0, follow_redirects=True) as c:
+            r = c.get(url, headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+                ),
+                "Accept-Language": "pt-BR,pt;q=0.9",
+            })
+        if r.status_code != 200:
+            return None
+        ct = (r.headers.get("content-type") or "").lower()
+        if "html" not in ct and "text" not in ct:
+            return None
+        return r.text[: max_kb * 1024]
+    except (httpx.HTTPError, OSError):
+        return None
+
+
+def _html_para_texto(html: str, *, max_chars: int = 26000) -> str:
+    """HTML → texto enxuto p/ o extrator: preserva JSON-LD e __NEXT_DATA__ (onde sites
+    SSR guardam torres/unidades), remove script/style/tags do resto."""
+    blobs = re.findall(
+        r'<script[^>]*application/(?:ld\+json|json)[^>]*>(.*?)</script>', html, re.S | re.I)
+    nextdata = re.findall(r'id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
+    corpo = re.sub(r'(?is)<(script|style|noscript)[^>]*>.*?</\1>', ' ', html)
+    corpo = re.sub(r'(?s)<[^>]+>', ' ', corpo)
+    corpo = re.sub(r'\s+', ' ', corpo).strip()
+    estrut = ' '.join(blobs + nextdata)[:10000]
+    return (corpo[:max_chars] + (' [DADOS_ESTRUTURADOS] ' + estrut if estrut else ''))
+
+
+def _extrair_do_html(html: str) -> dict | None:
+    """Gemini lê o texto da página do empreendimento → JSON estruturado."""
+    from tools._genai_client import build_genai_client, generate_content_resilient
+
+    client = build_genai_client()
+    texto = _html_para_texto(html)
+    prompt = (
+        "Texto de uma página de empreendimento imobiliário (lançamento). Extraia em JSON puro:\n"
+        "{\n"
+        '  "empreendimento": "<nome>", "construtora": "<nome>",\n'
+        '  "torres": <int|null>, "andares": <int|null>, "unidades": <int total|null>,\n'
+        '  "unidades_por_torre": <int|null>,\n'
+        '  "tipologia": "<studio|1-2 dorm|3+ dorm|comercial|misto|null>",\n'
+        '  "amenidades": ["..."],\n'
+        '  "endereco": {"cep": "<digits|null>", "numero": "<str|null>", "bairro": "<str|null>"}\n'
+        "}\n"
+        "REGRA: 'unidades' = total de apartamentos do projeto inteiro (some torres se a "
+        "página der por torre). Use SÓ o que está no texto. NÃO invente. Sem dado → null.\n\n"
+        "PÁGINA:\n" + texto
+    )
+    resp = generate_content_resilient(
+        client, model="gemini-2.5-flash", contents=[prompt], max_retries=2, base_delay=3.0)
+    return _extrair_lancamento((resp.text or "").strip())
+
+
+def _refino_via_pagina(url: str, obra: dict) -> dict | None:
+    """Baixa a página do lançamento e extrai unidades reais. None se falhar."""
+    html = _baixar_html(url)
+    if not html:
+        return None
+    try:
+        ext = _extrair_do_html(html)
+        if ext and _unidades_do_extraido(ext):
+            ext["_pagina_url"] = url
+            return ext
+    except Exception as e:
+        print(f"[refino_pagina] falha extração: {type(e).__name__}: {e}")
+    return None
+
+
+def _melhor_fonte_url(fontes: list[dict], ext: dict) -> str | None:
+    """URL pra fetch: site oficial (não-portal/não-instagram) primeiro; senão qualquer
+    citação com uri (o redirect de atribuição do Vertex resolve pra página real)."""
+    for f in fontes:
+        if not _eh_portal(f) and not _eh_instagram(f) and f.get("uri"):
+            return f.get("uri")
+    for f in fontes:
+        if f.get("uri"):
+            return f.get("uri")
+    return ext.get("site") or ext.get("url") or None
+
+
 def refinar_demanda_via_lancamento(
     obra: dict,
     *,
     _grounding_fn: Callable[[str], dict] | None = None,
     _pdf_fn: Callable[[str, dict], dict | None] | None = None,
+    _pagina_fn: Callable[[str, dict], dict | None] | None = None,
 ) -> dict:
     """Refina uma obra via site da construtora/incorporadora. AUDITÁVEL: usa as CITAÇÕES
     reais do grounding (não o url auto-reportado). Só ALTA (match + fonte) sobrescreve proxy.
@@ -338,17 +434,49 @@ def refinar_demanda_via_lancamento(
             if metodo == "cep_numero" or cruzado:
                 confianca = "alta"
         unidades = _unidades_do_extraido(ext)
+        fonte_tipo = "site_instagram" if oficial else None
+        pagina_url = None
+
+        # FETCH da página quando o grounding não fechou em ALTA: baixa a listing/site
+        # achado e extrai unidades reais do conteúdo (não do snippet). Página = fonte
+        # primária OBSERVADA → vale mesmo sem cep/número, desde que o BAIRRO confira
+        # (a busca já foi por endereço). Match por bairro normalizado (tolera acento;
+        # o nome CNO é SPE/LTDA e não casa com a construtora).
+        if confianca != "alta" and tem_fonte:
+            cand_url = _melhor_fonte_url(fontes, ext)
+            pag_fn = _pagina_fn or _refino_via_pagina
+            pag = pag_fn(cand_url, obra) if cand_url else None
+            if pag and _unidades_do_extraido(pag):
+                from tools.bairro_normalize import normalizar_bairro
+
+                end_p = pag.get("endereco") or {}
+                b_o = normalizar_bairro(obra.get("bairro") or "")
+                b_p = normalizar_bairro(end_p.get("bairro") or "")
+                if b_o and b_o == b_p:
+                    cep_o, cep_p = _digits(obra.get("cep")), _digits(end_p.get("cep"))
+                    num_o, num_p = _digits(obra.get("numero_logradouro")), _digits(end_p.get("numero"))
+                    casou_endereco = bool(cep_o and cep_o == cep_p and num_o and num_o == num_p)
+                    unidades = _unidades_do_extraido(pag)
+                    ext = {**ext, **{k: v for k, v in pag.items() if v is not None}}
+                    confianca = "alta" if casou_endereco else "media"
+                    metodo = "pagina_cep_numero" if casou_endereco else "pagina_bairro"
+                    fonte_tipo = "pagina_lancamento"
+                    pagina_url = pag.get("_pagina_url") or cand_url
+
+        # Unidades da PÁGINA são observadas → aplicam mesmo em "media"; do snippet,
+        # só em "alta" (gate conservador original, evita adotar número de snippet ruim).
+        aplica_unidades = confianca == "alta" or fonte_tipo == "pagina_lancamento"
         return {
-            "unidades_exatas": unidades if confianca == "alta" else None,
+            "unidades_exatas": unidades if aplica_unidades else None,
             "andares": ext.get("andares"),
             "tipologia": ext.get("tipologia"),
             "amenidade_fitness": _tem_amenidade_fitness(ext),
-            "fonte_url": _fonte_preferida(fontes),   # citação REAL, não auto-reportada
+            "fonte_url": pagina_url or _fonte_preferida(fontes),   # citação REAL
             "instagram_url": instagram,
             "fontes": fontes,
             "cruzado": cruzado,
             "confianca": confianca,
-            "fonte_tipo": ("site_instagram" if oficial else None),
+            "fonte_tipo": fonte_tipo,
             "metodo_match": metodo,
             "empreendimento": ext.get("empreendimento"),
             "auditado": tem_fonte,
