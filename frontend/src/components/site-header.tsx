@@ -19,7 +19,8 @@ export function SiteHeader({ title = 'Dashboard' }: { title?: string }) {
         <h1 className="min-w-0 flex-1 truncate text-base font-medium">{title}</h1>
         <ApiStatusBadge
           loading={isLoading}
-          ok={!isError && health?.status === 'ok'}
+          unreachable={isError}
+          status={health?.status}
           base={API_BASE}
         />
       </div>
@@ -29,11 +30,13 @@ export function SiteHeader({ title = 'Dashboard' }: { title?: string }) {
 
 function ApiStatusBadge({
   loading,
-  ok,
+  unreachable,
+  status,
   base,
 }: {
   loading: boolean
-  ok: boolean
+  unreachable: boolean
+  status?: string
   base: string
 }) {
   if (loading) {
@@ -45,19 +48,35 @@ function ApiStatusBadge({
     )
   }
 
-  if (ok) {
+  // Offline = API INALCANÇÁVEL (fetch falhou/timeout). API que responde — mesmo
+  // "degraded" (componente opcional ausente, ex: gemini via Vertex ADC sem env key)
+  // — está ONLINE, não offline. Distinguir os dois evita falso "API offline".
+  if (unreachable) {
     return (
-      <Badge variant="success" className="gap-1 font-mono text-[10px]" title={base}>
+      <Badge variant="destructive" className="gap-1 font-mono text-[10px]" title={base}>
+        <WifiOffIcon className="size-3" />
+        API offline
+      </Badge>
+    )
+  }
+
+  if (status && status !== 'ok') {
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 font-mono text-[10px] border-amber-500/50 text-amber-600 dark:text-amber-400"
+        title={`${base} — ${status}`}
+      >
         <WifiIcon className="size-3" />
-        API online
+        API degradada
       </Badge>
     )
   }
 
   return (
-    <Badge variant="destructive" className="gap-1 font-mono text-[10px]" title={base}>
-      <WifiOffIcon className="size-3" />
-      API offline
+    <Badge variant="success" className="gap-1 font-mono text-[10px]" title={base}>
+      <WifiIcon className="size-3" />
+      API online
     </Badge>
   )
 }
