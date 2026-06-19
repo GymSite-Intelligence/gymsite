@@ -757,35 +757,50 @@ def buscar_academias(
         else:
             agregados = {"status": "desabilitado_custo", "count_total": None}
 
-        headers = {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": api_key,
-            "X-Goog-FieldMask": (
-                # priceLevel cortado (sem sinal pra gym); hours/contact ficam —
-                # tem_24h e a coluna de contato dos concorrentes dependem deles.
-                "places.id,places.displayName,places.formattedAddress,"
-                "places.location,places.rating,places.userRatingCount,"
-                "places.businessStatus,places.types,"
-                "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
-            ),
-        }
-        body = {
-            "locationRestriction": {"circle": {
-                "center": {"latitude": lat, "longitude": lng},
-                "radius": float(raio_metros),
-            }},
-            "includedTypes": ["gym", "fitness_center"],
-            "maxResultCount": 20,
-            "languageCode": "pt-BR",
-        }
-        try:
-            with httpx.Client(timeout=15) as c:
-                resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
-                data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
-                places_ok = resp.status_code == 200 and bool(data.get("places"))
-        except Exception as e:
-            places_ok = False
-            data = {"error": str(e)}
+        # searchNearby (Places New 3km) agora é LAZY: no caminho default (âncora-bairro)
+        # o resultado era DESCARTADO (retorna o textSearch/SearchAPI). Só roda quando é o
+        # caminho radius OU o textSearch-bairro volta vazio (fallback). Corte de Places New
+        # SEM mudar dado — resultado já era jogado fora no default. Antes: untracked → agora
+        # rastreado (places_search_new) quando roda.
+        _conc_src_pre = os.getenv("CONCORRENTES_SOURCE", "").strip().lower()
+        _ancora_bairro_pre = _conc_src_pre not in ("radius", "nearby", "raio", "municipio")
+
+        def _do_nearby() -> None:
+            nonlocal data, places_ok
+            from tools.api_cost_tracker import track_api_call
+
+            headers = {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": api_key,
+                "X-Goog-FieldMask": (
+                    "places.id,places.displayName,places.formattedAddress,"
+                    "places.location,places.rating,places.userRatingCount,"
+                    "places.businessStatus,places.types,"
+                    "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
+                ),
+            }
+            body = {
+                "locationRestriction": {"circle": {
+                    "center": {"latitude": lat, "longitude": lng},
+                    "radius": float(raio_metros),
+                }},
+                "includedTypes": ["gym", "fitness_center"],
+                "maxResultCount": 20,
+                "languageCode": "pt-BR",
+            }
+            try:
+                with track_api_call("buscar_academias_nearby", "places_search_new", 1):
+                    with httpx.Client(timeout=15) as c:
+                        resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
+                        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                        places_ok = resp.status_code == 200 and bool(data.get("places"))
+            except Exception as e:
+                places_ok = False
+                data = {"error": str(e)}
+
+        # Eager SÓ no caminho radius (sem âncora-bairro). No default fica lazy (fallback).
+        if not (_ancora_bairro_pre and bairro.strip()):
+            _do_nearby()
 
     # ── Âncora bairro (DEFAULT) ──────────────────────────────────────────────
     # textSearch "{tipo} {bairro} {cidade} {uf}" (dado Google Maps, bairro-scoped) +
@@ -820,7 +835,9 @@ def buscar_academias(
                                    _TIPO_NEGOCIO_KW.get((tipo_negocio or '').strip().lower(), 'academias'),
                                    bairro, cidade),
             }
-        # textSearch vazio → segue no fluxo Places 3km (fallback)
+        # textSearch vazio → AGORA roda o Places nearby (lazy) como fallback 3km.
+        if api_key:
+            _do_nearby()
 
     concorrentes: list[dict] = []
     fonte_busca = "google_places"
