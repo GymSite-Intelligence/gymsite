@@ -73,6 +73,11 @@ metrics/cache/*.json
 metrics/state_diagnostics.jsonl
 metrics/rfb_cnpj_cache/
 
+# Artefatos de auditoria local — relatórios gitleaks contêm os findings (chave Maps
+# de runs antigos). Nunca trackear: scan roda local/CI, não vira parte do repo (C1.1).
+Auditoria_local_bak/
+Auditoria/audit-reports/
+
 # Dumps RFB / artefatos grandes
 *.zip
 

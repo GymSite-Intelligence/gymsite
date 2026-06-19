@@ -1,0 +1,20 @@
+# GitLeaks no CI — CONSTITUTION C1.1: secret hardcoded em commit bloqueia o merge.
+# Roda em push e PR; escaneia os commits do evento contra .gitleaks.toml.
+name: gitleaks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # histórico completo p/ o scan de commits
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml

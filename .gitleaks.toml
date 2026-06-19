@@ -1,0 +1,27 @@
+# Config GitLeaks — CONSTITUTION C1.1 (zero secrets hardcoded; CI bloqueia finding).
+# Estende o ruleset default + allowlist de artefatos locais e PLACEHOLDERS (não são
+# segredos reais). Chaves reais nunca devem entrar em arquivo trackeado — vault/env.
+title = "GymSite gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Artefatos locais (gitignored) + placeholders de exemplo"
+paths = [
+  '''metrics/relatorios/.*''',
+  '''Auditoria_local_bak/.*''',
+  '''Auditoria/audit-reports/.*''',
+  '''frontend/src/mocks/relatorios/.*''',
+  '''eval/golden_dataset/.*''',
+  '''.*\.example$''',
+  '''.*\.template\..*''',
+  '''.*template.*\.json$''',
+]
+regexes = [
+  '''AIzaSy_your_key_here''',
+  '''AIzaSyxxxx[A-Za-z0-9_-]*''',
+  '''AIzaSy_youtube[A-Za-z0-9_-]*''',
+  '''your[-_]?api[-_]?key''',
+  '''REDACTED''',
+]
