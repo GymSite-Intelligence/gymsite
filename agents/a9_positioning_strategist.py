@@ -358,6 +358,63 @@ def _resumo_oferta_e_gaps(state: dict) -> str | None:
     return "\n".join(out)
 
 
+def _sintese_posicionamento_deterministica(state: dict, parsed: dict) -> str:
+    """Síntese curta do posicionamento dos campos JÁ determinísticos do A9: veredito
+    (override headroom de renda), ticket recomendado, gaps reais (_gaps_reais) e demanda
+    futura. NÃO é o markdown ERRC (esse o LLM gera) — é o resumo de fatos travados, fonte
+    única e coerente. Usado como fonte+fallback da narração (mesmo padrão do A6)."""
+    cidade, bairro = _resolve_location_from_state(state)
+    loc = f"{bairro.title()}, {cidade.title()}" if cidade else (bairro.title() or "bairro alvo")
+    vere = (parsed.get("veredito_posicionamento") or "indeterminado").strip()
+    ticket = (parsed.get("recomendacao_ticket") or {}).get("ticket_recomendado")
+    gaps = _gaps_reais(state) or []
+
+    partes = [f"Posicionamento {loc}: veredito {vere}."]
+    if ticket not in (None, "", "N/A"):
+        partes.append(f"Ticket recomendado R$ {ticket}.")
+    if gaps:
+        partes.append(
+            f"Gaps reais (serviço que nenhum concorrente oferece): {len(gaps)} — "
+            f"{', '.join(gaps)}."
+        )
+    else:
+        partes.append(
+            "Mercado coberto: nenhum gap de serviço — diferenciação por qualidade, "
+            "não por novo serviço."
+        )
+    df = state.get("demanda_futura") or {}
+    if isinstance(df, dict) and df.get("status") == "ok" and df.get("captura_total_est"):
+        partes.append(
+            f"Demanda futura: ~{df.get('captura_total_est')} alunos potenciais de obras "
+            f"no raio (janela de entrada antes da entrega)."
+        )
+    return " ".join(partes)
+
+
+def _sintese_posicionamento_narrada(state: dict, parsed: dict) -> str:
+    """Reescreve a síntese determinística de forma fluente via Claude headless (subscription,
+    sem api_key → escapa dunning/custo-token). Guardrail trava veredito/número → fallback é a
+    própria síntese determinística. Default OFF (NARRADOR_CLAUDE_ENABLED=0). Mesmo padrão do A6."""
+    import re as _re
+
+    from tools.narrador_claude import narrar
+
+    det = _sintese_posicionamento_deterministica(state, parsed)
+    vere = (parsed.get("veredito_posicionamento") or "").strip()
+    nums = _re.findall(r"\d[\d.,]*\d|\d", det)
+    ancoras = ([vere] if vere else []) + nums
+    instrucao = (
+        "Reescreva a síntese de posicionamento abaixo de forma fluente e profissional, "
+        "em 2 a 3 frases em português do Brasil. NÃO altere, invente nem remova NENHUM "
+        "número, veredito ou gap. Não use ferramentas; responda apenas o texto."
+    )
+    r = narrar(fatos_texto=det, ancoras=ancoras, fallback=det, instrucao=instrucao)
+    if r.get("fonte") == "claude_subscription":
+        logger.info("A9 síntese de posicionamento narrada via Claude headless (subscription)",
+                    extra={"agent": "A9"})
+    return r["texto"]
+
+
 def _a9_inject_oferta_e_gaps(state: dict, llm_request) -> None:
     """Injeta a oferta real + gaps computados no prompt do A9 (substrato da ERRC)."""
     try:
@@ -499,6 +556,12 @@ def _a9_after_agent_callback(callback_context):
         state["relatorio_posicionamento"] = parsed
         # Veredito DETERMINÍSTICO (headroom de renda) sobrepõe o do LLM — sourced/auditável.
         _a9_override_veredito_deterministico(state, parsed)
+        # Síntese de posicionamento narrada (Claude headless quando ligado; fallback
+        # determinístico). Pós-override → usa o veredito determinístico. Default OFF.
+        try:
+            parsed["sintese_posicionamento"] = _sintese_posicionamento_narrada(state, parsed)
+        except Exception as e:
+            logger.warning("A9 síntese posicionamento falhou: %s", e, extra={"agent": "A9"})
         if parsed.get("markdown"):
             state["relatorio_posicionamento_md"] = parsed["markdown"]
         if state.get("_a9_langcache_hit"):
