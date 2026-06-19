@@ -725,33 +725,37 @@ def buscar_academias(
     places_ok = False
     data: dict = {}
     if api_key:
-        try:
-            from tools.places_aggregate_tools import compute_insight_count_circle
+        # areaInsights (Places Aggregate) é CARO (~R$37/dia, 2 chamadas/run) e só
+        # alimenta a densidade regional 3km = CONTEXTO. A saturação/veredito vêm da
+        # CONTAGEM no BAIRRO (textSearch gated), não daqui. Desligado por default;
+        # PLACES_AGGREGATE_ENABLED=1 religa. Off → densidade regional fica None
+        # (contexto, já de-enfatizado no relatório). Custo > sinal.
+        if os.getenv("PLACES_AGGREGATE_ENABLED", "0").strip().lower() in ("1", "true", "yes"):
+            try:
+                from tools.places_aggregate_tools import compute_insight_count_circle
 
-            base = compute_insight_count_circle(
-                latitude=lat,
-                longitude=lng,
-                radius_meters=int(raio_metros),
-                included_types=["gym", "fitness_center"],
-            )
-            hi42 = compute_insight_count_circle(
-                latitude=lat,
-                longitude=lng,
-                radius_meters=int(raio_metros),
-                included_types=["gym", "fitness_center"],
-                min_rating=param("benchmark_rating_bem_avaliada"),
-            )
-            agregados = {
-                "status": "ok" if "erro" not in base else "erro",
-                "count_total": base.get("count") if isinstance(base, dict) else None,
-                "count_rating_ge_4_2": hi42.get("count") if isinstance(hi42, dict) else None,
-                "radius_meters": int(raio_metros),
-                "center": {"lat": lat, "lng": lng},
-                "included_types": ["gym", "fitness_center"],
-                "erros": [e for e in [base.get("erro"), hi42.get("erro")] if e],
-            }
-        except Exception:
-            agregados = {"status": "erro", "motivo": "exception_import_or_call"}
+                base = compute_insight_count_circle(
+                    latitude=lat, longitude=lng, radius_meters=int(raio_metros),
+                    included_types=["gym", "fitness_center"],
+                )
+                hi42 = compute_insight_count_circle(
+                    latitude=lat, longitude=lng, radius_meters=int(raio_metros),
+                    included_types=["gym", "fitness_center"],
+                    min_rating=param("benchmark_rating_bem_avaliada"),
+                )
+                agregados = {
+                    "status": "ok" if "erro" not in base else "erro",
+                    "count_total": base.get("count") if isinstance(base, dict) else None,
+                    "count_rating_ge_4_2": hi42.get("count") if isinstance(hi42, dict) else None,
+                    "radius_meters": int(raio_metros),
+                    "center": {"lat": lat, "lng": lng},
+                    "included_types": ["gym", "fitness_center"],
+                    "erros": [e for e in [base.get("erro"), hi42.get("erro")] if e],
+                }
+            except Exception:
+                agregados = {"status": "erro", "motivo": "exception_import_or_call"}
+        else:
+            agregados = {"status": "desabilitado_custo", "count_total": None}
 
         headers = {
             "Content-Type": "application/json",

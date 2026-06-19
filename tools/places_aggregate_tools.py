@@ -75,8 +75,13 @@ def compute_insight_count_circle(
     headers = {"X-Goog-Api-Key": api_key, "Content-Type": "application/json"}
 
     try:
-        with httpx.Client(timeout=timeout_seconds) as c:
-            resp = c.post(_AREA_INSIGHTS_BASE, json=body, headers=headers)
+        # Rastreia o custo (areaInsights = SKU places_aggregate). Antes ZERO track →
+        # ~R$37/dia invisível no /custos. Agora aparece se religado.
+        from tools.api_cost_tracker import track_api_call
+
+        with track_api_call("places_aggregate", "places_aggregate", 1):
+            with httpx.Client(timeout=timeout_seconds) as c:
+                resp = c.post(_AREA_INSIGHTS_BASE, json=body, headers=headers)
         if resp.status_code != 200:
             return {"erro": f"HTTP {resp.status_code}: {resp.text[:200]}"}
         data = resp.json() if resp.content else {}
