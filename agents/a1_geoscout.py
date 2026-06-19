@@ -1,124 +1,85 @@
 # agents/a1_geoscout.py
-from google.adk.agents import Agent
-from google.genai import types
+"""A1 GeoScout — DETERMINÍSTICO (sem LLM).
+
+Antes era LlmAgent com thinking=0 que SÓ copiava o JSON da macro
+`analisar_pontos_comerciais_completo` (100% determinística) pro output_key. Era
+passthrough caro + risco de truncar o array de candidatos (incidente b5b0e627:
+14 candidatos → 0 no A6 porque o LLM truncou ao copiar).
+
+Vira BaseAgent (igual A2/A3a): roda a macro direto e grava o resultado. Elimina:
+- variância (mesma praça = mesmo resultado)
+- custo LLM (uma chamada Gemini Flash a menos por run)
+- a truncagem do array (o LLM não toca mais o JSON)
+- exposição ao dunning/Vertex (A1 sobrevive mesmo com billing travado)
+
+Mapa de determinização VEC: "o LLM raciocina sobre dado, não PRODUZ dado". A1 só
+produzia (copiava) → determinizado.
+"""
+from __future__ import annotations
+
+import asyncio
+from typing import AsyncGenerator
+
+from google.adk.agents import BaseAgent
+from google.adk.agents.invocation_context import InvocationContext
+from google.adk.events import Event, EventActions
+
 from tools.anchoring_tools import analisar_pontos_comerciais_completo
-
-# REFATOR 2026-05-09 (VEC-379 fase 1B):
-# A1 GeoScout estava emitindo MALFORMED_FUNCTION_CALL em 5 de 9 runs
-# (Runs 9, 11, 13, 14, 16). Causa raiz: o LLM tentava reenviar a lista
-# de polos geradores (30+ items) como argumento de
-# `calcular_score_ancoragem(lat, lng, polos)` — payload corrompia o
-# JSON do function_call.
-#
-# Fix: substituídas as 10 tools (geocode, buscar_pontos_comerciais,
-# buscar_imoveis_texto, buscar_polos_geradores, calcular_score_ancoragem,
-# estimar_visibilidade, detectar_avenida_principal, obter_street_view_url,
-# calcular_distancia_km, obter_checklist_diligencia) por uma única
-# macro-tool `analisar_pontos_comerciais_completo` que executa o pipeline
-# inteiro internamente — o LLM faz 1 chamada sem args grandes.
-#
-# Resultados esperados:
-# - Sem MALFORMED no GeoScout
-# - 1-2 LLM calls (era 6+)
-# - Todos os candidatos com score_geoscout, score_ancoragem, polos_geradores,
-#   visibilidade, avenida_principal, street_view_url preenchidos
-
-# Thinking calibrado: A1 agora só chama macro + emite JSON. Sem julgamento.
-_GENERATE_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(thinking_budget=0),  # pyright: ignore[reportCallIssue]
-)
+from tools.competitor_tools import _parse_market_context
 
 
-def _persistir_macro_no_state(tool, args, tool_context, tool_response):
-    """Grava o output bruto da macro-tool em `candidatos_geoscout_pronto`.
+def _loc_do_state(state) -> tuple[str, str, str]:
+    """cidade/uf/bairro do input_params (api.py) + market_context (A0)."""
+    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    cidade = (state.get("cidade") or ip.get("cidade") or "").strip()
+    uf = (state.get("uf") or ip.get("uf") or "").strip()
+    bairro = (state.get("bairro") or ip.get("bairro") or "").strip()
+    ctx = _parse_market_context(state.get("market_context"))
+    if isinstance(ctx, dict):
+        inner = ctx.get("market_context") if isinstance(ctx.get("market_context"), dict) else ctx
+        if isinstance(inner, dict):
+            cidade = cidade or (inner.get("cidade") or "").strip()
+            uf = uf or (inner.get("uf") or "").strip()
+            bairro = bairro or (inner.get("bairro") or "").strip()
+    return cidade, uf, bairro
 
-    Incidente 12/06 (run b5b0e627): a macro retornou 14 candidatos, mas o
-    LLM truncou o array ao copiar o JSON pro output_key — `top_3_candidatos`
-    chegou vazio no A6 e a tabela `candidatos` ficou zerada. O state bypassa
-    o LLM: A6 lê esta chave primeiro e só cai no output_key como fallback.
-    """
-    if getattr(tool, "name", "") == "analisar_pontos_comerciais_completo" and isinstance(
-        tool_response, dict
-    ):
-        tool_context.state["candidatos_geoscout_pronto"] = tool_response
-    return None
 
-from tools.agent_factory import build_llm_agent
-geoscout_agent = build_llm_agent(
+class GeoScoutAgent(BaseAgent):
+    """A1 determinístico: roda a macro de pontos comerciais e grava o resultado."""
+
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        cidade, uf, bairro = _loc_do_state(state)
+        try:
+            # macro é síncrona — roda em thread pra não travar o loop
+            r = await asyncio.to_thread(
+                analisar_pontos_comerciais_completo, bairro, cidade, uf
+            )
+            if not isinstance(r, dict):
+                r = {"erro": "macro retornou não-dict", "total_candidatos": 0, "candidatos": []}
+        except Exception as e:  # nunca derruba o pipeline
+            r = {"erro": f"{type(e).__name__}: {e}", "total_candidatos": 0, "candidatos": []}
+
+        yield Event(
+            author=self.name,
+            invocation_id=ctx.invocation_id,
+            # candidatos_geoscout_pronto = snapshot que o A6 lê PRIMEIRO (bypassa o LLM,
+            # como o _persistir_macro_no_state fazia). candidatos_geoscout = output_key
+            # legado p/ consumidores que leem essa chave.
+            actions=EventActions(state_delta={
+                "candidatos_geoscout_pronto": r,
+                "candidatos_geoscout": r,
+            }),
+        )
+
+
+geoscout_agent = GeoScoutAgent(
     name="GeoScout",
-    model="gemini-2.5-flash",
-    generate_content_config=_GENERATE_CONFIG,
     description=(
-        "Identifica zonas comerciais com sinal positivo para academias usando "
-        "Google Maps. Retorna endereços-âncora para field research, não imóveis vagos."
+        "A1 determinístico (sem LLM): identifica zonas comerciais-âncora p/ academias "
+        "via macro Google Maps (geocode + nearby + text + score + polos + listings). "
+        "Retorna endereços-âncora para field research, não imóveis vagos."
     ),
-    instruction="""
-Você é o GeoScout — especialista em prospecção de zonas comerciais para academias.
-
-## CONTEXTO
-A Google Places API NÃO tem inventário de imóveis vagos. Sua função é
-identificar **endereços-âncora**: locais com características compatíveis
-com academias, que servem de ponto de partida para field research.
-
-## FLUXO OBRIGATÓRIO (1 chamada apenas)
-
-Chame **analisar_pontos_comerciais_completo(bairro, cidade, uf)** UMA única vez.
-
-A macro-tool já executa internamente:
-- Geocoding do bairro/cidade
-- Nearby Search por shopping_mall, store, supermarket, establishment
-- Text Search por "supermercado <bairro>" e "concessionária <bairro>"
-- Dedup por place_id
-- Filtro blacklist por nome (restaurantes, anúncios, pequeno porte)
-- Filtro de área incompatível (restaurant sem outro tipo âncora)
-- Score GeoScout (0-10) com regras determinísticas
-- Busca de polos geradores (terminais + atacadistas) em raio de 2km
-- Score Ancoragem por candidato (proximidade dos polos)
-- Estimativa de visibilidade (alta/média/baixa)
-- Detecção de avenida principal
-- URL Street View
-- Checklist de diligência fixo (6 itens)
-- **Listings reais de OLX + ImovelWeb (Playwright)** com `listing_url`,
-  `listing_id`, `price_raw`, `source` — oferta concreta marcada com
-  `qualidade_sinal: "direto-listing"` (vs heurísticas com "indireto-heuristico")
-- **Investigação web** nos imóveis com gatilho (`investigacao`, `investigacao_resultado`):
-  o que opera no endereço hoje (aberto/vago/fechado) — preserve esses campos nos candidatos
-
-NÃO chame ferramentas separadas — todas foram consolidadas. Uma única
-chamada à macro-tool é suficiente E obrigatória.
-
-## SAÍDA ESPERADA (JSON)
-
-Cole o resultado da macro-tool no formato abaixo (TODOS os campos
-vêm prontos da função, basta copiar). Preserve `listing_url`, `listing_id`,
-`price_raw` e `source` nos candidatos que tiverem `fonte: "listing"` —
-A5 ContactHunter usa esses campos:
-
-```json
-{
-  "total_candidatos": <N retornado pela macro>,
-  "ancoras_heuristicas": <N de zonas-âncora>,
-  "listings_reais": <N de listings OLX/ImovelWeb>,
-  "estrategia": "<copiar da macro>",
-  "qualidade_sinal": "<copiar da macro>",
-  "checklist_diligencia": [<6 itens>],
-  "investigacoes_imoveis": {"disparados": N, "executados": N, "limite": 5},
-  "candidatos": [<lista com investigacao + investigacao_resultado quando houver>]
-}
-```
-
-## REGRAS
-
-- Se `analisar_pontos_comerciais_completo` retornar `{"erro": ...}`,
-  emita JSON com `total_candidatos: 0`, `candidatos: []`, e adicione
-  o erro no campo `aviso`. NÃO tente refazer com parâmetros diferentes.
-- NUNCA invente score, polos ou visibilidade — todos vêm da macro-tool.
-- Se total_candidatos < 5, mantenha mesmo assim — lista vazia é falha,
-  mas lista pequena é melhor do que nada.
-""",
-    tools=[
-        analisar_pontos_comerciais_completo,
-    ],
-    after_tool_callback=_persistir_macro_no_state,
-    output_key="candidatos_geoscout",
 )
