@@ -415,6 +415,138 @@ def _sintese_posicionamento_narrada(state: dict, parsed: dict) -> str:
     return r["texto"]
 
 
+def _errc_deterministica(state: dict) -> dict:
+    """ERRC + posicionamento 100% DETERMINÍSTICO, da matéria-prima já calculada:
+    headroom de renda (avaliar_posicionamento — IBGE Censo 2022 × ticket dos concorrentes),
+    gaps reais e penetração da oferta real dos concorrentes (planos_precos + modalidades + IG).
+
+    O LLM do A9 NUNCA produziu a matéria-prima — recebia tudo pronto e só narrava a ERRC.
+    Aqui montamos a ERRC por TEMPLATE ancorado no dado. Retorna o dict no contrato do A9
+    (markdown + campos estruturados), pronto pra ser o output do agente OU o fallback/fonte
+    da narração via narrar(). Recalibrável via parametros_metodologia (params do headroom)."""
+    from collections import Counter
+
+    from tools.competitor_tools import _parse_market_context
+    from tools.posicionamento_renda import avaliar_posicionamento
+
+    cidade, bairro = _resolve_location_from_state(state)
+    uf = _resolve_uf_from_state(state)
+    loc = f"{bairro.title()}, {cidade.title()}" if cidade else (bairro.title() or "bairro alvo")
+
+    ic = _parse_market_context(state.get("inteligencia_competitiva"))
+    inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+    concs = [c for c in ((inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
+                         if isinstance(inner, dict) else []) if isinstance(c, dict)]
+    nivel_sat = (inner.get("nivel_saturacao") if isinstance(inner, dict) else None) or "indeterminada"
+
+    hr = avaliar_posicionamento(cidade, uf, bairro, concorrentes=concs) if (cidade and bairro) else {"status": "sem_local"}
+    ok = hr.get("status") == "ok"
+    veredito = (hr.get("veredito_posicionamento") if ok else None) or "INDETERMINADO"
+    ticket_rec = hr.get("ticket_teto_sustentavel") if ok else None
+    ticket_mkt = hr.get("ticket_mercado") if ok else None
+    ratio = hr.get("headroom_ratio") if ok else None
+    tier = hr.get("tier_modelo_percentil") if ok else None
+
+    # banda de ticket: piso = mercado atual, teto = teto sustentável da renda (recomendado).
+    ticket_min = round(ticket_mkt) if isinstance(ticket_mkt, (int, float)) else None
+    ticket_max = round(ticket_rec) if isinstance(ticket_rec, (int, float)) else None
+
+    # comparativo de mercado: menor plano REAL de cada concorrente + o recomendado.
+    comparativo: dict = {}
+    for c in concs:
+        precos = [p.get("preco_mensal") for p in (c.get("planos_precos") or [])
+                  if isinstance(p, dict) and p.get("preco_mensal")]
+        precos = [float(x) for x in precos if isinstance(x, (int, float))]
+        if precos:
+            comparativo[str(c.get("nome") or "?")[:24]] = round(min(precos))
+    comparativo = dict(list(comparativo.items())[:5])
+    if isinstance(ticket_rec, (int, float)):
+        comparativo["recomendado"] = round(ticket_rec)
+
+    # penetração dos serviços do catálogo (universo) na oferta real dos concorrentes
+    universo = sorted(set(_SERVICOS_CATALOGO.values()))
+    pen: Counter = Counter()
+    for c in concs:
+        for s in _servicos_do_concorrente(c):
+            pen[s] += 1
+    n = len(concs)
+    mapa_servicos = {
+        s: {"oferecem": pen.get(s, 0), "de": n,
+            "penetracao_pct": round(100 * pen.get(s, 0) / n) if n else 0}
+        for s in universo
+    }
+    gaps = [s for s in universo if pen.get(s, 0) == 0] if n else []
+
+    # ── 4 dimensões ERRC (template ANCORADO no dado, não no palpite do LLM) ──
+    eliminar = ["Guerra de preço / planos genéricos low-cost — destrói margem no oceano vermelho."]
+    if str(nivel_sat).upper().startswith("ALTO"):
+        eliminar.append(f"Competir só por preço num mercado saturado ({n} concorrentes no bairro).")
+    reduzir = ["CAC alto e complexidade operacional (mix de planos excessivo).",
+               "Capacidade ociosa em horário de baixa — escalonar a grade."]
+    if veredito == "VERMELHO":
+        reduzir.append("Ambição premium sem lastro de renda (headroom baixo) — calibrar para o tier real.")
+    aumentar = []
+    if ratio and veredito in ("OCEANO_AZUL", "TRANSICAO"):
+        aumentar.append(
+            f"Exclusividade, atendimento e margem por aluno — há espaço premium real "
+            f"(headroom ratio {ratio}, tier {tier})."
+        )
+    else:
+        aumentar.append("Retenção, NPS e comunidade — diferenciação por experiência (sem lastro premium).")
+    aumentar.append("Ticket médio rumo ao teto sustentável da renda local.")
+    criar = ([f"{g} — nenhum concorrente da praça oferece." for g in gaps]
+             if gaps else ["Mercado coberto nos serviços-núcleo — sem CRIAR; foco em AUMENTAR/REDUZIR."])
+
+    # ── markdown ──
+    def _bul(xs):
+        return "\n".join(f"- {x}" for x in xs)
+
+    mapa_linhas = "\n".join(
+        f"| {s} | {v['oferecem']}/{v['de']} | {v['penetracao_pct']}% |"
+        for s, v in mapa_servicos.items()
+    )
+    tk_rec = f"R$ {ticket_rec:.0f}" if isinstance(ticket_rec, (int, float)) else "indisponível"
+    tk_mkt = f"R$ {ticket_mkt:.0f}" if isinstance(ticket_mkt, (int, float)) else "indisponível"
+    head = f" (headroom ratio {ratio}, tier {tier})" if ratio else ""
+    markdown = (
+        f"## Posicionamento Estratégico — {loc}\n\n"
+        f"**Veredito:** {veredito}{head}\n"
+        f"**Ticket recomendado:** {tk_rec} (teto sustentável da renda) · "
+        f"**ticket de mercado atual:** {tk_mkt}\n\n"
+        f"### Framework ERRC\n"
+        f"**ELIMINAR**\n{_bul(eliminar)}\n\n"
+        f"**REDUZIR**\n{_bul(reduzir)}\n\n"
+        f"**AUMENTAR**\n{_bul(aumentar)}\n\n"
+        f"**CRIAR**\n{_bul(criar)}\n\n"
+        f"### Mapa de serviços (penetração na praça)\n"
+        f"| Serviço | Oferecem | Penetração |\n|---|---|---|\n{mapa_linhas}\n\n"
+        f"_Fonte: headroom de renda (IBGE Censo 2022) + oferta real dos concorrentes "
+        f"(planos + IG). ERRC determinística — recalibrável via parametros_metodologia._\n"
+    )
+
+    return {
+        "markdown": markdown,
+        "veredito_posicionamento": veredito,
+        "fonte_veredito": "deterministico_headroom_renda (IBGE Censo 2022)",
+        "recomendacao_ticket": {
+            "ticket_recomendado": ticket_rec, "ticket_mercado": ticket_mkt,
+            "ticket_minimo": ticket_min, "ticket_maximo": ticket_max,
+            "comparativo_mercado": comparativo,
+            "fonte": "ticket_teto_sustentavel = renda_pc × ticket_renda_pct_premium (param)",
+        },
+        "gaps_identificados": (
+            [f"{g} — nenhum concorrente da praça oferece (oportunidade de CRIAR)" for g in gaps]
+            if gaps else ["Mercado coberto nos serviços-núcleo — foco em AUMENTAR/REDUZIR"]
+        ),
+        "fonte_gaps": "deterministico_oferta_concorrentes (planos+IG)",
+        "mapa_servicos": mapa_servicos,
+        "framework_errc": {"eliminar": eliminar, "reduzir": reduzir,
+                           "aumentar": aumentar, "criar": criar},
+        "headroom_renda": hr if ok else None,
+        "fonte_geracao": "deterministico_errc",
+    }
+
+
 def _a9_inject_oferta_e_gaps(state: dict, llm_request) -> None:
     """Injeta a oferta real + gaps computados no prompt do A9 (substrato da ERRC)."""
     try:
@@ -627,137 +759,60 @@ def _a9_after_agent_callback(callback_context):
         )
 
 
-from tools.agent_factory import build_llm_agent
-# Model env-swappable p/ A/B de custo: A9 faz só NARRATIVA (ERRC/justificativa); o
-# veredito/gaps/ticket são override DETERMINÍSTICO (headroom IBGE + dados reais). Pro
-# é o default conservador; A9_MODEL=gemini-2.5-flash testa o corte de custo (~R$100/mês).
-_A9_MODEL = os.getenv("A9_MODEL", "gemini-2.5-pro").strip() or "gemini-2.5-pro"
-positioning_strategist_agent = build_llm_agent(
+# ─────────────────────────────────────────────────────────────────────────────
+# A9 DETERMINÍSTICO (BaseAgent, sem LLM).
+#
+# Antes era LlmAgent (Gemini Pro) que SÓ narrava a ERRC: a matéria-prima (headroom
+# de renda IBGE, gaps reais, penetração da oferta dos concorrentes) já vinha pronta e
+# determinística, injetada no prompt; o veredito/gaps/ticket eram override determinístico
+# DEPOIS. O LLM nunca produziu dado — só vestia. Determinizado via _errc_deterministica:
+# elimina variância, custo Gemini Pro (~R$100/mês) e a exposição ao dunning/Vertex.
+#
+# A síntese executiva fluente segue no _a9_after_agent_callback (narrar() via Claude
+# headless/subscription, opcional, default OFF). A ERRC markdown é template determinístico.
+# ─────────────────────────────────────────────────────────────────────────────
+from typing import AsyncGenerator
+
+from google.adk.agents import BaseAgent
+from google.adk.agents.invocation_context import InvocationContext
+from google.adk.events import Event, EventActions
+
+
+class PositioningStrategistAgent(BaseAgent):
+    """A9 determinístico: monta a ERRC + posicionamento por template da matéria-prima
+    já calculada. Grava o dict no contrato do A9; o after_agent_callback parseia (dict
+    direto), confirma o veredito determinístico, narra a síntese e persiste."""
+
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        try:
+            parsed = _errc_deterministica(state)
+        except Exception as e:  # nunca derruba o pipeline
+            parsed = {
+                "erro": f"{type(e).__name__}: {e}",
+                "veredito_posicionamento": "INDETERMINADO",
+                "markdown": "",
+                "fonte_geracao": "deterministico_errc",
+            }
+        yield Event(
+            author=self.name,
+            invocation_id=ctx.invocation_id,
+            # dict (não string): o _a9_after_agent_callback usa parsed=raw direto.
+            actions=EventActions(state_delta={
+                "relatorio_posicionamento_md": parsed,
+                "relatorio_posicionamento": parsed,
+            }),
+        )
+
+
+positioning_strategist_agent = PositioningStrategistAgent(
     name="PositioningStrategist",
-    model=_A9_MODEL,
     description=(
-        "A9 — Gera relatório estratégico de posicionamento via Framework ERRC, "
-        "consumindo outputs de A0–A6. Mapeia serviços dos concorrentes, "
-        "identifica GAPs, recomenda ticket e emite veredito de posicionamento."
+        "A9 determinístico (sem LLM): monta ERRC + veredito + ticket + GAPs + mapa de "
+        "serviços da matéria-prima determinística (headroom de renda IBGE Censo 2022 + "
+        "oferta real dos concorrentes). Síntese executiva fluente opcional via Claude headless."
     ),
-    instruction="""
-agente: A9 PositioningStrategist
-papel: análise estratégica de posicionamento via Framework ERRC
-regra_execucao: autonoma
-
-## SEU PAPEL
-Analisar TODOS os dados já produzidos pelo pipeline (A0–A6) e gerar um
-**relatório estratégico de posicionamento** que responda:
-
-> "Como esta academia deve se posicionar no mercado para escapar do oceano
-> vermelho (guerra de preços) e nadar no oceano azul (diferenciação real)?"
-
-## ENTRADAS (já no state / contexto da conversa)
-- market_context (A0)
-- candidatos_geoscout (A1)
-- analise_demografica (A2)
-- inteligencia_competitiva (A3b)
-- oferta_concorrentes (A3c)
-- analise_financeira (A4)
-- contato_decisor (A5)
-- relatorio_md (A6)
-- demanda_futura (Apêndice B — obras residenciais no raio entregando em T+24;
-  injetada como bloco "DEMANDA FUTURA DATADA" no contexto quando disponível)
-
-## FRAMEWORK ERRC — 4 dimensões obrigatórias
-- ELIMINAR: o que NÃO fazer (guerra de preço low-cost, planos genéricos, etc.)
-- REDUZIR: capacidade excessiva, CAC alto, complexidade operacional
-- AUMENTAR: exclusividade, atendimento, NPS, margem por aluno
-- CRIAR: nichos/serviços que NENHUM concorrente oferece — use EXCLUSIVAMENTE a lista
-  "GAPS REAIS" injetada (dado real da praça). NÃO invente "nutrição/recovery/silver"
-  por reflexo: se o bloco DADO REAL mostra que um concorrente já oferece, NÃO é gap.
-
-## MAPEAMENTO DE SERVIÇOS (16 obrigatórios, escala 0–10 por concorrente)
-Musculação, Treino funcional/HIIT, Aulas de dança, Spinning, Artes marciais,
-Yoga/Pilates, Crossfit, Natação/Hidro, Nutrição integrada, Avaliação física,
-App/monitoramento digital, Aulas personalizadas (PT), Recovery/fisioterapia,
-Comunidade/eventos, Aulas idosos (50+), Beach tennis/esportes praia.
-
-GAP = serviço com penetração < 3 em TODOS os concorrentes.
-PREENCHA `mapa_servicos` a partir do bloco "DADO REAL — OFERTA DOS CONCORRENTES"
-injetado (não chute as notas) e use os "GAPS REAIS" computados pra a dimensão CRIAR.
-
-## VEREDITO (um dos três)
-- OCEANO_AZUL: renda alta, baixa densidade de concorrência local, ausência de redes premium fortes, 3+ GAPs evidentes. Se houver concorrência madura/saturada, NÃO pode ser Oceano Azul.
-- TRANSICAO: renda média/alta, concorrência existente e madura (mesmo que genérica), mas com espaço para nicho (1–2+ GAPs).
-- VERMELHO: mercado saturado focado em preço (low-cost), margens espremidas, 0–1 GAPs ou demanda estagnada.
-
-NOTA: o `veredito_posicionamento` final é recalculado DETERMINISTICAMENTE downstream
-(headroom = renda real do bairro IBGE 2022 × ticket dos concorrentes) e pode sobrepor o
-seu. Dê seu melhor palpite, mas escreva o markdown ancorando em ERRC/GAPs/AÇÕES (o que
-fazer), não só no rótulo do veredito — assim a narrativa não contradiz o veredito sourced.
-
-## OUTPUT — retorne APENAS JSON válido (sem texto fora do JSON):
-
-{
-  "framework_errc": {
-    "eliminar": ["...", "..."],
-    "reduzir": ["...", "..."],
-    "aumentar": ["...", "..."],
-    "criar": ["...", "..."]
-  },
-  "mapa_servicos": [
-    {"concorrente": "Nome", "servicos": {"musculacao": 9, "treino_funcional": 6, ...}}
-  ],
-  "gaps_identificados": [
-    {
-      "gap": "Nutrição integrada + recovery",
-      "descricao": "...",
-      "potencial_ticket": "R$ 250–350",
-      "dificuldade_implementacao": "Média"
-    }
-  ],
-  "recomendacao_ticket": {
-    "ticket_recomendado": 249,
-    "ticket_minimo": 199,
-    "ticket_maximo": 299,
-    "justificativa": "...",
-    "comparativo_mercado": {"smart_fit": 79, "selfit": 99, "recomendado": 249}
-  },
-  "veredito_posicionamento": "OCEANO_AZUL",
-  "justificativa_veredito": "...",
-  "janela_de_entrada": {
-    "tem_demanda_futura": true,
-    "obras_no_raio": 5,
-    "captura_estimada_alunos": 52,
-    "janela_entrega": "2027-06 a 2028-11",
-    "recomendacao_timing": "Abrir ~6 meses antes da maior entrega para capturar a migração de CEP.",
-    "confianca": "media",
-    "fonte": "CNO/RFB + site/instagram/PDF da construtora (auditado)"
-  },
-  "markdown": "# Relatório de Posicionamento Estratégico\\n\\n..."
-}
-
-Se NÃO houver bloco "DEMANDA FUTURA DATADA" no contexto, retorne
-`janela_de_entrada: {"tem_demanda_futura": false}` e NÃO invente obras.
-
-## REGRAS
-- Use dados REAIS do pipeline. Não invente números.
-- Se dado ausente, indique "dado indisponível".
-- O campo markdown deve ser relatório executivo completo em português.
-- Foque em acionabilidade: o gestor deve saber EXATAMENTE o que fazer.
-
-## REGRAS DE COERÊNCIA FINANCEIRA (obrigatórias — caso Cocó 11/06)
-- Ao citar valor de aluguel ou custo por m², SEMPRE no formato completo:
-  "R$ X/m² para a faixa de Y–Z m² (≈ R$ W/mês)" — valor unitário solto
-  contradiz o quadro financeiro e destrói a credibilidade do relatório.
-- Use EXCLUSIVAMENTE o aluguel de analise_financeira (A4) como referência;
-  PROIBIDO recalcular ou citar outro R$/m² de memória.
-- Todo número financeiro do markdown deve bater com o JSON do A4 — se o A4
-  diz payback 35 meses, o texto não pode dizer outro número.
-- Entidades completas na primeira menção: "Smart Fit Papicu (Fortaleza/CE)",
-  nunca "ela"/"a unidade" sem antecedente claro.
-""",
-    generate_content_config=_GENERATE_CONFIG,
-    tools=[],
-    output_key="relatorio_posicionamento_md",
-    before_model_callback=_a9_before_model_callback,
-    after_model_callback=_a9_after_model_callback,
 )
-
 positioning_strategist_agent.after_agent_callback = _a9_after_agent_callback
