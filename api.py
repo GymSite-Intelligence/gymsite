@@ -1807,6 +1807,40 @@ def post_entrante_enriquecer(relatorio_id: str, body: EntranteEnriquecerInput) -
     return {"ok": True, "cnpj": cnpj_limpo, "entrante": enriched, "meta": meta}
 
 
+def _aviso_hitl_relatorio(sb, rid: str) -> dict | None:
+    """C6.3 (gate INFORMADO): antes de acionar prospecção (ação outbound a decisores),
+    sinaliza se o relatório-base pede validação humana — veredito inviável/reprovado,
+    score de viabilidade baixo ou A8 marcou revisar_manual (alerta crítico). NÃO bloqueia
+    (o humano já dispara a ação); informa a decisão. Best-effort."""
+    motivos: list[str] = []
+    try:
+        out = (sb.table("relatorio_outputs").select("veredito,score_viabilidade")
+               .eq("relatorio_id", rid).maybe_single().execute())
+        d = out.data or {}
+        vere = str(d.get("veredito") or "").upper()
+        if any(t in vere for t in ("INVIAVEL", "INVIÁVEL", "REPROVAD", "VERMELHO")):
+            motivos.append(f"veredito do relatório: {d.get('veredito')}")
+        sv = d.get("score_viabilidade")
+        if isinstance(sv, (int, float)) and sv < 5:
+            motivos.append(f"score de viabilidade baixo ({sv})")
+    except Exception:
+        pass
+    try:
+        val = (sb.table("validacoes").select("revisar_manual")
+               .eq("relatorio_id", rid).order("created_at", desc=True).limit(1).execute())
+        if val.data and val.data[0].get("revisar_manual"):
+            motivos.append("A8 marcou revisar_manual (alerta crítico)")
+    except Exception:
+        pass
+    if motivos:
+        return {
+            "requer_validacao_humana": True,
+            "motivos": motivos,
+            "mensagem": "O relatório-base sinaliza validação humana antes de prospectar — confira os motivos.",
+        }
+    return None
+
+
 @app.post("/api/relatorios/{relatorio_id}/entrantes-cnpj/prospeccao")
 def post_entrantes_para_prospeccao(
     request: Request,
@@ -1942,6 +1976,8 @@ def post_entrantes_para_prospeccao(
         "atualizados": ignorados,
         "erros": erros,
         "total_enviados": len(inseridos) + len(ignorados),
+        # C6.3: gate informado — avisa se o relatório-base pede validação humana.
+        "aviso_hitl": _aviso_hitl_relatorio(sb, rid),
     }
 
 
@@ -2752,3 +2788,113 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
 @app.options("/{path:path}")
 async def preflight_catchall(path: str) -> None:
     return None
+
+# ════════════════════════════════════════════════════════════════════════════
+# WebSocket — Living Agent Map (streaming de estado do pipeline em tempo real)
+# ════════════════════════════════════════════════════════════════════════════
+
+from fastapi import WebSocket, WebSocketDisconnect
+import json
+
+# Estado em-memória do pipeline (atualizado pelo heartbeat e pelos callbacks)
+_pipeline_state: dict[str, Any] = {
+    "agents": {},
+    "connections": [],
+    "metrics": {
+        "totalExecutions": 0,
+        "avgLatency": 0,
+        "successRate": 97.2,
+        "activeAgents": 0,
+        "dataVolume": 0.0,
+        "lastUpdate": datetime.now(timezone.utc).isoformat(),
+    },
+    "currentRun": None,
+}
+
+
+def _update_agent_status(agent_id: str, status: str, tokens: int = 0, latency_ms: int = 0):
+    """Chamado pelos callbacks de telemetria para atualizar estado em tempo real."""
+    now = datetime.now(timezone.utc).isoformat()
+    if agent_id not in _pipeline_state["agents"]:
+        _pipeline_state["agents"][agent_id] = {
+            "id": agent_id,
+            "status": "idle",
+            "tokens": 0,
+            "latencyMs": 0,
+            "lastActivity": now,
+            "runs": 0,
+        }
+    agent = _pipeline_state["agents"][agent_id]
+    agent["status"] = status
+    agent["tokens"] += tokens
+    agent["latencyMs"] = latency_ms
+    agent["lastActivity"] = now
+    if status == "completed":
+        agent["runs"] += 1
+    _pipeline_state["metrics"]["lastUpdate"] = now
+
+
+# ── Hook nos callbacks existentes de telemetria ──
+# Você já tem em tools/token_telemetry.py:
+#   before_agent_callback, after_model_callback
+# E em tools/agent_telemetry.py:
+#   before_agent_callback, after_agent_callback
+# 
+# Basta injetar _update_agent_status() no final desses callbacks.
+
+# Exemplo de hook no after_model_callback:
+"""
+# Em tools/token_telemetry.py, no after_model_callback existente:
+
+from api import _update_agent_status  # ou melhor: usar um signal/pubsub
+
+def after_model_callback(callback_context, llm_response):
+    # ... código existente de log de tokens ...
+    
+    # NOVO: notifica o mapa
+    agent_id = callback_context.agent_name  # A0, A1, etc.
+    tokens = llm_response.usage_metadata.total_token_count if llm_response.usage_metadata else 0
+    _update_agent_status(agent_id, "active", tokens=tokens)
+"""
+
+# ── WebSocket endpoint ──
+
+@app.websocket("/ws/pipeline")
+async def websocket_pipeline(websocket: WebSocket):
+    """Streama estado do pipeline em tempo real para o Living Agent Map."""
+    await websocket.accept()
+    client_id = f"map_{time.time()}"
+    logger.info("Living Agent Map conectado: %s", client_id)
+    
+    try:
+        # Envia estado inicial completo
+        await websocket.send_json({
+            "type": "init",
+            "data": _pipeline_state,
+        })
+        
+        # Loop de push a cada 2 segundos
+        last_hash = None
+        while True:
+            await asyncio.sleep(2)
+            
+            # Só envia se mudou algo (dedup)
+            current = json.dumps(_pipeline_state, sort_keys=True, default=str)
+            current_hash = hash(current)
+            if current_hash != last_hash:
+                await websocket.send_json({
+                    "type": "update",
+                    "data": _pipeline_state,
+                })
+                last_hash = current_hash
+                
+    except WebSocketDisconnect:
+        logger.info("Living Agent Map desconectado: %s", client_id)
+    except Exception as e:
+        logger.warning("WebSocket pipeline erro: %s", e)
+
+
+@app.get("/api/pipeline/status")
+def pipeline_status():
+    """REST fallback para o Map (quando WebSocket não disponível)."""
+    return _pipeline_state

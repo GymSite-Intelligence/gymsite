@@ -51,6 +51,8 @@ from tools.token_telemetry import (
 )
 # Diagnóstico de state (debug #124): registra keys do state após cada agente.
 from tools.state_diagnostics import after_agent_state_dump as _state_dump
+# Checkpoint do state em Supabase (C6.4 — estado recuperável pós-crash). Best-effort.
+from tools.state_checkpoint import after_agent_checkpoint as _state_checkpoint
 # OpenTelemetry spans por agente (A0–A6)
 from tools.agent_telemetry import before_agent_callback as _otel_before, after_agent_callback as _otel_after
 # Progresso do pipeline no banco (stepper do front) — fail-safe absoluto.
@@ -106,6 +108,10 @@ def _attach_telemetry(*agents):
             # State dump vai depois do otel_after para manter ordem
             ag.after_agent_callback = _chain_callbacks(
                 ag.after_agent_callback, _state_dump
+            )
+            # Checkpoint externo do state (C6.4 — recuperável). Depois do dump.
+            ag.after_agent_callback = _chain_callbacks(
+                ag.after_agent_callback, _state_checkpoint
             )
             # Progresso visual (etapa_atual/etapas_concluidas no banco)
             ag.before_agent_callback = _chain_callbacks(
