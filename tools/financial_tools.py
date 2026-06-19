@@ -1217,6 +1217,24 @@ async def analise_financeira_a4_completo(
         queries_ok = aluguel.get("queries_com_dados", 0)
         tier_usado = 2 if mediana and mediana > 0 else 3
 
+    # ── Tier 0: MRLR DETERMINÍSTICO (primário) ──────────────────────────────
+    # Aluguel/m² CALCULADO da equação IBAPE-GO sobre inputs ESTÁVEIS (espelhos
+    # municipio_pib + renda_bairro) — mesma praça SEMPRE o mesmo valor. Mata o swing
+    # 17k→88k do scraping (audit divergência Cocó). Portal/grounding viram fallback.
+    _tier0_mrlr = None
+    try:
+        from tools.aluguel_mrlr import aluguel_deterministico
+
+        _m = aluguel_deterministico(area_m2=float(area_m2), cidade=cidade, bairro=bairro)
+        if _m.get("status") == "ok" and _m.get("valor_unitario_m2"):
+            _tier0_mrlr = _m
+            mediana = float(_m["valor_unitario_m2"])
+            min_r = round(mediana * 0.85, 2)   # banda estreita — determinístico
+            max_r = round(mediana * 1.15, 2)
+            tier_usado = 0
+    except Exception:
+        pass
+
     # 2. Calcula viabilidade 3 cenários (síncrono — só matemática)
     # Schema v1.5: propaga tipo_negocio + tamanho_preset pra cascata
     # de equipamentos detalhada (kit por modelo financeiro).
@@ -1244,7 +1262,14 @@ async def analise_financeira_a4_completo(
         if av not in fin["alertas"]:
             fin["alertas"].append(av)
 
-    if tier_usado == 1:
+    if tier_usado == 0 and _tier0_mrlr:
+        fin["fonte_aluguel"] = _tier0_mrlr.get("fonte") or "MRLR IBAPE-GO (determinístico)"
+        fin["aluguel_mrlr_inputs"] = _tier0_mrlr.get("inputs")
+        fin["aviso_metodologia_aluguel"] = (
+            "Aluguel determinístico (equação MRLR sobre espelhos: porte/PIB do município "
+            "+ padrão da renda do bairro + zona). Mesma praça = mesmo valor, recalibrável."
+        )
+    elif tier_usado == 1:
         fin["fonte_aluguel"] = (
             f"Portais municipais (ZAP/Viva/OLX) | N={queries_ok}"
         )
