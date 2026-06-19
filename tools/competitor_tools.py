@@ -976,18 +976,39 @@ def _processar_review_card(texto: str, rating: int, autor: str, data_rel: str) -
     }
 
 
-def _reviews_searchapi_card(place_id: str, max_reviews: int = 5) -> list[dict] | None:
-    """Reviews via SearchAPI google_maps_reviews (sort lowest_rating → dores primeiro),
-    processadas no shape do card. None se sem key/erro (→ caller cai pro Places)."""
+# Memo in-process por place_id — mata o 2× DENTRO do run (duas funções, mesmo place_id).
+_REVIEWS_RAW_MEMO: dict[str, "list | None"] = {}
+
+
+def _fetch_reviews_raw(place_id: str) -> "list | None":
+    """SearchAPI google_maps_reviews (sort lowest_rating) → reviews[] cru. Cacheado:
+    memo in-process (mata o 2× no run) + DB cache_reviews (determinístico cross-run,
+    TTL 7d). None = sem key/erro (caller cai pro Places); list (mesmo vazia) = OK.
+    Antes: 2 funções batiam o MESMO place_id, valor podia divergir entre as chamadas."""
     import os as _os
 
+    if not place_id:
+        return None
+    if place_id in _REVIEWS_RAW_MEMO:
+        return _REVIEWS_RAW_MEMO[place_id]
+    try:
+        from tools.cache_store import get_reviews
+
+        hit = get_reviews(place_id)
+        if hit.hit and isinstance(hit.payload, dict):
+            revs = hit.payload.get("reviews") or []
+            _REVIEWS_RAW_MEMO[place_id] = revs
+            return revs
+    except Exception:
+        pass
     key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
-    if not key or not place_id:
+    if not key:
+        _REVIEWS_RAW_MEMO[place_id] = None
         return None
     try:
         from tools.api_cost_tracker import track_api_call
 
-        with track_api_call("buscar_reviews_academia", "searchapi_google_maps_reviews", 1):
+        with track_api_call("reviews_concorrente", "searchapi_google_maps_reviews", 1):
             with httpx.Client(timeout=45) as c:
                 data = c.get(
                     "https://www.searchapi.io/api/v1/search",
@@ -995,13 +1016,34 @@ def _reviews_searchapi_card(place_id: str, max_reviews: int = 5) -> list[dict] |
                             "sort_by": "lowest_rating", "hl": "pt-br", "gl": "br"},
                     headers={"Authorization": f"Bearer {key}"},
                 ).json()
+        revs = data.get("reviews") or []
     except Exception:
+        _REVIEWS_RAW_MEMO[place_id] = None
+        return None
+    _REVIEWS_RAW_MEMO[place_id] = revs
+    try:
+        from tools.cache_store import set_reviews
+
+        if revs:
+            set_reviews(place_id, revs)
+    except Exception:
+        pass
+    return revs
+
+
+def _reviews_searchapi_card(place_id: str, max_reviews: int = 5) -> list[dict] | None:
+    """Reviews via SearchAPI (raw compartilhado cacheado), shape do card. None se
+    sem key/erro (→ caller cai pro Places)."""
+    if not place_id:
+        return None
+    raw = _fetch_reviews_raw(place_id)
+    if raw is None:
         return None
 
     import re as _re_html
 
     out: list[dict] = []
-    for rev in (data.get("reviews") or [])[:max_reviews]:
+    for rev in (raw or [])[:max_reviews]:
         texto = (rev.get("text") or rev.get("snippet") or "")
         texto = _re_html.sub(r"<br\s*/?>", " ", texto, flags=_re_html.IGNORECASE)
         texto = _re_html.sub(r"<[^>]+>", "", texto)
@@ -2074,34 +2116,14 @@ def _reviews_baixa_nota_searchapi(place_id: str, max_reviews: int = 10) -> list[
 
     Promovido do scripts/backfill_reviews_dores.py (12/06) pro pipeline:
     relatório nasce com dores reais em vez das 5 reviews-elogio da Places.
-    Sem SEARCHAPI_KEY ou falha → [] (best-effort, nunca bloqueia)."""
-    import os as _os
-
-    import requests as _requests
-
-    key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
-    if not key or not place_id:
-        return []
-    try:
-        r = _requests.get(
-            "https://www.searchapi.io/api/v1/search",
-            params={
-                "engine": "google_maps_reviews",
-                "place_id": place_id,
-                "sort_by": "lowest_rating",
-                "hl": "pt-br",
-                "gl": "br",
-                "api_key": key,
-            },
-            timeout=45,
-        )
-        r.raise_for_status()
-    except Exception:
-        return []
+    Sem SEARCHAPI_KEY ou falha → [] (best-effort, nunca bloqueia).
+    Usa o fetch RAW compartilhado (memo + cache) — antes batia o place_id de novo,
+    duplicando a chamada que _reviews_searchapi_card já fez."""
+    raw = _fetch_reviews_raw(place_id) or []
     import re as _re_html
 
     out: list[dict] = []
-    for rev in (r.json().get("reviews") or [])[:max_reviews]:
+    for rev in raw[:max_reviews]:
         texto = (rev.get("text") or rev.get("snippet") or "").strip()
         # SearchAPI devolve <br> e tags HTML cruas dentro do texto da review
         texto = _re_html.sub(r"<br\s*/?>", " ", texto, flags=_re_html.IGNORECASE)

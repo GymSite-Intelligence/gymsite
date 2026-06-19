@@ -241,6 +241,37 @@ def set_geocode(endereco_norm: str, lat, lng, payload: dict, *,
     }, on_conflict="endereco_norm").execute()
 
 
+def get_reviews(place_id: str) -> CacheHit:
+    """Reviews crus do concorrente (place_id). Mata o 2× (2 funções, mesmo place_id)
+    + determinístico cross-run. TTL 7d."""
+    sb = _get_client()
+    if not sb or not place_id:
+        return CacheHit(hit=False, payload=None)
+    res = (sb.table("cache_reviews").select("*").eq("place_id", place_id)
+           .gt("expires_at", _dt_to_iso(_utcnow())).limit(1).execute())
+    row = (res.data or [None])[0]
+    if not row:
+        return CacheHit(hit=False, payload=None)
+    try:
+        sb.table("cache_reviews").update({"hit_count": int(row.get("hit_count") or 0) + 1}).eq(
+            "place_id", place_id).execute()
+    except Exception:
+        pass
+    return CacheHit(hit=True, payload=row)
+
+
+def set_reviews(place_id: str, reviews: list, *, source: str = "searchapi", ttl_days: int = 7) -> None:
+    sb = _get_client()
+    if not sb or not place_id:
+        return
+    now = _utcnow()
+    sb.table("cache_reviews").upsert({
+        "place_id": place_id, "reviews": reviews, "source": source,
+        "cached_at": _dt_to_iso(now),
+        "expires_at": _dt_to_iso(now + timedelta(days=ttl_days)), "hit_count": 0,
+    }, on_conflict="place_id").execute()
+
+
 # -----------------------------------------------------------------------------
 # cache_popular_times
 # -----------------------------------------------------------------------------

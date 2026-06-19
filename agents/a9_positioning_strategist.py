@@ -565,9 +565,13 @@ def _a9_after_agent_callback(callback_context):
 
 
 from tools.agent_factory import build_llm_agent
+# Model env-swappable p/ A/B de custo: A9 faz só NARRATIVA (ERRC/justificativa); o
+# veredito/gaps/ticket são override DETERMINÍSTICO (headroom IBGE + dados reais). Pro
+# é o default conservador; A9_MODEL=gemini-2.5-flash testa o corte de custo (~R$100/mês).
+_A9_MODEL = os.getenv("A9_MODEL", "gemini-2.5-pro").strip() or "gemini-2.5-pro"
 positioning_strategist_agent = build_llm_agent(
     name="PositioningStrategist",
-    model="gemini-2.5-pro",
+    model=_A9_MODEL,
     description=(
         "A9 — Gera relatório estratégico de posicionamento via Framework ERRC, "
         "consumindo outputs de A0–A6. Mapeia serviços dos concorrentes, "
