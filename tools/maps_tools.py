@@ -262,11 +262,9 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
         "X-Goog-FieldMask": (
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.businessStatus,"
-            "places.rating,places.userRatingCount,"
-            # SEM contact data (phone/website/hours): esta busca traz ÂNCORAS/
-            # polos (supermercado, shopping) — ninguém liga pro Carrefour pra
-            # alugar ponto. Contact fica só em buscar_imoveis_texto (candidato
-            # real, contato de imobiliária importa). Corta SKU Enterprise.
+            # rating/userRatingCount CORTADOS: âncora/polo (supermercado, shopping)
+            # não é scoreado por nota — só puxava o tier Enterprise à toa. Contact
+            # também fora (ninguém liga pro Carrefour pra alugar ponto). Tier Pro.
             "places.googleMapsUri"
         ),
     }
@@ -318,9 +316,9 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
         "X-Goog-FieldMask": (
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.types,places.businessStatus,"
-            "places.rating,places.userRatingCount,"
-            # Contact mantido (telefone de imobiliária = lead do candidato);
-            # regularOpeningHours cortado — imóvel vago não tem horário.
+            # rating/userRatingCount CORTADOS — imóvel vago não tem nota relevante;
+            # só puxava tier Enterprise. Contact MANTIDO (telefone de imobiliária =
+            # lead do candidato); regularOpeningHours fora (imóvel vago sem horário).
             "places.nationalPhoneNumber,places.websiteUri,"
             "places.googleMapsUri"
         ),
