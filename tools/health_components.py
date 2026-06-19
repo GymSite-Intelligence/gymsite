@@ -82,8 +82,14 @@ def gather_health_components(*, probe_supabase: bool = True) -> dict[str, str]:
 
 def health_payload(*, probe_supabase: bool = True) -> dict[str, Any]:
     components = gather_health_components(probe_supabase=probe_supabase)
-    critical = {"gemini"}
-    degraded = any(components.get(k) in ("missing", "invalid_key", "error") for k in critical)
+    # CRÍTICO = o que o trabalho da API exige. A API serve dashboard/relatório/PDF
+    # (Supabase); o pipeline (gemini/maps/langcache) roda em OUTRO nó (local/worker).
+    # Antes gateava em `gemini` → prod (serving, sem chave de pipeline que NÃO usa)
+    # virava "degraded" à toa. supabase é o dep real de serving; os de pipeline ficam
+    # visíveis nos components mas não forçam degraded num nó de serving.
+    critical = {"supabase"}
+    _ok_vals = ("ok", "configured", "connected", "authenticated")
+    degraded = any(components.get(k) not in _ok_vals for k in critical)
     return {
         "status": "degraded" if degraded else "ok",
         "service": "gymsite-intelligence-api",
