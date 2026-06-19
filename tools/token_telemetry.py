@@ -112,7 +112,10 @@ def _resolve_model_name(callback_context, llm_response=None) -> str:
         if agent is not None:
             m = getattr(agent, "model", None)
             if m:
-                return str(m)
+                # build_llm_agent embrulha a string num objeto Gemini(model="..."):
+                # str(m) viraria o repr inteiro. Extrai o nome aninhado quando objeto.
+                nome = getattr(m, "model", None)
+                return str(nome) if nome else str(m)
     return "?"
 
 
