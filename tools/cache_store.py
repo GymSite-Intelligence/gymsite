@@ -205,6 +205,42 @@ def set_places_details(
     sb.table("cache_places_details").upsert(row, on_conflict="place_id").execute()
 
 
+def get_geocode(endereco_norm: str) -> CacheHit:
+    """Geocode cacheado (endereco_norm → lat/lng). Geocode é estável → TTL 90d."""
+    sb = _get_client()
+    if not sb:
+        return CacheHit(hit=False, payload=None)
+    res = (
+        sb.table("cache_geocode").select("*")
+        .eq("endereco_norm", endereco_norm)
+        .gt("expires_at", _dt_to_iso(_utcnow())).limit(1).execute()
+    )
+    row = (res.data or [None])[0]
+    if not row:
+        return CacheHit(hit=False, payload=None)
+    try:
+        sb.table("cache_geocode").update(
+            {"last_hit_at": _dt_to_iso(_utcnow()), "hit_count": int(row.get("hit_count") or 0) + 1}
+        ).eq("endereco_norm", endereco_norm).execute()
+    except Exception:
+        pass
+    return CacheHit(hit=True, payload=row)
+
+
+def set_geocode(endereco_norm: str, lat, lng, payload: dict, *,
+                source: str = "google", ttl_days: int = 90) -> None:
+    sb = _get_client()
+    if not sb:
+        return
+    now = _utcnow()
+    sb.table("cache_geocode").upsert({
+        "endereco_norm": endereco_norm, "lat": lat, "lng": lng, "payload": payload,
+        "source": source, "cached_at": _dt_to_iso(now),
+        "expires_at": _dt_to_iso(now + timedelta(days=ttl_days)),
+        "last_hit_at": None, "hit_count": 0,
+    }, on_conflict="endereco_norm").execute()
+
+
 # -----------------------------------------------------------------------------
 # cache_popular_times
 # -----------------------------------------------------------------------------

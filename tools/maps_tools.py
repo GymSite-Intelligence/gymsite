@@ -94,10 +94,41 @@ def _geocode_google(endereco: str) -> dict:
     return {"error": f"Geocoding falhou: {data.get('status')}", "detail": msg}
 
 
+def _norm_endereco_cache(s: str) -> str:
+    import re as _re
+    import unicodedata as _ud
+    s = _ud.normalize("NFKD", str(s or "").lower()).encode("ascii", "ignore").decode()
+    return _re.sub(r"\s+", " ", s).strip()
+
+
 def geocode_endereco(endereco: str) -> dict:
-    """Converte endereço em lat/lng (Google → fallback Nominatim/OSM)."""
+    """Converte endereço em lat/lng (Google → fallback Nominatim/OSM).
+    Cache-first (cache_geocode, TTL 90d): re-run do mesmo bairro não bate Google
+    Geocoding de novo (~R$21/dia economizados). Best-effort — falha no cache degrada."""
+    chave = _norm_endereco_cache(endereco)
+    if chave:
+        try:
+            from tools.cache_store import get_geocode
+
+            hit = get_geocode(chave)
+            if hit.hit and isinstance(hit.payload, dict) and hit.payload.get("payload"):
+                cached = hit.payload["payload"]
+                if isinstance(cached, dict) and "error" not in cached:
+                    cached["fonte_geocode"] = (cached.get("fonte_geocode") or "google") + "_cache"
+                    return cached
+        except Exception:
+            pass
+
     result = _geocode_google(endereco)
     if "error" not in result:
+        if chave:
+            try:
+                from tools.cache_store import set_geocode
+
+                set_geocode(chave, result.get("lat"), result.get("lng"), result,
+                            source=result.get("fonte_geocode") or "google")
+            except Exception:
+                pass
         return result
     try:
         from tools.maps_fallback import fallback_habilitado, geocode_nominatim
