@@ -2026,6 +2026,35 @@ def _resumo_executivo_deterministico(
     return " ".join(partes)
 
 
+def _resumo_executivo_narrado(
+    *, det_text: str, veredito: str, modelo_recomendado: str, nivel_saturacao: str,
+) -> str:
+    """Reescreve o resumo determinístico de forma fluente via Claude headless (subscription,
+    sem api_key → escapa dunning/custo-token). O `det_text` é A FONTE dos fatos E o fallback:
+    Claude só veste, nunca produz dado. Guardrail (em narrador_claude) reprova se faltar
+    veredito/modelo/saturação ou surgir QUALQUER número novo → cai no det_text intacto.
+
+    Default OFF (NARRADOR_CLAUDE_ENABLED=0) → devolve det_text sem tocar. Liga só local
+    (prod Cloud Run não tem subscription). Zero variância de fato — só a prosa muda.
+    """
+    import re as _re
+
+    from tools.narrador_claude import narrar
+
+    # âncoras = veredito/modelo/saturação (literal) + TODO número do texto determinístico.
+    nums = _re.findall(r"\d[\d.,]*\d|\d", det_text or "")
+    ancoras = [a for a in (veredito, modelo_recomendado, nivel_saturacao) if a] + nums
+    instrucao = (
+        "Reescreva o resumo executivo abaixo de forma fluente e profissional, em 3 a 4 "
+        "frases em português do Brasil. NÃO altere, invente nem remova NENHUM número, "
+        "percentual, veredito ou nome de modelo. Não use ferramentas; responda apenas o texto."
+    )
+    r = narrar(fatos_texto=det_text, ancoras=ancoras, fallback=det_text, instrucao=instrucao)
+    if r.get("fonte") == "claude_subscription":
+        logger.info("[A6] resumo executivo narrado via Claude headless (subscription)")
+    return r["texto"]
+
+
 def _extrair_relatorio_estruturado(callback_context) -> dict:
     """
     Constrói o JSON canônico do relatório lendo todos os outputs do state.
@@ -2582,11 +2611,17 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # narra "211 academias no raio 3km" / candidato fora-bairro). Montado dos MESMOS
     # campos estruturados → coerência garantida com o resto do relatório.
     if isinstance(contato, dict):
-        contato["resumo_executivo"] = _resumo_executivo_deterministico(
+        _det = _resumo_executivo_deterministico(
             cidade=cidade, bairro=bairro, veredito=veredito,
             modelo_recomendado=modelo_recomendado, cenarios=cenarios,
             nivel_saturacao=nivel_saturacao, total_concorrentes=total_concorrentes,
             top_3=top_3, zoneamento=zoneamento_block,
+        )
+        # Narração fluente via Claude headless quando ligado (subscription, fora do dunning);
+        # guardrail trava número/veredito → fallback é o próprio _det. Default OFF = _det puro.
+        contato["resumo_executivo"] = _resumo_executivo_narrado(
+            det_text=_det, veredito=veredito,
+            modelo_recomendado=modelo_recomendado, nivel_saturacao=nivel_saturacao,
         )
 
     return {
