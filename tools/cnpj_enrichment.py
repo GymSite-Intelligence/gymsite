@@ -117,7 +117,10 @@ def _cache_put(cnpj: str, payload: dict) -> None:
         "expires_at": expires.isoformat(),
     }
     try:
-        sb.table("cnpj_contato_cache").upsert(row, on_conflict="cnpj").execute()
+        from tools.db_schema import tbl
+
+        # upsert (ON CONFLICT) não funciona via view de compat → schema real
+        tbl(sb, "cnpj_contato_cache").upsert(row, on_conflict="cnpj").execute()
     except Exception:
         pass
 

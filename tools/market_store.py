@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from tools.db_schema import tbl
 
 _TRUTHY = {"1", "true", "yes", "on"}
 
@@ -64,7 +65,7 @@ def upsert_bundle(slug: str, bundle: dict[str, Any]) -> bool:
         "payload": bundle,
     }
     try:
-        cli.table("market_bundles").upsert(row, on_conflict="slug").execute()
+        tbl(cli, "market_bundles").upsert(row, on_conflict="slug").execute()
         return True
     except Exception as e:
         print(f"[market_store] upsert_bundle falhou ({slug}): {type(e).__name__}: {e}")
@@ -79,7 +80,7 @@ def fetch_bundle(slug: str) -> dict[str, Any] | None:
     if cli is None:
         return None
     try:
-        res = cli.table("market_bundles").select("payload").eq("slug", slug).limit(1).execute()
+        res = tbl(cli, "market_bundles").select("payload").eq("slug", slug).limit(1).execute()
         data = getattr(res, "data", None) or []
         if data and isinstance(data[0].get("payload"), dict):
             return data[0]["payload"]
@@ -97,7 +98,7 @@ def upsert_snapshot(nome: str, payload: dict[str, Any]) -> bool:
         return False
     row = {"nome": nome, "payload": payload, "gerado_em": payload.get("gerado_em")}
     try:
-        cli.table("market_snapshots").upsert(row, on_conflict="nome").execute()
+        tbl(cli, "market_snapshots").upsert(row, on_conflict="nome").execute()
         return True
     except Exception as e:
         print(f"[market_store] upsert_snapshot falhou ({nome}): {type(e).__name__}: {e}")
@@ -111,7 +112,7 @@ def fetch_snapshot(nome: str) -> dict[str, Any] | None:
     if cli is None:
         return None
     try:
-        res = cli.table("market_snapshots").select("payload").eq("nome", nome).limit(1).execute()
+        res = tbl(cli, "market_snapshots").select("payload").eq("nome", nome).limit(1).execute()
         data = getattr(res, "data", None) or []
         if data and isinstance(data[0].get("payload"), dict):
             return data[0]["payload"]

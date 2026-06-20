@@ -7,6 +7,7 @@ runtime pelo MRLR (aluguel/m²). Roda anual. Mesmo padrão de renda_bairro/censo
 from __future__ import annotations
 
 import os
+from tools.db_schema import tbl
 
 _QUERY = """
 WITH pib AS (
@@ -51,7 +52,7 @@ def carregar() -> dict:
         })
     n = 0
     for i in range(0, len(rows), 500):
-        cli.table("municipio_pib").upsert(rows[i:i + 500], on_conflict="id_municipio").execute()
+        tbl(cli, "municipio_pib").upsert(rows[i:i + 500], on_conflict="id_municipio").execute()
         n += len(rows[i:i + 500])
     return {"municipios": n, "ano": ano}
 

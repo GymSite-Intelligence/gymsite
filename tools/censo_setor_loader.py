@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import os
+from tools.db_schema import tbl
 
 _BQ_SQL = """
 SELECT
@@ -59,12 +60,12 @@ def carregar(*, id_municipio: str | None = None, batch: int = 2000) -> int:
             "lat": r["lat"], "lng": r["lng"], "ano": 2022,
         })
         if len(lote) >= batch:
-            sb.table("censo_setor").upsert(lote, on_conflict="id_setor").execute()
+            tbl(sb, "censo_setor").upsert(lote, on_conflict="id_setor").execute()
             total += len(lote)
             print(f"  upsert {total}/{len(rows)}")
             lote = []
     if lote:
-        sb.table("censo_setor").upsert(lote, on_conflict="id_setor").execute()
+        tbl(sb, "censo_setor").upsert(lote, on_conflict="id_setor").execute()
         total += len(lote)
     print(f"OK: {total} setores no Supabase")
     return total

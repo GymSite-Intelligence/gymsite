@@ -8,6 +8,7 @@ Tabela: municipio_publico_sexo PK (id_municipio, faixa_idade).
 Uso:  python -m tools.municipio_publico_sexo_loader
 """
 from __future__ import annotations
+from tools.db_schema import tbl
 
 # (label, idade_min, idade_max) inclusivo. idade_anos é ano-a-ano → faixa EXATA.
 _FAIXAS_GRANULARES = [(f"{a}-{a+4}", a, a + 4) for a in range(0, 100, 5)] + [("100+", 100, 130)]
@@ -65,7 +66,7 @@ GROUP BY id_municipio, idade_anos, sexo"""
     if sb is None:
         raise RuntimeError("Supabase client indisponível (SUPABASE_URL/SERVICE_ROLE_KEY)")
     for i in range(0, len(recs), 1000):
-        sb.table("municipio_publico_sexo").upsert(
+        tbl(sb, "municipio_publico_sexo").upsert(
             recs[i:i + 1000], on_conflict="id_municipio,faixa_idade"
         ).execute()
     return len(recs)

@@ -34,6 +34,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from tools.cnpj_segment_classifier import classificar_segmento
+from tools.db_schema import tbl
 _ENV_CANDIDATES = (
     _ROOT / ".env",
     _ROOT / "frontend" / ".env",
@@ -473,7 +474,7 @@ def _upsert_rows(sb: Any, rows: list[dict], *, strip_segmento: bool) -> bool:
         if strip_segmento:
             batch = [{k: v for k, v in r.items() if k != "segmento_operacao"} for r in batch]
         try:
-            sb.table("cnpj_fitness_estabelecimentos").upsert(
+            tbl(sb, "cnpj_fitness_estabelecimentos").upsert(
                 batch,
                 on_conflict="ref_month,cnpj",
             ).execute()
@@ -489,7 +490,7 @@ def _upsert_rows(sb: Any, rows: list[dict], *, strip_segmento: bool) -> bool:
                     {k: v for k, v in r.items() if k != "segmento_operacao"}
                     for r in batch
                 ]
-                sb.table("cnpj_fitness_estabelecimentos").upsert(
+                tbl(sb, "cnpj_fitness_estabelecimentos").upsert(
                     batch,
                     on_conflict="ref_month,cnpj",
                 ).execute()

@@ -19,6 +19,7 @@ import os
 
 from tools.basedosdados_loader import run_query
 from tools.cno_fitness_tools import _KEYWORDS_OBRA_FITNESS, _eh_obra_fitness
+from tools.db_schema import tbl
 
 _TABLE = "`basedosdados.br_me_cno.microdados`"
 _SITUACAO_EM_CURSO = {"01", "02", "03", "04", "1", "2", "3", "4"}
@@ -110,7 +111,7 @@ def minerar(*, dry_run: bool = False, chunk: int = 500) -> dict:
         # = INSERT ON CONFLICT DO NOTHING — só preenche id_cno ausente, NUNCA
         # sobrescreve linha existente (que pode ter dado fresco do rfb_cno_loader
         # mensal). Sem isso, re-rodar este loader após o RFB regredia 2026→2021.
-        cli.table("cno_obras_fitness").upsert(
+        tbl(cli, "cno_obras_fitness").upsert(
             batch, on_conflict="id_cno", ignore_duplicates=True
         ).execute()
         out["upserted"] += len(batch)
@@ -221,7 +222,7 @@ def minerar_grande_porte(*, dry_run: bool = False, chunk: int = 500) -> dict:
         batch = rows[i : i + chunk]
         # PRECEDÊNCIA: ver minerar() — backfill histórico não sobrescreve dado
         # fresco do rfb_cno_loader (ignore_duplicates = ON CONFLICT DO NOTHING).
-        cli.table("cno_obras_grande_porte").upsert(
+        tbl(cli, "cno_obras_grande_porte").upsert(
             batch, on_conflict="id_cno", ignore_duplicates=True
         ).execute()
         out["upserted"] += len(batch)

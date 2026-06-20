@@ -138,7 +138,9 @@ def _cache_fresco(place_id: str, ttl_dias: int) -> Optional[dict]:
     if not sb or not place_id:
         return None
     try:
-        res = (sb.table("competidor_intel_cache").select("*")
+        from tools.db_schema import tbl
+
+        res = (tbl(sb, "competidor_intel_cache").select("*")
                .eq("place_id", place_id).limit(1).execute())
         row = (res.data or [None])[0]
         if not row or not row.get("collected_at"):
@@ -155,9 +157,12 @@ def _upsert_cache(reg: dict) -> None:
     if not sb:
         return
     try:
+        from tools.db_schema import tbl
+
         reg = {**reg, "collected_at": datetime.now(timezone.utc).isoformat(),
                "updated_at": datetime.now(timezone.utc).isoformat()}
-        sb.table("competidor_intel_cache").upsert(reg, on_conflict="place_id").execute()
+        # upsert (ON CONFLICT) NÃO funciona via view de compat → tem que ir no schema real
+        tbl(sb, "competidor_intel_cache").upsert(reg, on_conflict="place_id").execute()
     except Exception:
         pass
 

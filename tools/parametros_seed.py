@@ -19,6 +19,7 @@ import os
 import sys
 
 from tools.parametros_metodologia import _DEFAULTS
+from tools.db_schema import tbl
 
 
 def _client():
@@ -51,7 +52,7 @@ def seed(*, force: bool = False, dry_run: bool = False) -> None:
     cli = _client()
     existentes = set()
     try:
-        res = cli.table("parametros_metodologia").select("nome").execute()
+        res = tbl(cli, "parametros_metodologia").select("nome").execute()
         existentes = {r["nome"] for r in (getattr(res, "data", None) or [])}
     except Exception as e:
         sys.exit(f"[seed] não consegui ler tabela: {type(e).__name__}: {e}")
@@ -85,7 +86,7 @@ def seed(*, force: bool = False, dry_run: bool = False) -> None:
         return
 
     # upsert por nome (PK/unique em `nome`)
-    cli.table("parametros_metodologia").upsert(payload, on_conflict="nome").execute()
+    tbl(cli, "parametros_metodologia").upsert(payload, on_conflict="nome").execute()
     print(f"[seed] gravadas {len(payload)} linhas.")
 
 

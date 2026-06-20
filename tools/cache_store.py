@@ -17,6 +17,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
+from tools.db_schema import tbl
 
 
 def _utcnow() -> datetime:
@@ -80,7 +81,7 @@ def get_market_context(
     cidade_slug = _slug(cidade)
     bairro_slug = _slug(bairro)
     q = (
-        sb.table("cache_market_context")
+        tbl(sb, "cache_market_context")
         .select("*")
         .eq("cidade_slug", cidade_slug)
         .eq("bairro_slug", bairro_slug)
@@ -97,7 +98,7 @@ def get_market_context(
         return CacheHit(hit=False, payload=None)
 
     try:
-        sb.table("cache_market_context").update(
+        tbl(sb, "cache_market_context").update(
             {"last_hit_at": _dt_to_iso(_utcnow()), "hit_count": int(row.get("hit_count") or 0) + 1}
         ).eq("id", row["id"]).execute()
     except Exception:
@@ -139,7 +140,7 @@ def set_market_context(
     }
 
     # Upsert pela unique key (cidade_slug, uf, bairro_slug)
-    sb.table("cache_market_context").upsert(
+    tbl(sb, "cache_market_context").upsert(
         row,
         on_conflict="cidade_slug,uf,bairro_slug",
     ).execute()
@@ -156,7 +157,7 @@ def get_places_details(place_id: str) -> CacheHit:
         return CacheHit(hit=False, payload=None)
 
     res = (
-        sb.table("cache_places_details")
+        tbl(sb, "cache_places_details")
         .select("*")
         .eq("place_id", place_id)
         .gt("expires_at", _dt_to_iso(_utcnow()))
@@ -168,7 +169,7 @@ def get_places_details(place_id: str) -> CacheHit:
         return CacheHit(hit=False, payload=None)
 
     try:
-        sb.table("cache_places_details").update(
+        tbl(sb, "cache_places_details").update(
             {"last_hit_at": _dt_to_iso(_utcnow()), "hit_count": int(row.get("hit_count") or 0) + 1}
         ).eq("place_id", place_id).execute()
     except Exception:
@@ -202,7 +203,7 @@ def set_places_details(
         "last_hit_at": None,
         "hit_count": 0,
     }
-    sb.table("cache_places_details").upsert(row, on_conflict="place_id").execute()
+    tbl(sb, "cache_places_details").upsert(row, on_conflict="place_id").execute()
 
 
 def get_geocode(endereco_norm: str) -> CacheHit:
@@ -211,7 +212,7 @@ def get_geocode(endereco_norm: str) -> CacheHit:
     if not sb:
         return CacheHit(hit=False, payload=None)
     res = (
-        sb.table("cache_geocode").select("*")
+        tbl(sb, "cache_geocode").select("*")
         .eq("endereco_norm", endereco_norm)
         .gt("expires_at", _dt_to_iso(_utcnow())).limit(1).execute()
     )
@@ -219,7 +220,7 @@ def get_geocode(endereco_norm: str) -> CacheHit:
     if not row:
         return CacheHit(hit=False, payload=None)
     try:
-        sb.table("cache_geocode").update(
+        tbl(sb, "cache_geocode").update(
             {"last_hit_at": _dt_to_iso(_utcnow()), "hit_count": int(row.get("hit_count") or 0) + 1}
         ).eq("endereco_norm", endereco_norm).execute()
     except Exception:
@@ -233,7 +234,7 @@ def set_geocode(endereco_norm: str, lat, lng, payload: dict, *,
     if not sb:
         return
     now = _utcnow()
-    sb.table("cache_geocode").upsert({
+    tbl(sb, "cache_geocode").upsert({
         "endereco_norm": endereco_norm, "lat": lat, "lng": lng, "payload": payload,
         "source": source, "cached_at": _dt_to_iso(now),
         "expires_at": _dt_to_iso(now + timedelta(days=ttl_days)),
@@ -247,13 +248,13 @@ def get_reviews(place_id: str) -> CacheHit:
     sb = _get_client()
     if not sb or not place_id:
         return CacheHit(hit=False, payload=None)
-    res = (sb.table("cache_reviews").select("*").eq("place_id", place_id)
+    res = (tbl(sb, "cache_reviews").select("*").eq("place_id", place_id)
            .gt("expires_at", _dt_to_iso(_utcnow())).limit(1).execute())
     row = (res.data or [None])[0]
     if not row:
         return CacheHit(hit=False, payload=None)
     try:
-        sb.table("cache_reviews").update({"hit_count": int(row.get("hit_count") or 0) + 1}).eq(
+        tbl(sb, "cache_reviews").update({"hit_count": int(row.get("hit_count") or 0) + 1}).eq(
             "place_id", place_id).execute()
     except Exception:
         pass
@@ -265,7 +266,7 @@ def set_reviews(place_id: str, reviews: list, *, source: str = "searchapi", ttl_
     if not sb or not place_id:
         return
     now = _utcnow()
-    sb.table("cache_reviews").upsert({
+    tbl(sb, "cache_reviews").upsert({
         "place_id": place_id, "reviews": reviews, "source": source,
         "cached_at": _dt_to_iso(now),
         "expires_at": _dt_to_iso(now + timedelta(days=ttl_days)), "hit_count": 0,
@@ -283,7 +284,7 @@ def get_popular_times(place_id: str) -> CacheHit:
         return CacheHit(hit=False, payload=None)
 
     res = (
-        sb.table("cache_popular_times")
+        tbl(sb, "cache_popular_times")
         .select("*")
         .eq("place_id", place_id)
         .gt("expires_at", _dt_to_iso(_utcnow()))
@@ -295,7 +296,7 @@ def get_popular_times(place_id: str) -> CacheHit:
         return CacheHit(hit=False, payload=None)
 
     try:
-        sb.table("cache_popular_times").update(
+        tbl(sb, "cache_popular_times").update(
             {"last_hit_at": _dt_to_iso(_utcnow()), "hit_count": int(row.get("hit_count") or 0) + 1}
         ).eq("place_id", place_id).execute()
     except Exception:
@@ -327,5 +328,5 @@ def set_popular_times(
         "last_hit_at": None,
         "hit_count": 0,
     }
-    sb.table("cache_popular_times").upsert(row, on_conflict="place_id").execute()
+    tbl(sb, "cache_popular_times").upsert(row, on_conflict="place_id").execute()
 

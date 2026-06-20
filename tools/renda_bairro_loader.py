@@ -11,6 +11,7 @@ Uso:
 """
 from __future__ import annotations
 import argparse, csv, io, json, os, re, unicodedata, zipfile
+from tools.db_schema import tbl
 
 JSON_PATH = "tools/data/ibge_renda_bairro_BR_2022.json"
 
@@ -89,7 +90,7 @@ def load_supabase(rows=None):
     cli=load_create_client()(os.environ["SUPABASE_URL"], os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY"))
     B=1000; tot=0
     for i in range(0,len(rows),B):
-        cli.table("renda_bairro").upsert(rows[i:i+B], on_conflict="municipio_cod,bairro_norm").execute(); tot+=len(rows[i:i+B])
+        tbl(cli, "renda_bairro").upsert(rows[i:i+B], on_conflict="municipio_cod,bairro_norm").execute(); tot+=len(rows[i:i+B])
         print(f"  upsert {tot}/{len(rows)}", flush=True)
     print(f"[load] {tot} bairros no Supabase")
 

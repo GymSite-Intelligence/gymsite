@@ -1037,7 +1037,8 @@ def _agregar_e_persistir_custos(sb, relatorio_id: str, run_id: str | None) -> di
         ]
 
         if records:
-            sb.table("relatorio_custos_agentes") \
+            from tools.db_schema import tbl
+            tbl(sb, "relatorio_custos_agentes") \
               .upsert(records, on_conflict="relatorio_id,agente") \
               .execute()
 

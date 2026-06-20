@@ -38,6 +38,7 @@ from tools.cno_fitness_tools import (
 )
 from tools.cno_bigquery_loader import _KW_COMERCIAL, _AREA_GP_MAX, _AREA_GP_MIN, _SITUACAO_EM_CURSO
 from tools.rfb_cnpj_fitness_loader import IBGE_TO_RFB_MUNICIPIO, _is_valid_zip, _stream_download
+from tools.db_schema import tbl
 
 CNO_INDEX_URL = os.environ.get("CNO_BULK_INDEX_URL", "https://dadosabertos.rfb.gov.br/CNO/")
 _FITNESS_KW = tuple(k for k in _KEYWORDS_OBRA_FITNESS)
@@ -198,7 +199,7 @@ def _supabase():
 def _upsert(cli, tabela: str, rows: list[dict], chunk: int = 500) -> int:
     n = 0
     for i in range(0, len(rows), chunk):
-        cli.table(tabela).upsert(rows[i:i + chunk], on_conflict="id_cno").execute()
+        tbl(cli, tabela).upsert(rows[i:i + chunk], on_conflict="id_cno").execute()
         n += len(rows[i:i + chunk])
     return n
 

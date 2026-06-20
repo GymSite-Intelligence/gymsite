@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from tools.db_schema import tbl
 
 logger = logging.getLogger("gymsite.checkpoint")
 
@@ -55,7 +56,7 @@ def after_agent_checkpoint(callback_context) -> None:
         from tools.supabase_client import load_create_client
 
         cli = load_create_client()(url, key)
-        cli.table("relatorio_state_checkpoint").upsert(
+        tbl(cli, "relatorio_state_checkpoint").upsert(
             {"relatorio_id": rid, "agente": agente, "state": blob, "state_keys": keys},
             on_conflict="relatorio_id,agente",
         ).execute()

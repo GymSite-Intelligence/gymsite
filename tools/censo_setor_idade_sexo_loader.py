@@ -10,6 +10,7 @@ Faixas (v-code → segmento fitness): 15-24 = v01012+13 (H)/v01023+24 (M); 25-39
 Uso:  python -m tools.censo_setor_idade_sexo_loader
 """
 from __future__ import annotations
+from tools.db_schema import tbl
 
 
 def popular(limite_municipio: str | None = None) -> int:
@@ -45,7 +46,7 @@ WHERE v00005 > 0 {filtro}"""
     if sb is None:
         raise RuntimeError("Supabase client indisponível")
     for i in range(0, len(recs), 1000):
-        sb.table("censo_setor_idade_sexo").upsert(recs[i:i + 1000], on_conflict="id_setor").execute()
+        tbl(sb, "censo_setor_idade_sexo").upsert(recs[i:i + 1000], on_conflict="id_setor").execute()
     return len(recs)
 
 
