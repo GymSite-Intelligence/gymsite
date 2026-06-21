@@ -167,6 +167,12 @@ def listar_bairros(municipio: str, uf: str = "") -> dict:
     except Exception as e:
         return {"bairros": [], "fonte": "places-nodb", "harvested": False,
                 "erro": f"{type(e).__name__}: {e}"}
+    # NÃO persistir varredura vazia: 0 bairros é quase sempre Places sem chave/billing,
+    # não município sem bairros. Cachear isso envenenaria o cache (serviria vazio do DB
+    # pra sempre). Deixa sem marcar como varrido → re-tenta quando o Places funcionar.
+    if not bairros:
+        return {"bairros": [], "fonte": "places-nodb", "harvested": False,
+                "erro": "Places retornou 0 bairros (provável GOOGLE_MAPS_API_KEY/billing) — não cacheado"}
     try:
         _persistir(client, municipio, uf, municipio_norm, bairros)
         fonte = "places"
