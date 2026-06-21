@@ -246,6 +246,29 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
             "required": ["projeto_id"],
         },
     ),
+    types.FunctionDeclaration(
+        name="consultar_base_conhecimento",
+        description=(
+            "Consulta a base de conhecimento documental (Vertex AI Search) para "
+            "perguntas QUALITATIVAS: metodologia GymSite (como o score/viabilidade/MRLR "
+            "são calculados), regras de regulatório/zoneamento/licença pra abrir academia, "
+            "franquia/operação/boas práticas e pesquisa de mercado setorial (ACAD/SEBRAE/"
+            "IHRSA). Chamar quando: 'preciso de qual licença', 'pode abrir nessa zona', "
+            "'como vocês calculam X', 'qual a tendência do setor', 'boas práticas de retenção'. "
+            "NÃO usar para NÚMEROS de um bairro (renda, população, concorrentes, financeiro) — "
+            "esses vêm das ferramentas de dados. Cite as fontes retornadas na resposta."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "pergunta": {
+                    "type": "string",
+                    "description": "Pergunta qualitativa em linguagem natural para a base de documentos.",
+                },
+            },
+            "required": ["pergunta"],
+        },
+    ),
 ])
 
 # ─── System prompt do consultor ───────────────────────────────────────────────
@@ -275,6 +298,7 @@ Seu comportamento:
 - Cite sempre a fonte dos dados ("Google Maps, 12 academias encontradas", "IBGE Censo 2022").
 - Quando uma ferramenta retornar erro ou dado indisponível, informe com clareza.
 - Encadeie ferramentas quando necessário (ex: pesquisar_concorrentes antes de analisar_reviews_e_dores).
+- Para perguntas QUALITATIVAS (metodologia, regulatório/zoneamento/licença, franquia, boas práticas, tendências do setor), use consultar_base_conhecimento e cite os documentos retornados. Números de um bairro (renda, população, concorrentes, financeiro) vêm SEMPRE das ferramentas de dados, nunca da base de conhecimento.
 - NÃO chame gerar_relatorio_formal a menos que o usuário peça explicitamente.
 - Termine respostas com 1-3 sugestões de próximo passo, separadas como lista JSON no campo `sugestoes`.
 
@@ -353,6 +377,12 @@ async def _executar_ferramenta(
         elif nome == "gerar_relatorio_formal":
             resultado = await _tool_relatorio(args, projeto, usuario_id)
             resumo = "Relatório em geração"
+
+        elif nome == "consultar_base_conhecimento":
+            # Conhecimento auxiliar (RAG) — NÃO marca pesquisas_realizadas (não é uma
+            # das 7 pesquisas de viabilidade; preserva o gate pode_gerar_relatorio).
+            resultado = await _tool_base_conhecimento(args, projeto)
+            resumo = _resumo_base_conhecimento(resultado)
 
         else:
             resultado = {"erro": f"Ferramenta desconhecida: {nome}"}
@@ -581,6 +611,16 @@ async def _tool_relatorio(args: dict, projeto: ProjectState, usuario_id: str) ->
         ),
     }
 
+
+async def _tool_base_conhecimento(args: dict, projeto: ProjectState) -> dict:
+    """Base de conhecimento qualitativa (Vertex AI Search). Retorna trechos + citações;
+    o próprio Gemini do Consultor sintetiza. NÃO produz número."""
+    from tools.discovery_engine_tools import buscar_conhecimento
+
+    pergunta = (args.get("pergunta") or "").strip()
+    resultado = await asyncio.to_thread(buscar_conhecimento, pergunta)
+    return resultado if isinstance(resultado, dict) else {"resultados": [], "n_docs": 0}
+
 # ─── Helpers de resumo (texto curto para as pills do frontend) ────────────────
 
 def _resumo_mercado(r: dict) -> str:
@@ -626,6 +666,12 @@ def _resumo_financeiro(r: dict) -> str:
     if score is not None:
         return f"score {score:.1f} · {modelo}"
     return modelo or "estimativa gerada"
+
+def _resumo_base_conhecimento(r: dict) -> str:
+    n = r.get("n_docs", 0)
+    if r.get("erro"):
+        return "base indisponível"
+    return f"{n} doc(s)" if n else "nada na base"
 
 def _inferir_tamanho(area_m2: float) -> str:
     if area_m2 < 500:
@@ -703,6 +749,7 @@ _CUSTO_BRL_POR_TOOL: dict[str, float] = {
     "mapear_oferta_e_servicos": 0.20,
     "estimar_investimento": 0.15,
     "gerar_relatorio_formal": 3.50,
+    "consultar_base_conhecimento": 0.05,
 }
 
 def _custo_tools(tools_executadas: list[str]) -> float:
