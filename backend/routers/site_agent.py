@@ -113,6 +113,24 @@ def _cap_estourado(sb, ip: str | None) -> bool:
     return False
 
 
+def _capturar_lead(sb, data: "AnaliseInput", background) -> None:
+    """Persiste o lead (best-effort, não bloqueia). Usado no fluxo normal E no
+    overflow 'fila' — senão a promessa de 'enviamos por e-mail' descartaria o
+    contato. NÃO consome o entitlement (analise_gratuita): o email segue elegível."""
+    try:
+        from backend.routers.leads import LeadInput, _persistir_lead, _sync_apollo_bg
+        lead = LeadInput(
+            nome=data.nome, email=data.email, telefone=data.telefone,
+            cidade=data.cidade, bairro=data.bairro, perfil=data.perfil,
+            utm_source=data.utm_source, utm_medium=data.utm_medium,
+            utm_campaign=data.utm_campaign, fonte=_FONTE,
+        )
+        reg = _persistir_lead(sb, lead)
+        background.add_task(_sync_apollo_bg, reg["id"], lead)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("captura de lead falhou (segue): %s", e)
+
+
 def _searchapi_sem_folga() -> bool:
     """True se a allowance do SearchAPI está no nível crítico (best-effort)."""
     try:
@@ -148,8 +166,11 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
             mensagem="Você já usou sua análise gratuita. Fale com nosso time para o relatório completo.",
         )
 
-    # 3. Caps (IP/dia, global/dia) e 4. allowance SearchAPI → enfileira p/ depois.
+    # 3. Caps (IP/dia, global/dia) e 4. allowance SearchAPI → overflow.
     if _cap_estourado(sb, ip) or _searchapi_sem_folga():
+        # Captura o lead ANTES de retornar — a mensagem promete follow-up por
+        # e-mail; sem isso o contato se perderia. Não consome o entitlement.
+        _capturar_lead(sb, data, background)
         return AnaliseResposta(
             status="fila",
             mensagem="Estamos com alta demanda agora. Deixe seus dados que enviamos sua análise por e-mail em breve.",
@@ -191,18 +212,7 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
         )
 
     # 7. Lead pro CRM/Apollo (best-effort, não bloqueia).
-    try:
-        from backend.routers.leads import LeadInput, _persistir_lead, _sync_apollo_bg
-        lead = LeadInput(
-            nome=data.nome, email=data.email, telefone=data.telefone,
-            cidade=data.cidade, bairro=data.bairro, perfil=data.perfil,
-            utm_source=data.utm_source, utm_medium=data.utm_medium,
-            utm_campaign=data.utm_campaign, fonte=_FONTE,
-        )
-        reg = _persistir_lead(sb, lead)
-        background.add_task(_sync_apollo_bg, reg["id"], lead)
-    except Exception as e:  # noqa: BLE001
-        logger.warning("lead da análise grátis falhou (segue): %s", e)
+    _capturar_lead(sb, data, background)
 
     # 8. Enfileira o MESMO pipeline.
     await _enqueue_ou_background({
