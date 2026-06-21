@@ -474,7 +474,8 @@ app.include_router(chat_router)
 _env_cors = os.getenv("CORS_ORIGINS", "")
 _cors_origins = [
     o.strip() for o in _env_cors.split(",") if o.strip()
-] + ["https://vectracargo.com.br", "https://www.vectracargo.com.br", "https://gymsite.vectracargo.com.br"]
+] + ["https://vectracargo.com.br", "https://www.vectracargo.com.br", "https://gymsite.vectracargo.com.br",
+     "https://gymsite.com.br", "https://www.gymsite.com.br"]
 
 if _env_cors:
     logger.info("CORS origins from env: %s", _cors_origins)
