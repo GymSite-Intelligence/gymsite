@@ -1394,6 +1394,21 @@ def places_autocomplete_endpoint(body: PlacesAutocompleteInput) -> dict:
     )
 
 
+@app.get("/api/municipios/bairros")
+def municipio_bairros_endpoint(municipio: str, uf: str = "") -> dict:
+    """Lista bairros de um município com cache persistente (Places → DB).
+
+    1ª vez por município: varre o Places server-side e persiste em
+    `bairros_municipio`. Acessos seguintes servem do DB (grátis/instantâneo).
+    Retorna {"bairros": [{bairro, contexto, textoCompleto, placeId}], "fonte", "harvested"}.
+    """
+    if not (municipio or "").strip():
+        raise HTTPException(status_code=400, detail="municipio é obrigatório")
+    from tools.bairros_municipio import listar_bairros
+
+    return listar_bairros(municipio.strip(), (uf or "").strip())
+
+
 def _resolve_user_and_org(request: Request) -> tuple[str | None, str]:
     """Extrai user_id e org_id do JWT (Authorization: Bearer)."""
     default_org = os.getenv("SUPABASE_GYMSITE_ORG_ID") or _DEFAULT_ORG_ID
