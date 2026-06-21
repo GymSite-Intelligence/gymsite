@@ -2900,3 +2900,16 @@ async def websocket_pipeline(websocket: WebSocket):
 def pipeline_status():
     """REST fallback para o Map (quando WebSocket não disponível)."""
     return _pipeline_state
+
+
+# ─── Consultor V2 (Jarvis) ────────────────────────────────────────────────────
+# Montado no FIM do arquivo: api_consultor.py importa `_resolve_user_and_org` e
+# (no call-time) `create_relatorio_stub`/`NovoRelatorioInput` deste módulo —
+# todos já definidos aqui acima. O engine usa Gemini de forma LAZY, então o import
+# não crasha mesmo sem GEMINI_API_KEY no ambiente.
+try:
+    from services.consultor.api_consultor import router_consultor
+    app.include_router(router_consultor)
+    logger.info("Consultor V2 montado em /api/consultor")
+except Exception as _e:  # pragma: no cover - defensivo: não derruba a API se V2 falhar
+    logger.warning("Consultor V2 NÃO montado: %s: %s", type(_e).__name__, _e)
