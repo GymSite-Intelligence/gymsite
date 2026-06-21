@@ -2,7 +2,11 @@
 tools/cnpj_fitness_tools.py
 
 Consulta entrantes e parque ativo via CNPJ Aberto (RFB), snapshot mensal.
-Ingestão filtra CNAE 9313100; na API de produto usamos o termo **parque ativo**.
+A ingestão traz um leque amplo de CNAE (não só 9313100). O "joio vs trigo" é
+feito na LEITURA: o classificador aplica o PORTÃO da família fitness (grupo CNAE
+931 — ver _CNAE_FAMILIA_FITNESS) por cnae_principal; fora dela = `fora_familia`
+(não entra no parque). O nome só separa o TIPO (academia/studio/box) dentro da
+família. Na API de produto usamos o termo **parque ativo**.
 
 Este módulo NÃO baixa os dados (isso é tarefa do loader mensal). Ele só lê do
 Supabase para enriquecer o pipeline (A0/A6).
@@ -260,11 +264,16 @@ def listar_unidades_cnpj_no_bairro(
     uf: str = "",
     *,
     limit: int = 25,
+    tipo_negocio: str | None = None,
 ) -> dict[str, Any]:
     """
     Terceiro canal de competição local: parque ativo CNPJ (CNAE fitness) filtrado por bairro.
 
     Usado quando Google Places e Overpass falham ou retornam vazio.
+
+    tipo_negocio: quando informado (ex: "academia", "studio_pilates"), filtra pelo
+    segmento_operacao pedido — o confronto scrape×CNPJ tem que ser do MESMO tipo.
+    None = todo o parque comercial (todos os segmentos fitness, exceto joio).
     """
     from tools.bairro_normalize import bairro_em_alvo, normalizar_bairro, partes_bairro_alvo
 
@@ -301,6 +310,8 @@ def listar_unidades_cnpj_no_bairro(
                 pass
         cls = _classificar_row(r)
         if not cls.get("incluir_no_parque", True):
+            continue
+        if tipo_negocio and cls.get("segmento_operacao") != tipo_negocio:
             continue
         bairro_row = (r.get("bairro") or "").strip()
         if partes:
@@ -354,6 +365,36 @@ def _places_validate_enabled() -> bool:
     )
 
 
+def _filtrar_entrantes_bairro_tipo(
+    entrantes: list[dict[str, Any]],
+    bairro: str = "",
+    tipo_negocio: str | None = None,
+) -> list[dict[str, Any]]:
+    """Filtra entrantes ao bairro alvo (texto livre RFB → bairro_em_alvo, fallback
+    logradouro) e/ou ao segmento pedido. Puro: testável sem Supabase. Filtrar por
+    tipo já exclui joio (fora_familia/saude_clinica não casam nenhum tipo)."""
+    out = entrantes
+    if bairro and bairro.strip():
+        from tools.bairro_normalize import (
+            bairro_em_alvo,
+            normalizar_bairro,
+            partes_bairro_alvo,
+        )
+
+        partes = partes_bairro_alvo(bairro)
+
+        def _no_bairro(e: dict) -> bool:
+            if bairro_em_alvo((e.get("bairro") or "").strip(), bairro):
+                return True
+            log = normalizar_bairro(e.get("logradouro") or "")
+            return any(p in log for p in partes if len(p) >= 4)
+
+        out = [e for e in out if _no_bairro(e)]
+    if tipo_negocio:
+        out = [e for e in out if e.get("segmento_operacao") == tipo_negocio]
+    return out
+
+
 def listar_entrantes_cnpj_fitness(
     cidade: str,
     uf: str = "",
@@ -362,12 +403,20 @@ def listar_entrantes_cnpj_fitness(
     limit: int = 50,
     validar_places: bool | None = None,
     enriquecer: bool | None = None,
+    bairro: str = "",
+    tipo_negocio: str | None = None,
 ) -> dict[str, Any]:
     """
     Lista estabelecimentos fitness com início de atividade nos últimos `dias`.
     Usado pelo A6 para enriquecer o relatório (prospecção / entrantes).
 
     enriquecer=False pula ReceitaWS/QSA (recomendado no A0 — dados RFB já bastam).
+
+    bairro: filtra os entrantes ao bairro alvo (texto livre RFB → bairro_em_alvo,
+    com fallback no logradouro). Completa a célula entrantes-BAIRRO da árvore 2×2.
+    tipo_negocio: filtra ao segmento pedido (academia/studio_pilates/...). O filtro
+    por tipo já exclui joio (fora_familia/saude_clinica não casam nenhum tipo).
+    Filtro é client-side e aplicado ANTES do enriquecimento (não enriquece quem sai).
     """
     sb = _supabase_client()
     hoje = date.today()
@@ -437,6 +486,8 @@ def listar_entrantes_cnpj_fitness(
         for r in rows
         if isinstance(r, dict)
     ]
+    # Filtro bairro/tipo ANTES do enriquecimento (não gasta ReceitaWS em quem sai).
+    entrantes = _filtrar_entrantes_bairro_tipo(entrantes, bairro, tipo_negocio)
     meta_enr: dict[str, Any] = {"enriquecimento": "nao_executado"}
     if enriquecer is False:
         meta_enr = {"enriquecimento": "desligado", "motivo": "enriquecer=False"}
@@ -640,6 +691,28 @@ def dados_parque_cnpj_para_a0(
         and seg_parque != seg_entrada
     )
 
+    # ── Árvore 2×2: (estoque, entrantes 90d) × (município, bairro) — parque LIMPO ──
+    # Números gated (portão CNAE 931 + nome→tipo). estoque_municipio usa o
+    # parque_comercial_total (classificado), NÃO o cru. Bairro só quando informado;
+    # entrantes_bairro reusa a lista já buscada (sem query extra), conta só trigo.
+    estoque_bairro = None
+    entrantes_bairro = None
+    if bairro and bairro.strip():
+        uni_b = listar_unidades_cnpj_no_bairro(cidade, bairro, uf, limit=3000)
+        if uni_b.get("status") == "ok":
+            estoque_bairro = uni_b.get("total")
+        ent_b = _filtrar_entrantes_bairro_tipo(
+            entrantes_block.get("entrantes") or [], bairro=bairro
+        )
+        entrantes_bairro = sum(1 for e in ent_b if e.get("incluir_no_parque", True))
+    arvore_2x2_parque = {
+        "estoque_municipio": parque_com,
+        "estoque_bairro": estoque_bairro,
+        "entrantes_municipio_90d": novos,
+        "entrantes_bairro_90d": entrantes_bairro,
+        "nota": "parque LIMPO (gated): família CNAE 931 + nome→tipo. Bairro None se não pesquisado.",
+    }
+
     import os
     from pathlib import Path
 
@@ -670,6 +743,7 @@ def dados_parque_cnpj_para_a0(
         "uf": resumo.get("uf") or uf[:2].upper(),
         "bairro_alvo": bairro or None,
         "dias_janela": dias,
+        "arvore_2x2_parque": arvore_2x2_parque,
         "metricas_objetivas": {
             "parque_ativo_total": resumo.get("parque_ativo_total"),
             "parque_comercial_total": parque_com,

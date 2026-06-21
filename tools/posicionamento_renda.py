@@ -25,12 +25,27 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s)
 
 
+# Bairros POPULARES ausentes da base IBGE 2022 (gap de DADO, não de nome — ex: Moema, cujo
+# distrito falta na base) → mapeados pro vizinho COBERTO de MESMO tier de renda. É APROXIMAÇÃO
+# (não sinônimo exato): o resultado é marcado na `fonte` (item c). Só pares conferidos mesmo-
+# tier. Extensível — alias errado injeta renda errada, então seja conservador.
+# VAZIO de propósito: a base `renda_bairro` NÃO cobre São Paulo CAPITAL (só interior/metro)
+# nem DF/TO — então não há bairro SP-capital coberto pra onde mapear Moema/Itaim Bibi/etc.
+# (alias→cidade errada injeta renda pobre num bairro rico — pior que o fallback). O fix certo
+# é INGESTÃO da renda dos distritos de SP capital (IBGE 2022) ou fonte de secretaria (SEADE-SP).
+# Só popular aqui com pares conferidos MESMO-tier + MESMA cidade coberta.
+_ALIAS_BAIRRO: dict[tuple[str, str], str] = {}
+
+
 def renda_bairro_ipece(cidade: str, uf: str, bairro: str) -> dict | None:
     """Renda do bairro — fonte NACIONAL `renda_bairro` (IBGE Censo 2022, 17k bairros).
 
     Filtra por uf+bairro_norm (refina por cidade quando bate). Retorna dict com chaves
     normalizadas (renda_pc, percentil, ranking, renda_resp_domicilio, fonte, ano) p/ o
     avaliar_posicionamento consumir igual. Funciona em qualquer cidade com bairros IBGE.
+
+    Bairro popular ausente da base (ex: Moema/SP) → resolve via `_ALIAS_BAIRRO` pro vizinho
+    coberto de mesmo tier; o resultado marca `fonte` como aproximação + `_alias`.
     """
     key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
            or os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_KEY"))
@@ -40,7 +55,11 @@ def renda_bairro_ipece(cidade: str, uf: str, bairro: str) -> dict | None:
         from tools.supabase_client import load_create_client
 
         cli = load_create_client()(os.environ["SUPABASE_URL"], key)
-        q = cli.table("renda_bairro").select("*").eq("bairro_norm", _norm(bairro))
+        # (a) alias: bairro popular ausente → vizinho coberto de mesmo tier
+        bn = _norm(bairro)
+        alias = _ALIAS_BAIRRO.get(((uf or "").strip().upper(), bn))
+        bn_query = _norm(alias) if alias else bn
+        q = cli.table("renda_bairro").select("*").eq("bairro_norm", bn_query)
         if (uf or "").strip():
             q = q.eq("uf", uf.strip().upper())
         rows = getattr(q.limit(5).execute(), "data", None) or []
@@ -49,11 +68,15 @@ def renda_bairro_ipece(cidade: str, uf: str, bairro: str) -> dict | None:
         # refina pela cidade quando houver match (evita bairro homônimo em outra cidade)
         cnorm = _norm(cidade)
         pick = next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), rows[0])
+        # (c) transparência: marca a fonte quando veio por alias (aproximação)
+        fonte = pick.get("fonte")
+        if alias:
+            fonte = f"{fonte} [aprox. via bairro vizinho '{alias}' — '{bairro}' ausente na base IBGE]"
         return {
             "bairro": pick.get("bairro"), "renda_resp_domicilio": pick.get("renda_media"),
             "renda_pc": pick.get("renda_pc"), "percentil": pick.get("percentil_municipio"),
-            "ranking": pick.get("ranking_municipio"), "fonte": pick.get("fonte"),
-            "ano": pick.get("ano"),
+            "ranking": pick.get("ranking_municipio"), "fonte": fonte,
+            "ano": pick.get("ano"), "_alias_bairro": alias or None,
         }
     except Exception as exc:
         print(f"[posicionamento] renda_bairro indisponível: {type(exc).__name__}: {exc}")

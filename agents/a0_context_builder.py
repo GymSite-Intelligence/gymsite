@@ -17,6 +17,73 @@ _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=1024),
 )
 
+
+def _a0_override_cnpj_numeros(callback_context):
+    """Override DETERMINÍSTICO dos números CNPJ no market_context.
+
+    A0 é LlmAgent (precisa do Deep Research qualitativo), mas o LLM NÃO pode produzir
+    número — a instrução manda "Copiar metricas_objetivas", e copiar via LLM arrisca
+    transcrição errada/arredondamento sem guardrail. Este callback RE-RODA a tool
+    determinística `dados_parque_cnpj_para_a0` e sobrescreve os campos numéricos do CNPJ
+    + pluga `arvore_2x2_parque` (que o schema de saída do LLM dropava). Número = sempre da
+    tool (banco), nunca da boca do LLM. Mesmo padrão do override do A9. Os campos
+    QUALITATIVOS (ticket/aluguel/tendência/insights, do Deep Research) ficam intactos.
+
+    Best-effort: nunca derruba. _attach_telemetry encadeia ANTES do otel/state_dump.
+    """
+    try:
+        from tools.cnpj_fitness_tools import dados_parque_cnpj_para_a0
+        from tools.competitor_tools import _parse_market_context
+
+        st = callback_context.state
+        mc = _parse_market_context(st.get("market_context"))
+        tem_envelope = isinstance(mc.get("market_context"), dict)
+        inner = mc.get("market_context") if tem_envelope else mc
+        if not isinstance(inner, dict):
+            return None
+
+        ip = st.get("input_params") if isinstance(st.get("input_params"), dict) else {}
+        cidade = (ip.get("cidade") or inner.get("cidade") or "").strip()
+        uf = (ip.get("uf") or inner.get("uf") or "").strip()
+        bairro = (ip.get("bairro") or inner.get("bairro") or "").strip()
+        if not cidade:
+            return None
+
+        tool = dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)
+        if not isinstance(tool, dict) or tool.get("status") != "ok":
+            return None
+        m = tool.get("metricas_objetivas") or {}
+        ind = tool.get("indicadores_derivados") or {}
+
+        inner["parque_ativo_total"] = m.get("parque_ativo_total")
+        inner["parque_comercial_total"] = m.get("parque_comercial_total")
+        inner["academias_ativas_cidade_cnpj"] = m.get("parque_ativo_total")
+        inner["novos_cnpj_fitness_90d"] = m.get("novos_cnpj_fitness_90d")
+        inner["excluidos_saude_clinica"] = m.get("excluidos_saude_clinica")
+        inner["pendentes_validacao"] = m.get("pendentes_validacao")
+        inner["composicao_parque"] = m.get("composicao_parque") or {}
+        inner["novas_unidades_90d_por_segmento"] = m.get("novas_unidades_90d_por_segmento") or {}
+        inner["serie_aberturas_anual"] = m.get("serie_aberturas_anual") or {}
+        inner["arvore_2x2_parque"] = tool.get("arvore_2x2_parque")  # plug: o LLM dropava
+        inner["fatos_parque_cnpj"] = {
+            "fonte": "RFB CNPJ Aberto",
+            "metricas": m,
+            "indicadores_derivados": ind,
+            "cruzamento_cno": tool.get("cruzamento_cno") or {},
+            "lacunas": tool.get("lacunas_conhecidas") or [],
+        }
+        inner["_cnpj_override"] = "deterministico_tool"
+
+        if tem_envelope:
+            mc["market_context"] = inner
+            st["market_context"] = mc
+        else:
+            st["market_context"] = inner
+    except Exception:
+        pass
+    return None
+
+
 from tools.agent_factory import build_llm_agent
 context_builder_agent = build_llm_agent(
     name="ContextBuilder",
@@ -128,4 +195,5 @@ Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
         fatos_competicao_local,
     ],
     output_key="market_context",
+    after_agent_callback=_a0_override_cnpj_numeros,
 )

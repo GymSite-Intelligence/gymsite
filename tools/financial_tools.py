@@ -614,25 +614,23 @@ def _resolver_ticket_faixa(
     return round(ticket, 2), avisos
 
 
-def _renda_media_bairro(cidade: str, bairro: str, uf: str) -> float | None:
-    """Renda per capita do bairro p/ escolher o tier do modelo (low/mid/premium).
+def _renda_media_bairro(cidade: str, bairro: str, uf: str) -> tuple[float | None, str]:
+    """Renda per capita do bairro p/ escolher o tier do modelo. Retorna (valor, FONTE).
 
     PRIMÁRIO: `renda_bairro` IBGE Censo 2022 (renda_pc) — MESMA fonte do A9/headroom.
-    Antes lia o CKAN 2010 (`bairro_renda_loader.renda_media`) como primário, o que
-    fazia o A4 recomendar Low Cost em bairro top-1% (ex.: Cocó: CKAN 2010 = R$2.095
-    -> tier low, enquanto IBGE 2022 = R$4.952 -> premium). Isso contradizia o
-    posicionamento OCEANO_AZUL/Premium do A9 — duas fontes de renda divergentes.
-    CKAN 2010 (per capita) fica só como FALLBACK quando o IBGE 2022 não cobre o bairro.
+    FALLBACK: CKAN 2010 quando o IBGE 2022 não cobre o bairro (cobertura: 25/27 UFs —
+    falta DF/TO; nomes populares fora da subdivisão IBGE, ex: Moema/SP). O CKAN é mais
+    velho/grosso → a `fonte` retornada marca isso (item c, transparência).
     """
     if not (bairro or "").strip():
-        return None
-    # Fonte 2022 (coerente com o A9)
+        return None, "sem_bairro"
+    # Fonte 2022 (coerente com o A9) — pode vir por alias (marcado na fonte)
     try:
         from tools.posicionamento_renda import renda_bairro_ipece
 
         r = renda_bairro_ipece(cidade, uf or "", bairro)
         if r and r.get("renda_pc"):
-            return float(r["renda_pc"])
+            return float(r["renda_pc"]), (r.get("fonte") or "IBGE Censo 2022 (bairro)")
     except Exception:
         pass
     # Fallback CKAN 2010 — usa renda_media_per_capita (mesma ESCALA dos thresholds)
@@ -641,9 +639,11 @@ def _renda_media_bairro(cidade: str, bairro: str, uf: str) -> float | None:
 
         b = enrich_demografia_bairro({"bairro": {}}, cidade, bairro, uf or "").get("bairro") or {}
         val = b.get("renda_media_per_capita") or b.get("renda_media")
-        return float(val) if val is not None else None
+        if val is not None:
+            return float(val), "CKAN 2010 (fallback — IBGE 2022 não cobre este bairro)"
     except Exception:
-        return None
+        pass
+    return None, "indisponivel"
 
 
 def _renda_percentil_bairro(cidade: str, bairro: str, uf: str) -> float | None:
@@ -789,28 +789,57 @@ def _escolher_cenario_recomendado(
     # recomendação — recomendar Premium-inviável num relatório de viabilidade é
     # auto-contradição (VPL negativo, quebra em todo stress test).
     viaveis = [c for c in cenarios.values() if c.get("viabilidade") not in ("INVIAVEL", None)]
-    pool = viaveis or list(cenarios.values())
+
+    # GATE DE PAYBACK (opção c, jun/2026): tier-por-renda NÃO recomenda payback longo.
+    # Ceiling = 48 meses (mesmo limiar do alerta "Payback acima de 48 meses — risco elevado").
+    # Premium num bairro rico só é recomendado se fecha em payback aceitável; senão cai pro
+    # melhor modelo viável DENTRO do teto + nota. Evita recomendar premium de 7 anos calado.
+    try:
+        _CEIL_PB = float(param("payback_limiar_recomendavel"))
+    except Exception:
+        _CEIL_PB = 48.0
+    recomendaveis = [c for c in viaveis if float(c.get("payback_meses") or 999) <= _CEIL_PB]
+    pool = recomendaveis or viaveis or list(cenarios.values())
     so_inviaveis = not viaveis
+    fora_do_teto = bool(viaveis) and not recomendaveis  # viável mas todos com payback > ceiling
 
     def _rank(c: dict[str, Any]) -> tuple[float, float, float]:
         faixa = _faixa_key_de_modelo(c.get("modelo", ""))
         tier_gap = abs(ordem.get(faixa, 1) - ordem.get(preferido, 1))
         lucro = float(c.get("lucro_mensal_estimado") or 0)
         payback = float(c.get("payback_meses") or 999)
-        # Entre VIÁVEIS: maior tier viável (alinha à renda), depois lucro, payback.
-        # Se só há inviáveis: lucro manda (o menos-pior), tier é secundário.
-        return (-tier_gap, lucro, -payback) if not so_inviaveis else (lucro, -tier_gap, -payback)
+        # Entre RECOMENDÁVEIS (payback ok): maior tier (alinha à renda), depois lucro, payback.
+        # Se só sobrou inviável/fora-do-teto: payback manda (o menos-pior), tier é secundário.
+        return (-tier_gap, lucro, -payback) if not (so_inviaveis or fora_do_teto) else (-payback, lucro, -tier_gap)
 
     escolhido = max(pool, key=_rank)
-    # Se o tier preferido pela renda (ex.: premium em bairro rico) ficou de FORA por ser
-    # inviável, anota no escolhido que o premium é aspiracional mas não fecha — transparência.
+
+    # Nota de transparência se o tier preferido pela renda ficou de FORA — por inviabilidade
+    # OU por payback acima do teto.
     pref_c2 = cenarios.get(preferido)
     if (pref_c2 is not None and pref_c2 is not escolhido
-            and pref_c2.get("viabilidade") in ("INVIAVEL", None)
             and _faixa_key_de_modelo(escolhido.get("modelo", "")) != preferido):
-        escolhido.setdefault("nota_recomendacao",
-            f"Renda do bairro suportaria o tier {preferido.upper()}, mas ele é INVIÁVEL "
-            f"no cenário realista (não fecha conta) — recomendado o melhor modelo viável.")
+        pb = float(pref_c2.get("payback_meses") or 999)
+        if pref_c2.get("viabilidade") in ("INVIAVEL", None):
+            motivo = "é INVIÁVEL no cenário realista (não fecha conta)"
+        elif pb > _CEIL_PB:
+            motivo = f"tem payback de {int(pb)} meses (> {int(_CEIL_PB)}m — risco elevado)"
+        else:
+            motivo = None
+        if motivo:
+            escolhido.setdefault("nota_recomendacao",
+                f"Renda do bairro suportaria o tier {preferido.upper()}, mas ele {motivo} — "
+                f"recomendado o melhor modelo viável dentro do teto de payback.")
+
+    # Garante justificativa SEMPRE (o ramo teto-captação já setou; aqui o caminho normal/fallback,
+    # que antes deixava justificativa_recomendacao=None → relatório recomendava sem porquê).
+    if not escolhido.get("justificativa_recomendacao"):
+        escolhido["justificativa_recomendacao"] = (
+            escolhido.get("nota_recomendacao")
+            or f"Recomendado {escolhido.get('modelo', '')}: tier alinhado à renda do bairro, "
+               f"viável no cenário realista com payback de {escolhido.get('payback_meses')} meses."
+        )
+        escolhido.setdefault("justificativa", escolhido["justificativa_recomendacao"])
     return escolhido
 
 
@@ -1469,6 +1498,7 @@ def analise_financeira_completa(
             aluguel_max_m2 = round(bench_m2 * 1.5, 2)
             fonte_aluguel = "Benchmark ACAD"
 
+    _rmb, _renda_fonte = _renda_media_bairro(cidade, bairro, uf)
     viabilidade = calcular_viabilidade_3_cenarios(
         area_m2=area_m2,
         aluguel_mensal=aluguel_mensal,
@@ -1480,10 +1510,11 @@ def analise_financeira_completa(
         destino_lat=destino_lat,
         destino_lng=destino_lng,
         fornecedor_principal=fornecedor_principal,
-        renda_media_bairro=_renda_media_bairro(cidade, bairro, uf),
+        renda_media_bairro=_rmb,
         renda_percentil=_renda_percentil_bairro(cidade, bairro, uf),
     )
 
+    viabilidade["renda_fonte"] = _renda_fonte  # (c) transparência: qual fonte de renda foi usada
     viabilidade["fonte_aluguel"] = fonte_aluguel
     viabilidade["aluguel_min_m2_observado"] = aluguel_min_m2
     viabilidade["aluguel_mediana_m2_observado"] = (
