@@ -1395,15 +1395,20 @@ def places_autocomplete_endpoint(body: PlacesAutocompleteInput) -> dict:
 
 
 @app.get("/api/municipios/bairros")
-def municipio_bairros_endpoint(municipio: str, uf: str = "") -> dict:
-    """Lista bairros de um município com cache persistente (Places → DB).
+def municipio_bairros_endpoint(municipio: str, uf: str = "", q: str = "") -> dict:
+    """Bairros de um município com cache persistente (Places → DB).
 
-    1ª vez por município: varre o Places server-side e persiste em
-    `bairros_municipio`. Acessos seguintes servem do DB (grátis/instantâneo).
-    Retorna {"bairros": [{bairro, contexto, textoCompleto, placeId}], "fonte", "harvested"}.
+    - Sem `q`: lista completa. 1ª vez por município varre o Places server-side e
+      persiste em `bairros_municipio`; acessos seguintes servem do DB.
+    - Com `q`: top-up por termo digitado — busca `q` no Places, adiciona ao cache
+      e devolve só os matches (resgata bairros fora do sweep, ex.: "Cocó").
     """
     if not (municipio or "").strip():
         raise HTTPException(status_code=400, detail="municipio é obrigatório")
+    if (q or "").strip():
+        from tools.bairros_municipio import buscar_bairro_query
+
+        return buscar_bairro_query(municipio.strip(), (uf or "").strip(), q.strip())
     from tools.bairros_municipio import listar_bairros
 
     return listar_bairros(municipio.strip(), (uf or "").strip())

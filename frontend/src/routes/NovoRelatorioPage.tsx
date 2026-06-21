@@ -40,6 +40,7 @@ import {
   type MunicipioIBGE,
 } from '@/hooks/useMunicipioAutocomplete'
 import { useBairrosDoMunicipio } from '@/hooks/useBairrosDoMunicipio'
+import { useBairroQuery } from '@/hooks/useBairroQuery'
 import {
   usePublicoFaixas,
   faixasParaRange,
@@ -169,16 +170,35 @@ export function NovoRelatorioPage() {
     municipioSelecionado?.uf ?? '',
   )
 
-  // Filtro client-side por texto digitado sobre a lista completa (que vem do
-  // backend: cache Places→DB). Sem mais Places por tecla.
+  // Top-up por termo: quando o usuário digita, busca no backend (que consulta o
+  // Places e cacheia) pra resgatar bairros fora da lista pré-varrida (ex.: Cocó).
+  const debouncedBairro = useDebounce(bairroQuery, 300)
+  const { data: bairrosLive = [] } = useBairroQuery({
+    input: debouncedBairro,
+    municipio: municipioSelecionado?.nome ?? '',
+    uf: municipioSelecionado?.uf ?? '',
+  })
+
+  // Filtro client-side da lista completa + merge com o top-up ao vivo (dedup).
   const bairrosSugeridos = useMemo(() => {
     const _norm = (s: string) =>
       s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
     const q = _norm(bairroQuery)
-    return q
+    const filtrados = q
       ? bairrosDoMunicipio.filter((b) => _norm(b.bairro).includes(q))
       : bairrosDoMunicipio
-  }, [bairrosDoMunicipio, bairroQuery])
+    // Top-up primeiro (traz o que falta na lista pré-carregada), dedup.
+    const visto = new Set<string>()
+    const out: typeof bairrosDoMunicipio = []
+    for (const b of [...bairrosLive, ...filtrados]) {
+      const key = b.placeId || b.textoCompleto || b.bairro
+      if (!visto.has(key)) {
+        visto.add(key)
+        out.push(b)
+      }
+    }
+    return out
+  }, [bairrosDoMunicipio, bairrosLive, bairroQuery])
 
   const {
     register,
