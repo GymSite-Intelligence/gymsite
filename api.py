@@ -483,12 +483,14 @@ from backend.routers.execucao import router as execucao_router
 from backend.routers.rebusca import router as rebusca_router
 from backend.routers.leads import router as leads_router
 from backend.routers.chat import router as chat_router
+from backend.routers.site_agent import router_site_agent
 
 app.include_router(parceiros_admin_router)
 app.include_router(execucao_router)
 app.include_router(rebusca_router)
 app.include_router(leads_router)
 app.include_router(chat_router)
+app.include_router(router_site_agent)
 
 # CORS: dev libera localhost:* via regex; producao vem de CORS_ORIGINS (.env),
 # comma-separated. Ex: CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
@@ -496,7 +498,11 @@ _env_cors = os.getenv("CORS_ORIGINS", "")
 _cors_origins = [
     o.strip() for o in _env_cors.split(",") if o.strip()
 ] + ["https://vectracargo.com.br", "https://www.vectracargo.com.br", "https://gymsite.vectracargo.com.br",
-     "https://gymsite.com.br", "https://www.gymsite.com.br"]
+     "https://gymsite.com.br", "https://www.gymsite.com.br",
+     # Projeto Pages atual (gym-insight-hub) + domínios getgymsite (parceiro/legado
+     # que redireciona 301 p/ gymsite.com.br, mas o XHR pode partir dele no intervalo).
+     "https://getgymsite.com.br", "https://www.getgymsite.com.br",
+     "https://gym-insight-hub.pages.dev"]
 
 if _env_cors:
     logger.info("CORS origins from env: %s", _cors_origins)
@@ -510,6 +516,7 @@ _cors_origin_regex = (
     r"http://localhost:\d+"
     r"|http://127\.0\.0\.1:\d+"
     r"|https://([a-z0-9-]+\.)*gymsite-3p0\.pages\.dev"
+    r"|https://([a-z0-9-]+\.)*gym-insight-hub\.pages\.dev"
 )
 
 # Middleware stack — último add_middleware = mais externo (roda primeiro).
