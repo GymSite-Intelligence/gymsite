@@ -677,14 +677,19 @@ def _extrair_sugestoes(texto: str) -> tuple[str, list[str]]:
     """
     import re
     sugestoes: list[str] = []
-    padrao = r'\{"sugestoes"\s*:\s*(\[.*?\])\}'
+    # Tolera pretty-print do modelo: `{` e `"sugestoes"` separados por espaço/newline,
+    # e `]`/`}` idem. re.DOTALL faz o `.` casar newlines dentro do array.
+    padrao = r'\{\s*"sugestoes"\s*:\s*(\[.*?\])\s*\}'
     match = re.search(padrao, texto, re.DOTALL)
     if match:
         try:
             sugestoes = json.loads(match.group(1))
-            texto = texto[:match.start()].rstrip()
         except json.JSONDecodeError:
-            pass
+            sugestoes = []
+        # Corta o bloco do texto visível + uma cerca markdown ```json/``` que o anteceda
+        # (o modelo às vezes embrulha o JSON em fence) — senão a cerca vaza pro usuário.
+        head = re.sub(r'\n?\s*```(?:json)?\s*$', '', texto[:match.start()]).rstrip()
+        texto = head
     return texto, sugestoes
 
 # ─── Cálculo de custo estimado ────────────────────────────────────────────────

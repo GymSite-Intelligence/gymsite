@@ -67,7 +67,8 @@ def _insights_deterministicos(r: dict) -> list[str]:
     """Os 3 insights que o LLM 'escrevia' — eram templates derivados dos números.
     Recriados em Python (determinísticos, auditáveis, zero token)."""
     pub = int(_num_campo(r.get("publico_potencial_fitness")))
-    renda = _num_campo(r.get("renda_bairro") if r.get("renda_bairro") is not None else r.get("renda_media_domiciliar"))
+    renda = _num_campo(r.get("renda_bairro") if r.get("renda_bairro") is not None
+                       else (r.get("renda_media_per_capita") or r.get("renda_media_domiciliar")))
     score = _num_campo(r.get("score_demografico"))
     classe = str(r.get("classificacao") or "—")
     out: list[str] = []

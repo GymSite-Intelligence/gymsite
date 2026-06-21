@@ -67,7 +67,7 @@ def explicar_demografico(cidade: str, uf: str, faixa: str = "18-45",
 
     a2 = analise_demografica_completa(cidade, uf, faixa, bairro=bairro)
     pop_faixa = a2.get("populacao_faixa_18_45") or 0
-    renda = a2.get("renda_media_domiciliar") or 0.0
+    renda = a2.get("renda_media_per_capita") or a2.get("renda_media_domiciliar") or 0.0
     return {
         "fonte_dados": {
             "populacao": a2.get("fonte_populacao", "IBGE"),
