@@ -410,7 +410,8 @@ def analise_demografica_completa(
             "percentual_faixa": pct_default,
             "populacao_faixa_18_45": pop_faixa_default,
             "publico_potencial_fitness": int(pop_faixa_default * param("penetracao_potencial_fitness")),
-            "renda_media_domiciliar": renda_estimada,
+            "renda_media_per_capita": renda_estimada,  # UF é per capita
+            "renda_media_domiciliar": None,            # sem domiciliar no fallback UF
             "renda_uf_fonte": uf_upper,
             "score_demografico": score,
             "classificacao": "ESTIMATIVA",
@@ -448,7 +449,10 @@ def analise_demografica_completa(
             renda_b = b.get("renda_media")
             if renda_b:
                 renda_bairro_bloco = {
-                    "renda_bairro": float(renda_b),
+                    "renda_bairro": float(renda_b),  # per capita (cutoffs do score são per-capita)
+                    # domiciliar REAL do bairro (≈2× a per-capita) — exposto p/ exibição correta,
+                    # sem virar input do score. Só presente na fonte IBGE renda_bairro.
+                    "renda_resp_domicilio": b.get("renda_resp_domicilio"),
                     "idh_renda": b.get("idh_renda"),
                     "ranking_idh": b.get("ranking_idh"),
                     "renda_municipio_fallback": renda,
@@ -481,7 +485,11 @@ def analise_demografica_completa(
         "percentual_faixa": faixa_data["percentual"],
         "populacao_faixa_18_45": pop_faixa,
         "publico_potencial_fitness": publico,
-        "renda_media_domiciliar": renda,
+        # `renda` é PER CAPITA (buscar_renda + bairro renda_pc) — é o input dos cutoffs
+        # do score. Exposto com label honesto. O domiciliar REAL (quando há, ≈2×) vai
+        # separado em renda_media_domiciliar; None quando só temos per-capita (muni/UF).
+        "renda_media_per_capita": renda,
+        "renda_media_domiciliar": (renda_bairro_bloco or {}).get("renda_resp_domicilio"),
         "renda_uf_fonte": renda_data["uf"],
         "score_demografico": score,
         "classificacao": classificacao,

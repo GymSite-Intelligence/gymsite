@@ -184,7 +184,7 @@ def bundle_to_briefing_md(bundle: dict[str, Any]) -> str:
         "",
         "## Demografia (município)",
         f"- População: {demo_m.get('populacao_total', 'dados_nao_disponiveis')}",
-        f"- Renda média: {demo_m.get('renda_media_domiciliar', 'dados_nao_disponiveis')}",
+        f"- Renda média per capita: {demo_m.get('renda_media_per_capita', demo_m.get('renda_media_domiciliar', 'dados_nao_disponiveis'))}",
         f"- Fonte: {demo_m.get('fonte', 'n/d')} ({demo_m.get('renda_granularidade', 'n/d')})",
         "",
         "## Demografia (bairro)",
