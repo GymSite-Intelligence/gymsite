@@ -3,7 +3,7 @@
 Não chama `claude` de verdade (determinístico/offline): mocka `_claude_headless`.
 O ponto é provar que número estranho/âncora faltante → fallback determinístico.
 """
-import importlib
+from decimal import Decimal
 
 import tools.narrador_claude as nc
 
@@ -19,12 +19,25 @@ def _texto_bom():
             "score 6.0 de 10. Saturação ALTO com 8 concorrentes. Aluguel R$ 79.062,50.")
 
 
-# ---------- _numeros (normalização) ----------
+# ---------- _numeros (valor decimal) ----------
 
-def test_numeros_normaliza_separadores():
-    assert nc._numeros("R$ 79.062,50") == {"7906250"}
-    assert nc._numeros("6.0") == {"60"}
-    assert "8" in nc._numeros("8 concorrentes")
+def test_numeros_valor_decimal():
+    assert nc._numeros("R$ 79.062,50") == {Decimal("79062.50")}
+    assert nc._numeros("6.0") == {Decimal("6.0")}
+    assert Decimal("8") in nc._numeros("8 concorrentes")
+
+
+def test_numeros_6_0_distinto_de_60():
+    # o bug antigo: ambos viravam '60'. Agora 6.0 != 60 por valor.
+    assert nc._numeros("6.0") != nc._numeros("60")
+    assert Decimal("60") not in nc._numeros("6.0")
+
+
+def test_guardrail_rejeita_colisao_decimal():
+    # âncora score 6.0 / escala 10; LLM alucina "60 concorrentes" → DEVE reprovar
+    t = "Score 6.0 de 10, mas projetamos 60 concorrentes na praça."
+    ok, motivo = nc._guardrail_ok(t, ["6.0", "10"])
+    assert not ok and "não-ancorado" in motivo
 
 
 # ---------- guardrail ----------
@@ -82,3 +95,12 @@ def test_narrar_ligado_headless_falha_cai_no_fallback(monkeypatch):
     monkeypatch.setattr(nc, "_claude_headless", lambda *a, **k: None)
     r = nc.narrar(fatos_texto=FATOS, ancoras=ANCORAS, fallback=FALLBACK)
     assert r["fonte"] == "deterministico_fallback" and r["texto"] == FALLBACK
+
+
+def test_narrar_ligado_expansao_excessiva_cai_no_fallback(monkeypatch):
+    # texto fiel aos números mas longo demais (>3x fallback) → guarda anti-prosa-nova
+    monkeypatch.setenv("NARRADOR_CLAUDE_ENABLED", "1")
+    longo = (_texto_bom() + " ") * 4
+    monkeypatch.setattr(nc, "_claude_headless", lambda *a, **k: longo)
+    r = nc.narrar(fatos_texto=FATOS, ancoras=ANCORAS, fallback=FALLBACK)
+    assert r["fonte"] == "deterministico_fallback" and "expansao" in r["motivo"]

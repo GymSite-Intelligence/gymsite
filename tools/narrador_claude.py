@@ -25,9 +25,18 @@ import logging
 import os
 import re
 import subprocess
+import threading
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 logger = logging.getLogger("gymsite.narrador_claude")
+
+# Serializa as chamadas headless: 2 `claude -p` simultâneos no mesmo CLAUDE_CONFIG_DIR
+# corrompem .claude.json. O pipeline ADK roda em sequência, mas este lock blinda o caso
+# de duas fases (A6/A9) caírem no mesmo processo async. Escolhido em vez de copiar o
+# config dir por chamada: copiar perderia a auth de subscription (mora no ~/.claude).
+# Cross-PROCESSO ainda exige CLAUDE_CONFIG_DIR separado — fora do escopo deste lock.
+_LOCK = threading.Lock()
 
 # tokens numéricos: moeda/decimal/inteiro (R$ 79.062,50 | 6.0 | 8). Capta o "miolo".
 _NUM_RE = re.compile(r"\d[\d.,]*\d|\d")
@@ -40,15 +49,44 @@ def _on(name: str, default: bool) -> bool:
     return v.strip().lower() in {"1", "true", "yes", "on", "sim"}
 
 
-def _numeros(texto: str) -> set[str]:
-    """Núcleos numéricos normalizados (sem pontuação de milhar/decimal) p/ comparar
-    '79.062,50' == '79062,50' e '6.0' == '60'? Não — mantemos vírgula/ponto do
-    decimal seria frágil. Normalizamos removendo SÓ separadores → compara só dígitos."""
-    out = set()
+def _to_decimal(tok: str) -> Decimal | None:
+    """Converte um token numérico PT-BR/decimal no seu VALOR (Decimal), preservando a
+    distinção inteiro vs decimal — '6.0'→6.0 ≠ '60'→60 (o bag-de-dígitos antigo colapsava
+    ambos em '60', furando o guardrail). Convenções tratadas:
+      - tem ',':  vírgula = decimal, pontos = milhar  (79.062,50 → 79062.50)
+      - só '.', 1 ponto, 3 dígitos à direita: milhar   (79.062 → 79062)
+      - só '.', 1 ponto, 1-2 dígitos à direita: decimal (6.0 → 6.0 ; 12.5 → 12.5)
+      - só '.', vários pontos: tudo milhar             (1.234.567 → 1234567)
+    A heurística dos 3 dígitos cobre o domínio (score usa 1 decimal, moeda usa ',dd')."""
+    if not tok or not re.search(r"\d", tok):
+        return None
+    if "," in tok:
+        intp, _, decp = tok.rpartition(",")
+        s = re.sub(r"\D", "", intp) + "." + re.sub(r"\D", "", decp)
+    elif tok.count(".") == 1:
+        left, _, right = tok.partition(".")
+        rd = re.sub(r"\D", "", right)
+        ld = re.sub(r"\D", "", left)
+        s = (ld + rd) if len(rd) == 3 else (ld + "." + rd)
+    else:
+        s = re.sub(r"\D", "", tok)
+    if not re.search(r"\d", s):
+        return None
+    try:
+        return Decimal(s)
+    except InvalidOperation:
+        return None
+
+
+def _numeros(texto: str) -> set[Decimal]:
+    """Conjunto de VALORES numéricos (Decimal) presentes no texto. Compara por valor:
+    Decimal('6.0') == Decimal('6') mas != Decimal('60') → tolera formatação, pega
+    alucinação. Ver [_to_decimal] para as convenções de separador."""
+    out: set[Decimal] = set()
     for m in _NUM_RE.findall(texto or ""):
-        so_digitos = re.sub(r"[.,]", "", m)
-        if so_digitos:
-            out.add(so_digitos)
+        v = _to_decimal(m)
+        if v is not None:
+            out.add(v)
     return out
 
 
@@ -65,12 +103,20 @@ def _claude_headless(prompt: str, timeout_s: int) -> str | None:
         # subscription: sem key → escapa dunning E custo por-token
         env.pop("ANTHROPIC_API_KEY", None)
         env.pop("ANTHROPIC_AUTH_TOKEN", None)
+    # Hard-guard: narração é texto puro. --max-turns 1 (uma volta só) e --allowedTools
+    # vazio (nenhuma ferramenta) impedem o headless de chamar MCP/tool — o prompt já
+    # pedia, mas pedir não força. Override via NARRADOR_ALLOWED_TOOLS se precisar.
+    cmd = [claude_bin, "-p", prompt, "--output-format", "json",
+           "--max-turns", "1",
+           "--allowedTools", os.environ.get("NARRADOR_ALLOWED_TOOLS", "")]
     try:
-        proc = subprocess.run(
-            [claude_bin, "-p", prompt, "--output-format", "json"],
-            capture_output=True, text=True, encoding="utf-8",
-            timeout=timeout_s, env=env,
-        )
+        # lock: serializa p/ não corromper .claude.json em chamadas concorrentes
+        with _LOCK:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True, text=True, encoding="utf-8",
+                timeout=timeout_s, env=env,
+            )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
         logger.warning("claude headless falhou: %s", e)
         return None
@@ -148,5 +194,16 @@ def narrar(*, fatos_texto: str, ancoras: list[str], fallback: str,
     if not ok:
         logger.warning("guardrail reprovou (%s) — fallback determinístico", motivo)
         return {"texto": fallback, "fonte": "deterministico_fallback", "motivo": f"guardrail: {motivo}"}
+
+    # Guarda de expansão: o guardrail só vê NÚMERO — não pega alucinação qualitativa
+    # ("mercado em queda") sem número e com âncoras presentes. Não há checagem barata de
+    # semântica; este teto limita o espaço pra encher prosa nova. Heurística, não prova.
+    max_exp = float(os.environ.get("NARRADOR_MAX_EXPANSAO", "3.0") or 3.0)
+    ref = max(len(fatos_texto or ""), len(fallback or ""))
+    if ref and len(texto) > max_exp * ref:
+        logger.warning("texto %dx maior que a fonte (>%.1fx) — fallback determinístico",
+                       len(texto) // max(ref, 1), max_exp)
+        return {"texto": fallback, "fonte": "deterministico_fallback",
+                "motivo": f"expansao>{max_exp}x"}
 
     return {"texto": texto, "fonte": "claude_subscription", "motivo": "ok"}

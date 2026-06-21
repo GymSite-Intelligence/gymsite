@@ -537,7 +537,8 @@ async def mapear_oferta_concorrente(
                 textos_pra_analise.extend([titulo_site, meta_site, texto_site])
 
         # Instagram: só home pública (subpáginas exigem login).
-        # Cascata: 1) fetch público og:tags → 2) Outscraper API (se key existir).
+        # Cascata: 1) fetch público og:tags → 2) SearchAPI engine=instagram_profile.
+        # SEM Playwright e SEM Outscraper — IG vem do SearchAPI (mesma fonte do A3a).
         if handle:
             ig_publico_util = False
             ig_url = INSTAGRAM_PUBLIC_URL.format(handle=handle)
@@ -559,25 +560,27 @@ async def mapear_oferta_concorrente(
                 else:
                     o.erros.append("instagram_publico_sem_conteudo")
 
-            # Fallback Outscraper só se o público não veio útil
+            # Fallback SearchAPI (engine=instagram_profile) só se o público não veio útil.
+            # get_instagram_profile é síncrono (requests) → to_thread p/ não travar o loop.
             if not ig_publico_util:
-                perfil = await _outscraper_instagram_info(client, handle)
+                from tools.instagram_profile import get_instagram_profile
+
+                perfil = await asyncio.to_thread(get_instagram_profile, handle)
                 if perfil is None:
-                    if os.environ.get("OUTSCRAPER_API_KEY", "").strip():
-                        o.erros.append("outscraper_falhou_ou_perfil_inexistente")
+                    if os.environ.get("SEARCHAPI_KEY", "").strip():
+                        o.erros.append("searchapi_instagram_sem_perfil_ou_rate_limit")
                     else:
-                        o.erros.append("outscraper_desabilitado_sem_key")
+                        o.erros.append("searchapi_desabilitado_sem_key")
                 else:
                     o.fonte_instagram_ok = True
-                    bio = perfil.get("biography", "") or ""
-                    full = perfil.get("full_name", "") or ""
-                    captions_concat = " | ".join(perfil.get("captions", []))
-                    composto = " ".join([full, bio, captions_concat]).strip()
+                    bio = perfil.get("bio") or ""
+                    full = perfil.get("name") or ""
+                    composto = " ".join([full, bio]).strip()
                     if not o.raw_meta_description and bio:
                         o.raw_meta_description = bio[:500]
                     if composto:
                         textos_pra_analise.append(composto)
-                    o.erros.append("instagram_via_outscraper")  # marcador, não é erro real
+                    o.erros.append("instagram_via_searchapi")  # marcador, não é erro real
 
     texto_completo = " ".join(t for t in textos_pra_analise if t)
     if texto_completo:

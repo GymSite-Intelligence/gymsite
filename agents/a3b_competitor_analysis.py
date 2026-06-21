@@ -1,194 +1,248 @@
 # agents/a3b_competitor_analysis.py
 """
-A3b — CompetitorAnalysis (agregação + scores + posicionamento).
+A3b — CompetitorAnalysis (agregação + scores + posicionamento) — DETERMINÍSTICO (sem LLM).
 
-Sub-agente especialista da fase competitiva. Recebe `concorrentes_brutos`
-do A3a (via session state output_key) e produz:
-- inteligencia_competitiva (gaps, dores nominadas, oportunidades)
-- estrategia_counter_programming (picos/vales)
-- score_concorrencia (saturação numérica)
-- posicionamento_recomendado
+Recebe `concorrentes_brutos` do A3a (via state) e produz `inteligencia_competitiva`
+(gaps, dores nominadas, counter-programming, saturação, score_concorrencia).
 
-NÃO faz busca — isso é do A3a.
+REFATOR determinização (2026-06): A3b era LlmAgent cujo trabalho era CHAMAR a macro
+`analisar_concorrentes_completo` (que calcula TUDO) e RE-EMITIR o JSON de volta +
+2 campos de texto. O LLM não produzia número — só re-digitava o output da macro,
+e o fazia mal: dropava campos (`tipos`, `telefone`, `website`), exigindo um
+after_agent_callback determinístico (`_a3b_filtrar_concorrentes`) + `validar_lenient`
+pra consertar. Pior: re-enviar o payload grande causava MALFORMED_FUNCTION_CALL /
+OUT=0 (histórico de regressões 05/2026) — A3b era "estruturalmente sensível".
+
+Agora é BaseAgent: roda a macro direto, grava o envelope VERBATIM e sintetiza
+`posicionamento_recomendado` + `resumo_executivo` por TEMPLATE determinístico (mesmos
+fatos da macro, zero número novo). Mata a classe de crash (sem function_call do LLM,
+impossível malformar), zera custo-token e elimina o conserto pós-LLM (a macro JÁ
+filtra bairro/tipo inline).
+
+NOTA: a tradução de reviews EN→PT (único enriquecimento real que o LLM fazia) saiu
+do caminho determinístico — reviews ficam no idioma original com `categoria_dor`. Se
+quiser PT, religar via narrador opcional (Claude headless + guardrail), como A6/A9.
 """
-from google.adk.agents import Agent
-from google.genai import types
-from tools.competitor_tools import analisar_concorrentes_completo
+from __future__ import annotations
 
-# HISTÓRICO DE REGRESSÕES OUT=0 — A3b é estruturalmente sensível:
-#
-# 2026-05-08 (Flash + thinking_budget=8192) — OUT=0, A6 não rodou.
-#   Hipótese inicial: budget consumiu output. Foi engano.
-#
-# 2026-05-09 manhã (Pro, dynamic default) — OUT=0 reproduzido em Pro.
-#   Hipótese: AFC limit / payload size. Parcialmente correto.
-#
-# 2026-05-09 tarde — bug de `rating_geral=None` corrigido em
-#   `competitor_tools.py:267`, mas OUT=0 continuou.
-#
-# 2026-05-09 fim de tarde — telemetria com `finish_reason` revelou
-#   MALFORMED_FUNCTION_CALL. CAUSA RAIZ REAL:
-#   o LLM tentava reenviar `concorrentes_brutos` (com 5+ concorrentes,
-#   cada um carregando `enrichment_search_grounding_text` de 1k+ chars)
-#   como argumento de `analisar_gap_competitivo`. O payload corrompia
-#   o function_call, Gemini retornava MALFORMED, A3b emitia OUT=0.
-#
-# FIX 2026-05-09 (VEC-380): substituir 4 tools que recebiam payload
-# por 1 macro-tool que LÊ DO STATE — `analisar_concorrentes_completo`.
-# Function_call vira `analisar_concorrentes_completo()` sem args =>
-# impossível ser malformed. A3b vira "redator" que pega o output da
-# macro e adiciona `posicionamento_recomendado` + `resumo_executivo`.
-_GENERATE_CONFIG = types.GenerateContentConfig()
+from typing import Any, AsyncGenerator
 
-from tools.agent_factory import build_llm_agent
-competitor_analysis_agent = build_llm_agent(
-    name="CompetitorAnalysis",
-    model="gemini-2.5-flash-lite",
-    generate_content_config=_GENERATE_CONFIG,
-    description=(
-        "Análise agregada de concorrentes: gaps de mercado, dores dominantes "
-        "(com nominação), counter-programming (picos/vales), saturação e score. "
-        "Lê concorrentes_brutos do session state (output do A3a) via macro-tool."
-    ),
-    instruction="""
-agente: A3b CompetitorAnalysis
-papel: análise agregada + scores + posicionamento
-regra_execucao: autonoma  # nunca pede confirmação
+from google.adk.agents import BaseAgent
+from google.adk.agents.invocation_context import InvocationContext
+from google.adk.events import Event, EventActions
 
-input:
-  fonte: session_state.concorrentes_brutos (gerado pelo A3a)
-  acesso: via macro-tool (NUNCA passar como argumento explícito)
-
-fluxo_obrigatorio (2 passos APENAS):
-  - passo: 1
-    acao: analisar_concorrentes_completo()
-    nota_critica: |
-      Chame SEM ARGUMENTOS. A macro-tool lê concorrentes_brutos
-      direto do state. Tentar passar payload em argumento causa
-      MALFORMED_FUNCTION_CALL — bug histórico documentado.
-      O nome da tool é EXATAMENTE `analisar_concorrentes_completo` —
-      NUNCA adicione prefixo como `default_api.` ou namespace algum
-      (run 56d17ea0 morreu com "Tool 'default_api.analisar_concorrentes_completo'
-      not found").
-    output: dict com inteligencia_competitiva + estrategia_counter_programming
-            + nivel_saturacao + rating_medio_concorrentes + score_concorrencia
-  - passo: 2
-    acao: emitir JSON de saída final
-    instrucao: |
-      Pegue o output da macro-tool, adicione 2 campos textuais novos
-      (posicionamento_recomendado, resumo_executivo) e retorne o JSON
-      consolidado conforme `saida_obrigatoria_json` abaixo.
-
-regras_traducao:
-  - Reviews vêm do Google Maps frequentemente em INGLÊS (autores estrangeiros)
-  - O relatório final é em PT-BR — para CADA review em outro idioma,
-    inclua a versão traduzida em concorrentes_detalhados[].reviews_traduzidas
-  - Manter o nome do autor sem traduzir (nomes próprios)
-  - Indicar idioma original entre colchetes
-  - Exemplo:
-      ANTES: "Lost almost 2 hours trying to follow ridiculous registration rules..."
-      DEPOIS: "Perdi quase 2 horas tentando seguir regras de cadastro ridículas..." [original em inglês]
-
-saida_obrigatoria_json:
-  inteligencia_competitiva:
-    concorrentes_detalhados:  # PRESERVE TODOS os campos do slim + reviews_traduzidas
-      - nome: string                          # da macro
-        endereco: string                      # da macro - NÃO omita
-        bairro_concorrente: string            # da macro - NÃO omita
-        rating_geral: float                   # da macro
-        num_avaliacoes: int                   # da macro
-        tem_24h: bool                         # da macro - NÃO omita
-        telefone: string                      # da macro - NÃO omita (vem do Places API)
-        website: string                       # da macro - NÃO omita (vem do Places API)
-        horarios_pico: dict_or_null           # da macro
-        reviews_traduzidas:                   # ENRIQUECIDO pelo LLM
-          - quote_pt_br: string
-            quote_original: string
-            idioma_original: string  # "inglês"|"espanhol"|"português"
-            autor: string
-            rating: int
-            data_relativa: string
-            categoria_dor: string
-    dores_dominantes: [{dor, mencoes, mencionado_por:[{academia, vezes}]}]  # da macro
-    servicos_nao_oferecidos: [string]   # da macro
-    oportunidades_rankeadas: [...]      # da macro
-    score_oportunidade_mercado: float    # da macro
-    melhor_avaliada: {nome, rating}      # da macro
-    pior_avaliada: {nome, rating}        # da macro
-  estrategia_counter_programming:        # da macro
-    picos_compartilhados: [...]
-    vales_compartilhados: [...]
-    estrategias_acionaveis: [...]
-    concorrentes_com_dados: int
-  nivel_saturacao: BAIXO|MEDIO|ALTO|SATURADO  # da macro
-  rating_medio_concorrentes: float            # da macro
-  score_concorrencia: float                   # OBRIGATORIO numerico — da macro
-  distribuicao_geografica:                    # OBRIGATORIO — copiar literal da macro
-    - bairro: string                          # ex: "Aldeota"
-      count: int                              # quantos concorrentes nesse bairro
-      academias: [string]                     # nomes das academias
-  total_concorrentes_analisados: int          # da macro
-  posicionamento_recomendado: string  # NOVO — texto livre baseado nos gaps
-  resumo_executivo: string             # NOVO — max 3 frases
-
-regras_payload:
-  - NÃO chame `analisar_gap_competitivo`, `analisar_picos_competitivos`,
-    `classificar_saturacao` ou `calcular_score_concorrencia` separadamente.
-    Foram consolidadas em `analisar_concorrentes_completo`.
-  - NÃO passe `concorrentes_brutos` ou qualquer payload grande como argumento.
-  - NÃO omita campos do slim em `concorrentes_detalhados`. Copie LITERAL os
-    campos `endereco`, `bairro_concorrente`, `tem_24h`, `telefone`, `website`,
-    `horarios_pico` do output da macro-tool — só adicione `reviews_traduzidas`
-    por cima. Esses contatos vão pro CRM e o relatório fica capenga sem eles.
-""",
-    tools=[
-        analisar_concorrentes_completo,
-    ],
-    output_key="inteligencia_competitiva",
+from tools.competitor_tools import (
+    analisar_concorrentes_completo,
+    filtrar_concorrentes_bairro_tipo,
+    _parse_market_context,
 )
 
+_ERRO_ENVELOPE = {
+    "inteligencia_competitiva": {
+        "concorrentes_detalhados": [],
+        "dores_dominantes": [],
+        "servicos_nao_oferecidos": [],
+        "oportunidades_rankeadas": [],
+        "score_oportunidade_mercado": 0.0,
+        "melhor_avaliada": {"nome": "N/A", "rating": 0},
+        "pior_avaliada": {"nome": "N/A", "rating": 0},
+    },
+    "estrategia_counter_programming": {
+        "picos_compartilhados": [],
+        "vales_compartilhados": [],
+        "estrategias_acionaveis": [],
+        "concorrentes_com_dados": 0,
+    },
+    "nivel_saturacao": "BAIXO",
+    "rating_medio_concorrentes": 0.0,
+    "score_concorrencia": 7.0,
+}
 
-def _a3b_filtrar_concorrentes(callback_context, *args, **kwargs):
-    """Filtro AUTORITATIVO pós-A3b: o LLM re-emite a lista (e às vezes dropa `tipos`);
-    aqui dropamos vizinho-de-bairro + off-type (CrossFit/Artes Marciais em 'academia')
-    DETERMINISTICAMENTE no inteligencia_competitiva — governa a tabela competidores, os
-    cards do A6 e o markdown (todos leem essa chave). Best-effort, nunca derruba."""
+
+class _StateShim:
+    """tool_context mínimo — a macro só lê `.state`."""
+
+    __slots__ = ("state",)
+
+    def __init__(self, state):
+        self.state = state
+
+
+def _topo(seq, *chaves):
+    """1º item da lista; se dict, tenta as `chaves` em ordem; senão o próprio item."""
+    if not isinstance(seq, list) or not seq:
+        return None
+    it = seq[0]
+    if isinstance(it, dict):
+        for k in chaves:
+            v = it.get(k)
+            if v:
+                return v
+        return None
+    return it
+
+
+def _sintetizar_textos(envelope: dict) -> tuple[str, str]:
+    """Monta posicionamento_recomendado + resumo_executivo por TEMPLATE, a partir dos
+    fatos que a macro já calculou. Determinístico: nenhum número/fato novo, só os do
+    envelope. Mesmo papel do antigo texto-livre do LLM, sem alucinação."""
+    ic = envelope.get("inteligencia_competitiva")
+    ic = ic if isinstance(ic, dict) else {}
+    dores = ic.get("dores_dominantes") or []
+    servicos = ic.get("servicos_nao_oferecidos") or []
+    opps = ic.get("oportunidades_rankeadas") or []
+    melhor = ic.get("melhor_avaliada") or {}
+    n = len(ic.get("concorrentes_detalhados") or [])
+    sat = envelope.get("nivel_saturacao") or "—"
+    score = envelope.get("score_concorrencia")
+
+    top_dor = _topo(dores, "dor")
+    top_serv = _topo(servicos, "servico", "nome")
+    top_opp = _topo(opps, "titulo", "oportunidade", "nome")
+
+    # Resumo executivo (3 frases no máx., só fato do envelope)
+    partes = [f"{n} concorrentes analisados, saturação {sat}"]
+    if isinstance(score, (int, float)):
+        partes[0] += f" (score de concorrência {score})"
+    if top_dor:
+        partes.append(f"Dor dominante dos alunos: {top_dor}")
+    if melhor.get("nome") and melhor.get("nome") != "N/A":
+        partes.append(f"Melhor avaliada: {melhor.get('nome')} ({melhor.get('rating')}★)")
+    resumo_executivo = ". ".join(partes) + "."
+
+    # Posicionamento recomendado (a partir do gap)
+    rec = []
+    if top_serv:
+        rec.append(f"Gap de oferta: {top_serv}")
+    if top_dor:
+        rec.append(f"atacar a dor '{top_dor}' que os concorrentes não resolvem")
+    if top_opp:
+        rec.append(f"explorar {top_opp}")
+    posicionamento_recomendado = (
+        "; ".join(rec).capitalize() + "."
+        if rec
+        else "Sem gap dominante mapeado — posicionar por qualidade de execução e atendimento."
+    )
+    return posicionamento_recomendado, resumo_executivo
+
+
+def _filtrar_envelope(envelope: dict, state: dict) -> None:
+    """Filtro determinístico AUTORITATIVO sobre `concorrentes_detalhados` (in-place):
+    dropa vizinho-de-bairro, off-type e CLOSED. A macro já filtra bairro/tipo no bruto,
+    mas isto reforça sobre o envelope final (+ CLOSED) e governa a tabela do A6. Era o
+    after_agent_callback `_a3b_filtrar_concorrentes` no LlmAgent; agora roda inline, sem
+    LLM no meio pra re-emitir/dropar. Best-effort: nunca derruba."""
     try:
-        from tools.competitor_tools import (
-            _parse_market_context,
-            filtrar_concorrentes_bairro_tipo,
-        )
-
-        st = callback_context.state
-        ic = st.get("inteligencia_competitiva")
-        ic = ic if isinstance(ic, dict) else _parse_market_context(ic)
-        if not isinstance(ic, dict):
-            return None
-        inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
-        lista = inner.get("concorrentes_detalhados") if isinstance(inner, dict) else None
+        ic = envelope.get("inteligencia_competitiva")
+        inner = ic if isinstance(ic, dict) else {}
+        lista = inner.get("concorrentes_detalhados")
         if not isinstance(lista, list) or not lista:
-            return None
-        mc = _parse_market_context(st.get("market_context"))
+            return
+        mc = _parse_market_context(state.get("market_context"))
         mci = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
-        ip = st.get("input_params") if isinstance(st.get("input_params"), dict) else {}
-        bairro = (st.get("bairro") or ip.get("bairro")
+        ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+        bairro = (state.get("bairro") or ip.get("bairro")
                   or (mci.get("bairro") if isinstance(mci, dict) else "") or "")
         tipo = (ip.get("tipo_negocio") or (mci.get("tipo_negocio") if isinstance(mci, dict) else "")
                 or "academia")
         inner["concorrentes_detalhados"] = filtrar_concorrentes_bairro_tipo(
             lista, bairro=bairro, tipo_negocio=tipo
         )
-        # C6.2: valida o contrato de saída do A3b (leniente — loga divergência).
+    except Exception:
+        pass
+
+
+def _mesclar_servicos_na_oferta(envelope: dict, oferta_out: dict) -> None:
+    """FUSÃO A3c: mescla as modalidades mapeadas (site+IG via SearchAPI) em
+    `servicos_oferecidos` de CADA concorrente. Esse é o campo que o A9 `_gaps_reais`
+    lê pra computar o GAP da ERRC. Sem o merge, serviço que o concorrente tem (mas só
+    aparece no site, não no IG/search) fica de fora → vira gap FALSO → ERRC manda
+    'CRIAR' algo que já existe → relatório furado. In-place, best-effort."""
+    mp = (oferta_out or {}).get("oferta_concorrentes") or {}
+    if not isinstance(mp, dict) or not mp:
+        return
+    ic = envelope.get("inteligencia_competitiva")
+    inner = ic if isinstance(ic, dict) else {}
+    for i, c in enumerate(inner.get("concorrentes_detalhados") or []):
+        if not isinstance(c, dict):
+            continue
+        chave = c.get("place_id") or c.get("nome") or f"idx_{i}"
+        of = mp.get(chave)
+        if not isinstance(of, dict):  # fallback: casa por nome
+            of = next((v for v in mp.values()
+                       if isinstance(v, dict) and v.get("nome") == c.get("nome")), None)
+        if not isinstance(of, dict):
+            continue
+        atuais = {s for s in (c.get("servicos_oferecidos") or []) if s}
+        novos = {m for m in (of.get("modalidades") or []) if m}
+        c["servicos_oferecidos"] = sorted(atuais | novos)
+
+
+class CompetitorAnalysisAgent(BaseAgent):
+    """A3b+A3c FUNDIDO, determinístico: agrega (dores/gaps/score) + mapeia oferta
+    (serviços/planos via SearchAPI) e mescla os serviços por concorrente. Grava
+    inteligencia_competitiva (com serviços completos) + oferta_concorrentes."""
+
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        state = ctx.session.state
+        try:
+            envelope: dict[str, Any] = analisar_concorrentes_completo(_StateShim(state))
+            if not isinstance(envelope, dict) or "erro" in envelope:
+                raise ValueError(envelope.get("erro") if isinstance(envelope, dict) else "macro retornou não-dict")
+        except Exception as e:  # nunca derruba o pipeline — A6 lida com envelope vazio
+            print(f"[A3b determinístico] falha: {type(e).__name__}: {e}")
+            envelope = {**_ERRO_ENVELOPE, "aviso": f"{type(e).__name__}: {e}"}
+
+        _filtrar_envelope(envelope, state)
+        pos, resumo = _sintetizar_textos(envelope)
+        envelope["posicionamento_recomendado"] = pos
+        envelope["resumo_executivo"] = resumo
+
+        # ── FUSÃO A3c: mapeia oferta (determinístico, SearchAPI) + mescla serviços ──
+        oferta_out: dict[str, Any] = {}
+        try:
+            from tools.offer_mapper_tool import mapear_oferta_competidores_completo
+
+            # state-shim com o envelope pronto (a macro lê concorrentes_detalhados dele)
+            tmp = dict(state)
+            tmp["inteligencia_competitiva"] = envelope
+            mapear_oferta_competidores_completo(_StateShim(tmp))  # seta tmp['oferta_concorrentes']
+            oferta_out = tmp.get("oferta_concorrentes") or {}
+            _mesclar_servicos_na_oferta(envelope, oferta_out)
+        except Exception as e:  # oferta é best-effort — nunca derruba a análise
+            print(f"[A3b fusão oferta] {type(e).__name__}: {e}")
+
+        # Validação leniente do contrato (best-effort — só loga divergência).
         try:
             from models.pipeline_schemas import InteligenciaCompetitiva, validar_lenient
 
-            validar_lenient(InteligenciaCompetitiva, inner, agente="A3b")
+            inner = envelope.get("inteligencia_competitiva")
+            validar_lenient(
+                InteligenciaCompetitiva,
+                inner if isinstance(inner, dict) else envelope,
+                agente="A3b",
+            )
         except Exception:
             pass
-        st["inteligencia_competitiva"] = ic
-    except Exception:
-        pass
-    return None
+
+        yield Event(
+            author=self.name,
+            invocation_id=ctx.invocation_id,
+            actions=EventActions(state_delta={
+                "inteligencia_competitiva": envelope,
+                "oferta_concorrentes": oferta_out,
+            }),
+        )
 
 
-competitor_analysis_agent.after_agent_callback = _a3b_filtrar_concorrentes
+competitor_analysis_agent = CompetitorAnalysisAgent(
+    name="CompetitorAnalysis",
+    description=(
+        "A3b determinístico (sem LLM): roda analisar_concorrentes_completo (gaps, dores, "
+        "saturação, score, distribuição) e grava inteligencia_competitiva no state. "
+        "Sintetiza posicionamento+resumo por template. Substitui o LlmAgent-eco que "
+        "crashava com MALFORMED_FUNCTION_CALL e exigia conserto pós-LLM."
+    ),
+)

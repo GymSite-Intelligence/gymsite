@@ -1174,7 +1174,7 @@ def montar_perfil_competitivo(concorrente: dict, reviews_processados: list[dict]
 
         # Filtro de recência: dores e pontos fortes só de reviews com ≤ 1 ano.
         # Reviews antigos refletem operação que pode ter mudado.
-        review_recente = _review_recente_1ano(r.get("data_relativa"))
+        review_recente = _review_recente_6m(r.get("data_relativa"))
 
         # Reclamações: review negativa (rating <= 3) com dores detectadas, recente
         if review_recente and rating <= 3 and r.get("dores_detectadas"):
@@ -1445,9 +1445,39 @@ def calcular_score_concorrencia(num_concorrentes: int, rating_medio: float,
 # falsamente. Filtro abaixo aplica regras negativas combinando types + nome
 # para isolar academias tradicionais (musculação + cardio + aulas em grupo).
 
+# Types de inclusão = "isto É academia". Inclui os tokens EN do Places API novo
+# E os PT do SearchAPI (engine=google_maps). O bug VEC: o gate só tinha EN, mas o
+# caminho barato (SearchAPI) devolve type em português ("Academia", "Sala de
+# fitness") → a inclusão-por-tipo virava código morto e cortava academia real de
+# nome neutro (CT Greenlife, TBOX, Parque Esportes). Ver _eh_academia_tradicional.
+_TYPES_GYM = {
+    # EN (Places API novo)
+    "gym", "fitness_center",
+    # PT (SearchAPI google_maps)
+    "academia", "sala de fitness", "academia de ginástica", "academia de ginastica",
+    "centro de treinamento", "centro de condicionamento físico",
+    "centro de condicionamento fisico", "programa de condicionamento",
+    "ciclismo indoor", "clube de saúde", "clube de saude", "health club",
+}
+
 _TYPES_EXCLUSAO_FORTE = {
+    # Médico/saúde (EN — Places novo)
     "physiotherapist", "doctor", "hospital", "medical_center",
     "dentist", "veterinary_care", "physiotherapy",
+    # Parques / áreas naturais (PT — SearchAPI). Distinguem "Parque Estadual do
+    # Cocó" (parque) de "Parque Esportes" (type=Academia → entra). Só o type separa.
+    "parque estadual", "parque ecológico", "parque ecologico", "parque municipal",
+    "parque", "parque aquático", "parque aquatico", "reserva ecológica",
+}
+
+# Types de modalidade única (PT). Excluídos só se NÃO houver type-gym junto nem
+# qualificador no nome — academia multiesporte com piscina é flag, não exclusão.
+_TYPES_MODALIDADE = {
+    "estúdio de pilates", "estudio de pilates",
+    "estúdio de yoga", "estudio de yoga",
+    "escola de natação", "escola de natacao",
+    "escola de futebol", "escola de tênis", "escola de tenis",
+    "escola de dança", "escola de danca", "quadra de tênis", "quadra de tenis",
 }
 
 _NOME_EXCLUSAO_KEYWORDS = (
@@ -1477,6 +1507,7 @@ _MODALIDADES_UNICAS = (
     "krav maga", "krav-maga",
     "ballet", "balé",
     "yoga", "ioga",
+    "pilates",
     "natação", "natacao", "swimming",
     "hidroginás", "hidroginas",
 )
@@ -1503,21 +1534,21 @@ def _eh_academia_tradicional(place: dict) -> tuple[bool, str]:
     types = place.get("tipos") or place.get("types") or []
     types_set = {str(t).lower() for t in types if t}
 
-    # 1. Exclusão forte por type
+    # Buckets canônicos (EN do Places novo + PT do SearchAPI no mesmo vocabulário).
+    tem_gym_tipo = bool(types_set & _TYPES_GYM)
+    tem_qualificador = any(q in nome for q in _QUALIFICADORES_ACADEMIA)
+
+    # 1. Exclusão forte por type (médico EN + parque PT)
     if types_set & _TYPES_EXCLUSAO_FORTE:
         forte = types_set & _TYPES_EXCLUSAO_FORTE
         return False, f"type forte: {next(iter(forte))}"
 
     # 2. School sem gym exclusivo
-    if "school" in types_set and not (
-        "gym" in types_set or "fitness_center" in types_set
-    ):
+    if "school" in types_set and not tem_gym_tipo:
         return False, "school exclusivo"
 
     # 3. Sports club sem gym
-    if "sports_club" in types_set and not (
-        "gym" in types_set or "fitness_center" in types_set
-    ):
+    if "sports_club" in types_set and not tem_gym_tipo:
         return False, "sports_club sem gym"
 
     # 4. Exclusão por palavras-chave fortes no nome
@@ -1525,24 +1556,26 @@ def _eh_academia_tradicional(place: dict) -> tuple[bool, str]:
         if kw in nome:
             return False, f"nome contém '{kw}'"
 
-    # 5. Modalidade única — só exclui se NÃO houver qualificador "academia/fit"
-    for mod in _MODALIDADES_UNICAS:
-        if mod in nome:
-            tem_qualificador = any(q in nome for q in _QUALIFICADORES_ACADEMIA)
-            if not tem_qualificador:
-                return False, f"modalidade única: '{mod}'"
+    # 5. Modalidade única por TYPE (PT) — pilates/natação/yoga studio. Exclui só se
+    #    não houver type-gym nem qualificador (academia multiesporte com piscina fica).
+    if types_set & _TYPES_MODALIDADE and not tem_gym_tipo and not tem_qualificador:
+        mod = next(iter(types_set & _TYPES_MODALIDADE))
+        return False, f"type modalidade única: '{mod}'"
 
-    # 6. Inclusão final: tem que ter type=gym/fitness_center OU keyword no nome
-    if types_set & {"gym", "fitness_center", "health"}:
-        # confirma que não é "health" puro (clínica que escapou)
-        if "health" in types_set and not (
-            "gym" in types_set or "fitness_center" in types_set
-        ):
-            # health sozinho geralmente é clínica
-            return False, "health sem gym (provável clínica)"
+    # 6. Modalidade única por NOME — mesma regra, via nome
+    for mod in _MODALIDADES_UNICAS:
+        if mod in nome and not tem_qualificador:
+            return False, f"modalidade única: '{mod}'"
+
+    # 7. Inclusão final: type-gym (EN ou PT) OU qualificador no nome.
+    if tem_gym_tipo:
         return True, ""
 
-    if any(q in nome for q in _QUALIFICADORES_ACADEMIA):
+    # "health" sozinho (sem gym) costuma ser clínica → não inclui por type.
+    if "health" in types_set and not tem_gym_tipo:
+        return False, "health sem gym (provável clínica)"
+
+    if tem_qualificador:
         return True, ""
 
     return False, "sem indicação de academia"
@@ -2083,32 +2116,38 @@ def buscar_concorrentes_balanceados(
     }
 
 
-def _review_recente_1ano(data_relativa: str | None) -> bool:
-    """Retorna True se a review tem até ~1 ano de idade.
+_JANELA_DOR_MESES = 6  # dor pra posicionamento só vale recente (≤6m); >6m a academia pode ter consertado
 
-    Google Maps Places API retorna `data_relativa` em inglês, mesmo com
-    languageCode=pt-BR — depende do idioma original do review. Casos vistos:
 
-        "today" / "yesterday" / "an hour ago" / "2 hours ago"        ← OK
-        "a day ago" / "3 days ago"                                   ← OK
-        "a week ago" / "X weeks ago"                                 ← OK
-        "a month ago" / "X months ago"                               ← OK
-        "a year ago" / "X years ago"                                 ← FORA (>= 1 ano)
+def _review_recente_6m(data_relativa: str | None, meses: int = _JANELA_DOR_MESES) -> bool:
+    """Retorna True se a review tem até ~`meses` (default 6) de idade.
 
-    Política: reviews com 'year(s) ago' são descartados pra análise de dores.
-    Reviews antigos refletem operação que mudou. Sem `data_relativa` definida,
-    assume recente (defensive — não quer descartar review legítimo por falta
-    de label).
+    REGRA DE PRODUTO: dor pra insight de POSICIONAMENTO só vale se recente — dor de
+    >6 meses é stale (a academia pode já ter consertado), não orienta o usuário.
+
+    Google Maps/SearchAPI retorna `data_relativa` no idioma do review (PT/EN). Casos:
+        "today" / "yesterday" / "X days/weeks/hours ago"             ← recente
+        "a month ago" (=1) / "X months ago" se X<=meses              ← recente
+        "X months ago"/"há X meses" se X>meses                       ← FORA
+        "a/X year(s) ago" / "há X ano(s)"                            ← FORA
+
+    Sem `data_relativa` = assume recente (defensivo — não descarta review legítimo
+    por falta de label).
     """
     if not data_relativa:
-        return True  # sem label = mantém
+        return True
+    import re as _re
+
     s = data_relativa.strip().lower()
     if not s:
         return True
-    # Qualquer forma de "year" indica >= 1 ano (incluindo "a year ago")
-    if "year" in s or "ano" in s:
+    if "year" in s or "ano" in s:   # >= 1 ano, fora
         return False
-    return True
+    # "X months ago" / "há X meses" / "X mês(es)" — fora se X > meses
+    m = _re.search(r"(\d+)\s*(months?|m[êe]s(?:es)?)", s)
+    if m:
+        return int(m.group(1)) <= meses
+    return True  # "a month ago", semanas, dias, horas → recente
 
 
 def _reviews_baixa_nota_searchapi(place_id: str, max_reviews: int = 10) -> list[dict]:
@@ -2261,15 +2300,15 @@ def _slim_concorrente(c: dict) -> dict:
     todas = [r for r in (c.get("reviews") or []) if isinstance(r, dict)]
     baixa_recente = [
         r for r in todas
-        if (r.get("rating") or 5) <= 3 and _review_recente_1ano(r.get("data_relativa"))
+        if (r.get("rating") or 5) <= 3 and _review_recente_6m(r.get("data_relativa"))
     ]
     baixa_antiga = [
         r for r in todas
-        if (r.get("rating") or 5) <= 3 and not _review_recente_1ano(r.get("data_relativa"))
+        if (r.get("rating") or 5) <= 3 and not _review_recente_6m(r.get("data_relativa"))
     ]
     recentes_ok = [
         r for r in todas
-        if (r.get("rating") or 5) > 3 and _review_recente_1ano(r.get("data_relativa"))
+        if (r.get("rating") or 5) > 3 and _review_recente_6m(r.get("data_relativa"))
     ]
     reviews_raw = (baixa_recente + baixa_antiga + recentes_ok)[:8]
     reviews_slim = []

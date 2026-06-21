@@ -14,8 +14,10 @@ def test_tier_thresholds():
 def test_renda_prefere_fonte_2022(monkeypatch):
     # IBGE 2022 (renda_pc) é primário — Cocó top-1% deve dar premium, não low.
     monkeypatch.setattr(pr, "renda_bairro_ipece", lambda c, u, b: {"renda_pc": 4952.75})
-    v = ft._renda_media_bairro("Fortaleza", "Cocó", "CE")
+    # _renda_media_bairro agora retorna (valor, fonte) — fonte alimenta viabilidade.renda_fonte
+    v, fonte = ft._renda_media_bairro("Fortaleza", "Cocó", "CE")
     assert v == 4952.75
+    assert "2022" in fonte
     assert ft._tier_mercado_por_renda(v) == "premium"
 
 
@@ -30,6 +32,7 @@ def test_fallback_quando_2022_ausente(monkeypatch):
         brl, "enrich_demografia_bairro",
         lambda base, c, b, u: {"bairro": {"renda_media_per_capita": 1800.0}},
     )
-    v = ft._renda_media_bairro("X", "Y", "CE")
+    v, fonte = ft._renda_media_bairro("X", "Y", "CE")
     assert v == 1800.0
+    assert "CKAN" in fonte
     assert ft._tier_mercado_por_renda(v) == "low"

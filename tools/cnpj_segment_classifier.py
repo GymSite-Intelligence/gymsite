@@ -25,6 +25,7 @@ SEGMENTOS = (
     "personal_studio",
     "aqua_fitness",
     "saude_clinica",
+    "fora_familia",
 )
 
 SEGMENTO_LABELS: dict[str, str] = {
@@ -37,13 +38,33 @@ SEGMENTO_LABELS: dict[str, str] = {
     "personal_studio": "Personal / coaching",
     "aqua_fitness": "Natacao / aquáticos",
     "saude_clinica": "Clínica / reabilitação",
+    "fora_familia": "Fora da família fitness (CNAE não-esporte)",
 }
 
-# Segmentos que entram na composição do "parque comercial"
-SEGMENTOS_PARQUE_COMERCIAL = tuple(s for s in SEGMENTOS if s != "saude_clinica")
+# Buckets de EXCLUSÃO do parque comercial: clínica (por nome) + fora_familia (por
+# CNAE principal não-esporte).
+_SEGMENTOS_EXCLUIDOS = {"saude_clinica", "fora_familia"}
+SEGMENTOS_PARQUE_COMERCIAL = tuple(s for s in SEGMENTOS if s not in _SEGMENTOS_EXCLUIDOS)
+
+# ── Portão CNAE: a "família fitness" = grupo CNAE 931 (atividades esportivas) ──
+# Fonte da verdade do que É academia/studio/box: a ATIVIDADE registrada, não o nome.
+# Nome só separa o TIPO DENTRO da família (academia vs studio vs box compartilham
+# CNAE). Decisão de produto: 9312300 (clubes) e 8591100 (ensino esportivo) FORA.
+# Sem o portão, 33-36% do parque era joio (fisioterapia, hotel, salão, varejo com
+# nome "fit" caíam em academia pelo default).
+_CNAE_FAMILIA_FITNESS = frozenset({
+    "9311500", "9311501",                       # gestão de instalações esportivas
+    "9313100",                                  # condicionamento físico (academia) — núcleo
+    "9319101", "9319102", "9319103", "9319199",  # outras atividades esportivas (lutas/eventos)
+})
 
 _CNAE_PILATES = frozenset({"9311500", "9311501"})
 _CNAE_LUTAS = frozenset({"9319101", "9319102", "9319103"})
+
+
+def _cnae_digits(c) -> str:
+    """Normaliza CNAE pra 7 dígitos (aceita '9313-1/00' ou '9313100')."""
+    return re.sub(r"\D", "", str(c or ""))
 
 _RE_ACADEMIA_TYPO = re.compile(
     r"acad[aei][\w]*|academ|acadim|acadi[mn]|gene[sz]e|forma[\s\-]?fit",
@@ -115,6 +136,21 @@ def classificar_segmento(
     texto, fonte_txt = _texto_classificacao(nome_fantasia, razao_social)
     sec = _parse_cnaes(cnaes_secundarios)
     sinais: list[str] = []
+
+    # ── PORTÃO CNAE PRINCIPAL (estágio 1) ──
+    # Fora da família 931 = joio, descarta — mesmo com nome "fit" ou CNAE fitness
+    # SECUNDÁRIO (clínica com anexo de musculação não é academia). Só barra quando
+    # há CNAE principal; ausente cai no cascade de nome (defensivo contra gap de carga).
+    principal = _cnae_digits(cnae_principal)
+    if principal and principal not in _CNAE_FAMILIA_FITNESS:
+        return ClassificacaoSegmento(
+            segmento="fora_familia",
+            confianca="alta",
+            metodo="cnae_principal",
+            sinais=[f"CNAE principal {principal} fora da família fitness (931)"],
+            requer_validacao=False,
+            incluir_no_parque=False,
+        )
 
     def hit(seg: str, conf: str, metodo: str, *motivos: str) -> ClassificacaoSegmento:
         sig = list(motivos) or [metodo]

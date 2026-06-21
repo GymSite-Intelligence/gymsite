@@ -552,6 +552,48 @@ def analisar_pontos_comerciais_completo(
 # Helper: listings reais como candidatos
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _anexar_aluguel_mrlr(cands: list[dict], cidade: str, bairro: str) -> list[dict]:
+    """Anexa aluguel DETERMINÍSTICO (MRLR/IBAPE-GO) a cada candidato com área.
+
+    Mesma equação e mesma chamada que o A4 (financial_tools usa
+    aluguel_deterministico(area, cidade, bairro)) → o aluguel do candidato no A1
+    é IDÊNTICO ao que o A4 estima pra mesma praça+área (sem divergência 17k→88k do
+    anúncio raspado). `price_raw` continua como referência do anúncio, mas o número
+    de decisão é o MRLR. Best-effort: falha de DB degrada limpo (deixa None).
+    Memoiza por área (int) — mesmo bairro/cidade só muda pela área.
+    """
+    bn = (bairro or "").strip()
+    if not bn or bn == "(cidade inteira)" or not cands:
+        return cands
+    try:
+        from tools.aluguel_mrlr import aluguel_deterministico
+    except Exception:
+        return cands
+    cache: dict[int, dict] = {}
+    for c in cands:
+        if c.get("aluguel_estimado"):
+            continue
+        try:
+            area = float(c.get("area_estimada_m2") or 0)
+        except (TypeError, ValueError):
+            area = 0.0
+        if area <= 0:
+            continue
+        chave = int(round(area))
+        m = cache.get(chave)
+        if m is None:
+            try:
+                m = aluguel_deterministico(area_m2=area, cidade=cidade, bairro=bn)
+            except Exception:
+                m = {"status": "erro"}
+            cache[chave] = m
+        if m.get("status") == "ok":
+            c["aluguel_estimado"] = m.get("aluguel_total")
+            c["aluguel_unitario_m2"] = m.get("valor_unitario_m2")
+            c["aluguel_fonte"] = m.get("fonte")
+    return cands
+
+
 def _fetch_listings_como_candidatos(
     cidade: str,
     uf: str,
@@ -618,7 +660,7 @@ def _fetch_listings_como_candidatos(
         from tools.maps_tools import geocode_endereco
     except Exception as e:
         log.warning("listings: imports falharam — %s", e)
-        return casc_cands
+        return _anexar_aluguel_mrlr(casc_cands, cidade, _bai)
 
     def _runner():
         loop = asyncio.new_event_loop()
@@ -634,10 +676,10 @@ def _fetch_listings_como_candidatos(
             listings = ex.submit(_runner).result(timeout=180)
     except Exception as e:
         log.warning("listings: scraper falhou — %s", e)
-        return casc_cands
+        return _anexar_aluguel_mrlr(casc_cands, cidade, _bai)
 
     if not listings:
-        return casc_cands
+        return _anexar_aluguel_mrlr(casc_cands, cidade, _bai)
 
     # Limita aos top 15 por área pra controlar custo de geocode
     listings = listings[:15]
@@ -707,4 +749,4 @@ def _fetch_listings_como_candidatos(
     # Cascata (bairro-correto) primeiro; scrape city-level depois. Dedup por listing_url.
     _urls = {c.get("listing_url") for c in casc_cands if c.get("listing_url")}
     candidatos = casc_cands + [c for c in candidatos if c.get("listing_url") not in _urls]
-    return candidatos
+    return _anexar_aluguel_mrlr(candidatos, cidade, _bai)

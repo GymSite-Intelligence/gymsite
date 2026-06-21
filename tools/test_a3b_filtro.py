@@ -1,38 +1,27 @@
-"""Testes determinísticos — A3b CompetitorAnalysis: callback _a3b_filtrar_concorrentes.
+"""Testes determinísticos — A3b CompetitorAnalysis (BaseAgent).
 
-Foco: filtro autoritativo pós-agente (RN-A3b-06).
-Sem LLM / sem rede. Usa dados reais do filtrar_concorrentes_bairro_tipo.
+A3b foi determinizado (era LlmAgent-eco). O filtro autoritativo bairro/tipo/CLOSED
+saiu do after_agent_callback e roda INLINE no BaseAgent via `_filtrar_envelope`
+(RN-A3b-06). Sem LLM / sem rede.
 """
 from __future__ import annotations
 
-import types
-
 import pytest
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _fake_callback_context(state: dict):
-    """Mínimo fake de CallbackContext com .state."""
-    ctx = types.SimpleNamespace()
-    ctx.state = state
-    return ctx
+import agents.a3b_competitor_analysis as m
 
 
-def _ic_com_concorrentes(lista: list[dict], bairro_alvo: str | None = None) -> dict:
-    """Monta estrutura inteligencia_competitiva no formato esperado pelo callback."""
-    ic = {
-        "inteligencia_competitiva": {
-            "concorrentes_detalhados": lista,
-        }
-    }
-    return ic
+def _envelope(lista: list[dict]) -> dict:
+    """Envelope no formato que a macro retorna (inteligencia_competitiva aninhado)."""
+    return {"inteligencia_competitiva": {"concorrentes_detalhados": lista}}
+
+
+def _detalhados(env: dict) -> list[dict]:
+    return env["inteligencia_competitiva"]["concorrentes_detalhados"]
 
 
 # ---------------------------------------------------------------------------
-# Importação do módulo
+# Módulo importável + função exportada
 # ---------------------------------------------------------------------------
 
 def test_modulo_importavel():
@@ -40,233 +29,166 @@ def test_modulo_importavel():
 
 
 def test_funcao_filtro_exportada():
-    import agents.a3b_competitor_analysis as m
-    assert callable(m._a3b_filtrar_concorrentes)
+    assert callable(m._filtrar_envelope)
+    assert callable(m._sintetizar_textos)
 
 
 # ---------------------------------------------------------------------------
-# Testes do callback _a3b_filtrar_concorrentes
+# Filtro determinístico inline (_filtrar_envelope)
 # ---------------------------------------------------------------------------
 
-class TestFiltrarConcorrentes:
-    """Testa o filtro determinístico via callback (usa state dict como agente faz)."""
-
-    @pytest.fixture(autouse=True)
-    def _load(self):
-        import agents.a3b_competitor_analysis as m
-        self.fn = m._a3b_filtrar_concorrentes
-
-    def _run(self, state: dict):
-        ctx = _fake_callback_context(state)
-        result = self.fn(ctx)
-        return ctx.state, result
-
-    # ------------------------------------------------------------------
-    # Filtragem por bairro
-    # ------------------------------------------------------------------
+class TestFiltrarEnvelope:
+    def _run(self, lista, state_extra=None):
+        env = _envelope(lista)
+        state = {"inteligencia_competitiva": env, **(state_extra or {})}
+        m._filtrar_envelope(env, state)
+        return env
 
     def test_remove_concorrente_fora_do_bairro(self):
-        """Concorrente de outro bairro é dropado quando existe ao menos 1 no bairro alvo."""
-        lista = [
-            {"nome": "Academia Cocó Fit", "endereco": "Rua X, Cocó, Fortaleza"},
-            {"nome": "Smart Fit Aldeota", "endereco": "Av Y, Aldeota, Fortaleza"},
-        ]
-        state = {
-            "bairro": "Cocó",
-            "inteligencia_competitiva": _ic_com_concorrentes(lista),
-        }
-        st, ret = self._run(state)
-
-        sobrou = st["inteligencia_competitiva"]["inteligencia_competitiva"]["concorrentes_detalhados"]
-        nomes = [c["nome"] for c in sobrou]
-        assert "Academia Cocó Fit" in nomes
-        assert "Smart Fit Aldeota" not in nomes
+        env = self._run(
+            [
+                {"nome": "Academia Cocó Fit", "endereco": "Rua X, Cocó, Fortaleza"},
+                {"nome": "Smart Fit Aldeota", "endereco": "Av Y, Aldeota, Fortaleza"},
+            ],
+            {"bairro": "Cocó"},
+        )
+        nomes = [c["nome"] for c in _detalhados(env)]
+        assert "Academia Cocó Fit" in nomes and "Smart Fit Aldeota" not in nomes
 
     def test_mantem_todos_quando_nenhum_no_bairro(self):
-        """Salvaguarda: se ZERO casam o bairro, mantém todos (não zera a lista)."""
-        lista = [
-            {"nome": "Academia Aldeota Fit", "endereco": "Av Y, Aldeota, Fortaleza"},
-            {"nome": "Body Tech Meireles", "endereco": "Rua Z, Meireles, Fortaleza"},
-        ]
-        state = {
-            "bairro": "Bairro Inexistente",
-            "inteligencia_competitiva": _ic_com_concorrentes(lista),
-        }
-        st, _ = self._run(state)
+        env = self._run(
+            [
+                {"nome": "Academia Aldeota Fit", "endereco": "Av Y, Aldeota, Fortaleza"},
+                {"nome": "Body Tech Meireles", "endereco": "Rua Z, Meireles, Fortaleza"},
+            ],
+            {"bairro": "Bairro Inexistente"},
+        )
+        assert len(_detalhados(env)) == 2  # salvaguarda: não zera
 
-        sobrou = st["inteligencia_competitiva"]["inteligencia_competitiva"]["concorrentes_detalhados"]
-        assert len(sobrou) == 2  # todos preservados
-
-    # ------------------------------------------------------------------
-    # Filtragem por tipo
-    # ------------------------------------------------------------------
-
-    def test_remove_crossfit_quando_tipo_academia_com_2_on_type(self):
-        """CrossFit é off-type para 'academia' quando sobram >=2 academias comuns."""
-        lista = [
-            {"nome": "Smart Fit Cocó", "endereco": "Rua X, Cocó, Fortaleza", "tipos": ["gym"]},
-            {"nome": "Body Tech Cocó", "endereco": "Rua Y, Cocó, Fortaleza", "tipos": ["gym"]},
-            {"nome": "CrossFit Cocó Box", "endereco": "Av Z, Cocó, Fortaleza", "tipos": ["gym"]},
-        ]
-        state = {
-            "bairro": "Cocó",
-            "input_params": {"tipo_negocio": "academia"},
-            "inteligencia_competitiva": _ic_com_concorrentes(lista),
-        }
-        st, _ = self._run(state)
-
-        sobrou = st["inteligencia_competitiva"]["inteligencia_competitiva"]["concorrentes_detalhados"]
-        nomes = [c["nome"] for c in sobrou]
+    def test_remove_crossfit_quando_tipo_academia(self):
+        env = self._run(
+            [
+                {"nome": "Smart Fit Cocó", "endereco": "Rua X, Cocó, Fortaleza", "tipos": ["gym"]},
+                {"nome": "Body Tech Cocó", "endereco": "Rua Y, Cocó, Fortaleza", "tipos": ["gym"]},
+                {"nome": "CrossFit Cocó Box", "endereco": "Av Z, Cocó, Fortaleza", "tipos": ["gym"]},
+            ],
+            {"bairro": "Cocó", "input_params": {"tipo_negocio": "academia"}},
+        )
+        nomes = [c["nome"] for c in _detalhados(env)]
         assert "CrossFit Cocó Box" not in nomes
-        assert "Smart Fit Cocó" in nomes
-        assert "Body Tech Cocó" in nomes
-
-    # ------------------------------------------------------------------
-    # Filtragem por status CLOSED
-    # ------------------------------------------------------------------
+        assert "Smart Fit Cocó" in nomes and "Body Tech Cocó" in nomes
 
     def test_remove_permanently_closed(self):
-        """Academias PERMANENTLY_CLOSED são removidas quando existe ao menos 1 operacional."""
-        lista = [
-            {
-                "nome": "Academia Fechada",
-                "endereco": "Rua X, Cocó, Fortaleza",
-                "business_status": "PERMANENTLY_CLOSED",
-            },
-            {
-                "nome": "Smart Fit Cocó",
-                "endereco": "Rua Y, Cocó, Fortaleza",
-            },
-        ]
-        state = {
-            "bairro": "Cocó",
-            "inteligencia_competitiva": _ic_com_concorrentes(lista),
-        }
-        st, _ = self._run(state)
-
-        sobrou = st["inteligencia_competitiva"]["inteligencia_competitiva"]["concorrentes_detalhados"]
-        nomes = [c["nome"] for c in sobrou]
-        assert "Academia Fechada" not in nomes
-        assert "Smart Fit Cocó" in nomes
-
-    def test_remove_closed_temporarily(self):
-        """Academias CLOSED_TEMPORARILY também são removidas."""
-        lista = [
-            {
-                "nome": "Gym Temp Closed",
-                "endereco": "Rua X, Cocó, Fortaleza",
-                "business_status": "CLOSED_TEMPORARILY",
-            },
-            {
-                "nome": "Ativa Fit Cocó",
-                "endereco": "Rua Y, Cocó, Fortaleza",
-            },
-        ]
-        state = {
-            "bairro": "Cocó",
-            "inteligencia_competitiva": _ic_com_concorrentes(lista),
-        }
-        st, _ = self._run(state)
-
-        sobrou = st["inteligencia_competitiva"]["inteligencia_competitiva"]["concorrentes_detalhados"]
-        nomes = [c["nome"] for c in sobrou]
-        assert "Gym Temp Closed" not in nomes
-
-    # ------------------------------------------------------------------
-    # Tolerância a state malformado (RN-A3b-06: best-effort, nunca derruba)
-    # ------------------------------------------------------------------
-
-    def test_state_sem_inteligencia_competitiva_nao_levanta(self):
-        """State sem a chave inteligencia_competitiva → retorna None silenciosamente."""
-        state = {"bairro": "Cocó"}
-        ctx = _fake_callback_context(state)
-        result = self.fn(ctx)
-        assert result is None
-
-    def test_inteligencia_competitiva_nao_dict_nao_levanta(self):
-        """Valor string (não-dict) em inteligencia_competitiva → não derruba."""
-        state = {
-            "bairro": "Cocó",
-            "inteligencia_competitiva": "texto não-dict",
-        }
-        ctx = _fake_callback_context(state)
-        # Não deve levantar exceção
-        result = self.fn(ctx)
-        assert result is None
-
-    def test_concorrentes_detalhados_vazio_nao_levanta(self):
-        """Lista vazia em concorrentes_detalhados → retorna None sem erro."""
-        state = {
-            "bairro": "Cocó",
-            "inteligencia_competitiva": _ic_com_concorrentes([]),
-        }
-        ctx = _fake_callback_context(state)
-        result = self.fn(ctx)
-        assert result is None
-
-    def test_state_completamente_vazio_nao_levanta(self):
-        """State {} → retorna None sem exceção."""
-        ctx = _fake_callback_context({})
-        result = self.fn(ctx)
-        assert result is None
-
-    def test_callback_sempre_retorna_none(self):
-        """O contrato ADK: after_agent_callback deve retornar None (sem interceptar resposta)."""
-        lista = [
-            {"nome": "Smart Fit Cocó", "endereco": "Rua X, Cocó, Fortaleza"},
-        ]
-        state = {
-            "bairro": "Cocó",
-            "inteligencia_competitiva": _ic_com_concorrentes(lista),
-        }
-        ctx = _fake_callback_context(state)
-        result = self.fn(ctx)
-        assert result is None
-
-    # ------------------------------------------------------------------
-    # Bairro lido de fontes alternativas (input_params, market_context)
-    # ------------------------------------------------------------------
+        env = self._run(
+            [
+                {"nome": "Academia Fechada", "endereco": "Rua X, Cocó, Fortaleza",
+                 "business_status": "PERMANENTLY_CLOSED"},
+                {"nome": "Smart Fit Cocó", "endereco": "Rua Y, Cocó, Fortaleza"},
+            ],
+            {"bairro": "Cocó"},
+        )
+        nomes = [c["nome"] for c in _detalhados(env)]
+        assert "Academia Fechada" not in nomes and "Smart Fit Cocó" in nomes
 
     def test_bairro_lido_de_input_params(self):
-        """Se state['bairro'] ausente, lê de input_params.bairro."""
-        lista = [
-            {"nome": "Gym no Bairro Alvo", "endereco": "Rua X, Meireles, Fortaleza"},
-            {"nome": "Gym Fora", "endereco": "Av Y, Aldeota, Fortaleza"},
-        ]
-        state = {
-            "input_params": {"bairro": "Meireles", "tipo_negocio": "academia"},
-            "inteligencia_competitiva": _ic_com_concorrentes(lista),
-        }
-        st, _ = self._run(state)
-        sobrou = st["inteligencia_competitiva"]["inteligencia_competitiva"]["concorrentes_detalhados"]
-        nomes = [c["nome"] for c in sobrou]
-        assert "Gym no Bairro Alvo" in nomes
-        assert "Gym Fora" not in nomes
+        env = self._run(
+            [
+                {"nome": "Gym no Bairro Alvo", "endereco": "Rua X, Meireles, Fortaleza"},
+                {"nome": "Gym Fora", "endereco": "Av Y, Aldeota, Fortaleza"},
+            ],
+            {"input_params": {"bairro": "Meireles", "tipo_negocio": "academia"}},
+        )
+        nomes = [c["nome"] for c in _detalhados(env)]
+        assert "Gym no Bairro Alvo" in nomes and "Gym Fora" not in nomes
+
+    # tolerância (best-effort, nunca derruba)
+
+    def test_envelope_sem_ic_nao_levanta(self):
+        m._filtrar_envelope({"bairro": "x"}, {})
+
+    def test_envelope_nao_dict_ic_nao_levanta(self):
+        m._filtrar_envelope({"inteligencia_competitiva": "texto"}, {})
+
+    def test_lista_vazia_nao_levanta(self):
+        m._filtrar_envelope(_envelope([]), {"bairro": "Cocó"})
 
 
 # ---------------------------------------------------------------------------
-# Testes de contrato estático do agente A3b
+# Síntese determinística de textos (_sintetizar_textos)
+# ---------------------------------------------------------------------------
+
+class TestMesclarServicos:
+    """FUSÃO A3c: modalidades mapeadas entram em servicos_oferecidos (o campo do gap A9)."""
+
+    def test_merge_por_place_id(self):
+        env = {"inteligencia_competitiva": {"concorrentes_detalhados": [
+            {"place_id": "P1", "nome": "VS Club", "servicos_oferecidos": ["musculacao"]},
+            {"place_id": "P2", "nome": "Parque Esportes", "servicos_oferecidos": []},
+        ]}}
+        oferta = {"oferta_concorrentes": {
+            "P1": {"nome": "VS Club", "modalidades": ["piscina", "natacao"]},
+            "P2": {"nome": "Parque Esportes", "modalidades": ["funcional", "danca"]},
+        }}
+        m._mesclar_servicos_na_oferta(env, oferta)
+        det = env["inteligencia_competitiva"]["concorrentes_detalhados"]
+        assert set(det[0]["servicos_oferecidos"]) == {"musculacao", "piscina", "natacao"}
+        assert set(det[1]["servicos_oferecidos"]) == {"funcional", "danca"}
+
+    def test_match_por_nome(self):
+        env = {"inteligencia_competitiva": {"concorrentes_detalhados": [
+            {"nome": "Academia X", "servicos_oferecidos": []}]}}
+        oferta = {"oferta_concorrentes": {"idx_0": {"nome": "Academia X", "modalidades": ["pilates"]}}}
+        m._mesclar_servicos_na_oferta(env, oferta)
+        assert env["inteligencia_competitiva"]["concorrentes_detalhados"][0]["servicos_oferecidos"] == ["pilates"]
+
+    def test_oferta_vazia_nao_altera(self):
+        env = {"inteligencia_competitiva": {"concorrentes_detalhados": [
+            {"nome": "A", "servicos_oferecidos": ["x"]}]}}
+        m._mesclar_servicos_na_oferta(env, {})
+        assert env["inteligencia_competitiva"]["concorrentes_detalhados"][0]["servicos_oferecidos"] == ["x"]
+
+
+class TestSintetizarTextos:
+    def test_textos_usam_so_fatos_do_envelope(self):
+        env = {
+            "inteligencia_competitiva": {
+                "concorrentes_detalhados": [{"nome": "A"}, {"nome": "B"}],
+                "dores_dominantes": [{"dor": "lotação no pico"}],
+                "servicos_nao_oferecidos": ["natação"],
+                "oportunidades_rankeadas": [{"titulo": "24h premium"}],
+                "melhor_avaliada": {"nome": "REK", "rating": 4.9},
+            },
+            "nivel_saturacao": "ALTO",
+            "score_concorrencia": 6.0,
+        }
+        pos, resumo = m._sintetizar_textos(env)
+        assert "ALTO" in resumo and "6.0" in resumo and "lotação no pico" in resumo
+        assert "natação" in pos and "lotação no pico" in pos
+
+    def test_envelope_vazio_nao_levanta(self):
+        pos, resumo = m._sintetizar_textos({"inteligencia_competitiva": {}})
+        assert isinstance(pos, str) and isinstance(resumo, str)
+
+
+# ---------------------------------------------------------------------------
+# Contrato estático do agente A3b (agora BaseAgent, sem LLM)
 # ---------------------------------------------------------------------------
 
 class TestContratoEstaticoA3b:
-    @pytest.fixture(autouse=True)
-    def _load(self):
-        import agents.a3b_competitor_analysis as m
+    def setup_method(self):
         self.agent = m.competitor_analysis_agent
-        self.fn = m._a3b_filtrar_concorrentes
 
-    def test_output_key_correto(self):
-        assert self.agent.output_key == "inteligencia_competitiva"
+    def test_eh_base_agent_sem_llm(self):
+        from google.adk.agents import BaseAgent
+        assert isinstance(self.agent, BaseAgent)
+        assert type(self.agent).__name__ == "CompetitorAnalysisAgent"
 
     def test_nome_agente_correto(self):
         assert self.agent.name == "CompetitorAnalysis"
 
-    def test_after_agent_callback_eh_filtrar_concorrentes(self):
-        """RN-A3b-06: after_agent_callback deve ser _a3b_filtrar_concorrentes."""
-        assert self.agent.after_agent_callback is self.fn
+    def test_sem_after_agent_callback(self):
+        # filtro virou inline; não há mais callback pós-LLM
+        assert getattr(self.agent, "after_agent_callback", None) is None
 
     def test_description_nao_vazia(self):
         assert self.agent.description and len(self.agent.description.strip()) > 0
-
-    def test_instruction_nao_vazia(self):
-        assert self.agent.instruction and len(str(self.agent.instruction).strip()) > 0
