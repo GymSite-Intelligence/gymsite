@@ -37,6 +37,7 @@ import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
 import { LeadAccessPage } from '@/routes/LeadAccessPage'
 import { AssistentePage } from '@/routes/AssistentePage'
+import { ConsultorPage } from '@/routes/ConsultorPage'
 import AdminParceirosPage from '@/routes/AdminParceirosPage'
 import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
 import { PlanosListPage } from '@/routes/PlanosListPage'
@@ -288,6 +289,15 @@ const assistenteRoute = createRoute({
   component: AssistentePage,
 })
 
+const consultorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/consultor',
+  validateSearch: (search: Record<string, unknown>): { projeto_id?: string } => ({
+    projeto_id: typeof search.projeto_id === 'string' ? search.projeto_id : undefined,
+  }),
+  component: ConsultorPage,
+})
+
 const adminParceirosRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/parceiros',
@@ -340,6 +350,7 @@ const routeTree = rootRoute.addChildren([
   pdfSmokeRoute,
   leadAccessRoute,
   assistenteRoute,
+  consultorRoute,
   adminParceirosRoute,
   planosListRoute,
   execucaoRoute,

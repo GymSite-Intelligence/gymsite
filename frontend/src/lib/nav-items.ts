@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import {
   BarChart3Icon,
+  BotIcon,
   ClipboardListIcon,
   FileTextIcon,
   GitCompareIcon,
@@ -52,6 +53,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Prospecção',
     to: '/prospeccao',
     icon: TargetIcon,
+  },
+  {
+    title: 'Consultor',
+    to: '/consultor',
+    icon: BotIcon,
   },
   {
     title: 'Assistente',
