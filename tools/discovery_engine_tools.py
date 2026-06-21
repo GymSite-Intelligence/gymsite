@@ -78,11 +78,17 @@ def buscar_conhecimento(pergunta: str, n: int = 4) -> dict:
             trecho = ""
             extractive = d.get("extractive_answers") or []
             if extractive:
-                trecho = extractive[0].get("content", "")
-            else:
-                snippets = d.get("snippets") or []
-                if snippets:
-                    trecho = snippets[0].get("snippet", "")
+                trecho = (extractive[0].get("content") or "").strip()
+            if not trecho:
+                # Snippet só vale com status SUCCESS — o Discovery Engine devolve
+                # "No snippet is available for this page." (placeholder) enquanto
+                # indexa; nunca repassar isso como conteúdo.
+                for sn in (d.get("snippets") or []):
+                    status = sn.get("snippet_status")
+                    cand = (sn.get("snippet") or "").strip()
+                    if cand and status != "NO_SNIPPET_AVAILABLE" and "No snippet is available" not in cand:
+                        trecho = cand
+                        break
             if trecho:
                 resultados.append({"titulo": titulo, "uri": uri, "trecho": trecho})
 

@@ -67,6 +67,23 @@ def test_parsing_extractive_e_snippet(monkeypatch):
     assert "Vertex" in r["fonte"]
 
 
+def test_placeholder_snippet_descartado(monkeypatch):
+    # Discovery Engine devolve esse placeholder enquanto indexa — não pode virar trecho.
+    from google.cloud import discoveryengine_v1 as discoveryengine
+
+    class _Placeholder(_FakeClient):
+        def search(self, request):
+            return _FakeResponse([
+                _FakeResult({"title": "IHRSA", "link": "gs://kb/ihrsa.pdf",
+                             "snippets": [{"snippet": "No snippet is available for this page.",
+                                           "snippet_status": "NO_SNIPPET_AVAILABLE"}]}),
+            ])
+
+    monkeypatch.setattr(discoveryengine, "SearchServiceClient", _Placeholder)
+    r = de.buscar_conhecimento("ihrsa")
+    assert r["n_docs"] == 0  # placeholder não conta como conteúdo
+
+
 def test_pergunta_vazia_nao_chama_api(monkeypatch):
     _patch(monkeypatch)
     _FakeClient.last_serving = None
