@@ -40,7 +40,6 @@ import {
   type MunicipioIBGE,
 } from '@/hooks/useMunicipioAutocomplete'
 import { useBairrosDoMunicipio } from '@/hooks/useBairrosDoMunicipio'
-import { useBairroAutocomplete } from '@/hooks/useBairroAutocomplete'
 import {
   usePublicoFaixas,
   faixasParaRange,
@@ -170,37 +169,16 @@ export function NovoRelatorioPage() {
     municipioSelecionado?.uf ?? '',
   )
 
-  // Autocomplete AO VIVO da query digitada — a lista pré-carregada usa prefixos de
-  // 1 letra e o Places dá só 5/chamada, então bairros fora do top-5 (ex: Cocó em
-  // 'c', atrás de Centro/Cidade dos Funcionários) não entram. A busca ao vivo por
-  // 'coc' traz o que falta. Merge com a pré-carregada (ao vivo primeiro).
-  const debouncedBairro = useDebounce(bairroQuery, 250)
-  const { data: bairrosLive = [] } = useBairroAutocomplete({
-    input: debouncedBairro,
-    municipio: municipioSelecionado?.nome ?? '',
-    uf: municipioSelecionado?.uf ?? '',
-  })
-
-  // Filtro client-side por texto digitado + merge com o autocomplete ao vivo.
+  // Filtro client-side por texto digitado sobre a lista completa (que vem do
+  // backend: cache Places→DB). Sem mais Places por tecla.
   const bairrosSugeridos = useMemo(() => {
     const _norm = (s: string) =>
       s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
     const q = _norm(bairroQuery)
-    const filtrados = q
+    return q
       ? bairrosDoMunicipio.filter((b) => _norm(b.bairro).includes(q))
       : bairrosDoMunicipio
-    // ao vivo primeiro (acha o que falta na pré-carregada), dedup
-    const visto = new Set<string>()
-    const out: typeof bairrosDoMunicipio = []
-    for (const b of [...bairrosLive, ...filtrados]) {
-      const key = b.placeId || b.textoCompleto || b.bairro
-      if (!visto.has(key)) {
-        visto.add(key)
-        out.push(b)
-      }
-    }
-    return out
-  }, [bairrosDoMunicipio, bairrosLive, bairroQuery])
+  }, [bairrosDoMunicipio, bairroQuery])
 
   const {
     register,
