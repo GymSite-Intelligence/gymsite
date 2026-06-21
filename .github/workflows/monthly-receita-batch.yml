@@ -44,6 +44,10 @@ jobs:
           BQ_MAX_BYTES_BILLED: "5368709120" # 5 GiB cap (guarda de custo)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Separação de schema (jun/2026): loaders escrevem direto no schema real
+          # (upsert ON CONFLICT não funciona via view de compat). cno_* = shared.
+          GYMSITE_SCHEMA_SEP: "1"
+          SHARED_SCHEMA_SEP: "1"
         run: |
           python -m tools.cno_bigquery_loader
           python -m tools.cno_bigquery_loader --grande-porte

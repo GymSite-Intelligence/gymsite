@@ -47,6 +47,10 @@ jobs:
           MARKET_BUNDLE_SUPABASE: "1"
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Separação de schema (jun/2026): escrita direto no schema real (upsert via
+          # view de compat quebra). market_bundles/snapshots = gymsite.
+          GYMSITE_SCHEMA_SEP: "1"
+          SHARED_SCHEMA_SEP: "1"
           # Gemini via Vertex AI (ADC / service account) — NÃO API key.
           GOOGLE_GENAI_USE_VERTEXAI: "true"
           GOOGLE_CLOUD_PROJECT: gen-lang-client-0106729343
