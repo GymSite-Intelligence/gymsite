@@ -269,6 +269,29 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
             "required": ["pergunta"],
         },
     ),
+    types.FunctionDeclaration(
+        name="consultar_catalogos_equipamentos",
+        description=(
+            "Consulta os CATÁLOGOS dos fornecedores de equipamento de academia "
+            "(Movement, Physicus, Righetto, Life Fitness, Technogym, etc.) para "
+            "perguntas sobre EQUIPAMENTOS: que máquinas/aparelhos existem, linhas e "
+            "modelos, especificações, o que compor numa sala de musculação/cardio/"
+            "funcional. Chamar quando: 'que equipamentos preciso', 'quais máquinas da "
+            "Movement', 'monta a lista de equipamentos', 'opções de esteira/leg press'. "
+            "Cite o fornecedor/catálogo. NÃO inventar preço — se o catálogo não trouxer "
+            "valor, diga que é sob consulta."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "pergunta": {
+                    "type": "string",
+                    "description": "Pergunta sobre equipamentos/catálogos em linguagem natural.",
+                },
+            },
+            "required": ["pergunta"],
+        },
+    ),
 ])
 
 # ─── System prompt do consultor ───────────────────────────────────────────────
@@ -299,6 +322,7 @@ Seu comportamento:
 - Quando uma ferramenta retornar erro ou dado indisponível, informe com clareza.
 - Encadeie ferramentas quando necessário (ex: pesquisar_concorrentes antes de analisar_reviews_e_dores).
 - Para perguntas QUALITATIVAS (metodologia, regulatório/zoneamento/licença, franquia, boas práticas, tendências do setor), use consultar_base_conhecimento e cite os documentos retornados. Números de um bairro (renda, população, concorrentes, financeiro) vêm SEMPRE das ferramentas de dados, nunca da base de conhecimento.
+- Para EQUIPAMENTOS (que máquinas comprar, modelos, especificações, fornecedores), use consultar_catalogos_equipamentos e cite o fornecedor/catálogo. Não invente preço — diga "sob consulta" quando o catálogo não trouxer valor.
 - NÃO chame gerar_relatorio_formal a menos que o usuário peça explicitamente.
 - Termine respostas com 1-3 sugestões de próximo passo, separadas como lista JSON no campo `sugestoes`.
 
@@ -382,6 +406,10 @@ async def _executar_ferramenta(
             # Conhecimento auxiliar (RAG) — NÃO marca pesquisas_realizadas (não é uma
             # das 7 pesquisas de viabilidade; preserva o gate pode_gerar_relatorio).
             resultado = await _tool_base_conhecimento(args, projeto)
+            resumo = _resumo_base_conhecimento(resultado)
+
+        elif nome == "consultar_catalogos_equipamentos":
+            resultado = await _tool_catalogos_equipamentos(args, projeto)
             resumo = _resumo_base_conhecimento(resultado)
 
         else:
@@ -621,6 +649,15 @@ async def _tool_base_conhecimento(args: dict, projeto: ProjectState) -> dict:
     resultado = await asyncio.to_thread(buscar_conhecimento, pergunta)
     return resultado if isinstance(resultado, dict) else {"resultados": [], "n_docs": 0}
 
+
+async def _tool_catalogos_equipamentos(args: dict, projeto: ProjectState) -> dict:
+    """Catálogos de equipamento (data store/engine separado). Trechos + citações."""
+    from tools.discovery_engine_tools import buscar_catalogos_equipamentos
+
+    pergunta = (args.get("pergunta") or "").strip()
+    resultado = await asyncio.to_thread(buscar_catalogos_equipamentos, pergunta)
+    return resultado if isinstance(resultado, dict) else {"resultados": [], "n_docs": 0}
+
 # ─── Helpers de resumo (texto curto para as pills do frontend) ────────────────
 
 def _resumo_mercado(r: dict) -> str:
@@ -750,6 +787,7 @@ _CUSTO_BRL_POR_TOOL: dict[str, float] = {
     "estimar_investimento": 0.15,
     "gerar_relatorio_formal": 3.50,
     "consultar_base_conhecimento": 0.05,
+    "consultar_catalogos_equipamentos": 0.05,
 }
 
 def _custo_tools(tools_executadas: list[str]) -> float:

@@ -121,9 +121,17 @@ def baixar_pdf(item: dict, fornecedor: str, out_dir: Path) -> dict:
         if not conteudo.startswith(b"%PDF"):
             res["status"] = "assinatura-invalida"
             return res
-        h = hashlib.sha1(url.encode()).hexdigest()[:8]
-        nome = f"{_slug(fornecedor)}-{h}.pdf"
+        # Nome por hash de CONTEÚDO (não da URL): a busca às vezes retorna o MESMO
+        # PDF pra fornecedores diferentes (marca internacional sem catálogo BR) — assim
+        # o duplicado colapsa no mesmo arquivo e não é reindexado.
+        h = hashlib.sha1(bytes(conteudo)).hexdigest()[:12]
+        nome = f"{h}.pdf"
         destino = out_dir / nome
+        res["content_sha1"] = h
+        if destino.exists():
+            res.update({"arquivo": str(destino), "bytes": len(conteudo), "status": "duplicado"})
+            print(f"  [dup] {fornecedor}: {nome} (mesmo conteúdo já baixado)")
+            return res
         destino.write_bytes(bytes(conteudo))
         res.update({"arquivo": str(destino), "bytes": len(conteudo), "status": "ok"})
         print(f"  [ok] {fornecedor}: {nome} ({len(conteudo)//1024} KB)")
@@ -140,15 +148,16 @@ def ingerir_no_rag(arquivos: list[str]) -> dict:
 
     if not arquivos:
         return {"status": "nada-pra-ingerir"}
+    prefix = os.environ.get("CATALOGOS_PREFIX", "catalogos").strip("/")
     # 1. upload pro bucket
     sclient = storage.Client(project=_PROJECT)
     bucket = sclient.bucket(_BUCKET)
     uris: list[str] = []
     for f in arquivos:
         nome = Path(f).name
-        blob = bucket.blob(f"catalogos/{nome}")
+        blob = bucket.blob(f"{prefix}/{nome}")
         blob.upload_from_filename(f, content_type="application/pdf")
-        uris.append(f"gs://{_BUCKET}/catalogos/{nome}")
+        uris.append(f"gs://{_BUCKET}/{prefix}/{nome}")
         print(f"  [gcs] subiu {nome}")
     # 2. import no data store (conteúdo não-estruturado via GCS)
     dclient = discoveryengine.DocumentServiceClient()
@@ -156,7 +165,7 @@ def ingerir_no_rag(arquivos: list[str]) -> dict:
               f"dataStores/{_DATASTORE}/branches/default_branch")
     req = discoveryengine.ImportDocumentsRequest(
         parent=parent,
-        gcs_source=discoveryengine.GcsSource(input_uris=[f"gs://{_BUCKET}/catalogos/*.pdf"],
+        gcs_source=discoveryengine.GcsSource(input_uris=[f"gs://{_BUCKET}/{prefix}/*.pdf"],
                                              data_schema="content"),
         reconciliation_mode=discoveryengine.ImportDocumentsRequest.ReconciliationMode.INCREMENTAL,
     )

@@ -15,22 +15,25 @@ import os
 from google.api_core.client_options import ClientOptions
 
 _DEFAULT_ENGINE = "gymsite-market-app_1782013373452"
+_DEFAULT_EQUIP_ENGINE = "gymsite-equip-app"  # engine só de catálogos de equipamento
 _DEFAULT_SERVING = "default_search"
 _FONTE = "Vertex AI Search (gymsite-market-app)"
 
 
-def _config() -> tuple[str, str, str, str]:
-    """(project, location, engine_id, serving_config) — env com defaults."""
+def _config(engine_id: str | None = None, serving_config: str | None = None) -> tuple[str, str, str, str]:
+    """(project, location, engine_id, serving_config) — args > env > defaults."""
     project = (os.environ.get("GOOGLE_CLOUD_PROJECT")
                or os.environ.get("GOOGLE_PROJECT_ID")
                or "gen-lang-client-0106729343")
     location = os.environ.get("DISCOVERY_LOCATION", "global")
-    engine = os.environ.get("DISCOVERY_ENGINE_ID", _DEFAULT_ENGINE)
-    serving = os.environ.get("DISCOVERY_SERVING_CONFIG", _DEFAULT_SERVING)
+    engine = engine_id or os.environ.get("DISCOVERY_ENGINE_ID", _DEFAULT_ENGINE)
+    serving = serving_config or os.environ.get("DISCOVERY_SERVING_CONFIG", _DEFAULT_SERVING)
     return project, location, engine, serving
 
 
-def buscar_conhecimento(pergunta: str, n: int = 4) -> dict:
+def buscar_conhecimento(pergunta: str, n: int = 4,
+                        engine_id: str | None = None,
+                        serving_config: str | None = None) -> dict:
     """Busca trechos relevantes no app de conhecimento e devolve ESTRUTURADO.
 
     Returns:
@@ -42,7 +45,7 @@ def buscar_conhecimento(pergunta: str, n: int = 4) -> dict:
     if not (pergunta or "").strip():
         return {"resultados": [], "n_docs": 0, "fonte": _FONTE, "erro": "pergunta vazia"}
 
-    project, location, engine, serving = _config()
+    project, location, engine, serving = _config(engine_id, serving_config)
     client_options = (
         ClientOptions(api_endpoint=f"{location}-discoveryengine.googleapis.com")
         if location != "global" else None
@@ -96,6 +99,15 @@ def buscar_conhecimento(pergunta: str, n: int = 4) -> dict:
     except Exception as e:
         return {"resultados": [], "n_docs": 0, "fonte": _FONTE,
                 "erro": f"{type(e).__name__}: {e}"}
+
+
+def buscar_catalogos_equipamentos(pergunta: str, n: int = 4) -> dict:
+    """Busca nos CATÁLOGOS de fornecedores de equipamento (data store/engine separado
+    `gymsite-equip-docs`/`gymsite-equip-app`). Mesmo formato de buscar_conhecimento."""
+    engine = os.environ.get("DISCOVERY_EQUIP_ENGINE_ID", _DEFAULT_EQUIP_ENGINE)
+    r = buscar_conhecimento(pergunta, n=n, engine_id=engine)
+    r["fonte"] = "Vertex AI Search (catálogos de equipamento)"
+    return r
 
 
 def search_market_docs(query: str, project_id: str = None, location: str = "global",
