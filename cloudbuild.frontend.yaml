@@ -1,0 +1,33 @@
+# Build + deploy do gymsite-frontend (Cloud Run) a partir de frontend/Dockerfile.
+# Usado por um trigger Cloud Build em ^main$ com includedFiles=frontend/** — assim
+# um commit que toca frontend/ sobe o front automaticamente (o trigger gymsite-api
+# só cobre o backend). Receita: build clássico (manifest Docker v2) + deploy por tag.
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gymsite-frontend:$SHORT_SHA
+      - -f
+      - frontend/Dockerfile
+      - frontend
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gymsite-frontend:$SHORT_SHA
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - gymsite-frontend
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gymsite-frontend:$SHORT_SHA
+      - --region=us-central1
+      - --quiet
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gymsite-frontend:$SHORT_SHA
+options:
+  logging: CLOUD_LOGGING_ONLY
