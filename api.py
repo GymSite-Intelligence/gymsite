@@ -363,6 +363,27 @@ _metrics_mw_instance: MetricsMiddleware | None = None
 _queue: RedisQueue | None = None
 
 
+async def _enqueue_ou_background(job: dict, background: BackgroundTasks) -> str:
+    """Enfileira o job no Redis; se o Redis estiver indisponível, degrada para
+    BackgroundTasks (processa in-process após a resposta).
+
+    Em Cloud Run sem Redis provisionado, o `lpush`/`get_redis()` levanta
+    ConnectionError (localhost:6379 recusado). Em vez de devolver 500, processamos
+    o mesmo `job` pelo próprio worker (`gymsite_worker`) como tarefa de fundo.
+    Requer CPU sempre alocada + min-instances>=1 no serviço (pipeline é longo).
+    """
+    if _queue is not None:
+        try:
+            return await _queue.enqueue(job)
+        except Exception as e:  # ConnectionError, TimeoutError, etc.
+            logger.warning(
+                "Redis enqueue falhou (%s: %s) — degradando para BackgroundTasks",
+                type(e).__name__, e,
+            )
+    background.add_task(gymsite_worker, job)
+    return "background"
+
+
 class _CapturedMetricsMiddleware(MetricsMiddleware):
     """Captures the middleware instance so /api/metrics can read from it."""
     def __init__(self, app):
@@ -1541,6 +1562,7 @@ def create_relatorio_stub(
 async def create_relatorio(
     payload: NovoRelatorioInput,
     request: Request,
+    background: BackgroundTasks,
 ) -> RelatorioStub:
     """Cria stub do relatório + enfileira pipeline no Redis. Retorna ID pra polling."""
     with span("api.relatorios.create", cidade=payload.cidade, uf=payload.uf):
@@ -1554,14 +1576,11 @@ async def create_relatorio(
         except RuntimeError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
-        if _queue is None:
-            raise HTTPException(status_code=503, detail="Task queue não inicializado")
-
-        await _queue.enqueue({
+        await _enqueue_ou_background({
             "type": "pipeline",
             "relatorio_id": relatorio_id,
             "payload": payload.model_dump(),
-        })
+        }, background)
 
         return RelatorioStub(
             id=relatorio_id,
@@ -2462,14 +2481,12 @@ class WebhookConfigureInput(BaseModel):
 async def executar_prospeccao(
     request: Request,
     payload: ProspeccaoExecutarInput,
+    background: BackgroundTasks,
 ) -> dict:
     """Enfileira engine de cruzamento CNPJ × CNO no Redis."""
     _, org_id = _require_authenticated(request)
     with span("api.prospeccao.executar", cidade=payload.cidade, uf=payload.uf):
-        if _queue is None:
-            raise HTTPException(status_code=503, detail="Task queue não inicializado")
-
-        await _queue.enqueue({
+        await _enqueue_ou_background({
             "type": "prospeccao",
             "kwargs": {
                 "cidade": payload.cidade,
@@ -2479,7 +2496,7 @@ async def executar_prospeccao(
                 "org_id": payload.org_id or org_id,
                 "webhook_url": payload.webhook_url,
             },
-        })
+        }, background)
         return {
             "status": "started",
             "message": f"Prospecção enfileirada para {payload.cidade}/{payload.uf}",
@@ -2676,7 +2693,7 @@ class ConversarOutput(BaseModel):
 
 
 @app.post("/api/assistente/conversar", response_model=ConversarOutput)
-async def assistente_conversar(request: Request, payload: ConversarInput) -> ConversarOutput:
+async def assistente_conversar(request: Request, payload: ConversarInput, background: BackgroundTasks) -> ConversarOutput:
     """Endpoint do Agente de IA Especialista em Fitness — fluxo conversacional.
 
     Substitui o formulário tradicional por slot-filling via chat natural.
@@ -2756,13 +2773,11 @@ async def assistente_conversar(request: Request, payload: ConversarInput) -> Con
                 org_id=org_from_jwt,
                 user_id=user_id,
             )
-            if _queue is None:
-                raise RuntimeError("Task queue não inicializado")
-            await _queue.enqueue({
+            await _enqueue_ou_background({
                 "type": "pipeline",
                 "relatorio_id": relatorio_id,
                 "payload": rel_input.model_dump(),
-            })
+            }, background)
             atualizar_sessao(
                 resultado["session_id"],
                 relatorio_id=relatorio_id,

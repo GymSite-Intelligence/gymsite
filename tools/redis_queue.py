@@ -106,15 +106,18 @@ async def gymsite_worker(job: dict) -> None:
 
     elif job_type == "prospeccao":
         from prospecting.engine import run_prospeccao
-        result = run_prospeccao(**job["kwargs"])
+        # run_prospeccao é síncrono e bloqueante — roda em thread pra não travar o
+        # event loop (este worker já roda dentro de um loop, seja no RedisQueue ou
+        # no fallback BackgroundTasks).
+        result = await asyncio.to_thread(run_prospeccao, **job["kwargs"])
         logger.info(f"Prospecção {job['kwargs'].get('cidade')} concluída via RedisQueue")
         try:
             from tools.redis_pubsub import notify_prospeccao_pronta
-            import asyncio
-            asyncio.run(notify_prospeccao_pronta(
+            # await direto (NÃO asyncio.run — já há loop ativo).
+            await notify_prospeccao_pronta(
                 job["kwargs"].get("cidade", ""),
                 oportunidades_count=result if isinstance(result, int) else 0,
-            ))
+            )
         except Exception:
             pass
 
