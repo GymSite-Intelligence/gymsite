@@ -421,9 +421,18 @@ async def lifespan(app: FastAPI):
         logger.warning("Gemini auth startup check skip: %s", e)
 
     global _queue
+    # _queue sempre existe (a API enfileira por ele). Mas o CONSUMO da fila (BRPOP +
+    # rodar o pipeline) só roda quando RUN_QUEUE_WORKER on — assim o serviço de API
+    # pode SÓ enfileirar (RUN_QUEUE_WORKER=0) e o pipeline rodar num serviço worker
+    # separado (gymsite-worker, RUN_QUEUE_WORKER=1), tirando a carga do instance que
+    # serve HTTP. Default "1" preserva o comportamento atual (single-service).
     _queue = RedisQueue(gymsite_worker)
-    worker_task = asyncio.create_task(_queue.start_worker())
-    _shutdown_mgr.register(worker_task)
+    if (os.getenv("RUN_QUEUE_WORKER", "1") or "1").strip().lower() not in ("0", "false", "no", "off"):
+        worker_task = asyncio.create_task(_queue.start_worker())
+        _shutdown_mgr.register(worker_task)
+        logger.info("RedisQueue worker iniciado (RUN_QUEUE_WORKER on)")
+    else:
+        logger.info("RUN_QUEUE_WORKER off — este serviço apenas ENFILEIRA; consumo é do worker separado")
 
     try:
         n = _recover_stale_running_reports(_supabase_client())
