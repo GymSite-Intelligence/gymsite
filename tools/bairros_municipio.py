@@ -90,23 +90,28 @@ def _ler_db(client, municipio_norm: str, uf: str) -> list[dict]:
     ]
 
 
-def _persistir(client, municipio: str, uf: str, municipio_norm: str, bairros: list[dict]) -> None:
-    if bairros:
-        linhas = [
-            {
-                "uf": uf,
-                "municipio": municipio,
-                "municipio_norm": municipio_norm,
-                "bairro": b.get("bairro") or "",
-                "contexto": b.get("contexto") or None,
-                "texto_completo": b.get("textoCompleto") or None,
-                "place_id": b.get("placeId") or None,
-            }
-            for b in bairros
-            if b.get("bairro")
-        ]
+def _upsert_bairros(client, municipio: str, uf: str, municipio_norm: str, bairros: list[dict]) -> None:
+    """Insere bairros em bairros_municipio (idempotente). NÃO mexe no harvest record."""
+    linhas = [
+        {
+            "uf": uf,
+            "municipio": municipio,
+            "municipio_norm": municipio_norm,
+            "bairro": b.get("bairro") or "",
+            "contexto": b.get("contexto") or None,
+            "texto_completo": b.get("textoCompleto") or None,
+            "place_id": b.get("placeId") or None,
+        }
+        for b in bairros
+        if b.get("bairro")
+    ]
+    if linhas:
         # ignore_duplicates: índices únicos parciais (place_id / nome) colapsam repetidos.
         client.table(_TABLE).upsert(linhas, ignore_duplicates=True).execute()
+
+
+def _persistir(client, municipio: str, uf: str, municipio_norm: str, bairros: list[dict]) -> None:
+    _upsert_bairros(client, municipio, uf, municipio_norm, bairros)
     client.table(_HARVEST).upsert(
         {
             "municipio_norm": municipio_norm,
@@ -114,6 +119,36 @@ def _persistir(client, municipio: str, uf: str, municipio_norm: str, bairros: li
             "n_bairros": len(bairros),
         }
     ).execute()
+
+
+def buscar_bairro_query(municipio: str, uf: str, q: str) -> dict:
+    """Top-up por TERMO digitado: busca `q` no Places e adiciona ao cache.
+
+    Resgata bairros que o sweep por prefixo de 1 letra não trouxe (ex.: 'Cocó'
+    fora do top-5 do prefixo 'c' em Fortaleza). Persiste os achados em
+    bairros_municipio (sem tocar no harvest record) → auto-cura o cache: na
+    próxima a lista completa (fonte 'db') já inclui. Devolve só os matches do termo.
+    """
+    municipio = (municipio or "").strip()
+    uf = (uf or "").strip().upper()
+    q = (q or "").strip()
+    if not municipio or len(q) < 2:
+        return {"bairros": [], "fonte": "places-query"}
+    from tools.places_autocomplete import places_autocomplete
+
+    try:
+        r = places_autocomplete(input_text=q, municipio=municipio, uf=uf)
+    except Exception as e:
+        return {"bairros": [], "fonte": "places-query", "erro": f"{type(e).__name__}: {e}"}
+    achados = r.get("suggestions") or []
+    if achados:
+        client = _client()
+        if client is not None:
+            try:
+                _upsert_bairros(client, municipio, uf, _norm(municipio), achados)
+            except Exception as e:
+                logger.warning("Top-up persist falhou (%s)", e)
+    return {"bairros": achados, "fonte": "places-query", "erro": r.get("error")}
 
 
 def listar_bairros(municipio: str, uf: str = "") -> dict:
