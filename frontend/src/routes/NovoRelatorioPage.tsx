@@ -155,7 +155,6 @@ export function NovoRelatorioPage() {
     sugestoes: municipiosSugeridos,
     isLoading: loadingMun,
     total: totalMun,
-    fonte: fonteMun,
   } = useMunicipioAutocomplete(debouncedMunicipio, ufSelecionada?.sigla ?? '')
 
   const retryEraCidadeInteira = retrySearch.bairro === BAIRRO_CIDADE_INTEIRA
@@ -552,11 +551,7 @@ export function NovoRelatorioPage() {
             hint={
               !ufSelecionada
                 ? 'Selecione um estado primeiro'
-                : loadingMun
-                  ? 'Carregando municípios do IBGE…'
-                  : fonteMun === 'fallback'
-                    ? `IBGE indisponível — usando ${totalMun} municípios em cache local de ${ufSelecionada.nome}`
-                    : `${totalMun} municípios em ${ufSelecionada.nome} · digite pra filtrar`
+                : `${totalMun} municípios em ${ufSelecionada.nome} · digite pra filtrar`
             }
             error={errors.municipio?.message}
           >
