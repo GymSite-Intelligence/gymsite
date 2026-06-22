@@ -31,7 +31,7 @@ Cada agente do pipeline chama o Gemini. O custo da API Google é proporcional ao
 | **A0** | ContextBuilder | Deep Research de mercado |
 | **A1** | GeoScout | Zonas comerciais (Google Maps) |
 | **A2** | DemoAnalyst | Demografia IBGE *(paralelo)* |
-| **A3** | CompetitorIntel | Sub-pipeline **A3a → A3b → A3c** *(paralelo)* |
+| **A3** | CompetitorIntel | Sub-pipeline **A3a → A3b** (A3b absorveu o ex-A3c: oferta) *(paralelo)* |
 | **A4** | FinancialEstimator | Viabilidade financeira *(paralelo)* |
 | **A5** | ContactHunter | Decisores e scripts |
 | **A6** | ReportConsolidator | Relatório executivo |

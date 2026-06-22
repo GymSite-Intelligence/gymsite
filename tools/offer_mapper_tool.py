@@ -1,10 +1,11 @@
 """
-offer_mapper_tool.py — macro-tool consumida pelo agente A3c CompetitorMapper.
+offer_mapper_tool.py — macro-tool de mapeamento de oferta, chamada pelo A3b
+determinístico (fusão do ex-A3c CompetitorMapper).
 
 Lê `inteligencia_competitiva.concorrentes_detalhados` do tool_context.state
 (output_key do A3b), roda `competitor_offer_mapper.mapear_oferta_concorrente`
 em paralelo para cada concorrente com `website`/`instagram`, e retorna o
-mapeamento bruto pronto pro LLM A3c normalizar.
+mapeamento bruto já normalizado (sem LLM — `_normalizar_oferta_basica`).
 
 Por que macro-tool sem argumentos (igual A3b):
 - Tools que recebem `concorrentes_detalhados` como argumento estouram
@@ -101,7 +102,7 @@ def _chave_concorrente(c: dict, idx: int) -> str:
 
 def mapear_oferta_competidores_completo(tool_context) -> dict:
     """
-    Macro-tool do A3c CompetitorMapper.
+    Macro-tool de oferta, chamada pelo A3b determinístico (ex-A3c).
 
     Lê `inteligencia_competitiva.concorrentes_detalhados` direto do
     `tool_context.state` (output_key do A3b) e dispara fetch paralelo

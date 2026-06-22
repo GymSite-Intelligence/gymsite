@@ -48,7 +48,7 @@ Gravado via `EventActions(state_delta={"concorrentes_brutos": resultado})` — n
 A execução chama `analisar_concorrentes_a3a_completo(tool_context, bairro, cidade)` (em `tools/competitor_tools.py`, linha 2292). Esta macro encapsula em código Python: `buscar_concorrentes_balanceados` → filtro semântico → `buscar_reviews_academia` → `enriquecer_concorrente_via_google` (async/Playwright) → `classificar_dores_reviews_batch_gemini` (1 call Gemini Flash batch) → `aplicar_classificacao_dores`. Nenhum LLM orquestra o fluxo — é 100% Python.
 
 **RN-A3a-02 — Cap de enriquecimento por latência**
-Enriquece somente os `MAX_ENRIQUECIMENTO` (default 6, via env) concorrentes com maior número de avaliações. Concorrentes além do cap ficam na lista com dados básicos (sem reviews/pico). Razão: Playwright roda sequencial no Windows (Playwright concorrente trava — motivo do A3c desligado).
+Enriquece somente os `MAX_ENRIQUECIMENTO` (default 6, via env) concorrentes com maior número de avaliações. Concorrentes além do cap ficam na lista com dados básicos (sem reviews/pico). Razão: o enriquecimento via Playwright roda sequencial no Windows (Playwright concorrente trava).
 
 **RN-A3a-03 — Filtro semântico de tipo pré-enriquecimento**
 Antes do enriquecimento, cada item passa por `_eh_academia_tradicional(c)`. Itens que não passam (ex: clínicas, estúdios de dança classificados pelo Google como fora do escopo) vão para `concorrentes_excluidos`. O filtro é binário e determinístico.
@@ -91,7 +91,7 @@ O agente é `BaseAgent` (não `LlmAgent`). Não há chamada de LLM no `_run_asyn
 
 **Gotcha 1 — BaseAgent, não LlmAgent:** O `CompetitorSearchAgent` herda de `google.adk.agents.BaseAgent` e implementa `_run_async_impl`. Não tem `instruction`, `tools` declarados no construtor nem `output_key`. A gravação no state é via `EventActions(state_delta=...)`, não via parsing de JSON do LLM.
 
-**Gotcha 2 — Playwright Windows sync lock (A3c desligado):** A macro roda `enriquecer_concorrente_via_google` de forma sequencial deliberada. Paralelização via `asyncio.gather` causava travamento do Playwright no Windows. O sub-agente A3c (que tentava paralelizar via coroutines separadas) foi desligado por este motivo. Não re-paralelizar sem testar em Windows.
+**Gotcha 2 — Playwright Windows sync lock:** A macro roda `enriquecer_concorrente_via_google` de forma sequencial deliberada. Paralelização via `asyncio.gather` causava travamento do Playwright no Windows. (Histórico: o antigo A3c, hoje removido, sofria o mesmo lock ao paralelizar coroutines; sua função de oferta migrou para SearchAPI e foi fundida no A3b.) Não re-paralelizar o enriquecimento do A3a sem testar em Windows.
 
 **Gotcha 3 — `_StateShim`:** A macro `analisar_concorrentes_a3a_completo` espera um `tool_context` com atributo `.state`. O agente cria um `_StateShim(state)` mínimo (apenas `__slots__ = ("state",)`) para compatibilidade com as tools que fazem `tool_context.state.get(...)`.
 

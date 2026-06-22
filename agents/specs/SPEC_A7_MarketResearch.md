@@ -119,7 +119,7 @@ Antes de 2026-06-16, A7 não tinha `output_key` e o resultado se perdia no state
 
 - **`output_key="market_research_result"` foi bug histórico**: antes de existir, o resultado do A7 ia para um output key default interno do ADK e se perdia para outros agentes. O comentário nas linhas 15-19 do código documenta isso como fix de C6.2/C6.4. Ao criar novos agentes com `build_llm_agent`, sempre declarar `output_key` explícito se o resultado precisa ser acessado por outros agentes.
 
-- **A7 é acionado pelo root_agent, não pelo pipeline sequencial A0-A6**: o pipeline GymSite Intelligence corre A0→A1→A2→A3a→A3b→A3c→A4→A5→A6 de forma sequencial. A7 é um agente lateral acionado pelo `root_agent` quando o usuário pede pesquisa ad-hoc ou quando o pipeline falha em capturar dados de pico. Não é parte do fluxo normal de um relatório completo.
+- **A7 é acionado pelo root_agent, não pelo pipeline de viabilidade**: o pipeline GymSite Intelligence corre A0 → A1 → ParallelAnalysis(A2, A3a→A3b, A4) → A6 → A9. A7 é um agente lateral acionado pelo `root_agent` quando o usuário pede pesquisa ad-hoc ou quando o pipeline falha em capturar dados de pico. Não é parte do fluxo normal de um relatório completo.
 
 - **Queries de horários de pico são fallback do Playwright**: o scraper Playwright tenta capturar `popular_times` do Knowledge Panel do Google Maps. Quando esse dado não está disponível (negócio novo, Knowledge Panel incompleto), o root_agent pode delegar ao A7 para construir uma narrativa de pico baseada em reviews recentes e referências online.
 

@@ -52,7 +52,7 @@ root_agent (GymSiteIntelligence)
 
 **Agentes fora do pipeline de viabilidade:**
 - **A5 ContactHunter**: definido e importado, mas não incluído no `GymSitePipeline` (linha 163–165 de `agent.py`). Pertence à rota de prospecção (VEC-410 / Apollo people_search), não à viabilidade. Remover custo ~R$0,17/relatório e 1 step de latência.
-- **A3c CompetitorMapper**: desligado em 12/06 (comentado na linha 140–145). Crash Playwright sync dentro de loop async no Windows (run `9213f40d`). Religar somente após sandbox em subprocesso.
+- **A3c CompetitorMapper**: REMOVIDO (jun/2026). Era `LlmAgent` dead code; sua função (mapear oferta) foi fundida no A3b determinístico. A oferta migrou Playwright→SearchAPI, matando o crash sync/async no Windows (run `9213f40d`).
 - **A7 MarketResearch**: importado como função dentro de A3a/A4 (não como AgentTool no grafo).
 - **A8 ValidadorCruzado**: invocado via `tools/a8_runner.run_a8_validation()` dentro do `after_agent_callback` do A6. Não é nó do grafo.
 
@@ -93,8 +93,8 @@ Agentes LLM são construídos via `tools/agent_factory.build_llm_agent()`. A fac
 **RN-ORCH-005 — A5 ContactHunter excluído da viabilidade**
 A5 foi removido do `GymSitePipeline` explicitamente (linha 163). Responsabilidade separada: viabilidade responde "devo abrir?"; prospecção responde "quem contatar?" (conforme `feedback_separar_viabilidade_prospeccao`). Qualquer PR que reinsira A5 no pipeline principal exige justificativa de negócio.
 
-**RN-ORCH-006 — A3c desligado até sandbox em subprocesso**
-`competitor_mapper_agent` está comentado no `CompetitorPipeline` (linha 140–145). É modo shadow (A6 não consome `oferta_concorrentes`, GymSite #127). Re-habilitação exige: (a) mover Playwright para subprocesso isolado, (b) smoke E2E no Windows, (c) atualizar esta SPEC.
+**RN-ORCH-006 — A3c fundido no A3b (removido do grafo)**
+`competitor_mapper_agent` foi REMOVIDO (arquivo `agents/a3c_competitor_mapper.py` deletado). O `CompetitorPipeline` é só A3a → A3b. O A3b (BaseAgent determinístico) absorveu o mapeamento de oferta: chama `mapear_oferta_competidores_completo` (site via httpx + Instagram via SearchAPI `engine=instagram_profile`, sem Playwright/Outscraper) e mescla os serviços por concorrente, gravando `oferta_concorrentes` no state.
 
 **RN-ORCH-007 — Modo Crowdsource detectado pelo root_agent**
 Palavras-chave: "indicações da comunidade", "formulário", "campanha", "pesquisa", "votação" ou lista de bairros sugeridos por terceiros. Ativa `bairros_indicados=[...]` na delegação. A6 renderiza seção especial "Demanda Social Detectada".
@@ -151,8 +151,8 @@ A3a é `BaseAgent` (não chama modelo). `"after_model_callback" in getattr(type(
 **Gotcha #4 — Ordem de chain nos callbacks importa.**
 `_attach_telemetry` encadeia na ordem: `otel_before` → `progress_before` (before); `otel_after` → `state_dump` → `progress_after` (after). Alterar a ordem pode fazer `state_dump` rodar antes do estado ser atualizado pelo `otel_after`.
 
-**Gotcha #5 — A3c desligado e GymSite #127 aberto.**
-`oferta_concorrentes` (A3c) não está sendo gravado no state em produção. O A9 `_resumo_oferta_e_gaps()` usa `inteligencia_competitiva` (A3b) como fallback. Quando A3c for reabilitado, A6 precisará ser atualizado para consumir `oferta_concorrentes` (issue #127 aberto).
+**Gotcha #5 — `oferta_concorrentes` agora vem do A3b (ex-A3c).**
+Com a fusão, `oferta_concorrentes` passa a ser gravado pelo A3b no mesmo passo da análise competitiva (não há mais agente A3c separado). O A9 `_resumo_oferta_e_gaps()` consome a oferta mesclada em `inteligencia_competitiva.concorrentes_detalhados[*].servicos_oferecidos`.
 
 **Gap C6.4 — `InMemorySessionService` (conhecido, sem mitigação atual):**
 O state de orquestração vive apenas em memória durante a sessão ADK. Não há checkpoint externo recuperável. Em caso de crash do processo durante o pipeline, o usuário precisa re-submeter a análise do zero. Mitigação futura: `DatabaseSessionService` (Supabase) ou `VertexAISessionService`.

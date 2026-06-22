@@ -28,7 +28,7 @@ Consolidar os outputs dos agentes A0-A5 em um relatório executivo markdown estr
 | `analise_demografica` | dict/str | A2 | Score demográfico + perfil sexo/público |
 | `concorrentes_brutos` | dict/str | A3a | Envelope de busca bruta (raio 3km) + metadados de redes |
 | `inteligencia_competitiva` | dict/str | A3b | Análise profunda de concorrentes: scores, dores, posicionamento |
-| `oferta_concorrentes` | dict/str/JSON | A3c | Mapeamento de planos/mensalidades por academia |
+| `oferta_concorrentes` | dict/str/JSON | A3b (oferta fundida do ex-A3c) | Mapeamento de planos/mensalidades por academia |
 | `analise_financeira` | dict/str | A4 | Cenários financeiros, modelo recomendado, alertas |
 | `analise_financeira_pronto` | dict | A4 callback | Snapshot determinístico do A4 (preferido sobre echo do LLM) |
 | `contato_decisor` | dict | A5 | Decisor do candidato #1 + script de abordagem |

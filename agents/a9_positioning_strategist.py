@@ -10,7 +10,7 @@ ENTRADAS (state keys reais do pipeline):
   - candidatos_geoscout      → A1
   - analise_demografica      → A2
   - inteligencia_competitiva → A3b
-  - oferta_concorrentes      → A3c
+  - oferta_concorrentes      → A3b (oferta fundida do ex-A3c)
   - analise_financeira       → A4
   - contato_decisor          → A5
   - relatorio_md             → A6
@@ -162,10 +162,28 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
             (inner.get("concorrentes_detalhados") or inner.get("concorrentes") or [])
             if isinstance(inner, dict) else []
         )
-        hr = avaliar_posicionamento(cidade, uf, bairro, concorrentes=concorrentes)
+        # Sinais da Zona de Percepção (§2.1): gaps reais + densidade competitiva.
+        gaps_pre = _gaps_reais(state)
+        tem_gaps = bool(gaps_pre)
+        nivel_sat = (inner.get("nivel_saturacao") if isinstance(inner, dict) else None) or ""
+        densidade_baixa = not str(nivel_sat).upper().startswith(("ALTO", "SATURAD"))
+        hr = avaliar_posicionamento(cidade, uf, bairro, concorrentes=concorrentes,
+                                    densidade_premium_baixa=densidade_baixa, tem_gaps=tem_gaps)
         if hr.get("status") != "ok":
             return
         parsed["headroom_renda"] = hr  # renda_pc/percentil/tier sempre determinísticos
+        # §2.1 — Zona de Percepção determinística sobrepõe (campos novos no output do A9).
+        if hr.get("zona_percepcao"):
+            parsed["zona_percepcao"] = hr.get("zona_percepcao")
+            parsed["zona_nome"] = hr.get("zona_nome")
+            parsed["zona_descricao"] = hr.get("zona_descricao")
+        # §2.2 — alertas financeiros/fiscais determinísticos (consome A4).
+        try:
+            parsed["alertas_financeiros_fiscais"] = _alertas_financeiros_fiscais(
+                state, hr.get("tier_modelo_percentil"), hr.get("ticket_teto_sustentavel")
+            )
+        except Exception:
+            logger.warning("A9 alertas fiscais falharam", exc_info=True, extra={"agent": "A9"})
         # GAPs determinísticos: o PDF/relatório lê gaps_identificados (output estruturado);
         # o LLM chutava genérico (Nutrição/Recovery/Silver). Sobrepõe pelo dado real da praça.
         gaps_reais = _gaps_reais(state)
@@ -415,6 +433,128 @@ def _sintese_posicionamento_narrada(state: dict, parsed: dict) -> str:
     return r["texto"]
 
 
+def _cenario_recomendado_a4(state: dict) -> dict:
+    """Extrai o cenário RECOMENDADO do A4 (state['analise_financeira']) — fonte dos
+    campos fiscais/ocupação novos (FASE 1): ticket_piso_ocupacao, ocupacao_pct,
+    anexo_simples, fator_r, tributos_mensal. Tolerante: dict ou str (parseia)."""
+    fin = _parse_market_context(state.get("analise_financeira"))
+    if not isinstance(fin, dict):
+        return {}
+    # o A4 às vezes embrulha em {"analise_financeira": {...}}
+    if isinstance(fin.get("analise_financeira"), dict):
+        fin = fin["analise_financeira"]
+    cenarios = fin.get("cenarios") if isinstance(fin.get("cenarios"), dict) else {}
+    if not cenarios:
+        return {}
+    rec = fin.get("recomendacao") or fin.get("recomendacao_modelo") or ""
+    rec_l = str(rec).strip().lower()
+    # casa pelo label do modelo OU pelo modelo_key; senão pega o primeiro cenário.
+    for c in cenarios.values():
+        if isinstance(c, dict) and (
+            str(c.get("modelo") or "").strip().lower() == rec_l
+            or str(c.get("modelo_key") or "").strip().lower() == rec_l
+        ):
+            return c
+    primeiro = next((c for c in cenarios.values() if isinstance(c, dict)), {})
+    return primeiro or {}
+
+
+def _alertas_financeiros_fiscais(state: dict, tier: str | None, ticket_rec) -> list[dict]:
+    """Alertas determinísticos (sem LLM) cruzando A9 × A4 — PLANO_MOTOR_FINANCEIRO_V3 §2.2
+    + adendo M&A (Valuation readiness). 3 tipos:
+      1. FATOR_R          — tier Mid/Premium: CNAE 9313-1/00 nasce Anexo V 15,5%; migra
+                            Anexo III 6% só com folha+pró-labore ≥28% do faturamento.
+      2. OCUPACAO_TICKET  — ticket_rec < ticket_piso_ocupacao do A4 (insustentável pelo aluguel).
+      3. KPI_BENCHMARK    — metas por tier atreladas ao Valuation (múltiplo EBITDA Boutique 3,8-6,5x).
+    Fonte sempre citada (determinístico/benchmark). Consome state['analise_financeira'] (A4)."""
+    from tools.parametros_metodologia import param
+
+    alertas: list[dict] = []
+    tier_norm = str(tier or "").strip()
+    is_mid_premium = tier_norm in ("Mid Market", "Premium")
+    cen = _cenario_recomendado_a4(state)
+
+    # ── 1) FATOR_R (gatilho tier Mid/Premium) ──
+    if is_mid_premium:
+        anexo_atual = cen.get("anexo_simples")
+        fator_r = cen.get("fator_r")
+        corte = param("fator_r_corte_folha")  # 0.28
+        if anexo_atual:
+            diag_anexo = (
+                f"A4 projeta Anexo {anexo_atual} (Fator R = {fator_r} ≷ corte {corte:.0%})."
+            )
+        else:
+            diag_anexo = "Anexo do A4 indisponível — assuma Anexo V (15,5%) até comprovar folha."
+        alertas.append({
+            "tipo": "FATOR_R",
+            "severidade": "ALTA",
+            "titulo": "Fator R: folha+pró-labore ≥28% migra o Simples do Anexo V (15,5%) p/ III (6%)",
+            "diagnostico": (
+                f"Academia (CNAE 9313-1/00, sem MEI) NASCE no Anexo V (15,5%). Só migra para o "
+                f"Anexo III (6%) com folha+pró-labore ≥ {corte:.0%} do faturamento (Fator R). "
+                f"{diag_anexo} Em tier {tier_norm}, proteger a folha é alavanca fiscal, não custo a cortar."
+            ),
+            "anexo_atual": anexo_atual,
+            "fator_r": fator_r,
+            "corte_fator_r": corte,
+            "fonte": "deterministico (LC 123/2006 — Fator R) + A4 analise_financeira",
+        })
+
+    # ── 2) OCUPACAO_TICKET (ticket_rec < ticket_piso_ocupacao do A4) ──
+    ticket_piso = cen.get("ticket_piso_ocupacao")
+    ocup_pct = cen.get("ocupacao_pct")
+    teto_ocup = cen.get("teto_ocupacao")
+    if (isinstance(ticket_rec, (int, float)) and isinstance(ticket_piso, (int, float))
+            and ticket_rec < ticket_piso):
+        ocup_txt = f"{ocup_pct:.0%}" if isinstance(ocup_pct, (int, float)) else "indisponível"
+        teto_txt = f"{teto_ocup:.0%}" if isinstance(teto_ocup, (int, float)) else "teto"
+        alertas.append({
+            "tipo": "OCUPACAO_TICKET",
+            "severidade": "CRITICA",
+            "titulo": "Ticket viável pela renda, mas insustentável pelo aluguel",
+            "diagnostico": (
+                f"O ticket recomendado (R$ {ticket_rec:.0f}) é menor que o piso de ocupação do A4 "
+                f"(R$ {ticket_piso:.0f}) — o aluguel não cabe no teto. Ocupação projetada {ocup_txt} "
+                f"> teto {teto_txt}: ticket sustentável pela renda, insustentável pelo aluguel. "
+                f"Subir ticket, reduzir área ou renegociar locação."
+            ),
+            "ticket_recomendado": round(float(ticket_rec), 2),
+            "ticket_piso_ocupacao": round(float(ticket_piso), 2),
+            "ocupacao_pct": ocup_pct,
+            "teto_ocupacao": teto_ocup,
+            "fonte": "deterministico (A4 ticket_piso_ocupacao × teto de ocupação imobiliária)",
+        })
+
+    # ── 3) KPI_BENCHMARK (metas por tier, atreladas ao Valuation — adendo M&A) ──
+    tier_key = {"Premium": "premium", "Mid Market": "mid", "Low Cost": "low"}.get(tier_norm, "mid")
+    cac_max = param("cac_max_valuation")          # R$180
+    ret_min = param("retencao_ano_min_valuation")  # 0.85
+    ltv_key = "ltv_aluno_min_premium" if tier_key == "premium" else "ltv_aluno_min_mid"
+    ltv_min = param(ltv_key) if tier_key in ("premium", "mid") else param("ltv_aluno_min_mid")
+    mult_min = param(f"multiplo_ebitda_{tier_key}_min")
+    mult_max = param(f"multiplo_ebitda_{tier_key}_max")
+    alertas.append({
+        "tipo": "KPI_BENCHMARK",
+        "severidade": "MEDIA",
+        "titulo": "KPIs de Valuation readiness (M&A) — blindam o plano contra otimismo e furo em due-diligence",
+        "diagnostico": (
+            f"Para sustentar o múltiplo do tier {tier_norm} ({mult_min:g}–{mult_max:g}× EBITDA; "
+            f"Boutique/Premium 3,8–6,5×), o A4 e a operação precisam comprovar: "
+            f"CAC < R$ {cac_max:.0f}/aluno, retenção anual > {ret_min:.0%} (churn < ~5%/mês), "
+            f"LTV/aluno > R$ {ltv_min:.0f}. Teto de ocupação >15% derruba metade do valuation."
+        ),
+        "metas": {
+            "cac_max": cac_max,
+            "retencao_ano_min": ret_min,
+            "ltv_aluno_min": ltv_min,
+            "multiplo_ebitda": [mult_min, mult_max],
+        },
+        "fonte": "benchmark M&A (Boutique/Premium 3,8-6,5x EBITDA) + parametros_metodologia §2.5",
+    })
+
+    return alertas
+
+
 def _errc_deterministica(state: dict) -> dict:
     """ERRC + posicionamento 100% DETERMINÍSTICO, da matéria-prima já calculada:
     headroom de renda (avaliar_posicionamento — IBGE Censo 2022 × ticket dos concorrentes),
@@ -439,31 +579,8 @@ def _errc_deterministica(state: dict) -> dict:
                          if isinstance(inner, dict) else []) if isinstance(c, dict)]
     nivel_sat = (inner.get("nivel_saturacao") if isinstance(inner, dict) else None) or "indeterminada"
 
-    hr = avaliar_posicionamento(cidade, uf, bairro, concorrentes=concs) if (cidade and bairro) else {"status": "sem_local"}
-    ok = hr.get("status") == "ok"
-    veredito = (hr.get("veredito_posicionamento") if ok else None) or "INDETERMINADO"
-    ticket_rec = hr.get("ticket_teto_sustentavel") if ok else None
-    ticket_mkt = hr.get("ticket_mercado") if ok else None
-    ratio = hr.get("headroom_ratio") if ok else None
-    tier = hr.get("tier_modelo_percentil") if ok else None
-
-    # banda de ticket: piso = mercado atual, teto = teto sustentável da renda (recomendado).
-    ticket_min = round(ticket_mkt) if isinstance(ticket_mkt, (int, float)) else None
-    ticket_max = round(ticket_rec) if isinstance(ticket_rec, (int, float)) else None
-
-    # comparativo de mercado: menor plano REAL de cada concorrente + o recomendado.
-    comparativo: dict = {}
-    for c in concs:
-        precos = [p.get("preco_mensal") for p in (c.get("planos_precos") or [])
-                  if isinstance(p, dict) and p.get("preco_mensal")]
-        precos = [float(x) for x in precos if isinstance(x, (int, float))]
-        if precos:
-            comparativo[str(c.get("nome") or "?")[:24]] = round(min(precos))
-    comparativo = dict(list(comparativo.items())[:5])
-    if isinstance(ticket_rec, (int, float)):
-        comparativo["recomendado"] = round(ticket_rec)
-
-    # penetração dos serviços do catálogo (universo) na oferta real dos concorrentes
+    # penetração dos serviços do catálogo (universo) na oferta real dos concorrentes.
+    # Calculado ANTES do avaliar_posicionamento → alimenta os sinais da Zona de Percepção.
     universo = sorted(set(_SERVICOS_CATALOGO.values()))
     pen: Counter = Counter()
     for c in concs:
@@ -477,6 +594,51 @@ def _errc_deterministica(state: dict) -> dict:
     }
     gaps = [s for s in universo if pen.get(s, 0) == 0] if n else []
 
+    # Sinais da Zona de Percepção (§2.1): tem_gaps = há serviço que ninguém oferece;
+    # densidade_baixa = saturação NÃO alta/saturada (poucos players no raio).
+    tem_gaps = bool(gaps)
+    densidade_baixa = not str(nivel_sat).upper().startswith(("ALTO", "SATURAD"))
+
+    hr = (avaliar_posicionamento(cidade, uf, bairro, concorrentes=concs,
+                                 densidade_premium_baixa=densidade_baixa, tem_gaps=tem_gaps)
+          if (cidade and bairro) else {"status": "sem_local"})
+    ok = hr.get("status") == "ok"
+    veredito = (hr.get("veredito_posicionamento") if ok else None) or "INDETERMINADO"
+    zona_percepcao = hr.get("zona_percepcao") if ok else None
+    zona_nome = hr.get("zona_nome") if ok else None
+    zona_descricao = hr.get("zona_descricao") if ok else None
+    ticket_rec = hr.get("ticket_teto_sustentavel") if ok else None
+    ticket_mkt = hr.get("ticket_mercado") if ok else None
+    ratio = hr.get("headroom_ratio") if ok else None
+    tier = hr.get("tier_modelo_percentil") if ok else None
+
+    # banda de ticket: piso = mercado atual, teto = teto sustentável da renda (recomendado).
+    ticket_min = round(ticket_mkt) if isinstance(ticket_mkt, (int, float)) else None
+    ticket_max = round(ticket_rec) if isinstance(ticket_rec, (int, float)) else None
+
+    # §2.3 — piso de ticket pela ocupação (aluguel) do A4 + flag de insustentabilidade.
+    cen_a4 = _cenario_recomendado_a4(state)
+    ticket_piso_ocupacao = cen_a4.get("ticket_piso_ocupacao")
+    ticket_insustentavel_aluguel = bool(
+        isinstance(ticket_rec, (int, float)) and isinstance(ticket_piso_ocupacao, (int, float))
+        and ticket_rec < ticket_piso_ocupacao
+    )
+
+    # §2.2 — alertas financeiros/fiscais determinísticos (FATOR_R, OCUPACAO_TICKET, KPI_BENCHMARK).
+    alertas_financeiros_fiscais = _alertas_financeiros_fiscais(state, tier, ticket_rec)
+
+    # comparativo de mercado: menor plano REAL de cada concorrente + o recomendado.
+    comparativo: dict = {}
+    for c in concs:
+        precos = [p.get("preco_mensal") for p in (c.get("planos_precos") or [])
+                  if isinstance(p, dict) and p.get("preco_mensal")]
+        precos = [float(x) for x in precos if isinstance(x, (int, float))]
+        if precos:
+            comparativo[str(c.get("nome") or "?")[:24]] = round(min(precos))
+    comparativo = dict(list(comparativo.items())[:5])
+    if isinstance(ticket_rec, (int, float)):
+        comparativo["recomendado"] = round(ticket_rec)
+
     # ── 4 dimensões ERRC (template ANCORADO no dado, não no palpite do LLM) ──
     eliminar = ["Guerra de preço / planos genéricos low-cost — destrói margem no oceano vermelho."]
     if str(nivel_sat).upper().startswith("ALTO"):
@@ -485,6 +647,15 @@ def _errc_deterministica(state: dict) -> dict:
                "Capacidade ociosa em horário de baixa — escalonar a grade."]
     if veredito == "VERMELHO":
         reduzir.append("Ambição premium sem lastro de renda (headroom baixo) — calibrar para o tier real.")
+    # §2.4 — Trava ERRC: em tier Mid/Premium NÃO cortar folha/comissão. A folha vira
+    # alavanca a PROTEGER (Fator R ≥28% migra Simples Anexo V→III + churn premium sobe se
+    # corta equipe). Mantém os cortes de CAC/ociosidade acima; só adiciona a trava condicional.
+    if str(tier or "").strip() in ("Mid Market", "Premium"):
+        reduzir.append(
+            f"PROTEGER a folha (NÃO cortar salário/comissão): em tier {tier} a folha é "
+            f"alavanca, não custo — Fator R ≥28% migra o Simples do Anexo V (15,5%) p/ III (6%), "
+            f"e cortar equipe dispara o churn premium. Reduza CAC e ociosidade, jamais a folha."
+        )
     aumentar = []
     if ratio and veredito in ("OCEANO_AZUL", "TRANSICAO"):
         aumentar.append(
@@ -508,11 +679,24 @@ def _errc_deterministica(state: dict) -> dict:
     tk_rec = f"R$ {ticket_rec:.0f}" if isinstance(ticket_rec, (int, float)) else "indisponível"
     tk_mkt = f"R$ {ticket_mkt:.0f}" if isinstance(ticket_mkt, (int, float)) else "indisponível"
     head = f" (headroom ratio {ratio}, tier {tier})" if ratio else ""
+    # §2.1 — linha da Zona de Percepção (substitui as 3 caixas; veredito vira derivado).
+    zona_linha = (
+        f"**Zona de Percepção:** {zona_percepcao} — {zona_nome} ({zona_descricao})\n"
+        if zona_percepcao else ""
+    )
+    # §2.3 — alerta de ticket insustentável pelo aluguel (cruza piso de ocupação do A4).
+    ocup_linha = (
+        f"**⚠️ Ticket viável pela renda mas insustentável pelo aluguel:** "
+        f"piso de ocupação (A4) R$ {ticket_piso_ocupacao:.0f} > ticket recomendado {tk_rec}.\n"
+        if ticket_insustentavel_aluguel and isinstance(ticket_piso_ocupacao, (int, float)) else ""
+    )
     markdown = (
         f"## Posicionamento Estratégico — {loc}\n\n"
-        f"**Veredito:** {veredito}{head}\n"
+        f"{zona_linha}"
+        f"**Veredito (legado):** {veredito}{head}\n"
         f"**Ticket recomendado:** {tk_rec} (teto sustentável da renda) · "
-        f"**ticket de mercado atual:** {tk_mkt}\n\n"
+        f"**ticket de mercado atual:** {tk_mkt}\n"
+        f"{ocup_linha}\n"
         f"### Framework ERRC\n"
         f"**ELIMINAR**\n{_bul(eliminar)}\n\n"
         f"**REDUZIR**\n{_bul(reduzir)}\n\n"
@@ -526,13 +710,23 @@ def _errc_deterministica(state: dict) -> dict:
 
     return {
         "markdown": markdown,
+        # §2.1 — 6 Zonas de Percepção (campos novos); veredito legado DERIVADO da zona (compat).
+        "zona_percepcao": zona_percepcao,
+        "zona_nome": zona_nome,
+        "zona_descricao": zona_descricao,
         "veredito_posicionamento": veredito,
-        "fonte_veredito": "deterministico_headroom_renda (IBGE Censo 2022)",
+        "fonte_veredito": "deterministico_zona_percepcao (headroom IBGE Censo 2022) — veredito legado derivado",
         "recomendacao_ticket": {
             "ticket_recomendado": ticket_rec, "ticket_mercado": ticket_mkt,
             "ticket_minimo": ticket_min, "ticket_maximo": ticket_max,
             "comparativo_mercado": comparativo,
-            "fonte": "ticket_teto_sustentavel = renda_pc × ticket_renda_pct_premium (param)",
+            # §2.3 — cruzamento com o piso de ocupação (aluguel) do A4.
+            "ticket_piso_ocupacao": (
+                round(float(ticket_piso_ocupacao), 2)
+                if isinstance(ticket_piso_ocupacao, (int, float)) else None
+            ),
+            "ticket_insustentavel_aluguel": ticket_insustentavel_aluguel,
+            "fonte": "ticket_teto_sustentavel = renda_pc × ticket_renda_pct_premium (param); piso de ocupação do A4",
         },
         "gaps_identificados": (
             [f"{g} — nenhum concorrente da praça oferece (oportunidade de CRIAR)" for g in gaps]
@@ -542,6 +736,8 @@ def _errc_deterministica(state: dict) -> dict:
         "mapa_servicos": mapa_servicos,
         "framework_errc": {"eliminar": eliminar, "reduzir": reduzir,
                            "aumentar": aumentar, "criar": criar},
+        # §2.2 — alertas determinísticos financeiros/fiscais (consome A4 analise_financeira).
+        "alertas_financeiros_fiscais": alertas_financeiros_fiscais,
         "headroom_renda": hr if ok else None,
         "fonte_geracao": "deterministico_errc",
     }

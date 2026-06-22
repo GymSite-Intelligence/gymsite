@@ -41,8 +41,7 @@ Backend FastAPI (api.py :8000)
 │                          listings OLX & ImovelWeb           │
 │ A2 DemoAnalyst         → IBGE Censo 2022 (BigQuery)         │
 │ A3a CompetitorSearch   → Places textSearch (âncora bairro)  │
-│ A3b CompetitorAnalysis → LLM extrai dores das reviews ≤ 1a  │
-│ A3c CompetitorMapper   → Top 10 balanceado + horários pico  │
+│ A3b CompetitorAnalysis → Dores/gaps/score + oferta (det.)   │
 │ A4 FinancialEstimator  → Aluguel mediano + CAPEX + payback  │
 │ A5 ContactHunter       → Decisor + script SPIN              │
 │ A6 ReportConsolidator  → Veredito + persist Supabase        │
@@ -109,27 +108,18 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A3b — CompetitorAnalysis
 **Arquivo:** `agents/a3b_competitor_analysis.py`  
-**Modelo:** Gemini 2.5 Flash  
+**Modelo:** nenhum — **`BaseAgent` determinístico (sem LLM)** desde 2026-06  
 **Input:** `concorrentes_brutos` do A3a (via session state)  
-**Output:** `inteligencia_competitiva`, `score_concorrencia`, `posicionamento_recomendado`, `estrategia_counter_programming`
+**Output:** `inteligencia_competitiva`, `oferta_concorrentes`, `score_concorrencia`, `posicionamento_recomendado`, `estrategia_counter_programming`
 
 - Recebe os dados brutos do A3a e produz:
   - Gaps competitivos, dores nominadas e oportunidades
   - Estratégia de counter-programming (picos/vales de horário)
   - Score numérico de saturação
   - Posicionamento recomendado para o novo negócio
+- **Absorveu o antigo A3c (jun/2026):** no mesmo passo determinístico mapeia a oferta de cada concorrente — **site oficial via httpx + Instagram via SearchAPI `engine=instagram_profile`** (sem Playwright/Outscraper) — e **mescla as modalidades em `servicos_oferecidos` por concorrente**, gravando `oferta_concorrentes` no state. Isso evita gap falso na ERRC do A9 (recomendar "criar" algo que o concorrente já oferece).
+- **BaseAgent determinístico:** roda as macros direto e grava via `state_delta`. Substitui o `LlmAgent`-eco que crashava com `MALFORMED_FUNCTION_CALL` e dropava campos.
 - NÃO faz busca — consome apenas o state do A3a.
-
-### A3c — CompetitorMapper
-**Arquivo:** `agents/a3c_competitor_mapper.py`  
-**Modelo:** Gemini 2.5 Flash  
-**Input:** top 10 concorrentes do A3b  
-**Output:** `oferta_concorrentes` (shadow mode)
-
-- Visita **site oficial + Instagram público** dos top 10 concorrentes.
-- Extrai modalidades, faixa de preço e diferenciais via keyword matching + normalização LLM.
-- **Modo SHADOW (default desde 2026-05-12):** output é gravado no state, mas o A6 ReportConsolidator ainda **não consome** ativamente. Feature flag `A3C_ENFORCE` no A6 ainda desativada — validar acurácia em 5 relatórios antes de ativar.
-- Motivação: evitar que o relatório recomende "explorar piscina + área kids" quando o concorrente já oferece ambos.
 
 ### A4 — FinancialEstimator
 **Arquivo:** `agents/a4_financial_estimator.py`  
@@ -204,7 +194,6 @@ gymsite_intelligence/
 │   ├── a2_demo_analyst.py
 │   ├── a3a_competitor_search.py
 │   ├── a3b_competitor_analysis.py
-│   ├── a3c_competitor_mapper.py
 │   ├── a4_financial_estimator.py
 │   ├── a5_contact_hunter.py
 │   ├── a6_report_consolidator.py
@@ -271,25 +260,6 @@ npm run dev   # :5174
 ```
 
 `.env` do frontend precisa de `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` + `VITE_API_BASE=http://localhost:8000`.
-
-### shadcn/ui (private registry `@gymsite`)
-
-O `frontend/components.json` define um registry privado `@gymsite` usando placeholders `${REGISTRY_URL}` e `${REGISTRY_TOKEN}`.
-O **shadcn CLI lê essas variáveis do ambiente do processo (shell)** e **não carrega `frontend/.env*`**.
-
-Workflow recomendado (PowerShell, a partir da raiz do repo):
-
-```powershell
-# 1) Preencha REGISTRY_URL e REGISTRY_TOKEN no .env da raiz
-#    (copie de .env.example → .env)
-#
-# 2) Exporte as variáveis na sua sessão (ou use um .env loader externo)
-$env:REGISTRY_URL="https://registry.vectracargo.com.br"
-$env:REGISTRY_TOKEN="..."
-
-# 3) Rode o shadcn
-npx shadcn@latest add @gymsite/<componente>
-```
 
 ### Login
 

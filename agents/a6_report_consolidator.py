@@ -975,7 +975,7 @@ def _renderizar_secao_bairros_alternativos(pronto: dict) -> str:
 
 def _renderizar_secao_ofertas_mapeadas(oferta_raw, concorrentes: list) -> str:
     """
-    Renderiza markdown das ofertas reais mapeadas via A3c CompetitorMapper.
+    Renderiza markdown das ofertas reais mapeadas pelo A3b (ex-A3c fundido).
     Anexado ao system instruction do A6 para que o LLM use os dados reais
     de planos, mensalidades e diferenciais em vez de silêncio/reviews apenas.
     """
@@ -3003,7 +3003,7 @@ def _a6_after_agent_callback(callback_context):
     try:
         relatorio = _extrair_relatorio_estruturado(callback_context)
 
-        # Shadow A3c
+        # oferta_concorrentes (gravado pelo A3b, ex-A3c fundido)
         try:
             state_shadow = getattr(callback_context, "state", {}) or {}
             oferta_raw = state_shadow.get("oferta_concorrentes")

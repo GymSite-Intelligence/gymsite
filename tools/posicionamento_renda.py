@@ -101,17 +101,96 @@ def _mediana_ticket_concorrentes(concorrentes: list[dict]) -> tuple[float | None
     return None, "indisponivel"
 
 
+# ── 6 Zonas de Percepção (Zonas de Valor — Luiza Castanho) ───────────────────
+# PLANO_MOTOR_FINANCEIRO_V3 §2.1. Substitui o veredito de 3 caixas (OCEANO_AZUL/
+# TRANSICAO/VERMELHO) por um raio-X de posicionamento em 6 zonas. A classificação é
+# DETERMINÍSTICA, a partir do headroom de renda (ratio = ticket_teto / ticket_mercado),
+# do tier de renda, da densidade competitiva e da contagem de gaps reais.
+#   1 Comodidade — oceano vermelho, só preço (sem headroom).
+#   2 Satisfação — conveniência, sem diferenciação.
+#   3 Resultado — custo-benefício, "teto de vidro".
+#   4 Superação — inovação (há gaps OU densidade baixa).
+#   5 Excelência — status/prestígio (Premium + gaps + densidade baixa).
+#   6 Culto/Pertença — pertença; o PDF afirma que NÃO existe marca no Brasil na Zona 6,
+#     então NUNCA é atribuída automaticamente (alvo aspiracional citado no texto).
+_ZONAS_PERCEPCAO = {
+    1: ("Comodidade", "Oceano vermelho — competição só por preço, sem headroom de renda."),
+    2: ("Satisfação", "Conveniência e proximidade — entrega o básico, sem diferenciação."),
+    3: ("Resultado", "Custo-benefício e entrega de resultado — 'teto de vidro' do mid-market."),
+    4: ("Superação", "Inovação e experiência superior — há espaço real acima do mercado."),
+    5: ("Excelência", "Status e prestígio — marca premium com diferenciação defensável."),
+    6: ("Culto/Pertença", "Pertença e identidade — inexistente no Brasil; alvo aspiracional, nunca calculado."),
+}
+
+
+def classificar_zona_percepcao(
+    ratio: float | None,
+    tier: str | None,
+    densidade_baixa: bool,
+    tem_gaps: bool,
+) -> dict:
+    """Classifica a Zona de Percepção (1..5) a partir dos sinais determinísticos.
+
+    Limiares EXATOS do §2.1 (PLANO_MOTOR_FINANCEIRO_V3 / Zonas de Valor de Luiza Castanho):
+      - ratio < 1.0                        → Zona 1 (Comodidade)
+      - 1.0 ≤ ratio < 1.2                  → Zona 2 (Satisfação)
+      - 1.2 ≤ ratio < 2.0                  → Zona 3 (Resultado)
+      - ratio ≥ 2.0 + (gaps OU dens.baixa) → Zona 4 (Superação)
+      - ratio ≥ 2.0 + Premium + gaps + dens.baixa → Zona 5 (Excelência)
+    Zona 6 (Culto) NUNCA é atribuída automaticamente.
+    Ordem: avalia Zona 5 (mais restritiva) ANTES da Zona 4.
+    Sem ratio → cai na Zona 1 (sem sinal de headroom = posição de preço por padrão).
+    """
+    r = ratio if isinstance(ratio, (int, float)) else 0.0
+    is_premium = str(tier or "").strip().lower() == "premium"
+
+    if r >= 2.0:
+        # Zona 5 primeiro (mais restritiva): Premium + gaps reais + densidade baixa.
+        if is_premium and tem_gaps and densidade_baixa:
+            zona = 5
+        elif tem_gaps or densidade_baixa:
+            zona = 4
+        else:
+            # ratio alto mas sem gaps nem densidade baixa → ainda é "Resultado".
+            zona = 3
+    elif r >= 1.2:
+        zona = 3
+    elif r >= 1.0:
+        zona = 2
+    else:
+        zona = 1
+
+    nome, descricao = _ZONAS_PERCEPCAO[zona]
+    return {"zona": zona, "nome": nome, "descricao": descricao}
+
+
+def veredito_legado_de_zona(zona: int | None) -> str | None:
+    """Deriva o veredito legado (compat) a partir da Zona de Percepção.
+    Zona 1-2 → VERMELHO; Zona 3 → TRANSICAO; Zona 4-5 → OCEANO_AZUL. §2.1."""
+    if zona in (1, 2):
+        return "VERMELHO"
+    if zona == 3:
+        return "TRANSICAO"
+    if zona in (4, 5):
+        return "OCEANO_AZUL"
+    return None
+
+
 def avaliar_posicionamento(
     cidade: str, uf: str, bairro: str,
     *,
     concorrentes: list[dict] | None = None,
     ticket_mercado: float | None = None,
     densidade_premium_baixa: bool = True,
+    tem_gaps: bool = False,
 ) -> dict[str, Any]:
     """Veredito de posicionamento DETERMINÍSTICO via headroom de renda + percentil.
 
     ticket_mercado explícito tem precedência; senão calcula a mediana dos concorrentes.
     densidade_premium_baixa confirma o gap (poucos players premium no raio).
+    tem_gaps sinaliza serviços que nenhum concorrente oferece (substrato da Zona 4/5).
+
+    Classifica a Zona de Percepção (§2.1) e DERIVA o veredito legado dela (compat).
     """
     renda = renda_bairro_ipece(cidade, uf, bairro)
     if not renda:
@@ -141,15 +220,17 @@ def avaliar_posicionamento(
     else:
         tier_modelo = "Low Cost"
 
-    # Veredito determinístico
+    # Zona de Percepção (§2.1) — nasce do ratio/tier/densidade/gaps; veredito legado DERIVA dela.
     if ratio is None:
+        zona = None
         veredito = "INDETERMINADO"
-    elif ratio >= param("headroom_ratio_oceano_azul") and densidade_premium_baixa:
-        veredito = "OCEANO_AZUL"
-    elif ratio >= param("headroom_ratio_transicao"):
-        veredito = "TRANSICAO"
+        zona_info = {"zona": None, "nome": None, "descricao": None}
     else:
-        veredito = "VERMELHO"
+        zona_info = classificar_zona_percepcao(
+            ratio, tier_modelo, densidade_baixa=bool(densidade_premium_baixa), tem_gaps=bool(tem_gaps)
+        )
+        zona = zona_info["zona"]
+        veredito = veredito_legado_de_zona(zona) or "INDETERMINADO"
 
     return {
         "status": "ok",
@@ -164,8 +245,12 @@ def avaliar_posicionamento(
         "fonte_ticket_mercado": fonte_ticket,
         "headroom_premium": headroom,
         "headroom_ratio": ratio,
-        "veredito_posicionamento": veredito,
+        # §2.1 — 6 Zonas de Percepção (substitui o veredito de 3 caixas; legado derivado).
+        "zona_percepcao": zona,
+        "zona_nome": zona_info["nome"],
+        "zona_descricao": zona_info["descricao"],
+        "veredito_posicionamento": veredito,  # legado (compat): derivado da zona
         "fonte_renda": renda.get("fonte"),
         "ano_renda": renda.get("ano"),
-        "metodo": "headroom = renda_pc×ticket_renda_pct_premium − ticket_mercado; cutoffs via param()",
+        "metodo": "zona = f(headroom_ratio, tier, densidade, gaps); veredito legado derivado da zona; cutoffs via param()",
     }

@@ -209,6 +209,13 @@ CUSTOS_DETALHADOS_BASE = {
 
 CUSTOS_MARKETING_PCT = param_por_modelo("marketing_pct")
 
+# Folha como % do faturamento (Benchmark Financeiro Academias 2024) — lê
+# folha_pct_fat_{low,mid,premium}. Aplicada como max(piso R$, % da receita).
+FOLHA_PCT_FATURAMENTO = param_por_modelo("folha_pct_fat")
+# Teto de ocupação imobiliária por modelo (Benchmark Financeiro Academias 2024) —
+# lê ocupacao_teto_{low,mid,premium}: (aluguel+condomínio+IPTU)/faturamento.
+OCUPACAO_TETO = param_por_modelo("ocupacao_teto")
+
 # CAPEX detalhado
 CAPEX_DETALHADO_BASE = {
     "equipamentos_por_m2": param_por_modelo("capex_equip_m2"),
@@ -219,11 +226,15 @@ CAPEX_DETALHADO_BASE = {
     "capital_giro_meses": param_int("capex_capital_giro_meses"),
 }
 
-# Sensibilidade — 3 stress tests aplicados em cima do cenário "realista"
+# Sensibilidade — stress tests aplicados em cima do cenário "realista".
+# 1.7: o stress de ocupação (aluguel +20%) reprova quando a razão de ocupação
+# (aluguel+condomínio+IPTU)/faturamento ultrapassa o teto do modelo.
 STRESS_TESTS = [
     {"id": "aluguel_mais_20pct",     "label": "Aluguel +20%",     "delta_aluguel": 0.20},
     {"id": "matriculas_menos_30pct", "label": "Matrículas -30%",  "delta_matriculas": -0.30},
     {"id": "ticket_menos_15pct",     "label": "Ticket -15%",      "delta_ticket": -0.15},
+    {"id": "ocupacao_aluguel_mais_20pct", "label": "Ocupação (aluguel +20%)",
+     "delta_aluguel": 0.20, "check_ocupacao": True},
 ]
 
 # Ticket mensal sustentável ≈ % da renda domiciliar (ACAD / A2).
@@ -422,7 +433,12 @@ def calcular_viabilidade_3_cenarios(
             fornecedor_principal=fornecedor_principal,
             capex_indices=_capex_ctx,
         )["total"]
-        folha = CUSTOS_DETALHADOS_BASE["folha_por_modelo"][faixa_key]
+        # 1.2 Folha = max(piso R$, % do faturamento). Piso preserva realismo na
+        # rampa/operação pequena; % do faturamento captura a escala (Benchmark
+        # Financeiro Academias 2024: low 18% / mid 35% / premium 33%). Também é o
+        # insumo do Fator R (folha/faturamento define Anexo III vs V).
+        folha_min = CUSTOS_DETALHADOS_BASE["folha_por_modelo"][faixa_key]
+        folha = max(folha_min, receita_mensal * FOLHA_PCT_FATURAMENTO[faixa_key])
         custos = {
             "aluguel": round(aluguel_mensal, 2),
             "condominio": round(
@@ -457,8 +473,35 @@ def calcular_viabilidade_3_cenarios(
 
         custos_totais = custos_fixos_total + marketing_mensal
 
+        # ── 1.3 MOTOR FISCAL (Fator R — Simples Nacional CNAE 9313-1/00) ──
+        # LC 123/2006: folha/faturamento ≥ 28% → Anexo III (6% faixa inicial),
+        # senão Anexo V (15,5% faixa inicial). Antes o motor era cego a tributos
+        # (lucro = receita − custos era pré-imposto disfarçado de líquido).
+        fator_r = (folha / receita_mensal) if receita_mensal > 0 else 0.0
+        anexo_simples = "III" if fator_r >= param("fator_r_corte_folha") else "V"
+        aliquota_tributos = (
+            param("aliquota_simples_anexo_iii") if anexo_simples == "III"
+            else param("aliquota_simples_anexo_v")
+        )
+        tributos_mensal = round(receita_mensal * aliquota_tributos, 2)
+
+        # ── 1.4 GUARDRAIL DE OCUPAÇÃO IMOBILIÁRIA ──
+        # Ocupação = (aluguel+condomínio+IPTU)/faturamento. Teto por modelo
+        # (Benchmark Financeiro Academias 2024: low 12,5% / mid 15% / premium 15-16%).
+        # Acima do teto, o aluguel estrangula o caixa estruturalmente (raiz do
+        # 34,3% do caso Cocó).
+        ocupacao_abs = custos["aluguel"] + custos["condominio"] + custos["iptu"]
+        ocupacao_pct = (ocupacao_abs / receita_mensal) if receita_mensal > 0 else 1.0
+        teto_ocup = OCUPACAO_TETO[faixa_key]
+        # Ticket mínimo p/ a ocupação caber no teto, à mesma matrícula realista.
+        ticket_piso_ocupacao = (
+            ocupacao_abs / (teto_ocup * matr_real * (1.0 - inadimplencia))
+        ) if (matr_real > 0 and (1.0 - inadimplencia) > 0) else None
+        ocupacao_estoura = ocupacao_pct > teto_ocup
+
         # ── RESULTADO ──
-        lucro_mensal = receita_mensal - custos_totais
+        # 1.3: lucro agora é LÍQUIDO de imposto (receita − custos − tributos).
+        lucro_mensal = receita_mensal - custos_totais - tributos_mensal
         margem_pct = (lucro_mensal / receita_mensal * 100) if receita_mensal > 0 else 0
         alunos_break_even = (
             int(custos_totais / ticket_realizado) + 1
@@ -492,9 +535,16 @@ def calcular_viabilidade_3_cenarios(
         )
 
         # ── VEREDITO ──
-        viabilidade = _classificar_viabilidade(lucro_mensal, payback_meses, margem_pct)
+        # 1.5: ocupação acima do teto rebaixa o veredito para INVIAVEL
+        # (estrangulamento estrutural de caixa, independente do payback).
+        viabilidade = _classificar_viabilidade(
+            lucro_mensal, payback_meses, margem_pct,
+            ocupacao_estoura=ocupacao_estoura,
+        )
 
-        # ── SENSIBILIDADE (3 stress tests) ──
+        # ── SENSIBILIDADE (3 stress tests + stress de ocupação) ──
+        # 1.7: passa ocupacao_abs/teto p/ medir a razão de ocupação (base e +20%
+        # aluguel) e reprovar quando estoura o teto.
         sensibilidade = _calcular_sensibilidade(
             base_aluguel=aluguel_mensal,
             base_matriculas=matr_real,
@@ -503,6 +553,8 @@ def calcular_viabilidade_3_cenarios(
             marketing_pct=mkt_pct,
             inadimplencia=TAXA_INADIMPLENCIA,
             investimento_total=investimento_total,
+            ocupacao_nao_aluguel=ocupacao_abs - custos["aluguel"],
+            teto_ocupacao=teto_ocup,
         )
 
         cenarios[faixa_key] = {
@@ -533,6 +585,21 @@ def calcular_viabilidade_3_cenarios(
             "marketing_pct_faturamento": mkt_pct,
             "marketing_mensal": marketing_mensal,
             "custos_totais": round(custos_totais, 2),
+
+            # Fiscal (1.3 — Fator R CNAE 9313-1/00, LC 123/2006)
+            "tributos_mensal": tributos_mensal,
+            "aliquota_tributos": round(aliquota_tributos, 4),
+            "fator_r": round(fator_r, 4),
+            "anexo_simples": anexo_simples,
+            "folha_pct_efetivo": round((folha / receita_mensal), 4) if receita_mensal > 0 else 0.0,
+
+            # Ocupação imobiliária (1.4 — guardrail de teto)
+            "ocupacao_pct": round(ocupacao_pct, 4),
+            "teto_ocupacao": round(teto_ocup, 4),
+            "ocupacao_estoura": ocupacao_estoura,
+            "ticket_piso_ocupacao": (
+                round(ticket_piso_ocupacao, 2) if ticket_piso_ocupacao is not None else None
+            ),
 
             # Resultado
             "lucro_mensal_estimado": round(lucro_mensal, 2),
@@ -566,6 +633,11 @@ def calcular_viabilidade_3_cenarios(
 
     melhor = _escolher_cenario_recomendado(cenarios, renda_media_bairro, renda_percentil)
     alertas_benchmark = _alertas_vs_sector_listed(cenarios)
+    # 1.6 Reconciliação OPEX (alerta bidirecional): além do alerta de margem BAIXA
+    # (já em _alertas_vs_sector_listed), sinaliza margem OTIMISTA — acima do
+    # benchmark de margem líquida do modelo + 8pp (Benchmark Financeiro Academias
+    # 2024: low 30% / mid 17% / premium 22,5%). Indica premissas frouxas.
+    alertas_benchmark.extend(_alertas_margem_otimista(cenarios))
     alertas_ticket.extend(_bench.get("ticket_sanity_avisos") or [])
 
     return {
@@ -896,6 +968,33 @@ def _alertas_vs_sector_listed(cenarios: dict[str, Any]) -> list[str]:
     return alertas
 
 
+# Benchmark de margem líquida por modelo (Benchmark Financeiro Academias 2024,
+# operação madura): low 30% / mid 17% / premium 22,5%.
+MARGEM_LIQUIDA_BENCHMARK = {"low": 30.0, "mid": 17.0, "premium": 22.5}
+_MARGEM_OTIMISTA_PP = 8.0  # tolerância (pontos percentuais) antes de alertar
+
+
+def _alertas_margem_otimista(cenarios: dict[str, Any]) -> list[str]:
+    """1.6 — alerta bidirecional: margem ACIMA do benchmark do modelo + 8pp.
+
+    Complementa o alerta de margem BAIXA (_alertas_vs_sector_listed). Margem muito
+    acima do benchmark sugere premissas frouxas (folha/tributos/ocupação subestimados).
+    """
+    alertas: list[str] = []
+    for faixa_key, c in cenarios.items():
+        bench = MARGEM_LIQUIDA_BENCHMARK.get(faixa_key)
+        if bench is None:
+            continue
+        margem = float(c.get("margem_percentual") or 0)
+        if margem > bench + _MARGEM_OTIMISTA_PP:
+            alertas.append(
+                f"⚠️ Margem {margem:.1f}% ({c.get('modelo', faixa_key)}) otimista vs "
+                f"benchmark {bench:.0f}% (+{_MARGEM_OTIMISTA_PP:.0f}pp) — revisar "
+                f"premissas (folha/tributos/ocupação)."
+            )
+    return alertas
+
+
 def _premissa_calibracao(modelo: str, calibracao: str) -> str:
     """Texto-fonte da calibração — pra UI mostrar 'de onde veio o número'."""
     fontes = {
@@ -1054,8 +1153,18 @@ def _calcular_vpl(investimento: float, lucro_mensal: float, anos: int, taxa_anua
     return vpl
 
 
-def _classificar_viabilidade(lucro: float, payback: int, margem: float) -> dict:
-    """Retorna {status, justificativa} baseado em 3 critérios."""
+def _classificar_viabilidade(
+    lucro: float, payback: int, margem: float, ocupacao_estoura: bool = False
+) -> dict:
+    """Retorna {status, justificativa} baseado em 3 critérios.
+
+    1.5: `ocupacao_estoura=True` (ocupação imobiliária acima do teto do modelo)
+    rebaixa para INVIAVEL — estrangulamento estrutural de caixa, independente do
+    payback (Benchmark Financeiro Academias 2024).
+    """
+    if ocupacao_estoura:
+        return {"status": "INVIAVEL",
+                "justificativa": "Ocupação imobiliária acima do teto do modelo — aluguel estrangula o caixa estruturalmente"}
     if lucro <= 0:
         return {"status": "INVIAVEL", "justificativa": f"Prejuízo mensal de R$ {-lucro:,.0f}"}
     if payback <= param("viab_payback_alto") and margem >= param("viab_margem_alto"):
@@ -1075,14 +1184,21 @@ def _calcular_sensibilidade(
     marketing_pct: float,
     inadimplencia: float,
     investimento_total: float,
+    ocupacao_nao_aluguel: float = 0.0,
+    teto_ocupacao: float | None = None,
 ) -> list[dict]:
     """
-    3 stress tests com lucro/payback/viabilidade resultantes.
+    Stress tests com lucro/payback/viabilidade resultantes.
 
     Cada stress aplica um delta sobre o cenário "realista":
     - aluguel +20%: simula contrato com reajuste alto
     - matrículas -30%: simula execução abaixo do benchmark Smart Fit
     - ticket -15%: simula pressão de preço (concorrência low-cost agressiva)
+    - ocupação (aluguel +20%): mede a razão de ocupação (aluguel+condomínio+IPTU)/
+      faturamento e reprova quando ultrapassa o teto do modelo (1.7).
+
+    `ocupacao_nao_aluguel` = condomínio+IPTU (componentes de ocupação fora o aluguel),
+    usado p/ recompor a ocupação absoluta sob o aluguel estressado.
     """
     resultados = []
     for stress in STRESS_TESTS:
@@ -1098,7 +1214,17 @@ def _calcular_sensibilidade(
         lucro = receita - custos_total
         margem = (lucro / receita * 100) if receita > 0 else 0
         payback = int(investimento_total / lucro) if lucro > 0 else 999
-        viab = _classificar_viabilidade(lucro, payback, margem)
+
+        # 1.7: razão de ocupação sob o aluguel estressado.
+        ocupacao_abs = aluguel + ocupacao_nao_aluguel
+        ocupacao_pct = (ocupacao_abs / receita) if receita > 0 else 1.0
+        ocupacao_estoura = (
+            teto_ocupacao is not None and ocupacao_pct > teto_ocupacao
+        )
+        viab = _classificar_viabilidade(
+            lucro, payback, margem,
+            ocupacao_estoura=ocupacao_estoura if stress.get("check_ocupacao") else False,
+        )
 
         resultados.append({
             "id": stress["id"],
@@ -1107,18 +1233,29 @@ def _calcular_sensibilidade(
             "margem_percentual": round(margem, 1),
             "payback_meses": payback,
             "viabilidade": viab["status"],
+            "ocupacao_pct": round(ocupacao_pct, 4),
+            "teto_ocupacao": round(teto_ocupacao, 4) if teto_ocupacao is not None else None,
+            "ocupacao_estoura": bool(ocupacao_estoura),
         })
     return resultados
 
 
 # ── Macro-tool consolidadora A4 (Task #56 — mesmo padrão A3a/A3b) ──
-def calcular_score_viabilidade(payback_meses: float, ocupacao_break: float) -> float:
+def calcular_score_viabilidade(
+    payback_meses: float, ocupacao_break: float, ocupacao_estoura: bool = False
+) -> float:
     """Score 0-10 de viabilidade (CANÔNICO) — payback + ocupação no break-even.
 
     Cortes e base via param() (calibração GymSite v2). Mesma fórmula usada pela
     granularização (metodologia_explain). É a FOLHA `score_viabilidade` do score_bairro
     → veredito; determinístico para o LLM do A4 não inventar.
+
+    1.5: `ocupacao_estoura=True` (ocupação imobiliária acima do teto do modelo) zera
+    o bônus e aplica penalidade — score abaixo do limiar de rejeição, coerente com o
+    veredito INVIAVEL (Benchmark Financeiro Academias 2024).
     """
+    if ocupacao_estoura:
+        return 0.0
     score = 0.0
     if payback_meses <= param("payback_limiar_excelente"): score += 4.0
     elif payback_meses <= param("payback_limiar_bom"): score += 3.0
@@ -1143,7 +1280,9 @@ def _resumo_decisao_a4(fin: dict) -> dict:
     cap = float(c.get("capacidade_maxima_alunos") or 0)
     be = float(c.get("alunos_break_even") or 0)
     ocup_break = (be / cap) if cap > 0 else 1.0
-    score = calcular_score_viabilidade(payback, ocup_break)
+    # 1.5: ocupação imobiliária acima do teto penaliza o score (coerente c/ veredito).
+    ocupacao_estoura = bool(c.get("ocupacao_estoura"))
+    score = calcular_score_viabilidade(payback, ocup_break, ocupacao_estoura=ocupacao_estoura)
 
     alertas: list[str] = []
     margem = float(c.get("margem_percentual") or 0)
@@ -1341,6 +1480,25 @@ async def analise_financeira_a4_completo(
             )
             if legado not in fin["alertas"]:
                 fin["alertas"].append(legado)
+
+    # Ressalva de fonte NÃO-determinística (tier != 0 = MRLR indisponível).
+    # Se o guardrail de ocupação reprovou algum cenário com aluguel de fallback
+    # (Search Grounding tende a puxar varejo, não galpão → aluguel inflado), o
+    # INVIAVEL por ocupação pode ser artefato da fonte. Não silencia a degradação:
+    # marca o veredito como sensível à fonte e exige confirmação.
+    fin["aluguel_deterministico"] = (tier_usado == 0)
+    if tier_usado != 0:
+        _cen = fin.get("cenarios") or {}
+        _vals = _cen.values() if isinstance(_cen, dict) else (_cen if isinstance(_cen, list) else [])
+        if any(isinstance(c, dict) and c.get("ocupacao_estoura") for c in _vals):
+            ressalva = (
+                "⚠️ Veredito de ocupação baseado em aluguel NÃO-determinístico "
+                f"(fonte: {fin.get('fonte_aluguel', '?')}). MRLR indisponível — o "
+                "INVIAVEL por ocupação pode ser artefato de aluguel superestimado; "
+                "confirmar cotação real de galpão/academia antes de reprovar."
+            )
+            if ressalva not in fin["alertas"]:
+                fin["alertas"].append(ressalva)
 
     referencia_macro_bcb = None
     if tier1_vazio:

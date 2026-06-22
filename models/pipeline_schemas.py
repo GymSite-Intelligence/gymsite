@@ -31,6 +31,10 @@ class A9Output(_Lenient):
     framework_errc: Optional[dict] = None
     janela_de_entrada: Optional[dict] = None
     markdown: Optional[str] = None
+    # PLANO_MOTOR_FINANCEIRO_V3 §2.1/§2.2 — 6 Zonas de Percepção + alertas fiscais/KPI.
+    zona_percepcao: Optional[int] = None
+    zona_nome: Optional[str] = None
+    alertas_financeiros_fiscais: Optional[list] = None
 
 
 class AnaliseDemografica(_Lenient):

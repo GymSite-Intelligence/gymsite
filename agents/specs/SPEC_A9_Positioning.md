@@ -26,7 +26,7 @@ O A9 consome os outputs de A0–A6 já presentes no state ADK e gera um **relat�
 | `candidatos_geoscout` | A1 GeoScout | Candidatos de localização |
 | `analise_demografica` | A2 DemoAnalyst | Perfil demográfico IBGE |
 | `inteligencia_competitiva` | A3b CompetitorAnalysis | Concorrentes + reviews + scores |
-| `oferta_concorrentes` | A3c CompetitorMapper (shadow) | Oferta real por concorrente (quando disponível) |
+| `oferta_concorrentes` | A3b CompetitorAnalysis (oferta fundida do ex-A3c) | Oferta real por concorrente (quando disponível) |
 | `analise_financeira` | A4 FinancialEstimator | Cenários financeiros (payback, capex, aluguel) |
 | `contato_decisor` | A5 ContactHunter | Decisores (informativo) |
 | `relatorio_md` | A6 ReportConsolidator | Relatório de viabilidade |
@@ -147,7 +147,7 @@ Threshold 0.88 causava o mesmo JSON de posicionamento para Parangaba e Meireles 
 **Gotcha #4 — `_resolve_location_from_state` fallback em cascata.**
 `cidade`/`bairro` podem estar em `state["input_params"]`, `state["cidade"]`, ou dentro de `market_context` (extraído via `_parse_market_context`). A função `_resolve_location_from_state()` (linha 108) tenta as três fontes. Se nenhuma retorna, `_a9_override_veredito_deterministico()` retorna sem ação (sem erro).
 
-**Gotcha #5 — A3c em modo shadow.**
-`oferta_concorrentes` (A3c) pode estar ausente porque `competitor_mapper_agent` foi desligado em 12/06 (crash Playwright sync/async no Windows, linha 140–145 de `agent.py`). `_resumo_oferta_e_gaps()` funciona mesmo sem A3c — usa `planos_precos.inclui` + modalidades de `inteligencia_competitiva` (A3b).
+**Gotcha #5 — `oferta_concorrentes` vem do A3b (ex-A3c fundido).**
+O agente A3c foi removido; o A3b determinístico passou a mapear a oferta (site via httpx + Instagram via SearchAPI, sem Playwright) e gravar `oferta_concorrentes`. `_resumo_oferta_e_gaps()` lê `planos_precos.inclui` + as modalidades já mescladas em `inteligencia_competitiva.concorrentes_detalhados[*].servicos_oferecidos` (A3b). Mesmo se a oferta vier vazia, a função degrada sem erro.
 
 **Gap C6.4 conhecido:** `InMemorySessionService` — estado A9 (posicionamento parsed) vive em memória durante a sessão ADK. Crash entre A9 completar e `_patch_relatorio_json` completar pode perder o posicionamento do JSON local. Supabase via `write_posicionamento_failsafe` é o fallback de recuperação.

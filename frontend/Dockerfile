@@ -10,10 +10,20 @@ RUN npm ci
 COPY . .
 
 # Drop dev env files so dev values (localhost API, VITE_DEV_AS_ADMIN=true) never
-# leak into a production bundle. Vite loads .env.production (copied above) in
-# production mode — it already targets gymsite-api.vectracargo.com.br and omits
-# VITE_DEV_AS_ADMIN (which would grant admin to every visitor).
-RUN rm -f .env .env.local .env.development .env.development.local .env.production.local
+# leak into a production bundle.
+RUN rm -f .env .env.local .env.development .env.development.local .env.production.local .env.production
+
+# Production bundle env (Vite bakes these at build time via .env.production).
+# ARGs carry safe defaults — the publishable key is NOT a secret (ships in the
+# client by design). This makes the Cloud Build trigger (clean git checkout, where
+# frontend/.env.production is gitignored) produce a working bundle with the correct
+# key, instead of a keyless one. Override any value with docker --build-arg.
+ARG VITE_USE_MOCKS=false
+ARG VITE_SUPABASE_URL=https://epgedaiukjippepujuzc.supabase.co
+ARG VITE_SUPABASE_ANON_KEY=sb_publishable_fj4Ioi3YX8gI-h3lrcb45w_FZa9UzhD
+ARG VITE_API_BASE=https://gymsite-api.vectracargo.com.br
+RUN printf 'VITE_USE_MOCKS=%s\nVITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\nVITE_API_BASE=%s\n' \
+      "$VITE_USE_MOCKS" "$VITE_SUPABASE_URL" "$VITE_SUPABASE_ANON_KEY" "$VITE_API_BASE" > .env.production
 
 RUN npm run build
 
