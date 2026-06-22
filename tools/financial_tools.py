@@ -1481,6 +1481,25 @@ async def analise_financeira_a4_completo(
             if legado not in fin["alertas"]:
                 fin["alertas"].append(legado)
 
+    # Ressalva de fonte NÃO-determinística (tier != 0 = MRLR indisponível).
+    # Se o guardrail de ocupação reprovou algum cenário com aluguel de fallback
+    # (Search Grounding tende a puxar varejo, não galpão → aluguel inflado), o
+    # INVIAVEL por ocupação pode ser artefato da fonte. Não silencia a degradação:
+    # marca o veredito como sensível à fonte e exige confirmação.
+    fin["aluguel_deterministico"] = (tier_usado == 0)
+    if tier_usado != 0:
+        _cen = fin.get("cenarios") or {}
+        _vals = _cen.values() if isinstance(_cen, dict) else (_cen if isinstance(_cen, list) else [])
+        if any(isinstance(c, dict) and c.get("ocupacao_estoura") for c in _vals):
+            ressalva = (
+                "⚠️ Veredito de ocupação baseado em aluguel NÃO-determinístico "
+                f"(fonte: {fin.get('fonte_aluguel', '?')}). MRLR indisponível — o "
+                "INVIAVEL por ocupação pode ser artefato de aluguel superestimado; "
+                "confirmar cotação real de galpão/academia antes de reprovar."
+            )
+            if ressalva not in fin["alertas"]:
+                fin["alertas"].append(ressalva)
+
     referencia_macro_bcb = None
     if tier1_vazio:
         bcb_cached = cached_bcb_imobiliario()
