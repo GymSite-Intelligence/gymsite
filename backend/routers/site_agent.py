@@ -27,6 +27,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
 from tools.turnstile import verificar_turnstile
+from tools.db_schema import tbl  # roteia gymsite/shared (flags ON em prod; tbl(sb,) cru = public)
 
 logger = logging.getLogger("gymsite.site_agent")
 
@@ -64,6 +65,20 @@ class AnaliseResposta(BaseModel):
     mensagem: str
 
 
+class ConversarSiteInput(BaseModel):
+    mensagem: str = Field(min_length=1, max_length=2000)
+    projeto_id: Optional[str] = None          # None = nova sessão (exige Turnstile)
+    turnstile_token: Optional[str] = None      # obrigatório só na 1ª mensagem
+
+
+class ConversarSiteResposta(BaseModel):
+    projeto_id: str
+    mensagem: str
+    sugestoes: list[str] = []
+    pode_gerar_relatorio: bool = False
+    dados_faltantes: list[str] = []
+
+
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _sb():
@@ -87,7 +102,7 @@ def _hoje_inicio_iso() -> str:
 
 def _email_ja_usou(sb, email: str) -> bool:
     res = (
-        sb.table("analise_gratuita")
+        tbl(sb,"analise_gratuita")
         .select("id")
         .eq("email", email.lower().strip())
         .limit(1)
@@ -98,13 +113,13 @@ def _email_ja_usou(sb, email: str) -> bool:
 
 def _cap_estourado(sb, ip: str | None) -> bool:
     inicio = _hoje_inicio_iso()
-    glob = sb.table("analise_gratuita").select("id", count="exact").gte("created_at", inicio).execute()
+    glob = tbl(sb,"analise_gratuita").select("id", count="exact").gte("created_at", inicio).execute()
     if (glob.count or 0) >= _CAP_GLOBAL_DIA:
         logger.warning("cap global/dia atingido (%s)", _CAP_GLOBAL_DIA)
         return True
     if ip:
         per_ip = (
-            sb.table("analise_gratuita").select("id", count="exact")
+            tbl(sb,"analise_gratuita").select("id", count="exact")
             .eq("ip", ip).gte("created_at", inicio).execute()
         )
         if (per_ip.count or 0) >= _CAP_IP_DIA:
@@ -194,11 +209,11 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
         raise HTTPException(status_code=500, detail="Falha ao iniciar a análise.") from e
 
     access_token = str(uuid.uuid4())
-    sb.table("relatorios").update({"access_token": access_token}).eq("id", relatorio_id).execute()
+    tbl(sb,"relatorios").update({"access_token": access_token}).eq("id", relatorio_id).execute()
 
     # 6. Grava entitlement (unique(email) é o guard duro contra corrida).
     try:
-        sb.table("analise_gratuita").insert({
+        tbl(sb,"analise_gratuita").insert({
             "email": data.email.lower().strip(),
             "ip": ip,
             "relatorio_id": relatorio_id,
@@ -231,6 +246,49 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
     )
 
 
+# ─── POST /api/site-agent/conversar (degustação — Tier 1) ─────────────────────
+
+@router_site_agent.post("/conversar", response_model=ConversarSiteResposta)
+async def conversar_site(data: ConversarSiteInput, request: Request):
+    """Chat de degustação da landing. Roda o MESMO engine do /consultor em
+    modo_site (persona de captação + base de conhecimento + whitelist Tier 1 +
+    antifatiamento hard). NÃO gera relatório — o release Tier 2 é o POST /analise
+    (com entitlement 1/email), chamado pelo frontend quando o gate de formulário
+    fecha. Turnstile (fail-closed) só na 1ª mensagem (criação da sessão).
+
+    NOTA: cap de novas sessões por IP/dia ainda não enforced aqui (Turnstile +
+    antifatiamento K=2 do engine + entitlement 1/email no /analise já limitam o
+    custo). Follow-up: contador por IP na criação de sessão.
+    """
+    from services.consultor.consultor_engine import conversar, _ANON_SITE_USER_ID
+
+    ip = _client_ip(request)
+    nova_sessao = not data.projeto_id
+
+    if nova_sessao and not await verificar_turnstile(data.turnstile_token, ip):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Verificação anti-bot falhou.")
+
+    try:
+        r = await conversar(
+            mensagem=data.mensagem,
+            usuario_id=_ANON_SITE_USER_ID,
+            projeto_id=data.projeto_id,
+            modo_site=True,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.exception("conversar_site falhou")
+        raise HTTPException(status_code=500, detail="Falha ao processar a conversa.") from e
+
+    return ConversarSiteResposta(
+        projeto_id=r["projeto_id"],
+        mensagem=r["mensagem"],
+        sugestoes=r.get("sugestoes", []),
+        pode_gerar_relatorio=r.get("pode_gerar_relatorio", False),
+        dados_faltantes=r.get("dados_faltantes", []),
+    )
+
+
 # ─── GET /api/site-agent/analise/{id} ─────────────────────────────────────────
 
 @router_site_agent.get("/analise/{relatorio_id}")
@@ -241,7 +299,7 @@ async def status_analise(relatorio_id: str, token: str, request: Request):
     """
     sb = _sb()
     rel = (
-        sb.table("relatorios").select("id, status, access_token")
+        tbl(sb,"relatorios").select("id, status, access_token")
         .eq("id", relatorio_id).maybe_single().execute()
     )
     row = rel.data
@@ -257,14 +315,14 @@ async def status_analise(relatorio_id: str, token: str, request: Request):
 
     # SUBSET free (gateia A9/concorrentes completos/financeiro/PDF — só no pago).
     out = (
-        sb.table("relatorio_outputs")
+        tbl(sb,"relatorio_outputs")
         .select("veredito, resumo_executivo, nivel_saturacao, score_bairro, "
                 "total_concorrentes_analisados, rating_medio_concorrentes, modelo_recomendado")
         .eq("relatorio_id", relatorio_id).maybe_single().execute()
     ).data or {}
 
     comp = (
-        sb.table("competidores")
+        tbl(sb,"competidores")
         .select("nome, bairro_concorrente, rating_oficial")
         .eq("relatorio_id", relatorio_id)
         .order("rating_oficial", desc=True)
