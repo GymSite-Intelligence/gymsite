@@ -17,7 +17,7 @@ são ações manuais do responsável.
 ## Remetente usado
 
 A sequência envia pela caixa de e-mail padrão da conta, que é
-`manager@vectracargo.com.br` (marcada como "Padrão" na Suíte de
+`<CONTACT_EMAIL>` (marcada como "Padrão" na Suíte de
 Entregabilidade). Não há remetente alternativo definido na sequência.
 Confirmado pelo rascunho da sequência, que sai desse endereço.
 
@@ -36,7 +36,7 @@ problema de SPF impacta a entregabilidade dos disparos (maior risco de spam
 e bounce).
 
 Gargalo adicional (impacta tanto quanto o SPF): a caixa
-`manager@vectracargo.com.br` está com warmup não iniciado e limite diário
+`<CONTACT_EMAIL>` está com warmup não iniciado e limite diário
 em 0/50 ("Iniciar aquecimento"). Com limite zerado, a sequência praticamente
 não dispara, o que é coerente com nenhum dos 4 contatos ter recebido e-mail.
 

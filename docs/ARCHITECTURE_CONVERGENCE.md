@@ -1,6 +1,6 @@
 # Arquitetura de Convergência — GymSite Intelligence
 
-> Documento de arquitetura que descreve como **o produto (gymsite)**, a **landing (gym-insight-hub)** e o **Apollo (GTM/CRM)** convergem sobre um único banco **Supabase** (projeto cargo-flow-navigator).
+> Documento de arquitetura que descreve como **o produto (gymsite)**, a **landing (gym-insight-hub)** e o **Apollo (GTM/CRM)** convergem sobre um único banco **Supabase** (projeto <SUPABASE_PROJECT>).
 >
 > Estado: desenho de integração. Reflete o que já existe (DNS Cloudflare, Pages, schema Supabase) e o que falta conectar.
 

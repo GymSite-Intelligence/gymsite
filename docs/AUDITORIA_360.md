@@ -1,7 +1,7 @@
 # Auditoria 360 — GymSite Intelligence
 
 > Executada em 2026-06-10 por workflow multi-agente (25 agentes): 6 frentes paralelas (rotas, imports Python, frontend orfao, codigo x banco, scripts, env/config) + verificacao adversarial de todo achado CRITICA/ALTA (cetico tenta refutar relendo arquivo e refazendo grep).
-> Resultado: **55 achados confirmados, 0 refutados.** Achados de banco re-verificados contra o Supabase de producao (cargo-flow-navigator).
+> Resultado: **55 achados confirmados, 0 refutados.** Achados de banco re-verificados contra o Supabase de producao (<SUPABASE_PROJECT>).
 
 ## Sumario Executivo
 

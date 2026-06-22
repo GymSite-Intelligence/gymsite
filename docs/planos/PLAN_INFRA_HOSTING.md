@@ -66,7 +66,7 @@ Resultado (9/9 dominios "AutoSSL Domain Validated", expiram em 12/09/2026, renov
 
 ## CDN / Edge (Cloudflare Pages) — VERIFICADO no painel Cloudflare em 2026-06-13
 
-- Conta Cloudflare: marcelo.rosas@vectracargo.com.br.
+- Conta Cloudflare: <CONTACT_EMAIL>.
 - Projeto Pages que serve o site: nome 'gymsite' (subdominio padrao gymsite-3p0.pages.dev).
 - Dominio customizado anexado ao projeto: www.gymsite.com.br.
 - Branch de producao: main. Ultimo deploy de producao: 2026-06-13, status SUCCESS.
@@ -128,7 +128,7 @@ Contexto: a landing page (repo gym-insight-hub, branch main) foi publicada no Cl
 
 Build / Deploy (Cloudflare Pages):
 - Projeto Pages: gym-insight-hub (subdominio padrao gym-insight-hub.pages.dev).
-- Conta Cloudflare: marcelo.rosas@vectracargo.com.br.
+- Conta Cloudflare: <CONTACT_EMAIL>.
 - Framework preset: None. Build command: bun install && bun run build. Output dir: dist.
 - Variavel de build: BUN_VERSION=1.3.14.
 - Ajuste no repo: vite.config.ts passou a definir o target de build para Cloudflare Pages (commit a275381). Saida em dist/ (com _worker.js, _routes.json, _headers, _redirects).

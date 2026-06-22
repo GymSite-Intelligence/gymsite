@@ -41,7 +41,7 @@ Autenticacao de e-mail COMPLETA na zona:
 
 ## Estado atual do Apollo (verificado)
 
-- Caixa conectada hoje: manager@vectracargo.com.br (IMAP, Padrao) — envio GoDaddy. Setup ~80%.
+- Caixa conectada hoje: <CONTACT_EMAIL> (IMAP, Padrao) — envio GoDaddy. Setup ~80%.
 - Diagnostico da caixa atual: DKIM Bom, DMARC Bom, SPF "Revisar". Por isso migramos para o dominio dedicado em vez de remendar.
 - Warmup: ainda nao iniciado. Limites: 50/dia, 6/hora, 600s de atraso.
 - Itens de setup ja OK: Assinatura, Limites de envio, Link de descadastro, Subdomain tracking.

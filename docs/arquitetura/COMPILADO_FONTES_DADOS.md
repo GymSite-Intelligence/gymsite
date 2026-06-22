@@ -241,7 +241,7 @@ não do extract local.
 
 ### 7.4 Pré-requisitos e guardas de custo
 
-- **IAM:** service account `gymsite-pipeline@gen-lang-client-0106729343` hoje só tem
+- **IAM:** service account `<GCP_SA_EMAIL>` hoje só tem
   `roles/aiplatform.user`. Precisa de `roles/bigquery.jobUser` (rodar query; grátis,
   reversível) — datasets públicos do basedosdados são lidos por qualquer projeto que
   rode job.

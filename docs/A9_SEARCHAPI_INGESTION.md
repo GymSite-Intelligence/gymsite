@@ -1,6 +1,6 @@
 # A9 — Ingestão dos JSONs do SearchAPI → Supabase
 
-> Como alimentar o agente A9 com os JSONs de busca do SearchAPI, estruturando e cacheando os dados no Supabase (projeto cargo-flow-navigator). Ancorado no schema real existente (tabela `competidores` já presente). Complementa `docs/A9_DATA_CONFIDENCE.md`, `docs/A9_CHARTS_TABLES_SPEC.md` e `docs/A9_SKILLS_RELATORIO.md`.
+> Como alimentar o agente A9 com os JSONs de busca do SearchAPI, estruturando e cacheando os dados no Supabase (projeto <SUPABASE_PROJECT>). Ancorado no schema real existente (tabela `competidores` já presente). Complementa `docs/A9_DATA_CONFIDENCE.md`, `docs/A9_CHARTS_TABLES_SPEC.md` e `docs/A9_SKILLS_RELATORIO.md`.
 
 ## 1. Engines em uso e mapeamento por agente
 

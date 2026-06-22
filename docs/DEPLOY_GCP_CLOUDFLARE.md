@@ -8,7 +8,7 @@
 
 ## 0. Pré-requisitos
 
-- [ ] Conta GCP com projeto ativo (ex: `gen-lang-client-0106729343`)
+- [ ] Conta GCP com projeto ativo (ex: `<GCP_PROJECT_ID>`)
 - [ ] `gcloud` CLI instalado e autenticado
 - [ ] Conta Cloudflare com domínio configurado (ex: `vectracargo.com.br`)
 - [ ] Chave SSH `~/.ssh/id_ed25519` (gerar: `ssh-keygen -t ed25519 -C 'gymsite'`)
@@ -80,7 +80,7 @@ ingress:
 ### 2.1 Variáveis de ambiente (local)
 
 ```bash
-export GCP_PROJECT_ID=gen-lang-client-0106729343
+export GCP_PROJECT_ID=<GCP_PROJECT_ID>
 export GCP_ZONE=southamerica-east1-a
 export GCP_VM_NAME=gymsite-api
 export GCP_MACHINE_TYPE=e2-medium   # 2 vCPU, 4 GB
@@ -167,7 +167,7 @@ Configure os seguintes **Repository Secrets** no GitHub (`Settings > Secrets and
 |--------|-----------|
 | `GCP_SA_KEY` | JSON da service account GCP (opcional, se usar GCE deploy) |
 | `GCP_VM_NAME` | Nome da VM (`gymsite-api`) |
-| `GCP_PROJECT_ID` | `gen-lang-client-0106729343` |
+| `GCP_PROJECT_ID` | `<GCP_PROJECT_ID>` |
 | `GCP_ZONE` | `southamerica-east1-a` |
 | `SSH_HOST` | IP externo da VM (para deploy VPS) |
 | `SSH_USER` | `ubuntu` |
