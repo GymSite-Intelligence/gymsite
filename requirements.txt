@@ -29,6 +29,10 @@ opentelemetry-sdk>=1.25.0
 google-genai>=0.3.0
 # BigQuery — rota basedosdados de dados públicos nacionais (Trilha 6 / CNO)
 google-cloud-bigquery>=3.0.0
+# Vertex AI Search (Discovery Engine) — RAG do Consultor/Site Agent
+# (consultar_base_conhecimento + consultar_catalogos_equipamentos). Sem ele o
+# container não importa discoveryengine_v1 e TODO RAG falha em prod.
+google-cloud-discoveryengine>=0.13.0
 # Pydantic (explicitar versao compativel). [email] puxa email-validator,
 # exigido por EmailStr em backend/routers/leads.py (boot crashava sem ele).
 pydantic[email]>=2.0.0
