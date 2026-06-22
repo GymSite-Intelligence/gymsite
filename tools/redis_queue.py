@@ -113,6 +113,7 @@ async def gymsite_worker(job: dict) -> None:
             usuario_id=job["usuario_id"],
             projeto_id=job["projeto_id"],
             modo_site=True,
+            agente=job.get("agente", "degustacao"),
         )
         logger.info(f"site_conversar {job.get('projeto_id')} concluído via RedisQueue")
 

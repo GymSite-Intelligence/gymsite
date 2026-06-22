@@ -69,6 +69,7 @@ class ConversarSiteInput(BaseModel):
     mensagem: str = Field(min_length=1, max_length=2000)
     projeto_id: Optional[str] = None          # None = nova sessão (exige Turnstile)
     turnstile_token: Optional[str] = None      # obrigatório só na 1ª mensagem
+    agente: Optional[str] = None               # degustacao (default) | responsavel_tecnico (RAG segmentado)
 
 
 class ConversarSiteResposta(BaseModel):
@@ -291,6 +292,7 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
         "projeto_id": projeto_id,
         "mensagem": data.mensagem,
         "usuario_id": _ANON_SITE_USER_ID,
+        "agente": data.agente or "degustacao",
     }, background)
 
     logger.info("site_conversar enfileirado projeto=%s ip=%s", projeto_id, ip)
