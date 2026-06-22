@@ -2432,7 +2432,7 @@ async def analisar_concorrentes_a3a_completo(
     # latência do parallel block + o maior custo de API (Places/pico) por relatório.
     # Enriquece só os top-N mais relevantes (por nº de avaliações); os demais ficam na
     # lista com dado básico. Paralelizar seria mais rápido mas Playwright concorrente
-    # trava no Windows (motivo do A3c desligado). N via env MAX_ENRIQUECIMENTO (default 6).
+    # trava no Windows. N via env MAX_ENRIQUECIMENTO (default 6).
     _max_enriq = max(1, int(os.getenv("MAX_ENRIQUECIMENTO", "6")))
     if len(incluidos) > _max_enriq:
         incluidos.sort(key=_avaliacoes_int, reverse=True)

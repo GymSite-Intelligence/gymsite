@@ -383,7 +383,7 @@ class A8ValidadorCruzado:
                 "dado_nao_verificavel",
                 f"score_oportunidade_mercado={score:g} com {informativos} review(s) informativo(s)",
                 "Score de oportunidade máximo sustentado por reviews vazios ('Top') — ausência de dado não é oportunidade.",
-                "Coletar mais evidência (reviews, A3c oferta real) ou rebaixar score no A3b.",
+                "Coletar mais evidência (reviews, oferta real do A3b) ou rebaixar score no A3b.",
                 "ALTA",
             )
 

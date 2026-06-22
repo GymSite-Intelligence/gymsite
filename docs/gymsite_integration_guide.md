@@ -19,7 +19,7 @@
 │  └──────────────┘   └──────────┘   └──────────────────────┘   │
 │       │                                                          │
 │       ▼                                                          │
-│  A3a CompetitorSearch ──► A3b Analysis ──► A3c Mapper           │
+│  A3a CompetitorSearch ──► A3b Analysis (+ oferta ex-A3c)       │
 │       │                    │                   │                 │
 │       ▼                    ▼                   ▼                 │
 │  A4 FinancialEstimator ──► A5 ContactHunter                    │
@@ -205,10 +205,10 @@ CREATE POLICY "validacoes_insert_org" ON validacoes
 
 ```python
 # ANTES: pipeline termina no A6
-sequential_pipeline = SequentialAgent("GymSitePipeline", [A0, A1, A2, A3a, A3b, A3c, A4, A5, A6])
+sequential_pipeline = SequentialAgent("GymSitePipeline", [A0, A1, A2, A3a, A3b, A4, A5, A6])
 
 # DEPOIS: adiciona A8 após o A6
-sequential_pipeline = SequentialAgent("GymSitePipeline", [A0, A1, A2, A3a, A3b, A3c, A4, A5, A6, A8])
+sequential_pipeline = SequentialAgent("GymSitePipeline", [A0, A1, A2, A3a, A3b, A4, A5, A6, A8])
 ```
 
 #### 3. Modificar `agents/a6_report_consolidator.py` para passar output ao A8

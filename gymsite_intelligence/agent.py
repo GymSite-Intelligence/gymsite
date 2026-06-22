@@ -32,10 +32,11 @@ from agents.a2_demo_analyst import demo_analyst_agent
 # A3 monolítico DEPRECATED — substituído por A3a + A3b (resolve AFC=10 + MALFORMED)
 # from agents.a3_competitor_intel import competitor_intel_agent
 from agents.a3a_competitor_search import competitor_search_agent
+# A3b (determinístico) FUNDIU o antigo A3c: roda analisar_concorrentes_completo
+# (gaps/dores/score) E mapear_oferta_competidores_completo (oferta site+IG via
+# SearchAPI), mesclando os serviços por concorrente. A3c CompetitorMapper foi
+# removido (era LlmAgent dead code; offer mapper migrou Playwright→SearchAPI).
 from agents.a3b_competitor_analysis import competitor_analysis_agent
-# A3c enriquece concorrentes com oferta real (site + IG). Modo SHADOW —
-# grava `oferta_concorrentes` no state mas A6 ainda não consome (GymSite #127).
-from agents.a3c_competitor_mapper import competitor_mapper_agent
 from agents.a4_financial_estimator import financial_estimator_agent
 from agents.a5_contact_hunter import contact_hunter_agent
 from agents.a6_report_consolidator import report_consolidator_agent
@@ -126,27 +127,25 @@ def _attach_telemetry(*agents):
 
 _attach_telemetry(
     context_builder_agent, geoscout_agent, demo_analyst_agent,
-    competitor_search_agent, competitor_analysis_agent, competitor_mapper_agent,
+    competitor_search_agent, competitor_analysis_agent,
     financial_estimator_agent,
     contact_hunter_agent, report_consolidator_agent,
     positioning_strategist_agent,
 )
 
-# ── Sub-pipeline competitivo: A3a (busca) → A3b (análise) → A3c (oferta real) ──
+# ── Sub-pipeline competitivo: A3a (busca) → A3b (análise + oferta) ──
 # Quebra do A3 monolítico que estourava AFC=10 e gerava MALFORMED_FUNCTION_CALL.
-# A3c (shadow) visita site+IG dos top 10 pra A6 saber o que cada concorrente
-# JÁ oferece antes de recomendar diferenciais.
+# A3b é determinístico e absorveu o antigo A3c: além de gaps/dores/score, mapeia
+# a oferta (site via httpx + Instagram via SearchAPI engine=instagram_profile) e
+# mescla os serviços por concorrente, gravando `oferta_concorrentes` no state.
+# O crash do A3c (Playwright sync no loop async, run 9213f40d) morreu junto: a
+# oferta não usa mais Playwright nem Outscraper.
 competitor_subpipeline = SequentialAgent(
     name="CompetitorPipeline",
-    description="A3a busca → A3b análise reviews.",
+    description="A3a busca → A3b análise + oferta.",
     sub_agents=[
         competitor_search_agent,      # A3a
-        competitor_analysis_agent,    # A3b
-        # A3c DESLIGADO 12/06: suspeito do crash duro do processo (Playwright
-        # sync dentro do loop async no Windows — backend morreu sem traceback
-        # durante o A3c no run 9213f40d). É modo shadow (A6 não consome,
-        # GymSite #127) — religar só após sandbox em subprocesso.
-        # competitor_mapper_agent,    # A3c
+        competitor_analysis_agent,    # A3b (+ oferta fundida do ex-A3c)
     ],
 )
 _attach_telemetry(competitor_subpipeline)

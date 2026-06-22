@@ -280,14 +280,14 @@ def _rows_candidatos(rel: dict, relatorio_id: str) -> list[dict]:
 
 def _build_oferta_lookup(rel: dict) -> dict:
     """
-    A3c CompetitorMapper (shadow) grava `oferta_concorrentes.oferta_concorrentes`
+    O A3b (ex-A3c fundido) grava `oferta_concorrentes.oferta_concorrentes`
     com chaves = place_id ou nome do concorrente. Retorna lookup achatado
     {place_id_ou_nome_lower: oferta_normalizada} pra _rows_competidores.
     """
     raiz = rel.get("oferta_concorrentes") if isinstance(rel, dict) else None
     if not isinstance(raiz, dict):
         return {}
-    # A3c output_key emite o JSON inteiro; campo interno também chamado oferta_concorrentes
+    # envelope com o JSON inteiro; campo interno também chamado oferta_concorrentes
     mapeamento = raiz.get("oferta_concorrentes") if isinstance(raiz.get("oferta_concorrentes"), dict) else raiz
     if not isinstance(mapeamento, dict):
         return {}
@@ -416,7 +416,7 @@ def _rows_competidores(
                 )
             except Exception:
                 whatsapp_link = None
-        # Lookup A3c (shadow): por place_id ou nome
+        # Lookup oferta (A3b, ex-A3c): por place_id ou nome
         oferta_mapeada = None
         place_id = c.get("place_id")
         nome_lower = (c.get("nome") or "").lower()
@@ -453,8 +453,8 @@ def _rows_competidores(
             "telefone": telefone,
             "website": website,
             "whatsapp_link": whatsapp_link,
-            # A3c shadow — GymSite #127. NULL nos top 6+ (limite 5) ou
-            # competidores sem fonte (website/IG).
+            # oferta do A3b (ex-A3c). NULL nos competidores sem fonte (website/IG)
+            # ou além do cap de mapeamento.
             "oferta_mapeada": oferta_mapeada,
         }
         rows.append(_merge_competidor_geo_row(row, geo_preserve))

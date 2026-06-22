@@ -7,20 +7,20 @@ relatório sugeriu "explorar natação e área kids visto a ausência na
 concorrência" — mas Tio Sam (concorrente top) tem ambos no site oficial.
 Resultado: recomendações imprecisas.
 
-ESTRATÉGIA: pra cada concorrente com site/Instagram público, baixa o HTML,
+ESTRATÉGIA: pra cada concorrente com site/Instagram público, baixa o HTML
+(site via httpx) + perfil Instagram (SearchAPI `engine=instagram_profile`),
 extrai texto + meta tags + sinais óbvios (modalidades, preços, diferenciais)
-via keyword matching + regex. Retorna payload bruto pro A3c agent
-normalizar depois via Gemini Flash.
+via keyword matching + regex. Retorna payload bruto já normalizado.
 
 NÃO faz LLM aqui — só I/O e parsing determinístico. Mantém o módulo
-testável isoladamente e barato (~zero custo). A3c (agente ADK) consome
-este output e produz o JSON canônico final.
+testável isoladamente e barato (~zero custo). O A3b (determinístico, ex-A3c
+fundido) consome este output e mescla os serviços por concorrente.
 
 Limitações conhecidas:
-- Instagram público bloqueia bots na maioria dos casos. Fallback futuro:
-  Outscraper ($0.003/place) ou Playwright com session.
-- Sites JS-rendered (Smart Fit, Bluefit) retornam HTML vazio. A3c
-  pula quando confiabilidade < 0.3.
+- Instagram público bloqueia bots; o caminho usa SearchAPI `engine=instagram_profile`
+  (sem Playwright, sem Outscraper) — plano pago ativo desde 12/06.
+- Sites JS-rendered (Smart Fit, Bluefit) retornam HTML vazio — pula
+  quando confiabilidade < 0.3.
 """
 import asyncio
 import json as _json
@@ -68,7 +68,7 @@ SLUG_NEGATIVO = [
 ]
 
 # Keywords canônicas — assinalam presença textual. A normalização e
-# desambiguação final ficam com o LLM no A3c (captura sinônimos, contexto).
+# desambiguação são determinísticas (regex/keyword), sem LLM.
 MODALIDADES_KEYWORDS: dict[str, list[str]] = {
     "musculacao":   ["musculação", "musculacao", "weight room", "sala de musculação"],
     "piscina":      ["piscina", "natação", "natacao", "swimming", "hidroginástica", "hidroginastica"],

@@ -32,8 +32,7 @@ AGENTE_MODELO_SUGERIDO: dict[str, str] = {
     "a2_demo_analyst": "gemini-2.5-flash",
     "a3_competitor_intel": "gemini-2.5-flash",
     "a3a_competitor_search": "gemini-2.5-flash",
-    "a3b_competitor_analysis": "gemini-2.5-flash-lite",  # já usa lite
-    "a3c_competitor_mapper": "gemini-2.5-flash",
+    "a3b_competitor_analysis": "gemini-2.5-flash-lite",  # stale: A3b virou BaseAgent determinístico (zero LLM, não entra no CSV)
     "a4_financial_estimator": "gemini-2.5-flash",  # aritmética estruturada; Pro→Flash 12/06 (golden case pendente)
     "a5_contact_hunter": "gemini-2.5-flash",
     "a6_report_consolidator": "gemini-2.5-flash",  # Pro→Flash 15/06 (custo #1; síntese templada, golden case)
