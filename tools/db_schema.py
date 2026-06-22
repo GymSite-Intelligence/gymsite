@@ -28,7 +28,7 @@ _GYMSITE = frozenset({
     "scout_jobs", "scout_eventos", "scout_messages", "scout_cadencia", "leads", "validacoes",
     "oportunidades_prospeccao", "otimizacoes_custo", "user_projects", "project_messages",
     "projeto_membros", "projeto_pessoas", "parceiro_leads", "playbooks", "sessions",
-    "chat_interacoes", "cnpj_contato_cache", "cache_reviews",
+    "chat_interacoes", "cnpj_contato_cache", "cache_reviews", "analise_gratuita",
     "parametros_metodologia", "catalogos_metodologia",
     # caches/estado do pipeline GymSite (classificados jun/2026; alguns ainda não criados)
     "market_bundles", "market_snapshots", "relatorio_state_checkpoint",

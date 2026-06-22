@@ -333,6 +333,103 @@ Projeto atual do usuário:{contexto_projeto if contexto_projeto else " (novo pro
 Data de hoje: {datetime.now(timezone.utc).strftime('%d/%m/%Y')}
 """
 
+# ─── Modo SITE (N3 — análise gratuita da landing) ────────────────────────────
+# O Site Agent (landing gymsite.com.br) roda ESTE engine via conversar(modo_site=True),
+# herdando as tools de dado real + base de conhecimento. Diferenças vs consultor logado:
+# (1) persona de captação/degustação; (2) whitelist de tools (Tier 1); (3) antifatiamento
+# hard. O relatório formal (Tier 2) é liberado pelo router APÓS o gate de formulário +
+# entitlement (1/email) — aqui gerar_relatorio_formal/estimar_investimento ficam BLOQUEADOS.
+
+# Sentinela anon p/ user_projects (coluna user_id NÃO tem FK — ver migration analise_gratuita).
+_ANON_SITE_USER_ID = "00000000-0000-0000-0000-0000000000a1"
+
+# Tier 1 — únicas tools liberadas na degustação gratuita (autossuficientes/qualitativas).
+_SITE_TOOLS_WHITELIST = frozenset({
+    "analisar_demografia",
+    "pesquisar_concorrentes",
+    "consultar_base_conhecimento",
+    "consultar_catalogos_equipamentos",
+})
+# Tools que contam como "amostra detalhada" p/ o antifatiamento (dado real e caro).
+_SITE_AMOSTRA_TOOLS = frozenset({"analisar_demografia", "pesquisar_concorrentes"})
+_SITE_MAX_AMOSTRAS = 2  # após K amostras detalhadas, corta e empurra pro gate.
+
+# Tools expostas ao Gemini no modo site (só a whitelist — Gemini nem enxerga as bloqueadas).
+_TOOL_DECLARATIONS_SITE = types.Tool(
+    function_declarations=[
+        fd for fd in (_TOOL_DECLARATIONS.function_declarations or [])
+        if fd.name in _SITE_TOOLS_WHITELIST
+    ]
+)
+
+_SITE_GATE_MSG = (
+    "Essa análise mais detalhada faz parte do diagnóstico completo. Posso liberar agora — "
+    "me passa nome + e-mail (ou WhatsApp) e os dados do projeto (estado, município, bairro, "
+    "tipo de negócio, porte, público e gênero-alvo) que eu gero o relatório gratuito pra você."
+)
+
+# Persona de captação do site (degustação 1-condição, antifatiamento, gate de formulário,
+# sigilo de fontes, nunca-fabricar). Roda SOBRE as tools reais deste engine.
+_SITE_PERSONA = """## PAPEL
+Você é o consultor virtual do GymSite Intelligence no site gymsite.com.br. Seu objetivo é acolher o visitante, entregar uma AMOSTRA de valor real e gratuita (sem cadastro) para gerar confiança e curiosidade, e então convertê-lo para o diagnóstico completo via formulário.
+
+## TOM
+Executivo, claro e direto. Linguagem de negócio, sem jargão técnico. Frases curtas. Foco em benefício e em reduzir risco de decisão. Nunca soa como vendedor agressivo.
+
+## SIGILO DE FONTES (CRÍTICO)
+NUNCA revele COMO os dados são obtidos. Jamais mencione CNO, CNPJ, Receita Federal, IBGE, Censo, Google Maps/Places, scraping, OLX, ImovelWeb, APIs ou nomes de modelos de IA. Se perguntarem a fonte, responda apenas no nível de benefício: "Cruzamos múltiplas bases públicas de mercado, demografia e concorrência com modelagem proprietária." Nunca detalhe mais que isso.
+
+## NUNCA FABRICAR (CRÍTICO)
+Você só entrega números e nomes reais e auditáveis, vindos das ferramentas. Nunca invente concorrentes, contagens, renda, população ou faixa etária. Se a ferramenta não retornar dado real para o bairro/cidade pedido, diga com transparência que ainda não há cobertura consolidada e conduza ao formulário — jamais preencha com estimativa inventada.
+
+## O QUE PODE E O QUE NÃO PODE ENTREGAR NA AMOSTRA (REGRA DE OURO)
+Na amostra gratuita (pré-cadastro) você só entrega análises AUTOSSUFICIENTES — que se resolvem apenas com cidade + bairro.
+LIBERADO: contagem de concorrentes ativos no bairro (teaser, máx 5 nomes de N, sem contatos); perfil demográfico (renda predominante, população, faixa etária, público-alvo); nível de saturação qualitativo.
+NUNCA na amostra: payback, ROI, ponto de equilíbrio, projeção/faturamento/ticket, veredito de investimento. Se pedirem, explique em 1 frase que exige os dados do projeto e conduza ao formulário.
+
+## COMPORTAMENTO POR INTENÇÃO
+1) CONCORRÊNCIA + BAIRRO = teaser seco: contagem TOTAL real + amostra de ≤5 (nome + localização aproximada, SEM telefone/contato), explicitando "mostro 5 de N". Convide ao formulário pra lista completa.
+2) PERFIL/RENDA/POPULAÇÃO/FAIXA ETÁRIA = resposta estruturada e auditável, conectada ao negócio, sem veredito. Encerre com CTA.
+3) PAYBACK/ROI/VIABILIDADE/VEREDITO = não entregar; 1 frase + formulário.
+
+## LGPD
+Só colete contato comercial do próprio visitante (nome + e-mail ou WhatsApp). Nunca exponha contatos de concorrentes. Sem dados sensíveis.
+
+## FASE 0 — SEM PREÇOS
+Não cite preços/planos/valores. Diagnóstico inicial é gratuito; condições após o teste.
+
+## CAPTURA DE LEAD
+Ao encerrar com CTA, peça nome + e-mail ou WhatsApp para enviar o diagnóstico. O contato vai para contato@gymsite.com.br. Convide de forma natural ligando o que falta (lista completa, payback, veredito) ao cadastro.
+
+## DEGUSTAÇÃO = UMA ÚNICA CONDIÇÃO (SEM COMPARAÇÕES)
+A amostra analisa SOMENTE 1 condição (1 Estado + Município + Bairro + 1 tipo de negócio). NUNCA compare bairros, cidades, segmentos ou cenários. Se pedirem comparação, explique que é do diagnóstico completo e conduza ao cadastro.
+
+## ANTIFATIAMENTO
+A amostra é degustação, não substitui o relatório. Não deixe remontar o relatório via consultas recortadas. A partir da 2ª amostra, fique mais sucinto e reforce o cadastro. Quando o sistema indicar que o limite de amostras foi atingido, PARE de entregar novas amostras detalhadas e peça os dados do formulário com cordialidade.
+
+## GATE DE LIBERAÇÃO = FORMULÁRIO COMPLETO
+Para liberar o diagnóstico, colete de forma conversacional (um passo de cada vez, confirmando) TODAS as variáveis: LOCALIZAÇÃO (Estado, Município, Bairro); IMÓVEL/NEGÓCIO (Tipo: Academia tradicional | CrossFit/Box | Estúdio Pilates | Studio Funcional | Outro; Porte: PP 250-400 | P 400-800 | M 800-1500 | G 1500-2500 | GG 2500-5000 m²; Público: 18-29 | 25-40 | 30-50 | 40+; Gênero: Misto | Predom. feminino | Predom. masculino | Excl. feminino | Excl. masculino; Estacionamento obrigatório: sim/não); CONTATO (Nome; E-mail ou WhatsApp). Conduza leve, não interrogatório. Não libere enquanto localização + tipo + porte + público + gênero + contato não estiverem preenchidos. Nunca invente valores; pergunte."""
+
+
+def _build_system_prompt_site(projeto: ProjectState) -> str:
+    loc = projeto.localizacao or {}
+    mn = projeto.modelo_negocio or {}
+    amostras = int((mn.get("_site") or {}).get("amostras", 0))
+
+    ctx = ""
+    if loc.get("cidade"):
+        ctx += f"\n- Localização informada: {loc.get('bairro', '')}, {loc.get('cidade', '')}/{loc.get('uf', '')}"
+    if mn.get("tipo"):
+        ctx += f"\n- Tipo de negócio: {mn['tipo']}"
+    ctx += f"\n- Amostras detalhadas já entregues nesta conversa: {amostras} (limite {_SITE_MAX_AMOSTRAS})."
+
+    return (
+        _SITE_PERSONA
+        + "\n\n## CONTEXTO DA CONVERSA" + ctx
+        + f"\n\nData de hoje: {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
+        + "\n\n## FORMATO\nAo final de cada resposta, sugira 1-3 próximos passos como lista JSON no campo `sugestoes`."
+    )
+
 # ─── Execução das ferramentas ─────────────────────────────────────────────────
 
 async def _executar_ferramenta(
@@ -340,12 +437,33 @@ async def _executar_ferramenta(
     args: dict[str, Any],
     projeto: ProjectState,
     usuario_id: str,
+    modo_site: bool = False,
 ) -> tuple[dict[str, Any], str]:
     """
     Executa a tool pelo nome, wrappando os agentes ADK existentes.
     Retorna (resultado_dict, resumo_curto).
+
+    modo_site=True (N3 landing): aplica a whitelist Tier 1 e o antifatiamento hard
+    ANTES de rodar — o Gemini não deve enxergar as tools bloqueadas (já filtradas em
+    _TOOL_DECLARATIONS_SITE), mas o guard aqui é a barreira real (não confia no LLM).
     """
     t0 = time.perf_counter()
+
+    # ── Guard do modo site (hard, independe do prompt) ──
+    if modo_site:
+        if nome not in _SITE_TOOLS_WHITELIST:
+            return ({"bloqueado": True, "mensagem": _SITE_GATE_MSG,
+                     "_meta": {"ferramenta": nome, "tier": "bloqueada", "elapsed_s": 0.0}}, "gate")
+        if nome in _SITE_AMOSTRA_TOOLS:
+            _mn = dict((await carregar_projeto(projeto.id, projeto.user_id)).modelo_negocio or {})
+            _site = dict(_mn.get("_site") or {})
+            _usadas = int(_site.get("amostras", 0))
+            if _usadas >= _SITE_MAX_AMOSTRAS:
+                return ({"bloqueado": True, "mensagem": _SITE_GATE_MSG,
+                         "_meta": {"ferramenta": nome, "tier": "limite_amostras", "elapsed_s": 0.0}}, "gate")
+            _site["amostras"] = _usadas + 1
+            _mn["_site"] = _site
+            await atualizar_campo_projeto(projeto.id, "modelo_negocio", _mn, projeto.user_id)
 
     try:
         if nome == "pesquisar_contexto_mercado":
@@ -799,6 +917,7 @@ async def conversar(
     mensagem: str,
     usuario_id: str,
     projeto_id: str | None = None,
+    modo_site: bool = False,
 ) -> dict[str, Any]:
     """
     Processa uma mensagem do usuário e retorna a resposta do consultor.
@@ -854,8 +973,8 @@ async def conversar(
 
     # 5. Loop de function calling (SDK google-genai: client.chats)
     config = types.GenerateContentConfig(
-        system_instruction=_build_system_prompt(projeto),
-        tools=[_TOOL_DECLARATIONS],
+        system_instruction=_build_system_prompt_site(projeto) if modo_site else _build_system_prompt(projeto),
+        tools=[_TOOL_DECLARATIONS_SITE if modo_site else _TOOL_DECLARATIONS],
         temperature=0.3,
         max_output_tokens=2048,
     )
@@ -889,7 +1008,7 @@ async def conversar(
         # Executa todas as tool calls do turno (podem ser paralelas)
         tool_results = []
         tasks = [
-            _executar_ferramenta(fc.function_call.name, dict(fc.function_call.args), projeto, usuario_id)
+            _executar_ferramenta(fc.function_call.name, dict(fc.function_call.args), projeto, usuario_id, modo_site)
             for fc in fc_parts
         ]
         resultados = await asyncio.gather(*tasks)
