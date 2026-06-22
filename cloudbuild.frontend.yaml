@@ -11,6 +11,14 @@ steps:
       - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gymsite-frontend:$SHORT_SHA
       - -f
       - frontend/Dockerfile
+      # Build-time env do Vite (publishable NÃO é segredo). Garante bundle com key
+      # correta mesmo no checkout limpo do trigger (frontend/.env.production é gitignored).
+      - --build-arg
+      - VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}
+      - --build-arg
+      - VITE_SUPABASE_ANON_KEY=${_VITE_SUPABASE_ANON_KEY}
+      - --build-arg
+      - VITE_API_BASE=${_VITE_API_BASE}
       - frontend
   - id: push
     name: gcr.io/cloud-builders/docker
@@ -29,5 +37,9 @@ steps:
       - --quiet
 images:
   - us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/gymsite-frontend:$SHORT_SHA
+substitutions:
+  _VITE_SUPABASE_URL: https://epgedaiukjippepujuzc.supabase.co
+  _VITE_SUPABASE_ANON_KEY: sb_publishable_fj4Ioi3YX8gI-h3lrcb45w_FZa9UzhD
+  _VITE_API_BASE: https://gymsite-api.vectracargo.com.br
 options:
   logging: CLOUD_LOGGING_ONLY
