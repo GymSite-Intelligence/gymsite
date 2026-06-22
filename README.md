@@ -230,7 +230,7 @@ gymsite_intelligence/
 
 - Python 3.12+
 - Node.js 20+ (pnpm/npm)
-- Acesso ao projeto Supabase `cargo-flow-navigator` (schema GymSite vive lá)
+- Acesso ao projeto Supabase `<SUPABASE_PROJECT>` (schema GymSite vive lá)
 - `GOOGLE_API_KEY` (Gemini Developer API — padrão atual)
 - (Opcional, Vertex) Service Account com role `Vertex AI User` — ver [docs/VERTEX_SETUP.md](docs/VERTEX_SETUP.md)
 
@@ -387,7 +387,7 @@ Custos persistidos em `relatorios.custo_brl/tokens_total` e detalhados por agent
 
 ## Segurança
 
-- API Keys e credenciais nunca em código — `.env` + Service Account JSON em `C:\Users\marce\.gcp\gymsite-sa.json` (gitignored)
+- API Keys e credenciais nunca em código — `.env` + Service Account JSON em `<PATH_TO_SA_JSON>` (gitignored)
 - RLS por organização (`user_org_ids()`) em todas as tabelas
 - Trigger `enforce_company_domain` no Supabase CFN aceita só domínio Vectra ou `app_metadata.origem='gymsite'`
 - Backend usa `service_role` apenas pra escrita do pipeline; leituras do frontend passam por JWT do usuário
@@ -401,4 +401,4 @@ Proprietária — © 2026 Vectra Cargo / Navi Vectra. Todos os direitos reservad
 
 ## Autor
 
-Marcelo Rosas · `marcelo.rosas@vectracargo.com.br`
+Marcelo Rosas · `<CONTACT_EMAIL>`

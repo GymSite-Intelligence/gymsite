@@ -4,7 +4,7 @@
  * Inicializado lazy a partir de VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY.
  * Quando VITE_USE_MOCKS=true, hooks bypassam o client (não chamam).
  *
- * Schema GymSite vive no mesmo Postgres do CFN (cargo-flow-navigator).
+ * Schema GymSite vive no mesmo Postgres do CFN (<SUPABASE_PROJECT>).
  * Tabelas: organizations, relatorios, relatorio_inputs, relatorio_outputs,
  * candidatos, competidores, cenarios_financeiros, sensibilidade_cenarios,
  * bairros_alternativos. Views: v_relatorios_resumo, v_bairros_aggregate.

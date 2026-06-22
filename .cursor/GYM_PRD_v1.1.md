@@ -49,7 +49,7 @@ automatizado de onboarding via VectraClaw (Morpheus -> Hermes -> CFN -> Navi).
 - PENDENTE Template Hermes gymsite_lead_welcome: nao existe
 - PENDENTE src/services/navi_client.py: nao existe
 
-### cargo-flow-navigator
+### <SUPABASE_PROJECT>
 - OK useClients.tsx + BrasilAPI ja usados
 - PENDENTE Colunas lead_source, lead_badge, gymsite_access_code na tabela clients: nao existem
 - PENDENTE Badge visual GymSite Lead no componente de cliente: nao existe
@@ -344,7 +344,7 @@ COMMENT ON COLUMN relatorios.access_code_used_at IS 'Timestamp da primeira utili
 - Variaveis de ambiente via import.meta.env.VITE_*
 - NUNCA commite credenciais
 
-### cargo-flow-navigator (Agente 4)
+### <SUPABASE_PROJECT> (Agente 4)
 - NAO altere useClients.tsx
 - Novos campos apenas via migration SQL
 - Badge visual apenas -- sem alterar logica de negocio existente

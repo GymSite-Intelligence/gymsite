@@ -4,7 +4,7 @@ Pipeline completo: **Build → Test → Push → Deploy**
 
 Suporta 2 targets de deploy:
 1. **VPS genérico** (DigitalOcean, Hetzner, AWS EC2, etc) — SSH direto
-2. **Google Compute Engine (GCE)** — VM no projeto GCP `gen-lang-client-0106729343`
+2. **Google Compute Engine (GCE)** — VM no projeto GCP `<GCP_PROJECT_ID>`
 
 ---
 
@@ -52,7 +52,7 @@ nano .env.production  # preencha os secrets
 
 ## Opção B: Deploy no Google Compute Engine (RECOMENDADO)
 
-Você já tem projeto GCP ativo: `gen-lang-client-0106729343`
+Você já tem projeto GCP ativo: `<GCP_PROJECT_ID>`
 
 ### 1. Bootstrap da VM (rode localmente)
 
@@ -98,7 +98,7 @@ scp -i ~/.ssh/id_ed25519 -r .cloudflared/* ubuntu@$VM_IP:/opt/gymsite/cloudflare
 | `SSH_HOST` | IP externo da VM (ex: `34.95.xxx.xxx`) |
 | `SSH_USER` | `ubuntu` |
 | `SSH_PRIVATE_KEY` | Conteúdo completo de `~/.ssh/id_ed25519` |
-| `GCP_SA_KEY` | (Opcional) Conteúdo de `.gcp/gymsite-sa.json` pra deploy via gcloud |
+| `GCP_SA_KEY` | (Opcional) Conteúdo de `<PATH_TO_SA_JSON>` pra deploy via gcloud |
 | `GCP_VM_NAME` | `gymsite-api` |
 | `GCP_ZONE` | `southamerica-east1-a` |
 | `SLACK_WEBHOOK_URL` | (Opcional) |

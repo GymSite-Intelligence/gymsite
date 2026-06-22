@@ -44,14 +44,14 @@ Since your VPS is offline, here are the **3 deployment options**:
 ### **Option 1: Cloud Run (Google Cloud) — RECOMMENDED**
 You already have GCP credentials:
 ```
-Project: gen-lang-client-0106729343
-Service Account: gymsite-pipeline@gen-lang-client-0106729343.iam.gserviceaccount.com
+Project: <GCP_PROJECT_ID>
+Service Account: <GCP_SA_EMAIL>
 ```
 
 **Setup:**
 ```bash
 gcloud run deploy gymsite-api \
-  --image gcr.io/gen-lang-client-0106729343/gymsite-api:latest \
+  --image gcr.io/<GCP_PROJECT_ID>/gymsite-api:latest \
   --region southamerica-east1 \
   --memory 2G --cpu 2 \
   --env-vars-file .env.prod
@@ -59,7 +59,7 @@ gcloud run deploy gymsite-api \
 
 **GitHub Actions Secret:**
 ```yaml
-GCP_SA_KEY = <contents of C:\Users\marce\.gcp\gymsite-sa.json>
+GCP_SA_KEY = <contents of <PATH_TO_SA_JSON>>
 ```
 
 ### **Option 2: Spin Up New VPS & SSH Deploy**
@@ -164,8 +164,8 @@ jobs:
 ```bash
 # Install gcloud CLI
 # Then:
-gcloud auth activate-service-account --key-file=~/.gcp/gymsite-sa.json
-gcloud config set project gen-lang-client-0106729343
+gcloud auth activate-service-account --key-file=<PATH_TO_SA_JSON>
+gcloud config set project <GCP_PROJECT_ID>
 gcloud run deploy gymsite-api \
   --source . \
   --region southamerica-east1 \
@@ -180,7 +180,7 @@ gcloud run deploy gymsite-api \
 |------|--------|-------|
 | **SSH Keys** | ✅ Found | `id_ed25519`, `oracle_paperclip` |
 | **VPS SSH** | ❌ Offline | 64.181.167.248, 136.248.92.230, 147.15.57.98 |
-| **GCP Project** | ✅ Active | `gen-lang-client-0106729343` |
+| **GCP Project** | ✅ Active | `<GCP_PROJECT_ID>` |
 | **GitHub Repo** | ✅ Found | `github.com/Marcelo-Rosas/gymsite` |
 | **Current Deployment** | ✅ Running | Cloudflare Tunnel (local machine) |
 | **Recommended Next** | 🎯 | Migrate to Google Cloud Run OR spin up new VPS |

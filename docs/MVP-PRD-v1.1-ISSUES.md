@@ -17,7 +17,7 @@ Fluxo: VectraCargo (form) → VectraClaw (POST /api/gymsite/lead) → Morpheus (
 
 ## Convenções
 
-- **Owner:** quem executa (`agente-1` gymsite, `agente-2` vectracargo, `agente-3` vectraclaw-backend, `agente-4` cargo-flow-navigator, `agente-5` navi, `humano` Marcelo).
+- **Owner:** quem executa (`agente-1` gymsite, `agente-2` vectracargo, `agente-3` vectraclaw-backend, `agente-4` <SUPABASE_PROJECT>, `agente-5` navi, `humano` Marcelo).
 - **Blocked by:** issues que precisam fechar antes desta começar.
 - **Estado:** `[ ]` pendente, `[~]` em progresso, `[x]` concluído.
 
@@ -449,7 +449,7 @@ async def create_gymsite_deal(nome, cnpj, email, telefone, access_code) -> dict:
 
 ### [ ] GYM-15 — Migration CFN (clients.lead_source, lead_badge, gymsite_access_code)
 
-- **Owner:** `agente-4` (cargo-flow-navigator)
+- **Owner:** `agente-4` (<SUPABASE_PROJECT>)
 - **Labels:** `CFN` `Supabase`
 - **Arquivo:** `supabase/migrations/2026-05-16T000000_gymsite_badge.sql`
 - **Blocked by:** —

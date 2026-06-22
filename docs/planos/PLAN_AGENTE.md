@@ -10,8 +10,8 @@ Agente que conversa com o visitante do site, demonstra valor (amostra demografic
 ## Onde vive
 
 - Google Cloud Agent Platform / Studio.
-- Projeto: gen-lang-client-0106729343 (Navi Vectra).
-- Agente: "GymSite — Consultor de Viabilidade" (agent id agent_1781375257727).
+- Projeto: <GCP_PROJECT_ID> (Navi Vectra).
+- Agente: "GymSite — Consultor de Viabilidade" (agent id <AGENT_ID>).
 - Ferramenta acoplada: GoogleSearchAgent (busca).
 
 ## Estado atual (verificado)
