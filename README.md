@@ -261,25 +261,6 @@ npm run dev   # :5174
 
 `.env` do frontend precisa de `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` + `VITE_API_BASE=http://localhost:8000`.
 
-### shadcn/ui (private registry `@gymsite`)
-
-O `frontend/components.json` define um registry privado `@gymsite` usando placeholders `${REGISTRY_URL}` e `${REGISTRY_TOKEN}`.
-O **shadcn CLI lê essas variáveis do ambiente do processo (shell)** e **não carrega `frontend/.env*`**.
-
-Workflow recomendado (PowerShell, a partir da raiz do repo):
-
-```powershell
-# 1) Preencha REGISTRY_URL e REGISTRY_TOKEN no .env da raiz
-#    (copie de .env.example → .env)
-#
-# 2) Exporte as variáveis na sua sessão (ou use um .env loader externo)
-$env:REGISTRY_URL="https://registry.vectracargo.com.br"
-$env:REGISTRY_TOKEN="..."
-
-# 3) Rode o shadcn
-npx shadcn@latest add @gymsite/<componente>
-```
-
 ### Login
 
 Email + senha (default) ou OTP código no email. Trigger CFN aceita usuários com `app_metadata.origem = 'gymsite'` mesmo fora de `@vectracargo.com.br`. Convidar tester via:

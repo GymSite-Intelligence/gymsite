@@ -22,12 +22,6 @@
   "menuColor": "default",
   "menuAccent": "subtle",
   "registries": {
-    "@shadcn": "https://ui.shadcn.com/r/styles/{style}/{name}.json",
-    "@gymsite": {
-      "url": "${REGISTRY_URL}/{name}.json",
-      "headers": {
-        "Authorization": "Bearer ${REGISTRY_TOKEN}"
-      }
-    }
+    "@shadcn": "https://ui.shadcn.com/r/styles/{style}/{name}.json"
   }
 }
