@@ -77,6 +77,10 @@ class ConversarSiteResposta(BaseModel):
     sugestoes: list[str] = []
     pode_gerar_relatorio: bool = False
     dados_faltantes: list[str] = []
+    # Dados coletados no chat (server-side) → prefill do form Tier 2 (POST /analise),
+    # pra não re-perguntar cidade/bairro/tipo que o visitante já disse conversando.
+    localizacao: dict = {}        # {cidade, bairro, uf}
+    modelo_negocio: dict = {}     # {tipo, ...} — sem campos internos
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -280,12 +284,18 @@ async def conversar_site(data: ConversarSiteInput, request: Request):
         logger.exception("conversar_site falhou")
         raise HTTPException(status_code=500, detail="Falha ao processar a conversa.") from e
 
+    proj = r.get("projeto") or {}
+    mn = dict(proj.get("modelo_negocio") or {})
+    mn.pop("_site", None)  # contador interno de antifatiamento — não vaza pro front
+
     return ConversarSiteResposta(
         projeto_id=r["projeto_id"],
         mensagem=r["mensagem"],
         sugestoes=r.get("sugestoes", []),
         pode_gerar_relatorio=r.get("pode_gerar_relatorio", False),
         dados_faltantes=r.get("dados_faltantes", []),
+        localizacao=proj.get("localizacao") or {},
+        modelo_negocio=mn,
     )
 
 
