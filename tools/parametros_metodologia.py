@@ -62,6 +62,22 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "renda_percentil_mid":          _p(0.40, "calibração GymSite v2 (acima da mediana → Mid)", "corte_posicionamento", "fração", "calibracao"),
     "headroom_ratio_oceano_azul":   _p(2.0, "calibração GymSite v2 (ticket sustentável ≥ 2× ticket de mercado)", "corte_posicionamento", "fator", "calibracao"),
     "headroom_ratio_transicao":     _p(1.2, "calibração GymSite v2 (folga moderada de ticket)", "corte_posicionamento", "fator", "calibracao"),
+    # ── A9 KPI / Valuation readiness (PLANO_MOTOR_FINANCEIRO_V3 §2.5, adendo M&A) ──
+    # LTV por aluno mínimo por tier (Boutique/Premium exige histórico longo de retenção).
+    "ltv_aluno_min_mid":     _p(1500.0, "Benchmark Financeiro Academias 2024 (LTV/aluno Mid mínimo p/ Valuation)", "kpi_valuation", "BRL/aluno", "benchmark"),
+    "ltv_aluno_min_premium": _p(2800.0, "Benchmark Financeiro Academias 2024 (LTV/aluno Boutique/Premium mínimo)", "kpi_valuation", "BRL/aluno", "benchmark"),
+    # Faixa de múltiplo EBITDA por tier (M&A) — param() só aceita escalar → _min/_max.
+    "multiplo_ebitda_low_min":     _p(4.0, "Benchmark M&A Academias 2024 (Low 4,0-6,0× EBITDA)", "multiplo_ebitda", "x_ebitda", "benchmark"),
+    "multiplo_ebitda_low_max":     _p(6.0, "Benchmark M&A Academias 2024 (Low 4,0-6,0× EBITDA)", "multiplo_ebitda", "x_ebitda", "benchmark"),
+    "multiplo_ebitda_mid_min":     _p(2.4, "Benchmark M&A Academias 2024 (Mid 2,4-3,6× EBITDA)", "multiplo_ebitda", "x_ebitda", "benchmark"),
+    "multiplo_ebitda_mid_max":     _p(3.6, "Benchmark M&A Academias 2024 (Mid 2,4-3,6× EBITDA)", "multiplo_ebitda", "x_ebitda", "benchmark"),
+    "multiplo_ebitda_premium_min": _p(3.8, "Benchmark M&A Academias 2024 (Premium/Boutique 3,8-6,5× EBITDA)", "multiplo_ebitda", "x_ebitda", "benchmark"),
+    "multiplo_ebitda_premium_max": _p(6.5, "Benchmark M&A Academias 2024 (Premium/Boutique 3,8-6,5× EBITDA)", "multiplo_ebitda", "x_ebitda", "benchmark"),
+    # Retenção anual / churn (premium retém >85%/ano = churn <~5%/mês).
+    "retencao_ano_min_premium": _p(0.85, "Benchmark Financeiro Academias 2024 (retenção anual Premium >85%)", "kpi_valuation", "fração", "benchmark"),
+    # Metas de Valuation readiness (genéricas — atreladas a due-diligence M&A).
+    "cac_max_valuation":         _p(180.0, "Benchmark M&A Academias 2024 (CAC máx por aluno p/ múltiplo-alvo)", "kpi_valuation", "BRL/aluno", "benchmark"),
+    "retencao_ano_min_valuation": _p(0.85, "Benchmark M&A Academias 2024 (retenção anual mínima p/ Valuation)", "kpi_valuation", "fração", "benchmark"),
     "market_share_default": _p(0.15, "fallback_conservador (A4/anéis recalibra)", "quota_raio_estimada", "fração", "calibracao", "2026-06-14"),
     "inadimplencia_default": _p(0.06, "fallback_ACAD_com_recorrencia", "benchmark_setorial", "fração", "benchmark", "2026-06-14"),
     "meses_entrega":        _p(30, "fallback_mediana_obra_24_36m (recalibrar CNO encerradas)", "mediana_tempo_obra", "meses", "benchmark", "2026-06-14"),
@@ -195,6 +211,18 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "custo_sistema_gestao_mensal": _p(800.0, "benchmark setorial 2024", "custo_fixo", "BRL/mês", "benchmark"),
     "custo_seguro_pct_capex":      _p(0.002, "benchmark setorial (mensal sobre CAPEX)", "custo_fixo", "fração", "benchmark"),
     "custo_outros_pct_receita":    _p(0.02, "calibração metodológica GymSite v2 (imprevistos)", "custo_fixo", "fração", "calibracao"),
+    # ── Folha como % do faturamento (benchmark maduro). Aplicado como max(piso R$, % da receita). ──
+    "folha_pct_fat_low":     _p(0.18, "Benchmark Financeiro Academias 2024 (Low-Cost 18%)", "folha_pct", "fração", "benchmark"),
+    "folha_pct_fat_mid":     _p(0.35, "Benchmark Financeiro Academias 2024 (Mid-Market 35%)", "folha_pct", "fração", "benchmark"),
+    "folha_pct_fat_premium": _p(0.33, "Benchmark Financeiro Academias 2024 (Premium 28-38%, alvo Fator R)", "folha_pct", "fração", "benchmark"),
+    # ── Fator R / Simples Nacional CNAE 9313-1/00 ──
+    "fator_r_corte_folha":        _p(0.28,  "LC 123/2006 — corte Fator R folha/faturamento", "fator_r", "fração", "regulatorio"),
+    "aliquota_simples_anexo_iii": _p(0.06,  "LC 123/2006 Anexo III faixa inicial", "tributo", "fração", "regulatorio"),
+    "aliquota_simples_anexo_v":   _p(0.155, "LC 123/2006 Anexo V faixa inicial", "tributo", "fração", "regulatorio"),
+    # ── Teto de ocupação imobiliária (aluguel+condomínio+IPTU / faturamento) por modelo ──
+    "ocupacao_teto_low":     _p(0.125, "Benchmark Financeiro Academias 2024 (Low-Cost 12,5%)", "ocupacao_teto", "fração", "benchmark"),
+    "ocupacao_teto_mid":     _p(0.15,  "Benchmark Financeiro Academias 2024 (Mid-Market 15%)", "ocupacao_teto", "fração", "benchmark"),
+    "ocupacao_teto_premium": _p(0.15,  "Benchmark Financeiro Academias 2024 (Premium 15-16%)", "ocupacao_teto", "fração", "benchmark"),
 
     # ══ SATURAÇÃO / CONCORRÊNCIA (competitor_tools) ══════════════════════════
     "saturacao_densidade_baixo": _p(0.3, "benchmark densidade acad/km² (mercado)", "limiar_saturacao", "acad/km2", "benchmark"),
