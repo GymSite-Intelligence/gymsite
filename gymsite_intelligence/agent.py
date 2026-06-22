@@ -18,8 +18,12 @@ try:
     from google.adk.models.google_llm import Gemini as _AdkGemini
     from google.genai import types as _genai_types
 
+    # Janela alargada (6 tentativas / até 90s): spikes de "503 high demand" do Gemini
+    # podem durar vários minutos; com 4/60s um run de ~12min morria perto do fim
+    # (ex.: relatório 30992711 em 2026-06-22). Mais tentativas absorvem o spike sem
+    # re-rodar a pipeline inteira. Fix de fundo (resume por checkpoint) é separado.
     _RETRY_OPTIONS = _genai_types.HttpRetryOptions(
-        attempts=4, initial_delay=2.0, max_delay=60.0, exp_base=2.0,
+        attempts=6, initial_delay=2.0, max_delay=90.0, exp_base=2.0,
         http_status_codes=[429, 503, 500],
     )
 except Exception:  # ADK/genai ausente em algum contexto — segue sem retry de modelo
