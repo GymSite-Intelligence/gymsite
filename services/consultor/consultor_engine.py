@@ -411,7 +411,56 @@ A amostra é degustação, não substitui o relatório. Não deixe remontar o re
 Para liberar o diagnóstico, colete de forma conversacional (um passo de cada vez, confirmando) TODAS as variáveis: LOCALIZAÇÃO (Estado, Município, Bairro); IMÓVEL/NEGÓCIO (Tipo: Academia tradicional | CrossFit/Box | Estúdio Pilates | Studio Funcional | Outro; Porte: PP 250-400 | P 400-800 | M 800-1500 | G 1500-2500 | GG 2500-5000 m²; Público: 18-29 | 25-40 | 30-50 | 40+; Gênero: Misto | Predom. feminino | Predom. masculino | Excl. feminino | Excl. masculino; Estacionamento obrigatório: sim/não); CONTATO (Nome; E-mail ou WhatsApp). Conduza leve, não interrogatório. Não libere enquanto localização + tipo + porte + público + gênero + contato não estiverem preenchidos. Nunca invente valores; pergunte."""
 
 
-def _build_system_prompt_site(projeto: ProjectState) -> str:
+# Persona do "Responsável Técnico" — especialista de EQUIPAMENTOS (RAG segmentado:
+# só o data store de catálogos de equipamentos via consultar_catalogos_equipamentos).
+_PERSONA_TECNICO = """## PAPEL
+Você é o Responsável Técnico do GymSite Intelligence — especialista em EQUIPAMENTOS de academia. Ajuda a decidir QUE máquinas comprar, especificações, quantidade por m², layout de sala e fornecedores, sempre com base no catálogo técnico.
+
+## TOM
+Técnico mas acessível. Frases curtas, objetivas, focadas em montar a academia certa.
+
+## REGRA DE OURO (FONTE)
+Responda SEMPRE com base na ferramenta de catálogos de equipamentos (consultar_catalogos_equipamentos) e CITE o fornecedor/catálogo. NUNCA invente specs, modelos ou preços. Se o catálogo não trouxer o dado, diga com transparência e ofereça encaminhar ao time. Preço: "sob consulta" quando o catálogo não trouxer valor — nunca chute.
+
+## ESCOPO
+Só equipamentos/montagem técnica (máquinas, cardio, peso livre, funcional, layout, quantidade, fornecedores). Se perguntarem viabilidade/concorrência/demografia/financeiro, diga que isso é com o diagnóstico de mercado e ofereça redirecionar.
+
+## LGPD / FASE 0
+Sem preços de plano. Colete contato (nome + e-mail/WhatsApp) só se o visitante quiser receber proposta de equipamentos."""
+
+
+# Registry dos agentes do site (RAG SEGMENTADO por agente). Cada agente = persona +
+# whitelist de tools — e cada tool aponta pro SEU data store (mercado/D2 vs equip).
+# Generaliza o modo_site: conversar(modo_site=True, agente="responsavel_tecnico").
+_AGENTES_SITE: dict[str, dict] = {
+    "degustacao": {  # captação/mercado (default) — dados reais + D2/regulatório
+        "persona": _SITE_PERSONA,
+        "tools": _SITE_TOOLS_WHITELIST,
+        "amostra_tools": _SITE_AMOSTRA_TOOLS,
+    },
+    "responsavel_tecnico": {  # equipamentos — só o RAG de catálogos (gymsite-equip-app)
+        "persona": _PERSONA_TECNICO,
+        "tools": frozenset({"consultar_catalogos_equipamentos", "consultar_base_conhecimento"}),
+        "amostra_tools": frozenset(),  # RAG é barato → sem antifatiamento de amostra
+    },
+}
+_AGENTE_DEFAULT = "degustacao"
+
+
+def _agente_cfg(agente: str | None) -> dict:
+    return _AGENTES_SITE.get((agente or _AGENTE_DEFAULT), _AGENTES_SITE[_AGENTE_DEFAULT])
+
+
+def _tool_decls_agente(agente: str | None) -> types.Tool:
+    """Tool declarations expostas ao Gemini p/ o agente (só o RAG/tools do escopo dele)."""
+    wl = _agente_cfg(agente)["tools"]
+    return types.Tool(function_declarations=[
+        fd for fd in (_TOOL_DECLARATIONS.function_declarations or []) if fd.name in wl
+    ])
+
+
+def _build_system_prompt_site(projeto: ProjectState, agente: str = _AGENTE_DEFAULT) -> str:
+    cfg = _agente_cfg(agente)
     loc = projeto.localizacao or {}
     mn = projeto.modelo_negocio or {}
     amostras = int((mn.get("_site") or {}).get("amostras", 0))
@@ -421,11 +470,12 @@ def _build_system_prompt_site(projeto: ProjectState) -> str:
         ctx += f"\n- Localização informada: {loc.get('bairro', '')}, {loc.get('cidade', '')}/{loc.get('uf', '')}"
     if mn.get("tipo"):
         ctx += f"\n- Tipo de negócio: {mn['tipo']}"
-    ctx += f"\n- Amostras detalhadas já entregues nesta conversa: {amostras} (limite {_SITE_MAX_AMOSTRAS})."
+    if cfg["amostra_tools"]:
+        ctx += f"\n- Amostras detalhadas já entregues nesta conversa: {amostras} (limite {_SITE_MAX_AMOSTRAS})."
 
     return (
-        _SITE_PERSONA
-        + "\n\n## CONTEXTO DA CONVERSA" + ctx
+        cfg["persona"]
+        + "\n\n## CONTEXTO DA CONVERSA" + (ctx or " (início)")
         + f"\n\nData de hoje: {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
         + "\n\n## FORMATO\nAo final de cada resposta, sugira 1-3 próximos passos como lista JSON no campo `sugestoes`."
     )
@@ -438,23 +488,25 @@ async def _executar_ferramenta(
     projeto: ProjectState,
     usuario_id: str,
     modo_site: bool = False,
+    agente: str = _AGENTE_DEFAULT,
 ) -> tuple[dict[str, Any], str]:
     """
     Executa a tool pelo nome, wrappando os agentes ADK existentes.
     Retorna (resultado_dict, resumo_curto).
 
-    modo_site=True (N3 landing): aplica a whitelist Tier 1 e o antifatiamento hard
-    ANTES de rodar — o Gemini não deve enxergar as tools bloqueadas (já filtradas em
-    _TOOL_DECLARATIONS_SITE), mas o guard aqui é a barreira real (não confia no LLM).
+    modo_site=True (N3 landing): aplica a whitelist do `agente` (RAG segmentado) e o
+    antifatiamento hard ANTES de rodar — o Gemini não deve enxergar as tools fora do
+    escopo (já filtradas em _tool_decls_agente), mas o guard aqui é a barreira real.
     """
     t0 = time.perf_counter()
 
-    # ── Guard do modo site (hard, independe do prompt) ──
+    # ── Guard do modo site (hard, por agente — independe do prompt) ──
     if modo_site:
-        if nome not in _SITE_TOOLS_WHITELIST:
+        _cfg = _agente_cfg(agente)
+        if nome not in _cfg["tools"]:
             return ({"bloqueado": True, "mensagem": _SITE_GATE_MSG,
                      "_meta": {"ferramenta": nome, "tier": "bloqueada", "elapsed_s": 0.0}}, "gate")
-        if nome in _SITE_AMOSTRA_TOOLS:
+        if nome in _cfg["amostra_tools"]:
             _mn = dict((await carregar_projeto(projeto.id, projeto.user_id)).modelo_negocio or {})
             _site = dict(_mn.get("_site") or {})
             _usadas = int(_site.get("amostras", 0))
@@ -918,6 +970,7 @@ async def conversar(
     usuario_id: str,
     projeto_id: str | None = None,
     modo_site: bool = False,
+    agente: str = _AGENTE_DEFAULT,
 ) -> dict[str, Any]:
     """
     Processa uma mensagem do usuário e retorna a resposta do consultor.
@@ -973,8 +1026,8 @@ async def conversar(
 
     # 5. Loop de function calling (SDK google-genai: client.chats)
     config = types.GenerateContentConfig(
-        system_instruction=_build_system_prompt_site(projeto) if modo_site else _build_system_prompt(projeto),
-        tools=[_TOOL_DECLARATIONS_SITE if modo_site else _TOOL_DECLARATIONS],
+        system_instruction=_build_system_prompt_site(projeto, agente) if modo_site else _build_system_prompt(projeto),
+        tools=[_tool_decls_agente(agente) if modo_site else _TOOL_DECLARATIONS],
         temperature=0.3,
         max_output_tokens=2048,
     )
@@ -1008,7 +1061,7 @@ async def conversar(
         # Executa todas as tool calls do turno (podem ser paralelas)
         tool_results = []
         tasks = [
-            _executar_ferramenta(fc.function_call.name, dict(fc.function_call.args), projeto, usuario_id, modo_site)
+            _executar_ferramenta(fc.function_call.name, dict(fc.function_call.args), projeto, usuario_id, modo_site, agente)
             for fc in fc_parts
         ]
         resultados = await asyncio.gather(*tasks)
