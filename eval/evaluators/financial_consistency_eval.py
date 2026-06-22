@@ -74,6 +74,66 @@ def _extract_scenario_tickets(oc: dict) -> dict[str, float]:
     return out
 
 
+def _evaluate_ocupacao_fiscal_zona(oc: dict, issues: list[dict[str, Any]]) -> None:
+    """Invariantes do motor V3 (Fator R + guardrail de ocupação + 6 Zonas).
+
+    GATED: cada checagem só roda quando o campo novo está presente. Reports
+    antigos (capturados antes do motor V3, sem esses campos) são ignorados —
+    a suite segue verde até o re-baseline. Reports re-capturados com o motor
+    novo ficam guardados contra regressão (margem otimista / cegueira fiscal).
+    """
+    cenarios = oc.get("viabilidade_3_cenarios") or oc.get("cenarios")
+    if isinstance(cenarios, dict):
+        cen_iter = list(cenarios.values())
+    elif isinstance(cenarios, list):
+        cen_iter = cenarios
+    else:
+        cen_iter = []
+    for c in cen_iter:
+        if not isinstance(c, dict):
+            continue
+        rotulo = c.get("modelo") or c.get("faixa_ticket") or c.get("modelo_key") or "?"
+        # Guardrail de ocupação: acima do teto tem de rebaixar p/ INVIAVEL.
+        ocup = _float_or_none(c.get("ocupacao_pct"))
+        teto = _float_or_none(c.get("teto_ocupacao"))
+        viab = str(c.get("viabilidade") or "").strip().upper()
+        if ocup is not None and teto is not None and ocup > teto and viab and viab != "INVIAVEL":
+            issues.append({
+                "field": "ocupacao_vs_veredito",
+                "message": (
+                    f"Cenário {rotulo}: ocupação {ocup:.1%} > teto {teto:.1%} "
+                    f"mas viabilidade={viab} (esperado INVIAVEL)"
+                ),
+                "severity": "fail",
+            })
+        # Cegueira fiscal: receita > 0 com o campo tributos presente deve ter tributo > 0.
+        receita = _float_or_none(c.get("receita_mensal") or c.get("receita_mensal_estimada"))
+        if receita is not None and receita > 0 and "tributos_mensal" in c:
+            trib = _float_or_none(c.get("tributos_mensal"))
+            if trib is None or trib <= 0:
+                issues.append({
+                    "field": "tributos",
+                    "message": f"Cenário {rotulo}: receita {receita:.0f} sem tributos modelados (Fator R)",
+                    "severity": "fail",
+                })
+    # Zona de Percepção (A9): 1..5 válidas; Zona 6 (Culto) nunca é atribuída automaticamente.
+    pos = oc.get("posicionamento_estrategico")
+    if isinstance(pos, dict) and pos.get("zona_percepcao") is not None:
+        try:
+            z = int(pos.get("zona_percepcao"))
+        except (TypeError, ValueError):
+            z = None
+        if z is None or z < 1 or z > 5:
+            issues.append({
+                "field": "zona_percepcao",
+                "message": (
+                    f"zona_percepcao inválida ({pos.get('zona_percepcao')}) — "
+                    "esperado 1..5 (Zona 6 nunca automática)"
+                ),
+                "severity": "fail",
+            })
+
+
 def _finalize_status(issues: list[dict[str, Any]]) -> str:
     fails = [i for i in issues if i.get("severity", "fail") != "warn"]
     warns = [i for i in issues if i.get("severity") == "warn"]
@@ -224,6 +284,9 @@ def evaluate_financial_consistency(report: dict, golden: dict) -> EvalResult:
                 "severity": "warn",
             }
         )
+
+    # Invariantes do motor V3 (gated nos campos novos — não afeta reports antigos).
+    _evaluate_ocupacao_fiscal_zona(oc, issues)
 
     status = _finalize_status(issues)
     return EvalResult(status=status, evaluator="financial", issues=issues)

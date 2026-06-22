@@ -238,6 +238,15 @@ table.d thead { display:table-header-group; }
 {% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}{{ ' ★' if c.recomendado }}</td><td>{{ c.ticket }}</td><td>{{ c.receita }}</td><td>{{ c.lucro }}</td><td>{{ c.margem }}</td><td>{{ c.payback }}</td><td>{{ c.alunos }}</td>
   <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span></td></tr>{% endfor %}
 </table>{% endif %}
+{% if cenarios_tem_fiscal %}
+<div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Tributos &amp; Ocupação por cenário (Simples Nacional · Fator R · teto de ocupação imobiliária)</div>
+<table class="d" style="margin-top:6px;"><tr><th>Modelo</th><th>Folha %fat</th><th>Fator R</th><th>Anexo</th><th>Alíquota</th><th>Tributos/mês</th><th>Ocupação</th><th>Teto</th><th>Ticket-piso</th></tr>
+{% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}</td><td>{{ c.folha_pct }}</td><td>{{ c.fator_r }}</td><td>{{ c.anexo }}</td><td>{{ c.aliquota }}</td><td>{{ c.tributos }}</td><td>{% if c.ocupacao_estoura %}<span class="pill no">{{ c.ocupacao }}</span>{% else %}{{ c.ocupacao }}{% endif %}</td><td>{{ c.teto }}</td><td>{{ c.ticket_piso }}</td></tr>{% endfor %}
+</table>
+<div class="note">Academia (CNAE 9313-1/00) nasce no Anexo V (15,5%); migra ao Anexo III (6%) com Fator R (folha+pró-labore ≥ 28% do faturamento). Ticket-piso = ticket mínimo para o aluguel caber no teto de ocupação. Fonte: A4 (determinístico, LC 123/2006).</div>{% endif %}
+{% if ocupacao_alertas %}
+<div class="alert" style="margin-top:10px;"><div style="font-weight:bold; color:#7F1D1D; font-size:9.5pt; margin-bottom:5px;">⚠ Inviável por ocupação imobiliária</div>
+<ul>{% for o in ocupacao_alertas %}<li><strong>{{ o.modelo }}:</strong> ocupação {{ o.ocupacao }} &gt; teto {{ o.teto }} — ticket-piso necessário {{ o.ticket_piso }} para o aluguel caber no teto. <strong>INVIÁVEL por ocupação.</strong></li>{% endfor %}</ul></div>{% endif %}
 {% if capex %}
 <div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Composição do investimento — cenário {{ capex.modelo }}</div>
 <div style="margin-top:6px;">
@@ -274,6 +283,18 @@ table.d thead { display:table-header-group; }
 {% if posicionamento_txt %}
 <div class="sec">Posicionamento Recomendado</div>
 {% for p in posicionamento_txt %}<p class="prose">{{ p }}</p>{% endfor %}{% endif %}
+
+{% if zona or alertas_ff %}
+<div style="page-break-inside:avoid;">
+{% if zona %}<div class="duo" style="margin-bottom:10px;">
+  <div class="c" style="width:100%; display:block; border-left:4px solid #0E5C66;"><div class="l">Zona de Percepção (escala de valor percebido — 6 zonas)</div>
+  <div class="v" style="color:#0E5C66;">Z{{ zona.n }} — {{ zona.nome }}</div>
+  {% if zona.descricao %}<div style="font-size:8.5pt; color:#475569; margin-top:3px; line-height:1.5;">{{ zona.descricao }}</div>{% endif %}</div>
+</div>{% endif %}
+{% if alertas_ff %}
+<div style="font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px; margin-bottom:6px;">Alertas financeiros &amp; fiscais (determinísticos — A9 × A4)</div>
+{% for a in alertas_ff %}<div class="gapc" style="border-left-color:#D97706;"><div class="t">{{ a.titulo }}{% if a.severidade %} <span class="pill mid">{{ a.severidade }}</span>{% endif %}</div>{% if a.diagnostico %}<div class="d">{{ a.diagnostico }}</div>{% endif %}</div>{% endfor %}{% endif %}
+</div>{% endif %}
 
 {% if novas_unidades %}
 <div class="sec">Novas Unidades (90 dias)</div>
@@ -412,6 +433,14 @@ def _mc_money(v, sufixo: str = "") -> str | None:
         except ValueError:
             return s
     return s
+
+
+def _pct(v, casas: int = 1) -> str | None:
+    """Fração (0.4035) → '40,4%'. None/não-numérico → None (oculta no template)."""
+    if not isinstance(v, (int, float)):
+        return None
+    s = f"{v * 100:.{casas}f}".rstrip("0").rstrip(".") if casas else f"{v * 100:.0f}"
+    return f"{s.replace('.', ',')}%"
 
 
 def _viab_cls(v: str) -> str:
@@ -765,6 +794,21 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "alunos": _int(c.matriculas_realista) if c.matriculas_realista else "—",
             "viab": c.viabilidade or "—", "viab_cls": _viab_cls(c.viabilidade or ""),
             "recomendado": is_rec,
+            # V3 (A4) — tributos & ocupação por cenário (frações → %, valores → R$).
+            "anexo": c.anexo_simples or "—",
+            "aliquota": _pct(c.aliquota_tributos) or "—",
+            "tributos": f"R$ {_brl(c.tributos_mensal)}" if c.tributos_mensal is not None else "—",
+            "fator_r": _pct(c.fator_r) or "—",
+            "folha_pct": _pct(c.folha_pct_efetivo) or "—",
+            "ocupacao": _pct(c.ocupacao_pct) or "—",
+            "teto": _pct(c.teto_ocupacao) or "—",
+            "ticket_piso": f"R$ {_brl(c.ticket_piso_ocupacao)}" if c.ticket_piso_ocupacao is not None else "—",
+            "ocupacao_estoura": bool(c.ocupacao_estoura),
+            # Flag p/ saber se há QUALQUER dado fiscal/ocupação neste cenário (renderiza a sub-tabela).
+            "tem_fiscal": any(x is not None for x in (
+                c.anexo_simples, c.aliquota_tributos, c.tributos_mensal, c.fator_r,
+                c.folha_pct_efetivo, c.ocupacao_pct,
+            )),
         })
         if (c.modelo or "").lower() == "mid":
             mid_cen = c
@@ -929,6 +973,40 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "cidade": str(ent.get("cidade") or "—")[:20],
         }
 
+    # V3 — flag de fiscal (mostra a sub-tabela "Tributos & Ocupação") + box de ocupação
+    # estourada (cenário onde aluguel não cabe no teto). Determinístico, do A4.
+    cenarios_tem_fiscal = any(c.get("tem_fiscal") for c in cenarios)
+    ocupacao_alertas = [
+        {
+            "modelo": c["modelo"], "ocupacao": c["ocupacao"], "teto": c["teto"],
+            "ticket_piso": c["ticket_piso"],
+        }
+        for c in cenarios
+        if c.get("ocupacao_estoura")
+    ]
+
+    # V3 (A9) — Zona de Percepção (6 zonas) + alertas financeiros/fiscais determinísticos.
+    # pos = posicionamento_estrategico (dict inteiro). Zona só renderiza se zona_percepcao existe.
+    zona = None
+    if pos.get("zona_percepcao"):
+        zona = {
+            "n": pos.get("zona_percepcao"),
+            "nome": pos.get("zona_nome") or "—",
+            "descricao": pos.get("zona_descricao") or "",
+        }
+    alertas_ff = []
+    for a in (pos.get("alertas_financeiros_fiscais") or []):
+        if not isinstance(a, dict):
+            continue
+        titulo = str(a.get("titulo") or "").strip()
+        diag = str(a.get("diagnostico") or "").strip()
+        if not (titulo or diag):
+            continue
+        alertas_ff.append({
+            "titulo": titulo, "diagnostico": diag,
+            "severidade": str(a.get("severidade") or "").strip() or None,
+        })
+
     return {
         "bairro": model.bairro, "cidade": model.cidade, "uf": model.uf,
         "tipo": (model.tipo_negocio or "").replace("_", " "),
@@ -953,6 +1031,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         },
         "mercado": mercado, "panorama": panorama, "demografia": demografia,
         "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
+        "cenarios_tem_fiscal": cenarios_tem_fiscal, "ocupacao_alertas": ocupacao_alertas,
+        "zona": zona, "alertas_ff": alertas_ff,
         "competidores": competidores, "planos": planos[:12],
         "ticket_segmentos": _ticket_segmentos(model.competidores),
         "dores_quadro": _dores_quadro(meta.get("dores_consolidadas")), "pico": meta.get("pico"),
