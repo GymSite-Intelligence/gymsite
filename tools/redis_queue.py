@@ -104,6 +104,18 @@ async def gymsite_worker(job: dict) -> None:
         await _run_pipeline_async(relatorio_id, input_obj)
         logger.info(f"Pipeline {relatorio_id} concluído via RedisQueue")
 
+    elif job_type == "site_conversar":
+        # Turno do chat de degustação (N3). Roda o engine do consultor em modo_site;
+        # conversar() persiste user+assistant em project_messages → o front faz polling.
+        from services.consultor.consultor_engine import conversar
+        await conversar(
+            mensagem=job["mensagem"],
+            usuario_id=job["usuario_id"],
+            projeto_id=job["projeto_id"],
+            modo_site=True,
+        )
+        logger.info(f"site_conversar {job.get('projeto_id')} concluído via RedisQueue")
+
     elif job_type == "prospeccao":
         from prospecting.engine import run_prospeccao
         # run_prospeccao é síncrono e bloqueante — roda em thread pra não travar o
