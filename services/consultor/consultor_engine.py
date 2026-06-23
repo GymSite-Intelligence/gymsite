@@ -612,7 +612,7 @@ async def _executar_ferramenta(
         resumo = "erro"
 
     elapsed = round(time.perf_counter() - t0, 2)
-    resultado["_meta"] = {"elapsed_s": elapsed, "ferramenta": nome}
+    resultado = {**resultado, "_meta": {"elapsed_s": elapsed, "ferramenta": nome}}
     return resultado, resumo
 
 # ─── Wrappers das tools (chamam as macros ADK existentes) ────────────────────
@@ -1036,7 +1036,7 @@ async def conversar(
 
     # 4. Monta histórico no formato google-genai (types.Content), SEM a msg atual
     #    (ela vai no primeiro send_message).
-    history_contents = [
+    history_contents: list = [
         types.Content(
             role="user" if m["role"] == "user" else "model",
             parts=[types.Part(text=m["content"])],
@@ -1086,7 +1086,7 @@ async def conversar(
             break
 
         # Executa todas as tool calls do turno (podem ser paralelas)
-        tool_results = []
+        tool_results: list = []
         tasks = [
             _executar_ferramenta(fc.function_call.name, dict(fc.function_call.args), projeto, usuario_id, modo_site, agente)
             for fc in fc_parts
