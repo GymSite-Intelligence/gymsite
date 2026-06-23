@@ -954,19 +954,38 @@ def _extrair_sugestoes(texto: str) -> tuple[str, list[str]]:
     """
     import re
     sugestoes: list[str] = []
-    # Tolera pretty-print do modelo: `{` e `"sugestoes"` separados por espaço/newline,
-    # e `]`/`}` idem. re.DOTALL faz o `.` casar newlines dentro do array.
-    padrao = r'\{\s*"sugestoes"\s*:\s*(\[.*?\])\s*\}'
-    match = re.search(padrao, texto, re.DOTALL)
-    if match:
+    if not texto:
+        return texto, sugestoes
+
+    def _norm(parsed) -> list[str]:
+        """Aceita {'sugestoes': [...]}, [str,...] ou [{'proximo_passo'|'sugestao'|...}]."""
+        if isinstance(parsed, dict):
+            arr = parsed.get("sugestoes")
+            parsed = arr if isinstance(arr, list) else [parsed]
+        out: list[str] = []
+        if isinstance(parsed, list):
+            for item in parsed:
+                if isinstance(item, str):
+                    out.append(item)
+                elif isinstance(item, dict):
+                    for k in ("proximo_passo", "sugestao", "texto", "passo", "titulo", "value"):
+                        v = item.get(k)
+                        if isinstance(v, str):
+                            out.append(v)
+                            break
+        return [s.strip() for s in out if isinstance(s, str) and s.strip()]
+
+    # 1) Bloco cercado no fim: ```json [...] ``` ou ``` {...} ```
+    m = re.search(r'```(?:json)?\s*(\{.*\}|\[.*\])\s*```\s*$', texto, re.DOTALL)
+    # 2) JSON cru no fim: {"sugestoes":...} ou array de objetos [{...}]
+    if not m:
+        m = re.search(r'(\{\s*"sugestoes".*\}|\[\s*\{.*\}\s*\])\s*$', texto, re.DOTALL)
+    if m:
         try:
-            sugestoes = json.loads(match.group(1))
-        except json.JSONDecodeError:
+            sugestoes = _norm(json.loads(m.group(1)))
+            texto = texto[:m.start()].rstrip()
+        except (json.JSONDecodeError, TypeError):
             sugestoes = []
-        # Corta o bloco do texto visível + uma cerca markdown ```json/``` que o anteceda
-        # (o modelo às vezes embrulha o JSON em fence) — senão a cerca vaza pro usuário.
-        head = re.sub(r'\n?\s*```(?:json)?\s*$', '', texto[:match.start()]).rstrip()
-        texto = head
     return texto, sugestoes
 
 # ─── Cálculo de custo estimado ────────────────────────────────────────────────
