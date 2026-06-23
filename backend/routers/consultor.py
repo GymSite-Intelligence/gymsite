@@ -217,5 +217,5 @@ async def arquivar(
 
 
 # Montado em api.py via:
-#   from services.consultor.api_consultor import router_consultor
+#   from backend.routers.consultor import router_consultor
 #   app.include_router(router_consultor)
