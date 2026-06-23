@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo Pino (Dark Green) -->
+  <path d="M32 2C18.7452 2 8 12.7452 8 26C8 42 32 62 32 62C32 62 56 42 56 26C56 12.7452 45.2548 2 32 2Z" fill="#111827" stroke="#22C55E" stroke-width="2"/>
+
+  <!-- Mascote Robô -->
+  <rect x="22" y="14" width="20" height="16" rx="4" fill="#4ADE80"/>
+  <circle cx="28" cy="20" r="2" fill="#111827"/>
+  <circle cx="36" cy="20" r="2" fill="#111827"/>
+
+  <!-- Objeto: Relatório + Caneta -->
+  <rect x="24" y="32" width="14" height="16" rx="1" fill="white"/>
+  <path d="M27 35H35M27 38H35M27 41H31M27 44H35" stroke="#111827" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M38 32L40 44L36 42L38 32Z" fill="#4ADE80" stroke="#111827" stroke-width="1"/>
+
+  <!-- Crachá Violeta -->
+  <path d="M12 48H52V56C52 58.2091 50.2091 60 48 60H16C13.7909 60 12 58.2091 12 56V48Z" fill="#A78BFA" stroke="#22C55E" stroke-width="2"/>
+</svg>

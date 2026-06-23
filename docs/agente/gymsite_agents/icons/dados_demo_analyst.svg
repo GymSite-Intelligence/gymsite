@@ -1,0 +1,13 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M32 2C18.7452 2 8 12.7452 8 26C8 42 32 62 32 62C32 62 56 42 56 26C56 12.7452 45.2548 2 32 2Z" fill="#111827" stroke="#22C55E" stroke-width="2"/>
+  <rect x="22" y="14" width="20" height="16" rx="4" fill="#4ADE80"/>
+  <circle cx="28" cy="20" r="2" fill="#111827"/>
+  <circle cx="36" cy="20" r="2" fill="#111827"/>
+
+  <!-- Objeto: Pizza + Silhuetas -->
+  <circle cx="32" cy="40" r="6" fill="white" stroke="#111827" stroke-width="1.5"/>
+  <path d="M32 40L32 34M32 40L37.1962 43" stroke="#111827" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M22 46C22 44 24 43 24 43C24 43 24.5 42 24.5 41C24.5 40 23.5 39.5 23.5 38.5C23.5 37.5 24 37 25 37C26 37 26.5 37.5 26.5 38.5C26.5 39.5 25.5 40 25.5 41C25.5 42 26 43 26 43C26 43 28 44 28 46" fill="#4ADE80"/>
+
+  <path d="M12 48H52V56C52 58.2091 50.2091 60 48 60H16C13.7909 60 12 58.2091 12 56V48Z" fill="#60A5FA" stroke="#22C55E" stroke-width="2"/>
+</svg>
