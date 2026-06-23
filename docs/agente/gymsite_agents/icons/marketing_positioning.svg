@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo Pino (Dark Green) -->
+  <path d="M32 2C18.7452 2 8 12.7452 8 26C8 42 32 62 32 62C32 62 56 42 56 26C56 12.7452 45.2548 2 32 2Z" fill="#111827" stroke="#22C55E" stroke-width="2"/>
+
+  <!-- Mascote Robô -->
+  <rect x="22" y="14" width="20" height="16" rx="4" fill="#4ADE80"/>
+  <circle cx="28" cy="20" r="2" fill="#111827"/>
+  <circle cx="36" cy="20" r="2" fill="#111827"/>
+
+  <!-- Objeto: Peça de Xadrez (Cavalo) -->
+  <path d="M30 32C30 32 28 33 27 35C26 37 26 40 26 40H36V38C36 38 36 36 34 35C33 34.5 32 34 32 32" fill="white" stroke="#111827" stroke-width="1.5"/>
+  <path d="M30 32L32 29L34 32H30Z" fill="white" stroke="#111827" stroke-width="1.5"/>
+  <rect x="25" y="40" width="12" height="3" rx="1" fill="#4ADE80"/>
+
+  <!-- Crachá Violeta -->
+  <path d="M12 48H52V56C52 58.2091 50.2091 60 48 60H16C13.7909 60 12 58.2091 12 56V48Z" fill="#A78BFA" stroke="#22C55E" stroke-width="2"/>
+</svg>

@@ -1,296 +1,93 @@
 // ============================================================
 // components/icons/gymsite-icons.tsx
-// Ícones SVG dos 5 Setores — GymSite Intelligence v2.1
-// Estilo: robô com objeto temático (verde #84cc16 / branco / cinza escuro)
-// Uso: <IconeDados className="h-4 w-4" />
+// Ícones dos agentes GymSite — arte real (SVG do usuário), não mais placeholder.
+//
+// Os arquivos .svg vivem em ./svg/ (copie a pasta docs/agente/gymsite_agents/icons/
+// do repo de handoff para components/icons/svg/ no gym-insight-hub).
+// Vite importa .svg como URL (default export) → renderizamos via <img>.
+// `className` controla o tamanho (ex.: <IconeDados className="h-5 w-5" />).
 // ============================================================
 
-import type { SVGProps } from 'react'
+import type { ComponentType, SVGProps } from 'react'
 
-type IconProps = SVGProps<SVGSVGElement> & { className?: string }
+type IconProps = { className?: string } & SVGProps<SVGSVGElement>
+type Icon = ComponentType<IconProps>
 
-// ============================================================
-// DADOS — Robô com gráfico de barras em nuvem (azul no badge)
-// ============================================================
-export function IconeDados({ className, ...props }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      {...props}
-    >
-      {/* Cabeça do robô */}
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      {/* Olhos */}
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      {/* Antena */}
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      {/* Corpo */}
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      {/* Braços */}
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Gráfico de barras no peito */}
-      <line x1="9" y1="17" x2="9" y2="15" strokeWidth="2" />
-      <line x1="12" y1="17" x2="12" y2="13.5" strokeWidth="2" />
-      <line x1="15" y1="17" x2="15" y2="14.5" strokeWidth="2" />
-    </svg>
+// ── imports dos SVGs (URL) ──────────────────────────────────
+// Setores (pipeline logado)
+import dados from './svg/dados.svg'
+import financeiro from './svg/financeiro.svg'
+import contabilidade from './svg/contabilidade.svg'
+import marketing from './svg/marketing.svg'
+import conhecimento from './svg/conhecimento.svg'
+// Agentes do site (degustação)
+import mercado from './svg/mercado.svg'
+import tecnico from './svg/tecnico.svg'
+import arquiteto from './svg/arquiteto.svg'
+import engenheiro from './svg/engenheiro.svg'
+import regulatorio from './svg/regulatorio.svg'
+// 18 agentes do pipeline (crachá por agente)
+import marketing_lead_capture from './svg/marketing_lead_capture.svg'
+import dados_context_builder from './svg/dados_context_builder.svg'
+import dados_geoscout from './svg/dados_geoscout.svg'
+import dados_demo_analyst from './svg/dados_demo_analyst.svg'
+import dados_competitor_search from './svg/dados_competitor_search.svg'
+import dados_competitor_analysis from './svg/dados_competitor_analysis.svg'
+import dados_market_research from './svg/dados_market_research.svg'
+import financeiro_estimator from './svg/financeiro_estimator.svg'
+import financeiro_sensibilidade from './svg/financeiro_sensibilidade.svg'
+import contabilidade_parque_cnpj from './svg/contabilidade_parque_cnpj.svg'
+import contabilidade_diligencia from './svg/contabilidade_diligencia.svg'
+import contabilidade_validador from './svg/contabilidade_validador.svg'
+import conhecimento_rag_retriever from './svg/conhecimento_rag_retriever.svg'
+import conhecimento_rag_insight from './svg/conhecimento_rag_insight.svg'
+import conhecimento_rag_cross from './svg/conhecimento_rag_cross.svg'
+import marketing_positioning from './svg/marketing_positioning.svg'
+import marketing_report_writer from './svg/marketing_report_writer.svg'
+import marketing_contact_hunter from './svg/marketing_contact_hunter.svg'
+
+/** Fábrica: transforma uma URL de SVG num componente de ícone (<img>). */
+function svgIcon(src: string, alt: string): Icon {
+  const C = ({ className }: IconProps) => (
+    <img src={src} alt={alt} className={className} draggable={false} />
   )
+  C.displayName = `Icone(${alt})`
+  return C
 }
 
-// ============================================================
-// FINANCEIRO — Robô com seta de crescimento e baú (emerald no badge)
-// ============================================================
-export function IconeFinanceiro({ className, ...props }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      {...props}
-    >
-      {/* Cabeça do robô */}
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      {/* Corpo */}
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      {/* Braços */}
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Seta de crescimento no peito */}
-      <polyline points="8,17 11,14 13,16 16,13" />
-      <polyline points="14,13 16,13 16,15" />
-    </svg>
-  )
-}
+// ── Setores (usados pelo config/handoff.ts) ─────────────────
+export const IconeDados = svgIcon(dados, 'Dados')
+export const IconeFinanceiro = svgIcon(financeiro, 'Financeiro')
+export const IconeContabilidade = svgIcon(contabilidade, 'Contabilidade')
+export const IconeMarketing = svgIcon(marketing, 'Marketing')
+export const IconeConhecimento = svgIcon(conhecimento, 'Conhecimento')
 
-// ============================================================
-// CONTABILIDADE — Robô com ábaco e planilha (amber no badge)
-// ============================================================
-export function IconeContabilidade({ className, ...props }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      {...props}
-    >
-      {/* Cabeça do robô */}
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      {/* Corpo */}
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      {/* Braços */}
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Planilha / grid no peito */}
-      <rect x="9" y="13" width="6" height="5" rx="0.5" />
-      <line x1="12" y1="13" x2="12" y2="18" />
-      <line x1="9" y1="15.5" x2="15" y2="15.5" />
-    </svg>
-  )
-}
+// ── Agentes do site (usados pelo config/handoff_site.ts) ────
+export const IconeMercado = svgIcon(mercado, 'Mercado')
+export const IconeTecnico = svgIcon(tecnico, 'Responsável Técnico')
+export const IconeArquiteto = svgIcon(arquiteto, 'Arquiteto')
+export const IconeEngenheiro = svgIcon(engenheiro, 'Engenheiro de Obra')
+export const IconeRegulatorio = svgIcon(regulatorio, 'Regulatório')
 
-// ============================================================
-// MARKETING — Robô com alvo e megafone (violet no badge)
-// ============================================================
-export function IconeMarketing({ className, ...props }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      {...props}
-    >
-      {/* Cabeça do robô */}
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      {/* Corpo */}
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      {/* Braços */}
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Alvo no peito */}
-      <circle cx="12" cy="15.5" r="3" />
-      <circle cx="12" cy="15.5" r="1.2" />
-      <circle cx="12" cy="15.5" r="0.3" fill="currentColor" stroke="none" />
-    </svg>
-  )
-}
-
-// ============================================================
-// CONHECIMENTO — Robô com cérebro/engrenagem e livro (rose no badge)
-// ============================================================
-export function IconeConhecimento({ className, ...props }: IconProps) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-      {...props}
-    >
-      {/* Cabeça do robô */}
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      {/* Corpo */}
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      {/* Braços */}
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Livro aberto + faísca de insight no peito */}
-      <path d="M9 14 Q9 13 12 13 Q15 13 15 14 L15 18 Q12 17 9 18 Z" />
-      <line x1="12" y1="13" x2="12" y2="18" />
-      {/* Faísca acima */}
-      <path d="M13.5 11.5 L12.5 13 L14 12.5 L13 14" strokeWidth="1.2" />
-    </svg>
-  )
-}
-
-// ============================================================
-// SITE / DEGUSTAÇÃO — 5 agentes especialistas da landing
-// (mesmo estilo robô; usados pelo config/handoff_site.ts)
-// ============================================================
-
-// TÉCNICO — Robô com haltere no peito (equipamentos) — amber no badge
-export function IconeTecnico({ className, ...props }: IconProps) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Haltere no peito */}
-      <line x1="9.5" y1="15.5" x2="14.5" y2="15.5" strokeWidth="2" />
-      <line x1="9.5" y1="14" x2="9.5" y2="17" strokeWidth="2" />
-      <line x1="14.5" y1="14" x2="14.5" y2="17" strokeWidth="2" />
-    </svg>
-  )
-}
-
-// ARQUITETO — Robô com esquadro/régua no peito (projeto) — sky no badge
-export function IconeArquiteto({ className, ...props }: IconProps) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Esquadro (triângulo) no peito */}
-      <path d="M9 13.5 L9 17.5 L15 17.5 Z" />
-      <line x1="10.5" y1="16" x2="11.5" y2="16" />
-    </svg>
-  )
-}
-
-// ENGENHEIRO DE OBRA — Robô com viga "I" no peito (estrutura) — slate no badge
-export function IconeEngenheiro({ className, ...props }: IconProps) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Viga "I" no peito */}
-      <line x1="9.5" y1="13.5" x2="14.5" y2="13.5" strokeWidth="2" />
-      <line x1="9.5" y1="17.5" x2="14.5" y2="17.5" strokeWidth="2" />
-      <line x1="12" y1="13.5" x2="12" y2="17.5" strokeWidth="2" />
-    </svg>
-  )
-}
-
-// REGULATÓRIO — Robô com balança no peito (legal/CREF) — emerald no badge
-export function IconeRegulatorio({ className, ...props }: IconProps) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Balança no peito */}
-      <line x1="12" y1="13" x2="12" y2="18" />
-      <line x1="9" y1="14" x2="15" y2="14" />
-      <path d="M9 14 L8 16 L10 16 Z" />
-      <path d="M15 14 L14 16 L16 16 Z" />
-    </svg>
-  )
-}
-
-// MERCADO — Robô com pino de mapa no peito (viabilidade) — violet no badge
-export function IconeMercado({ className, ...props }: IconProps) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true" {...props}>
-      <rect x="7" y="2" width="10" height="8" rx="3" />
-      <circle cx="10" cy="6" r="1" fill="currentColor" stroke="none" />
-      <circle cx="14" cy="6" r="1" fill="currentColor" stroke="none" />
-      <line x1="12" y1="2" x2="12" y2="0.5" />
-      <circle cx="12" cy="0.5" r="0.5" fill="currentColor" stroke="none" />
-      <rect x="6" y="11" width="12" height="8" rx="2" />
-      <line x1="6" y1="13" x2="3" y2="15" />
-      <line x1="18" y1="13" x2="21" y2="15" />
-      {/* Pino de mapa no peito */}
-      <path d="M12 13 C10.3 13 9 14.2 9 15.6 C9 17.2 12 18.5 12 18.5 C12 18.5 15 17.2 15 15.6 C15 14.2 13.7 13 12 13 Z" />
-      <circle cx="12" cy="15.5" r="0.9" fill="currentColor" stroke="none" />
-    </svg>
-  )
+// ── 18 agentes do pipeline — mapa por id (config_handoff.ts AGENTES_PIPELINE) ──
+// Use AGENT_ICONS[agente.id] para crachá por agente; se faltar, caia no ícone do setor.
+export const AGENT_ICONS: Record<string, Icon> = {
+  marketing_lead_capture: svgIcon(marketing_lead_capture, 'Captação de Lead'),
+  dados_context_builder: svgIcon(dados_context_builder, 'Context Builder'),
+  dados_geoscout: svgIcon(dados_geoscout, 'Geo Scout'),
+  dados_demo_analyst: svgIcon(dados_demo_analyst, 'Demo Analyst'),
+  dados_competitor_search: svgIcon(dados_competitor_search, 'Competitor Search'),
+  dados_competitor_analysis: svgIcon(dados_competitor_analysis, 'Competitor Analysis'),
+  dados_market_research: svgIcon(dados_market_research, 'Market Research'),
+  financeiro_estimator: svgIcon(financeiro_estimator, 'Financial Estimator'),
+  financeiro_sensibilidade: svgIcon(financeiro_sensibilidade, 'Stress Test'),
+  contabilidade_parque_cnpj: svgIcon(contabilidade_parque_cnpj, 'Parque CNPJ'),
+  contabilidade_diligencia: svgIcon(contabilidade_diligencia, 'Due Diligence'),
+  contabilidade_validador: svgIcon(contabilidade_validador, 'Validador Cruzado'),
+  conhecimento_rag_retriever: svgIcon(conhecimento_rag_retriever, 'RAG Retriever'),
+  conhecimento_rag_insight: svgIcon(conhecimento_rag_insight, 'Insight Engine'),
+  conhecimento_rag_cross: svgIcon(conhecimento_rag_cross, 'Cross Reference'),
+  marketing_positioning: svgIcon(marketing_positioning, 'Positioning Strategist'),
+  marketing_report_writer: svgIcon(marketing_report_writer, 'Report Writer'),
+  marketing_contact_hunter: svgIcon(marketing_contact_hunter, 'Contact Hunter'),
 }
