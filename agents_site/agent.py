@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google.adk.agents import Agent
 from google.genai import types as _genai_types
 
+from agents_site.guardrails import gate_degustacao
 from agents_site.tools import (
     consultar_catalogo_equipamentos,
     consultar_base_regulatoria,
@@ -26,6 +27,10 @@ from agents_site.tools import (
     calcular_equipamentos_por_area,
     consultar_engenharia_obra,
     calcular_sanitarios_por_lotacao,
+    pesquisar_contexto_mercado,
+    buscar_pontos_comerciais,
+    analisar_demografia,
+    estimar_investimento,
 )
 
 _MODELO = os.environ.get("GYMSITE_SITE_MODEL", "gemini-2.5-flash")
@@ -134,7 +139,15 @@ Zero número fabricado: contagem de concorrentes vem da ferramenta; metodologia 
 ## ESCOPO
 Mercado/viabilidade/captação. Equipamentos → Responsável Técnico; regras legais → Regulatório. Tom consultivo e acolhedor, frases curtas.
 """,
-    tools=[buscar_concorrentes, consultar_base_regulatoria],
+    tools=[
+        buscar_concorrentes,
+        analisar_demografia,
+        pesquisar_contexto_mercado,
+        buscar_pontos_comerciais,
+        estimar_investimento,
+        consultar_base_regulatoria,
+    ],
+    before_tool_callback=gate_degustacao,
     generate_content_config=_genai_types.GenerateContentConfig(temperature=0.3, max_output_tokens=1536),
 )
 
