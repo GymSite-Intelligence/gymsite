@@ -1060,19 +1060,26 @@ async def conversar(
     chat = client.chats.create(model=_MODEL_ROUTER, config=config, history=history_contents)
     response = await asyncio.to_thread(chat.send_message, mensagem)
 
+    def _partes(resp):
+        """Itera as parts com segurança: candidates/content/parts podem vir None
+        (resposta bloqueada por safety, MAX_TOKENS sem conteúdo, etc.) — evita
+        crash do worker e deixa cair no fallback de fim de loop."""
+        for c in (getattr(resp, "candidates", None) or []):
+            content = getattr(c, "content", None)
+            for p in (getattr(content, "parts", None) or []):
+                yield p
+
     for _round in range(_MAX_TOOL_ROUNDS):
         # Verifica se há function calls
         fc_parts = [
-            p for c in response.candidates
-            for p in c.content.parts
+            p for p in _partes(response)
             if hasattr(p, "function_call") and p.function_call
         ]
 
         if not fc_parts:
             # LLM retornou texto — fim do loop
             texto_bruto = "".join(
-                p.text for c in response.candidates
-                for p in c.content.parts
+                p.text for p in _partes(response)
                 if hasattr(p, "text") and p.text
             )
             resposta_final, sugestoes_finais = _extrair_sugestoes(texto_bruto)
