@@ -324,7 +324,7 @@ Seu comportamento:
 - Para perguntas QUALITATIVAS (metodologia, regulatório/zoneamento/licença, franquia, boas práticas, tendências do setor), use consultar_base_conhecimento e cite os documentos retornados. Números de um bairro (renda, população, concorrentes, financeiro) vêm SEMPRE das ferramentas de dados, nunca da base de conhecimento.
 - Para EQUIPAMENTOS (que máquinas comprar, modelos, especificações, fornecedores), use consultar_catalogos_equipamentos e cite o fornecedor/catálogo. Não invente preço — diga "sob consulta" quando o catálogo não trouxer valor.
 - NÃO chame gerar_relatorio_formal a menos que o usuário peça explicitamente.
-- Termine respostas com 1-3 sugestões de próximo passo, separadas como lista JSON no campo `sugestoes`.
+- SUGESTÕES: ao final, emita SOMENTE um JSON `{"sugestoes": ["...", "..."]}` (1-3 itens), na VOZ DO USUÁRIO — frases curtas que o usuário clicaria para responder/seguir (ex.: "Informar o pico de alunos", "Ver concorrentes no bairro", "Estimar o investimento"). NUNCA são perguntas SUAS ao usuário. NÃO escreva "Sugestões de próximo passo" nem o JSON no corpo visível da resposta — o JSON é extraído pelo sistema e some.
 
 Termos PROIBIDOS na resposta (nunca use): slot, pipeline, payload, output_key, session.state, token, async, worker, queue, tenant.
 
@@ -501,7 +501,7 @@ def _build_system_prompt_site(projeto: ProjectState, agente: str = _AGENTE_DEFAU
         cfg["persona"]
         + "\n\n## CONTEXTO DA CONVERSA" + (ctx or " (início)")
         + f"\n\nData de hoje: {datetime.now(timezone.utc).strftime('%d/%m/%Y')}"
-        + "\n\n## FORMATO\nAo final de cada resposta, sugira 1-3 próximos passos como lista JSON no campo `sugestoes`."
+        + "\n\n## FORMATO\nAo final, emita SOMENTE um JSON {\"sugestoes\": [\"...\"]} (1-3 itens) com próximos passos NA VOZ DO USUÁRIO — frases curtas que o visitante clicaria para responder/seguir (ex.: \"Informar o pico de alunos\", \"Ver concorrentes no bairro\"). NUNCA são perguntas suas. NÃO escreva \"Sugestões\" nem o JSON no corpo visível — o sistema extrai e some."
     )
 
 # ─── Execução das ferramentas ─────────────────────────────────────────────────
@@ -954,19 +954,38 @@ def _extrair_sugestoes(texto: str) -> tuple[str, list[str]]:
     """
     import re
     sugestoes: list[str] = []
-    # Tolera pretty-print do modelo: `{` e `"sugestoes"` separados por espaço/newline,
-    # e `]`/`}` idem. re.DOTALL faz o `.` casar newlines dentro do array.
-    padrao = r'\{\s*"sugestoes"\s*:\s*(\[.*?\])\s*\}'
-    match = re.search(padrao, texto, re.DOTALL)
-    if match:
+    if not texto:
+        return texto, sugestoes
+
+    def _norm(parsed) -> list[str]:
+        """Aceita {'sugestoes': [...]}, [str,...] ou [{'proximo_passo'|'sugestao'|...}]."""
+        if isinstance(parsed, dict):
+            arr = parsed.get("sugestoes")
+            parsed = arr if isinstance(arr, list) else [parsed]
+        out: list[str] = []
+        if isinstance(parsed, list):
+            for item in parsed:
+                if isinstance(item, str):
+                    out.append(item)
+                elif isinstance(item, dict):
+                    for k in ("proximo_passo", "sugestao", "texto", "passo", "titulo", "value"):
+                        v = item.get(k)
+                        if isinstance(v, str):
+                            out.append(v)
+                            break
+        return [s.strip() for s in out if isinstance(s, str) and s.strip()]
+
+    # 1) Bloco cercado no fim: ```json [...] ``` ou ``` {...} ```
+    m = re.search(r'```(?:json)?\s*(\{.*\}|\[.*\])\s*```\s*$', texto, re.DOTALL)
+    # 2) JSON cru no fim: {"sugestoes":...} ou array de objetos [{...}]
+    if not m:
+        m = re.search(r'(\{\s*"sugestoes".*\}|\[\s*\{.*\}\s*\])\s*$', texto, re.DOTALL)
+    if m:
         try:
-            sugestoes = json.loads(match.group(1))
-        except json.JSONDecodeError:
+            sugestoes = _norm(json.loads(m.group(1)))
+            texto = texto[:m.start()].rstrip()
+        except (json.JSONDecodeError, TypeError):
             sugestoes = []
-        # Corta o bloco do texto visível + uma cerca markdown ```json/``` que o anteceda
-        # (o modelo às vezes embrulha o JSON em fence) — senão a cerca vaza pro usuário.
-        head = re.sub(r'\n?\s*```(?:json)?\s*$', '', texto[:match.start()]).rstrip()
-        texto = head
     return texto, sugestoes
 
 # ─── Cálculo de custo estimado ────────────────────────────────────────────────

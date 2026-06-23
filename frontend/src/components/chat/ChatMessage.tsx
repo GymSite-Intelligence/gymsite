@@ -37,14 +37,12 @@ function AgentBadges({ acoes }: { acoes: ChatAcao[] }) {
     <div className="mb-2 flex flex-wrap gap-1.5">
       {itens.map(({ a, ag }, i) => {
         const st = SETOR_STYLE[ag.setor]
-        const Icone = ag.icone
         return (
           <span
             key={i}
             title={a.resumo}
-            className={`inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-[11px] font-medium ring-1 ${st.bg} ${st.text} ${st.ring} duration-300 animate-in fade-in slide-in-from-bottom-1`}
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${st.bg} ${st.text} ${st.ring} duration-300 animate-in fade-in slide-in-from-bottom-1`}
           >
-            <Icone className="h-5 w-5" />
             {ag.label}
           </span>
         )
@@ -83,6 +81,10 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
 
 export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps) {
   const isUser = msg.role === 'user'
+  // Agente principal do turno (1ª ferramenta reconhecida) → vira o avatar.
+  const IconeAg = !isUser
+    ? msg.acoes?.map((a) => agenteDaFerramenta(a.ferramenta)).find(Boolean)?.icone
+    : undefined
   const isAdmin = useIsAdmin()
   const [copied, setCopied] = useState(false)
   const [rated, setRated] = useState<1 | -1 | null>(null)
@@ -113,10 +115,16 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
           className={
             isUser
               ? 'bg-primary text-primary-foreground text-xs'
-              : 'bg-emerald-100 text-emerald-700 text-xs'
+              : `bg-emerald-100 text-emerald-700 text-xs${IconeAg ? ' overflow-hidden p-0' : ''}`
           }
         >
-          {isUser ? <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+          {isUser ? (
+            <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          ) : IconeAg ? (
+            <IconeAg className="h-full w-full object-cover" />
+          ) : (
+            <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          )}
         </AvatarFallback>
       </Avatar>
 
