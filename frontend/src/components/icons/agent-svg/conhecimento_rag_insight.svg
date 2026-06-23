@@ -1,0 +1,18 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo Pino (Dark Green) -->
+  <path d="M32 2C18.7452 2 8 12.7452 8 26C8 42 32 62 32 62C32 62 56 42 56 26C56 12.7452 45.2548 2 32 2Z" fill="#111827" stroke="#22C55E" stroke-width="2"/>
+
+  <!-- Mascote Robô -->
+  <rect x="22" y="14" width="20" height="16" rx="4" fill="#4ADE80"/>
+  <circle cx="28" cy="20" r="2" fill="#111827"/>
+  <circle cx="36" cy="20" r="2" fill="#111827"/>
+  <path d="M22 20H18M42 20H46M32 14V10" stroke="#4ADE80" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Objeto: Lâmpada de Insight -->
+  <path d="M32 32C29.5 32 27.5 34 27.5 36.5C27.5 38.5 28.5 40 30 41V43H34V41C35.5 40 36.5 38.5 36.5 36.5C36.5 34 34.5 32 32 32Z" fill="#FDE047" stroke="white" stroke-width="1.5"/>
+  <path d="M30 44H34" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M32 30V28M36 31L37 30M28 31L27 30" stroke="#FDE047" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Crachá Rosa -->
+  <path d="M12 48H52V56C52 58.2091 50.2091 60 48 60H16C13.7909 60 12 58.2091 12 56V48Z" fill="#FB7185" stroke="#22C55E" stroke-width="2"/>
+</svg>

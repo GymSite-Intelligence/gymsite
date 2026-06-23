@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <!-- Fundo Blueprint (Malha de Grade) -->
+  <rect width="100%" height="100%" fill="#f0f9ff" />
+  <g stroke="#bae6fd" stroke-width="1.5">
+    <path d="M 0 50 L 500 50 M 0 100 L 500 100 M 0 150 L 500 150 M 0 200 L 500 200 M 0 250 L 500 250 M 0 300 L 500 300 M 0 350 L 500 350 M 0 400 L 500 400 M 0 450 L 500 450" />
+    <path d="M 50 0 L 50 500 M 100 0 L 100 500 M 150 0 L 150 500 M 200 0 L 200 500 M 250 0 L 250 500 M 300 0 L 300 500 M 350 0 L 350 500 M 400 0 L 400 500 M 450 0 L 450 500" />
+  </g>
+
+  <!-- Fundo do Pino (Estilo Divisor Bicolor) -->
+  <path d="M 250 40 C 134 40 40 134 40 250 C 40 350 250 460 250 460 L 250 40 Z" fill="#84cc16" stroke="#0f172a" stroke-width="8" stroke-linejoin="round" />
+  <path d="M 250 40 C 366 40 460 134 460 250 C 460 350 250 460 250 460 L 250 40 Z" fill="#1e293b" stroke="#0f172a" stroke-width="8" stroke-linejoin="round" />
+
+  <!-- Robô Mascot (Base e Cabeça) -->
+  <circle cx="250" cy="200" r="60" fill="#f8fafc" stroke="#0f172a" stroke-width="7" />
+  <circle cx="220" cy="195" r="10" fill="#22c55e" stroke="#0f172a" stroke-width="4" />
+  <circle cx="280" cy="195" r="10" fill="#22c55e" stroke="#0f172a" stroke-width="4" />
+  <path d="M 190 290 Q 250 270 310 290 L 290 380 Q 250 400 210 380 Z" fill="#f8fafc" stroke="#0f172a" stroke-width="7" />
+
+  <!-- Braços do Robô -->
+  <path d="M 190 300 Q 150 330 170 370" fill="none" stroke="#0f172a" stroke-width="12" stroke-linecap="round" />
+  <path d="M 310 300 Q 360 320 350 360" fill="none" stroke="#0f172a" stroke-width="12" stroke-linecap="round" />
+
+  <!-- Mão esquerda segurando o Haltere (Dumbbell) -->
+  <g transform="translate(145, 370) rotate(-10)">
+    <rect x="0" y="0" width="60" height="12" rx="6" fill="#f8fafc" stroke="#0f172a" stroke-width="6"/>
+    <rect x="-15" y="-15" width="25" height="42" rx="4" fill="#64748b" stroke="#0f172a" stroke-width="6"/>
+    <rect x="50" y="-15" width="25" height="42" rx="4" fill="#64748b" stroke="#0f172a" stroke-width="6"/>
+  </g>
+
+  <!-- Ícone do Prédio (Lado Direito - Sobre o fundo Dark) -->
+  <g transform="translate(325, 340)">
+    <!-- Silhueta simples do prédio em estilo linha clara -->
+    <path d="M 0 60 L 0 10 L 30 0 L 60 10 L 60 60 Z" fill="none" stroke="#bae6fd" stroke-width="6" stroke-linejoin="round"/>
+    <!-- Janelas -->
+    <g fill="#bae6fd">
+      <rect x="12" y="15" width="10" height="10" rx="1"/>
+      <rect x="38" y="15" width="10" height="10" rx="1"/>
+      <rect x="12" y="32" width="10" height="10" rx="1"/>
+      <rect x="38" y="32" width="10" height="10" rx="1"/>
+      <!-- Porta -->
+      <rect x="25" y="50" width="10" height="10" rx="1"/>
+    </g>
+  </g>
+</svg>
