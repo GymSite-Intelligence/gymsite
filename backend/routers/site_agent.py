@@ -69,6 +69,7 @@ class ConversarSiteInput(BaseModel):
     mensagem: str = Field(min_length=1, max_length=2000)
     projeto_id: Optional[str] = None          # None = nova sessão (exige Turnstile)
     turnstile_token: Optional[str] = None      # obrigatório só na 1ª mensagem
+    agente: Optional[str] = None               # degustacao (default) | responsavel_tecnico (RAG segmentado)
 
 
 class ConversarSiteResposta(BaseModel):
@@ -252,19 +253,21 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
 
 # ─── POST /api/site-agent/conversar (degustação — Tier 1) ─────────────────────
 
-@router_site_agent.post("/conversar", response_model=ConversarSiteResposta)
-async def conversar_site(data: ConversarSiteInput, request: Request):
-    """Chat de degustação da landing. Roda o MESMO engine do /consultor em
-    modo_site (persona de captação + base de conhecimento + whitelist Tier 1 +
-    antifatiamento hard). NÃO gera relatório — o release Tier 2 é o POST /analise
-    (com entitlement 1/email), chamado pelo frontend quando o gate de formulário
-    fecha. Turnstile (fail-closed) só na 1ª mensagem (criação da sessão).
+@router_site_agent.post("/conversar")
+async def conversar_site(data: ConversarSiteInput, request: Request, background: BackgroundTasks):
+    """Chat de degustação ASSÍNCRONO. O engine (modo_site) leva ~30-90s (Vertex +
+    SearchAPI + rounds) — rodar inline estourava o timeout do proxy (524) / fetch.
+    Então o POST só: Turnstile (1ª msg) + cria o projeto anon (rápido) + ENFILEIRA
+    o turno, e responde NA HORA com {projeto_id, status:"analisando"}. O worker roda
+    `conversar(modo_site=True)` (que persiste user+assistant em project_messages). O
+    front faz polling em GET /conversar/{projeto_id}/mensagens.
 
-    NOTA: cap de novas sessões por IP/dia ainda não enforced aqui (Turnstile +
-    antifatiamento K=2 do engine + entitlement 1/email no /analise já limitam o
-    custo). Follow-up: contador por IP na criação de sessão.
+    NOTA: cap de novas sessões por IP/dia ainda não enforced (Turnstile + K=2 +
+    entitlement 1/email no /analise limitam o custo). Follow-up.
     """
-    from services.consultor.consultor_engine import conversar, _ANON_SITE_USER_ID
+    from services.consultor.consultor_engine import _ANON_SITE_USER_ID
+    from services.consultor.project_state import criar_projeto
+    from api import _enqueue_ou_background
 
     ip = _client_ip(request)
     nova_sessao = not data.projeto_id
@@ -274,29 +277,61 @@ async def conversar_site(data: ConversarSiteInput, request: Request):
                             detail="Verificação anti-bot falhou.")
 
     try:
-        r = await conversar(
-            mensagem=data.mensagem,
-            usuario_id=_ANON_SITE_USER_ID,
-            projeto_id=data.projeto_id,
-            modo_site=True,
-        )
+        projeto_id = data.projeto_id
+        if nova_sessao:
+            projeto = await criar_projeto(_ANON_SITE_USER_ID)
+            projeto_id = projeto.id
     except Exception as e:  # noqa: BLE001
-        logger.exception("conversar_site falhou")
-        raise HTTPException(status_code=500, detail="Falha ao processar a conversa.") from e
+        logger.exception("conversar_site: falha ao criar projeto anon")
+        raise HTTPException(status_code=500, detail="Falha ao iniciar a conversa.") from e
 
-    proj = r.get("projeto") or {}
+    # Enfileira o turno (worker roda o engine e salva a resposta). Com REDIS_URL +
+    # RUN_QUEUE_WORKER=0 na api, vai pro gymsite-worker; senão BackgroundTasks fallback.
+    await _enqueue_ou_background({
+        "type": "site_conversar",
+        "projeto_id": projeto_id,
+        "mensagem": data.mensagem,
+        "usuario_id": _ANON_SITE_USER_ID,
+        "agente": data.agente or "degustacao",
+    }, background)
+
+    logger.info("site_conversar enfileirado projeto=%s ip=%s", projeto_id, ip)
+    return {"projeto_id": projeto_id, "status": "analisando"}
+
+
+# ─── GET /api/site-agent/conversar/{id}/mensagens (polling) ───────────────────
+
+@router_site_agent.get("/conversar/{projeto_id}/mensagens")
+async def conversar_mensagens(projeto_id: str, desde: Optional[str] = None):
+    """Polling do chat. Devolve mensagens APÓS `desde` (ISO) + estado do projeto
+    (localizacao/modelo_negocio p/ prefill do Tier 2). O projeto_id (uuid não-
+    adivinhável) é o token da sessão; só serve projetos do user anon do site."""
+    from services.consultor.consultor_engine import _ANON_SITE_USER_ID
+    sb = _sb()
+
+    proj = (
+        tbl(sb, "user_projects")
+        .select("localizacao, modelo_negocio, status, user_id")
+        .eq("id", projeto_id).maybe_single().execute()
+    ).data or {}
+    if not proj or proj.get("user_id") != _ANON_SITE_USER_ID:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+
+    q = tbl(sb, "project_messages").select("role, content, created_at").eq("projeto_id", projeto_id)
+    if desde:
+        q = q.gt("created_at", desde)
+    msgs = q.order("created_at").execute().data or []
+
     mn = dict(proj.get("modelo_negocio") or {})
-    mn.pop("_site", None)  # contador interno de antifatiamento — não vaza pro front
-
-    return ConversarSiteResposta(
-        projeto_id=r["projeto_id"],
-        mensagem=r["mensagem"],
-        sugestoes=r.get("sugestoes", []),
-        pode_gerar_relatorio=r.get("pode_gerar_relatorio", False),
-        dados_faltantes=r.get("dados_faltantes", []),
-        localizacao=proj.get("localizacao") or {},
-        modelo_negocio=mn,
-    )
+    mn.pop("_site", None)
+    loc = proj.get("localizacao") or {}
+    return {
+        "mensagens": msgs,
+        "status": proj.get("status"),
+        "pode_gerar_relatorio": bool(loc.get("cidade") and loc.get("bairro")),
+        "localizacao": loc,
+        "modelo_negocio": mn,
+    }
 
 
 # ─── GET /api/site-agent/analise/{id} ─────────────────────────────────────────
