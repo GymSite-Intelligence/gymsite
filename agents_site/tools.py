@@ -1,0 +1,285 @@
+"""
+Ferramentas dos agentes do site (degustação na landing) — versão ADK.
+
+Cada função é envolvida como FunctionTool pelo ADK (passada em `tools=[...]`).
+Reusa o código JÁ validado de RAG (Vertex AI Search / Discovery Engine) e de
+concorrência (Google Maps), garantindo grounding: o agente SÓ cita código de
+modelo / spec / contagem que veio DESTAS funções, nunca de memória.
+
+Auth: ADC (mesmo caminho que já roda em prod no Cloud Run).
+"""
+from __future__ import annotations
+
+import logging
+
+logger = logging.getLogger("gymsite.agents_site.tools")
+
+
+def _nivel_saturacao(n: int) -> str:
+    if n <= 5:
+        return "baixo"
+    if n <= 12:
+        return "medio"
+    return "alto"
+
+
+def dimensionar_cardio_por_pico(
+    pico_simultaneo: int,
+    pct_cardio_min: float = 0.20,
+    pct_cardio_max: float = 0.25,
+    pct_esteira_no_cardio: float = 0.50,
+    fator_fila_min: float = 0.6,
+    fator_fila_max: float = 0.7,
+) -> dict:
+    """Calcula de forma DETERMINÍSTICA a faixa de esteiras (e de aparelhos de cardio)
+    a partir do pico de alunos simultâneos. Use SEMPRE esta ferramenta para QUANTIDADE —
+    nunca calcule de cabeça. Premissas são ajustáveis ao público.
+
+    Fórmula: esteiras = pico × %cardio × %esteira_no_cardio × fator_fila.
+
+    Args:
+        pico_simultaneo: alunos ao mesmo tempo no horário de pico (ex.: 300).
+        pct_cardio_min/max: fração do pico em cardio (padrão 0.20–0.25).
+        pct_esteira_no_cardio: fração do cardio que é esteira (padrão 0.50).
+        fator_fila_min/max: tolerância de fila/rotação (padrão 0.6–0.7).
+
+    Returns:
+        dict com faixas (mín/máx/ponto-médio) de esteiras e de cardio total, e as
+        premissas usadas — para o agente declarar tudo e rotular como planejamento.
+    """
+    p = max(0, int(pico_simultaneo))
+    cardio_min = p * pct_cardio_min
+    cardio_max = p * pct_cardio_max
+    est_min = round(cardio_min * pct_esteira_no_cardio * fator_fila_min)
+    est_max = round(cardio_max * pct_esteira_no_cardio * fator_fila_max)
+    return {
+        "esteiras": {"min": est_min, "max": est_max, "medio": round((est_min + est_max) / 2)},
+        "cardio_total": {"min": round(cardio_min), "max": round(cardio_max)},
+        "premissas": {
+            "pct_cardio": [pct_cardio_min, pct_cardio_max],
+            "pct_esteira_no_cardio": pct_esteira_no_cardio,
+            "fator_fila": [fator_fila_min, fator_fila_max],
+        },
+        "nota": "Premissas de PLANEJAMENTO (não números de catálogo). Ajuste ao público.",
+    }
+
+
+def calcular_equipamentos_por_area(
+    area_disponivel_m2: float,
+    footprint_m2: float = 0.0,
+    comprimento_cm: float = 0.0,
+    largura_cm: float = 0.0,
+    folga_passagem_pct: float = 0.5,
+    fator_circulacao: float = 0.60,
+) -> dict:
+    """Calcula de forma DETERMINÍSTICA quantas máquinas cabem numa área, respeitando
+    folga de passagem e circulação. Use SEMPRE para "quantos equipamentos cabem em X m²"
+    — nunca estime de cabeça.
+
+    O FOOTPRINT da máquina DEVE vir do catálogo (informe footprint_m2 OU comprimento_cm +
+    largura_cm obtidos via consultar_catalogo_equipamentos). Folga e circulação são
+    benchmarks de PLANEJAMENTO (não estão no catálogo).
+
+    Fórmula:
+        area_util   = area_disponivel × fator_circulacao        (desconta corredores/parede/recepção)
+        area_unit   = footprint × (1 + folga_passagem_pct)      (espaço de acesso por máquina)
+        n_maquinas  = piso(area_util ÷ area_unit)
+
+    Args:
+        area_disponivel_m2: área do salão (ou do bloco) dedicada a esse equipamento, em m².
+        footprint_m2: área de ocupação da máquina em m² (se já souber). Senão use as dimensões.
+        comprimento_cm, largura_cm: dimensões da máquina (do catálogo) p/ derivar o footprint.
+        folga_passagem_pct: espaço de acesso ao redor da máquina (padrão 0.5 = +50%).
+        fator_circulacao: fração útil do salão após corredores/parede (padrão 0.65).
+
+    Returns:
+        dict com n_maquinas, area_util_m2, area_por_maquina_m2, footprint_m2, premissas e nota.
+    """
+    if footprint_m2 and footprint_m2 > 0:
+        fp = float(footprint_m2)
+    elif comprimento_cm and largura_cm:
+        fp = (float(comprimento_cm) / 100.0) * (float(largura_cm) / 100.0)
+    else:
+        return {"erro": "Informe footprint_m2 OU comprimento_cm + largura_cm (do catálogo)."}
+
+    area_util = max(0.0, float(area_disponivel_m2)) * float(fator_circulacao)
+    area_unit = fp * (1.0 + float(folga_passagem_pct))
+    n = int(area_util // area_unit) if area_unit > 0 else 0
+    return {
+        "n_maquinas": n,
+        "footprint_m2": round(fp, 2),
+        "area_por_maquina_m2": round(area_unit, 2),
+        "area_util_m2": round(area_util, 1),
+        "premissas": {
+            "folga_passagem_pct": folga_passagem_pct,
+            "fator_circulacao": fator_circulacao,
+        },
+        "nota": (
+            "Footprint vem do catálogo (dado real). Folga ~0,80 m (ANVISA Manual de Fiscalização "
+            "Sanitária, Seção VII) / 0,6-0,9 m (NSCA); circulação ~40% (boas práticas + NBR 9050). "
+            "Premissas de PLANEJAMENTO, ajustáveis — projeto executivo deve ser validado por "
+            "engenheiro/arquiteto e vigilância sanitária local."
+        ),
+    }
+
+
+def consultar_catalogo_equipamentos(pergunta: str) -> dict:
+    """Consulta os CATÁLOGOS de fornecedores de equipamento de academia (Matrix,
+    Life Fitness, Total Health) na base de conhecimento. Use SEMPRE antes de citar
+    qualquer modelo, código, especificação, dimensão ou carga máxima de um equipamento.
+
+    Args:
+        pergunta: o que buscar no catálogo, em linguagem natural
+            (ex.: "leg press 45 graus Life Fitness", "esteira Matrix dimensões").
+
+    Returns:
+        dict com `resultados` (lista de {titulo, uri, trecho}), `n_docs` e `fonte`.
+        Se vier vazio, o modelo NÃO existe no catálogo — não invente.
+    """
+    from tools.discovery_engine_tools import buscar_catalogos_equipamentos
+    try:
+        return buscar_catalogos_equipamentos(pergunta, n=4)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("consultar_catalogo_equipamentos falhou")
+        return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
+
+
+def consultar_engenharia_obra(pergunta: str) -> dict:
+    """Consulta a base de ENGENHARIA DE OBRA, PROJETO ARQUITETÔNICO e LAYOUT de academia
+    (normas ABNT, licenças, estrutura/laje, instalações, acústica, incêndio, acessibilidade,
+    sanitários/vestiários, pisos, etapas de projeto, checklists retrofit × obra do zero). Use
+    SEMPRE antes de afirmar uma exigência de obra, norma, valor estrutural ou regra de projeto.
+
+    Args:
+        pergunta: o que buscar em linguagem natural (ex.: "carga de laje academia NBR 6120",
+            "alvará de reforma vs construção", "sanitários por lotação", "isolamento acústico peso").
+
+    Returns:
+        dict com `resultados` (lista de {titulo, uri, trecho}), `n_docs` e `fonte`.
+        Vazio = a base não cobre; oriente consultar engenheiro/arquiteto e órgão local, não invente.
+    """
+    import os
+    from tools.discovery_engine_tools import buscar_conhecimento
+    engine = os.environ.get("DISCOVERY_OBRA_ENGINE_ID", "gymsite-obra-app")
+    try:
+        r = buscar_conhecimento(pergunta, n=5, engine_id=engine)
+        r["fonte"] = "Vertex AI Search (engenharia de obra / projeto)"
+        return r
+    except Exception as e:  # noqa: BLE001
+        logger.exception("consultar_engenharia_obra falhou")
+        return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
+
+
+def calcular_sanitarios_por_lotacao(
+    lotacao: int,
+    pessoas_por_conjunto: int = 20,
+    pct_acessivel: float = 0.05,
+) -> dict:
+    """Calcula de forma DETERMINÍSTICA a quantidade de peças sanitárias por lotação, conforme
+    a regra usual de código de obras. Use SEMPRE para "quantos banheiros preciso" — não estime.
+
+    Regra: 1 bacia + 1 lavatório a cada `pessoas_por_conjunto` pessoas (padrão 20; locais de
+    reunião podem usar 50). Divide 50/50 por gênero. No masculino, até 50% das bacias podem
+    virar mictórios. Mínimo 5% acessível (NBR 9050).
+
+    Args:
+        lotacao: ocupação máxima simultânea da edificação (pessoas).
+        pessoas_por_conjunto: pessoas por conjunto bacia+lavatório (padrão 20).
+        pct_acessivel: fração acessível (padrão 0.05 = 5%).
+
+    Returns:
+        dict com bacias/lavatórios totais e por gênero, mictórios possíveis, peças acessíveis e nota.
+    """
+    import math
+    lot = max(0, int(lotacao))
+    ppc = max(1, int(pessoas_por_conjunto))
+    conjuntos = math.ceil(lot / ppc) if lot else 0
+    por_genero = math.ceil(conjuntos / 2) if conjuntos else 0
+    acessiveis = max(1, math.ceil(conjuntos * float(pct_acessivel))) if conjuntos else 0
+    return {
+        "bacias_total": conjuntos,
+        "lavatorios_total": conjuntos,
+        "bacias_por_genero": por_genero,
+        "lavatorios_por_genero": por_genero,
+        "mictorios_masc_possiveis": por_genero // 2,
+        "pecas_acessiveis_min": acessiveis,
+        "premissas": {"pessoas_por_conjunto": ppc, "pct_acessivel": pct_acessivel},
+        "nota": (
+            "Regra usual de Código de Obras (ex.: COE-SP LM 17.202/19): ~1 bacia+1 lavatório/20 "
+            "pessoas; reunião pode usar /50. 5% acessível (NBR 9050). Confirmar no Código de Obras "
+            "do município — premissa de PLANEJAMENTO."
+        ),
+    }
+
+
+def consultar_base_regulatoria(pergunta: str) -> dict:
+    """Consulta a base de conhecimento regulatória/de mercado (documentos CONFEF/CREF,
+    Lei 9.696/1998, anuidades, licenças, metodologia e pesquisa de mercado). Use SEMPRE
+    antes de afirmar uma exigência legal, valor de anuidade, prazo ou regra.
+
+    Args:
+        pergunta: o que buscar, em linguagem natural
+            (ex.: "registro CREF pessoa jurídica", "Lei 9.696 quem pode dar aula").
+
+    Returns:
+        dict com `resultados` (lista de {titulo, uri, trecho}), `n_docs` e `fonte`.
+        Se vier vazio, a base não cobre — oriente confirmar no CREF/prefeitura, não invente.
+    """
+    from tools.discovery_engine_tools import buscar_conhecimento
+    try:
+        return buscar_conhecimento(pergunta, n=4)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("consultar_base_regulatoria falhou")
+        return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
+
+
+def buscar_concorrentes(
+    cidade: str,
+    bairro: str,
+    uf: str = "",
+    tipo_negocio: str = "academia",
+    raio_metros: int = 1500,
+) -> dict:
+    """Conta e lista academias concorrentes num raio do bairro (Google Maps ao vivo).
+    Use para responder saturação/concorrência do entorno com NÚMERO REAL — nunca estime
+    a quantidade de cabeça.
+
+    Args:
+        cidade: cidade (ex.: "Fortaleza").
+        bairro: bairro de referência (ex.: "Cocó").
+        uf: sigla do estado, opcional (ex.: "CE").
+        tipo_negocio: "academia" | "crossfit" | "studio_pilates" | "studio_funcional".
+        raio_metros: raio de busca em metros (300 a 5000; padrão 1500).
+
+    Returns:
+        dict com `total_concorrentes` (int), `nivel_saturacao` (baixo|medio|alto) e
+        `concorrentes` (top 8 por distância: nome, endereco, distancia_m, rating, avaliacoes).
+    """
+    from tools.competitor_tools import buscar_academias
+    try:
+        raio = max(300, min(5000, int(raio_metros)))
+        res = buscar_academias(bairro, cidade, raio, uf or "", tipo_negocio)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("buscar_concorrentes falhou")
+        return {"total_concorrentes": 0, "nivel_saturacao": "desconhecido",
+                "concorrentes": [], "erro": f"{type(e).__name__}: {e}"}
+
+    brutos = res.get("concorrentes") or []
+    itens = []
+    for c in brutos:
+        if not isinstance(c, dict):
+            continue
+        itens.append({
+            "nome": c.get("nome") or c.get("name") or c.get("displayName") or "?",
+            "endereco": c.get("endereco") or c.get("address") or c.get("formattedAddress"),
+            "distancia_m": c.get("distancia_m") or c.get("distance_m") or c.get("distancia"),
+            "rating": c.get("rating") or c.get("nota"),
+            "avaliacoes": c.get("num_avaliacoes") or c.get("avaliacoes") or c.get("user_ratings_total"),
+        })
+    total = len(itens)
+    itens.sort(key=lambda x: x["distancia_m"] if x["distancia_m"] is not None else 99_999)
+    return {
+        "total_concorrentes": total,
+        "nivel_saturacao": _nivel_saturacao(total),
+        "concorrentes": itens[:8],
+    }
