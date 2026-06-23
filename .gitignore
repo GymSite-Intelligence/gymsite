@@ -45,6 +45,8 @@ frontend/dist/
 frontend/dist-types-node/
 .pnpm-store/
 **/*.tsbuildinfo
+# Saída de smoke tests de PDF (tools/smoke_pdf_visuais.py)
+build/
 
 # Dados de referência locais (PDF/CSV pesados — manter fora do git)
 docs/*.pdf
