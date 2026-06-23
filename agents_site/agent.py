@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google.adk.agents import Agent
 from google.genai import types as _genai_types
 
+from agents_site.guardrails import gate_degustacao
 from agents_site.tools import (
     consultar_catalogo_equipamentos,
     consultar_base_regulatoria,
@@ -146,6 +147,7 @@ Mercado/viabilidade/captação. Equipamentos → Responsável Técnico; regras l
         estimar_investimento,
         consultar_base_regulatoria,
     ],
+    before_tool_callback=gate_degustacao,
     generate_content_config=_genai_types.GenerateContentConfig(temperature=0.3, max_output_tokens=1536),
 )
 
