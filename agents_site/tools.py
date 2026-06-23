@@ -144,6 +144,111 @@ def consultar_catalogo_equipamentos(pergunta: str) -> dict:
         return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DADOS / VIABILIDADE — port do consultor_engine (Fase 0 da migração ADK).
+# Reusam os mesmos tools.* por baixo; params explícitos p/ o schema do ADK.
+# (reviews/oferta/relatório dependem de cache/estado → Fase 2.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def pesquisar_contexto_mercado(cidade: str, bairro: str, uf: str, tipo_negocio: str = "academia") -> dict:
+    """Contexto qualitativo do mercado fitness no bairro: renda, tendências, aluguel médio,
+    parque de academias (CNPJ/RFB), fatos de competição local. Use para "como está o mercado
+    lá", "qual a renda do bairro", "o mercado fitness está crescendo".
+
+    Args:
+        cidade, bairro, uf: localização (uf = sigla de 2 letras).
+        tipo_negocio: academia | crossfit_box | studio_pilates (padrão academia).
+    """
+    import asyncio
+    try:
+        from tools.market_bundle import carregar_market_bundle
+        from tools.cnpj_fitness_tools import dados_parque_cnpj_para_a0
+        from tools.local_market_facts import fatos_competicao_local
+        from datetime import datetime, timezone
+        bundle, cnpj_data, local = await asyncio.gather(
+            asyncio.to_thread(carregar_market_bundle, cidade, bairro, uf),
+            asyncio.to_thread(dados_parque_cnpj_para_a0, cidade, uf, 90, bairro),
+            asyncio.to_thread(fatos_competicao_local, cidade, bairro, uf),
+        )
+        return {"cidade": cidade, "bairro": bairro, "uf": uf, "bundle": bundle,
+                "parque_cnpj": cnpj_data, "competicao_local": local,
+                "fonte": "market_bundle + CNPJ/RFB + OSM",
+                "data_coleta": datetime.now(timezone.utc).strftime("%Y-%m-%d")}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("pesquisar_contexto_mercado falhou")
+        return {"erro": f"{type(e).__name__}: {e}"}
+
+
+async def buscar_pontos_comerciais(cidade: str, bairro: str, uf: str,
+                                   area_min_m2: int = 500, area_max_m2: int = 2000) -> dict:
+    """Imóveis comerciais e zonas âncora (shoppings, avenidas) adequados a academia no bairro.
+    Retorna candidatos com endereço, área e aluguel estimados, score de localização.
+
+    Args:
+        cidade, bairro, uf: localização.
+        area_min_m2, area_max_m2: faixa de área pretendida.
+    """
+    import asyncio
+    try:
+        from tools.anchoring_tools import analisar_pontos_comerciais_completo
+
+        class _StateShim:
+            def __init__(self, state: dict):
+                self.state = state
+
+        shim = _StateShim({"bairro": bairro, "cidade": cidade,
+                           "input_params": {"bairro": bairro,
+                                            "area_m2_min": int(area_min_m2),
+                                            "area_m2_max": int(area_max_m2)}})
+        res = await asyncio.to_thread(analisar_pontos_comerciais_completo, shim, bairro, cidade, uf)
+        return res if isinstance(res, dict) else {"candidatos": [], "total_candidatos": 0}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("buscar_pontos_comerciais falhou")
+        return {"erro": f"{type(e).__name__}: {e}"}
+
+
+async def analisar_demografia(cidade: str, bairro: str, uf: str) -> dict:
+    """Demografia IBGE Censo 2022: população por faixa etária, renda média domiciliar,
+    público potencial fitness, score demográfico. Use para "quem mora no bairro",
+    "qual a faixa etária", "público potencial", "score demográfico".
+    """
+    import asyncio
+    try:
+        from tools.ibge_tools import analise_demografica_completa
+        res = await asyncio.to_thread(analise_demografica_completa, cidade, uf, "18-45", bairro)
+        return res if isinstance(res, dict) else {"erro": "IBGE indisponível"}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("analisar_demografia falhou")
+        return {"erro": f"{type(e).__name__}: {e}"}
+
+
+async def estimar_investimento(cidade: str, bairro: str, uf: str, area_m2: float = 1150.0,
+                               tipo_negocio: str = "academia", tamanho_preset: str = "",
+                               genero_alvo: str = "misto") -> dict:
+    """Investimento inicial (CAPEX + OPEX) em 3 cenários (low/mid/premium), payback, margem
+    e aluguel de mercado. Use para "quanto custa abrir", "qual o investimento", "payback",
+    "viabilidade financeira".
+
+    Args:
+        cidade, bairro, uf, area_m2: localização e área pretendida.
+        tipo_negocio, tamanho_preset (p|m|g|gg, vazio = inferir por área), genero_alvo.
+    """
+    import asyncio
+    try:
+        from tools.financial_tools import analise_financeira_a4_completo
+        a = float(area_m2 or 1150.0)
+        preset = tamanho_preset or ("p" if a < 500 else "m" if a < 1500 else "g" if a < 3000 else "gg")
+        res = await analise_financeira_a4_completo(
+            bairro, cidade, uf, a,
+            area_m2_min=int(a * 0.8), area_m2_max=int(a * 1.2),
+            tipo_negocio=tipo_negocio, tamanho_preset=preset,
+        )
+        return res if isinstance(res, dict) else {"erro": "Financeiro indisponível"}
+    except Exception as e:  # noqa: BLE001
+        logger.exception("estimar_investimento falhou")
+        return {"erro": f"{type(e).__name__}: {e}"}
+
+
 def consultar_engenharia_obra(pergunta: str) -> dict:
     """Consulta a base de ENGENHARIA DE OBRA, PROJETO ARQUITETÔNICO e LAYOUT de academia
     (normas ABNT, licenças, estrutura/laje, instalações, acústica, incêndio, acessibilidade,
