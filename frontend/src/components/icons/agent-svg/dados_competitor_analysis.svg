@@ -1,0 +1,13 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M32 2C18.7452 2 8 12.7452 8 26C8 42 32 62 32 62C32 62 56 42 56 26C56 12.7452 45.2548 2 32 2Z" fill="#111827" stroke="#22C55E" stroke-width="2"/>
+  <rect x="22" y="14" width="20" height="16" rx="4" fill="#4ADE80"/>
+  <circle cx="28" cy="20" r="2" fill="#111827"/>
+  <circle cx="36" cy="20" r="2" fill="#111827"/>
+
+  <!-- Objeto: Gráfico Radar -->
+  <path d="M32 33L38 37L36 44H28L26 37L32 33Z" stroke="white" stroke-width="1"/>
+  <path d="M32 33V40M38 37L32 40M36 44L32 40M28 44L32 40M26 37L32 40" stroke="white" stroke-opacity="0.5" stroke-width="1"/>
+  <path d="M32 35L36 38L35 42H29L28 38L32 35Z" fill="#4ADE80" fill-opacity="0.8"/>
+
+  <path d="M12 48H52V56C52 58.2091 50.2091 60 48 60H16C13.7909 60 12 58.2091 12 56V48Z" fill="#60A5FA" stroke="#22C55E" stroke-width="2"/>
+</svg>

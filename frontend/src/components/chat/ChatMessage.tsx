@@ -5,6 +5,13 @@ import { Bot, User, Copy, Check, RotateCcw, FileText, ThumbsUp, ThumbsDown } fro
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
+import { agenteDaFerramenta, SETOR_STYLE } from '@/config/agentes'
+
+export interface ChatAcao {
+  ferramenta: string
+  status: string
+  resumo: string
+}
 
 export interface ChatMessageData {
   id: string
@@ -14,6 +21,36 @@ export interface ChatMessageData {
   attachments?: { id: string; file: File; preview?: string }[]
   /** id em chat_interacoes — presente só em respostas Q&A logadas */
   interacaoId?: string
+  /** ferramentas que rodaram no turno (acoes_executadas) → crachá de agentes */
+  acoes?: ChatAcao[]
+}
+
+/** Crachá dos agentes que agiram no turno (a partir de acoes_executadas). */
+function AgentBadges({ acoes }: { acoes: ChatAcao[] }) {
+  const vistos = new Set<string>()
+  const itens = acoes
+    .map((a) => ({ a, ag: agenteDaFerramenta(a.ferramenta) }))
+    .filter((x): x is { a: ChatAcao; ag: NonNullable<ReturnType<typeof agenteDaFerramenta>> } => Boolean(x.ag))
+    .filter(({ ag }) => (vistos.has(ag.label) ? false : (vistos.add(ag.label), true)))
+  if (itens.length === 0) return null
+  return (
+    <div className="mb-2 flex flex-wrap gap-1.5">
+      {itens.map(({ a, ag }, i) => {
+        const st = SETOR_STYLE[ag.setor]
+        const Icone = ag.icone
+        return (
+          <span
+            key={i}
+            title={a.resumo}
+            className={`inline-flex items-center gap-1 rounded-full py-0.5 pl-0.5 pr-2 text-[11px] font-medium ring-1 ${st.bg} ${st.text} ${st.ring} duration-300 animate-in fade-in slide-in-from-bottom-1`}
+          >
+            <Icone className="h-5 w-5" />
+            {ag.label}
+          </span>
+        )
+      })}
+    </div>
+  )
 }
 
 interface ChatMessageProps {
@@ -95,6 +132,9 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
             })}
           </span>
         </div>
+
+        {/* Crachá dos agentes que agiram neste turno (handoff) */}
+        {!isUser && msg.acoes && msg.acoes.length > 0 && <AgentBadges acoes={msg.acoes} />}
 
         <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5">
           <ReactMarkdown

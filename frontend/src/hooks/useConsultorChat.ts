@@ -141,6 +141,7 @@ export function useConsultorChat(): UseConsultorChatReturn {
           role: 'assistant',
           content: data.mensagem,
           timestamp: new Date(),
+          acoes: data.acoes_executadas,
         }
         setMessages((prev) => [...prev, assistantMsg])
       } catch (e: unknown) {
