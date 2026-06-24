@@ -173,8 +173,9 @@ export function ConsultorPage() {
                   {Icone ? (
                     <span
                       className={cn(
-                        'flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 transition-all',
-                        done ? `${st?.bg} ${st?.ring}` : 'opacity-40 grayscale ring-transparent',
+                        'flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full transition-all',
+                        // arte sempre COLORIDA (não cinza); "feito" = anel do setor + sombra
+                        done ? `ring-2 ${st?.ring} shadow-sm` : 'opacity-70 ring-1 ring-border',
                       )}
                     >
                       <Icone className="h-full w-full object-cover" />
