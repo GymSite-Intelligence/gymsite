@@ -27,40 +27,80 @@ def dimensionar_cardio_por_pico(
     pico_simultaneo: int,
     pct_cardio_min: float = 0.20,
     pct_cardio_max: float = 0.25,
-    pct_esteira_no_cardio: float = 0.50,
     fator_fila_min: float = 0.6,
     fator_fila_max: float = 0.7,
+    mix_esteira: float = 0.45,
+    mix_eliptico: float = 0.20,
+    mix_bike: float = 0.20,
+    mix_escada: float = 0.15,
 ) -> dict:
-    """Calcula de forma DETERMINÍSTICA a faixa de esteiras (e de aparelhos de cardio)
-    a partir do pico de alunos simultâneos. Use SEMPRE esta ferramenta para QUANTIDADE —
-    nunca calcule de cabeça. Premissas são ajustáveis ao público.
+    """Calcula de forma DETERMINÍSTICA a faixa de aparelhos de cardio a partir do pico
+    simultâneo, no modelo TOLERA-FILA (fator_fila < 1: nem todos usam no mesmo instante).
+    Use SEMPRE para QUANTIDADE de cardio — nunca calcule de cabeça.
 
-    Fórmula: esteiras = pico × %cardio × %esteira_no_cardio × fator_fila.
+    Fórmula: cardio_total = pico × %cardio × fator_fila; depois divide no MIX
+    (esteira/elíptico/bike/escada). Mix padrão 45/20/20/15. Premissas ajustáveis.
 
     Args:
-        pico_simultaneo: alunos ao mesmo tempo no horário de pico (ex.: 300).
+        pico_simultaneo: alunos ao mesmo tempo no pico (ex.: 300).
         pct_cardio_min/max: fração do pico em cardio (padrão 0.20–0.25).
-        pct_esteira_no_cardio: fração do cardio que é esteira (padrão 0.50).
-        fator_fila_min/max: tolerância de fila/rotação (padrão 0.6–0.7).
+        fator_fila_min/max: tolerância de fila/rotação (padrão 0.6–0.7; <1 = tolera fila).
+        mix_esteira/eliptico/bike/escada: divisão do parque de cardio (somam 1.0).
 
     Returns:
-        dict com faixas (mín/máx/ponto-médio) de esteiras e de cardio total, e as
-        premissas usadas — para o agente declarar tudo e rotular como planejamento.
+        dict com faixas (mín/máx/médio) de cardio_total e de cada tipo, + premissas.
     """
     p = max(0, int(pico_simultaneo))
-    cardio_min = p * pct_cardio_min
-    cardio_max = p * pct_cardio_max
-    est_min = round(cardio_min * pct_esteira_no_cardio * fator_fila_min)
-    est_max = round(cardio_max * pct_esteira_no_cardio * fator_fila_max)
+    car_min = p * pct_cardio_min * fator_fila_min
+    car_max = p * pct_cardio_max * fator_fila_max
+
+    def _faixa(frac: float) -> dict:
+        lo, hi = car_min * frac, car_max * frac
+        return {"min": round(lo), "max": round(hi), "medio": round((lo + hi) / 2)}
+
     return {
-        "esteiras": {"min": est_min, "max": est_max, "medio": round((est_min + est_max) / 2)},
-        "cardio_total": {"min": round(cardio_min), "max": round(cardio_max)},
+        "cardio_total": {"min": round(car_min), "max": round(car_max)},
+        "esteiras": _faixa(mix_esteira),
+        "elipticos": _faixa(mix_eliptico),
+        "bikes": _faixa(mix_bike),
+        "escadas": _faixa(mix_escada),
         "premissas": {
+            "modelo": "tolera-fila",
             "pct_cardio": [pct_cardio_min, pct_cardio_max],
-            "pct_esteira_no_cardio": pct_esteira_no_cardio,
             "fator_fila": [fator_fila_min, fator_fila_max],
+            "mix": {"esteira": mix_esteira, "eliptico": mix_eliptico, "bike": mix_bike, "escada": mix_escada},
         },
-        "nota": "Premissas de PLANEJAMENTO (não números de catálogo). Ajuste ao público.",
+        "nota": "Premissas de PLANEJAMENTO (não catálogo). Modelo tolera-fila (fator_fila<1). Ajuste ao público.",
+    }
+
+
+def dimensionar_musculacao(
+    pico_simultaneo: int,
+    pct_musculacao: float = 0.65,
+    fator_concorrencia: float = 1.4,
+    alerta_acima_de: float = 1.7,
+) -> dict:
+    """Estações de musculação por pico (revezamento saudável). Use SEMPRE para "quantas
+    estações/máquinas de musculação" — não estime de cabeça.
+
+    Fórmula: estações = (pico × %musculação) / fator_concorrência.
+    fator_concorrência = alunos por máquina (1.4 ideal; acima de 1.7 = superlotação).
+
+    Args:
+        pico_simultaneo: alunos ao mesmo tempo no pico (ex.: 300).
+        pct_musculacao: fração do pico na musculação (padrão 0.65).
+        fator_concorrencia: alunos/máquina alvo (padrão 1.4).
+        alerta_acima_de: limiar de superlotação (padrão 1.7).
+    """
+    p = max(0, int(pico_simultaneo))
+    n_forca = p * pct_musculacao
+    fc = fator_concorrencia if fator_concorrencia > 0 else 1.4
+    return {
+        "estacoes": round(n_forca / fc),
+        "alunos_musculacao_pico": round(n_forca),
+        "premissas": {"pct_musculacao": pct_musculacao, "fator_concorrencia": fc, "limite_alerta": alerta_acima_de},
+        "alerta_superlotacao": fc > alerta_acima_de,
+        "nota": "Premissa de PLANEJAMENTO. fator_concorrência = alunos/máquina (1.4 ideal; >1.7 superlota).",
     }
 
 
