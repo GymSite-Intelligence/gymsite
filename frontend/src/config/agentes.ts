@@ -50,3 +50,15 @@ export const TOOL_TO_AGENTE: Record<string, AgenteMeta> = {
 export function agenteDaFerramenta(ferramenta: string): AgenteMeta | undefined {
   return TOOL_TO_AGENTE[ferramenta]
 }
+
+/** Chave de `pesquisas_realizadas` → agente (ícone + cor), para o painel lateral
+ * do consultor. É AQUI que o "handoff" vive: cada pesquisa acende seu ícone. */
+export const PESQUISA_AGENTE: Record<string, { setor: SetorId; icone: Icon }> = {
+  mercado: { setor: 'dados', icone: AGENT_ICONS.dados_context_builder },
+  demografia: { setor: 'dados', icone: AGENT_ICONS.dados_demo_analyst },
+  concorrentes: { setor: 'dados', icone: AGENT_ICONS.dados_competitor_search },
+  reviews: { setor: 'dados', icone: AGENT_ICONS.dados_competitor_analysis },
+  oferta_concorrentes: { setor: 'dados', icone: AGENT_ICONS.dados_market_research },
+  pontos_comerciais: { setor: 'dados', icone: AGENT_ICONS.dados_geoscout },
+  investimento: { setor: 'financeiro', icone: AGENT_ICONS.financeiro_estimator },
+}

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useConsultorChat, type ConsultorPesquisas } from '@/hooks/useConsultorChat'
+import { PESQUISA_AGENTE, SETOR_STYLE } from '@/config/agentes'
 
 const PESQUISA_LABELS: { key: keyof ConsultorPesquisas; label: string }[] = [
   { key: 'mercado', label: 'Contexto de mercado' },
@@ -164,14 +165,26 @@ export function ConsultorPage() {
           <ul className="space-y-1.5">
             {PESQUISA_LABELS.map(({ key, label }) => {
               const done = Boolean(projeto?.pesquisas_realizadas?.[key])
+              const ag = PESQUISA_AGENTE[key]
+              const Icone = ag?.icone
+              const st = ag ? SETOR_STYLE[ag.setor] : undefined
               return (
                 <li key={key} className="flex items-center gap-2 text-xs">
-                  {done ? (
+                  {Icone ? (
+                    <span
+                      className={cn(
+                        'flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 transition-all',
+                        done ? `${st?.bg} ${st?.ring}` : 'opacity-40 grayscale ring-transparent',
+                      )}
+                    >
+                      <Icone className="h-full w-full object-cover" />
+                    </span>
+                  ) : done ? (
                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                   ) : (
                     <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
                   )}
-                  <span className={cn(done ? 'text-foreground' : 'text-muted-foreground')}>{label}</span>
+                  <span className={cn(done ? 'font-medium text-foreground' : 'text-muted-foreground')}>{label}</span>
                 </li>
               )
             })}

@@ -5,7 +5,6 @@ import { Bot, User, Copy, Check, RotateCcw, FileText, ThumbsUp, ThumbsDown } fro
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
-import { agenteDaFerramenta, SETOR_STYLE } from '@/config/agentes'
 
 export interface ChatAcao {
   ferramenta: string
@@ -21,34 +20,8 @@ export interface ChatMessageData {
   attachments?: { id: string; file: File; preview?: string }[]
   /** id em chat_interacoes — presente só em respostas Q&A logadas */
   interacaoId?: string
-  /** ferramentas que rodaram no turno (acoes_executadas) → crachá de agentes */
+  /** ferramentas que rodaram no turno (acoes_executadas) — handoff vive na sidebar do consultor */
   acoes?: ChatAcao[]
-}
-
-/** Crachá dos agentes que agiram no turno (a partir de acoes_executadas). */
-function AgentBadges({ acoes }: { acoes: ChatAcao[] }) {
-  const vistos = new Set<string>()
-  const itens = acoes
-    .map((a) => ({ a, ag: agenteDaFerramenta(a.ferramenta) }))
-    .filter((x): x is { a: ChatAcao; ag: NonNullable<ReturnType<typeof agenteDaFerramenta>> } => Boolean(x.ag))
-    .filter(({ ag }) => (vistos.has(ag.label) ? false : (vistos.add(ag.label), true)))
-  if (itens.length === 0) return null
-  return (
-    <div className="mb-2 flex flex-wrap gap-1.5">
-      {itens.map(({ a, ag }, i) => {
-        const st = SETOR_STYLE[ag.setor]
-        return (
-          <span
-            key={i}
-            title={a.resumo}
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${st.bg} ${st.text} ${st.ring} duration-300 animate-in fade-in slide-in-from-bottom-1`}
-          >
-            {ag.label}
-          </span>
-        )
-      })}
-    </div>
-  )
 }
 
 interface ChatMessageProps {
@@ -81,10 +54,6 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
 
 export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps) {
   const isUser = msg.role === 'user'
-  // Agente principal do turno (1ª ferramenta reconhecida) → vira o avatar.
-  const IconeAg = !isUser
-    ? msg.acoes?.map((a) => agenteDaFerramenta(a.ferramenta)).find(Boolean)?.icone
-    : undefined
   const isAdmin = useIsAdmin()
   const [copied, setCopied] = useState(false)
   const [rated, setRated] = useState<1 | -1 | null>(null)
@@ -115,24 +84,16 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
           className={
             isUser
               ? 'bg-primary text-primary-foreground text-xs'
-              : `bg-emerald-100 text-emerald-700 text-xs${IconeAg ? ' overflow-hidden p-0' : ''}`
+              : 'bg-emerald-100 text-emerald-700 text-xs'
           }
         >
-          {isUser ? (
-            <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          ) : IconeAg ? (
-            <IconeAg className="h-full w-full object-cover" />
-          ) : (
-            <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          )}
+          {isUser ? <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
         </AvatarFallback>
       </Avatar>
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-          <span className="text-sm font-semibold">
-            {isUser ? 'Você' : 'GymSite Agent'}
-          </span>
+          {isUser && <span className="text-sm font-semibold">Você</span>}
           <span className="text-[11px] text-muted-foreground">
             {msg.timestamp.toLocaleTimeString('pt-BR', {
               hour: '2-digit',
@@ -140,9 +101,6 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
             })}
           </span>
         </div>
-
-        {/* Crachá dos agentes que agiram neste turno (handoff) */}
-        {!isUser && msg.acoes && msg.acoes.length > 0 && <AgentBadges acoes={msg.acoes} />}
 
         <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5">
           <ReactMarkdown
