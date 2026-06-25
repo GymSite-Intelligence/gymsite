@@ -140,6 +140,8 @@ class RelatorioPdfModel:
     alertas: list[str] = field(default_factory=list)
 
     entrantes_cnpj_total: int | None = None
+    entrantes_cnpj_bairro: int | None = None
+    entrantes_cnpj_bairro_nome: str | None = None
     script_abordagem: str | None = None
 
     metadata: dict[str, Any] = field(default_factory=dict)

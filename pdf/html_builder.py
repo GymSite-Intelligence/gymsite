@@ -302,6 +302,7 @@ table.d thead { display:table-header-group; }
   <div class="c"><div class="kpi-t">Aberturas no município</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.total }}</div></div>
   <div class="c"><div class="kpi-t">Janela</div><div class="kpi-n" style="font-size:13pt; padding-top:2px;">{{ novas_unidades.dias }} dias</div></div>
   <div class="c"><div class="kpi-t">Cidade</div><div class="kpi-n" style="font-size:12pt; padding-top:3px;">{{ novas_unidades.cidade }}</div></div>
+  {% if novas_unidades.bairro_nome %}<div class="c"><div class="kpi-t">No bairro-alvo ({{ novas_unidades.bairro_nome }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.bairro_total }}</div></div>{% endif %}
 </div>
 <div class="timing-d">Aberturas de CNPJ fitness (RFB) nos últimos {{ novas_unidades.dias }} dias — sinal de aquecimento/entrada de concorrência no município. <em>Fonte: RFB CNPJ Aberto.</em></div>{% endif %}
 
@@ -971,6 +972,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         novas_unidades = {
             "total": _int(ent.get("total")), "dias": ent.get("dias") or 90,
             "cidade": str(ent.get("cidade") or "—")[:20],
+            "bairro_total": _int(ent.get("total_bairro")) if ent.get("total_bairro") is not None else None,
+            "bairro_nome": str(ent.get("bairro_alvo") or "")[:20] or None,
         }
 
     # V3 — flag de fiscal (mostra a sub-tabela "Tributos & Ocupação") + box de ocupação
