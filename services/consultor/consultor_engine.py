@@ -292,6 +292,56 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
             "required": ["pergunta"],
         },
     ),
+    types.FunctionDeclaration(
+        name="dimensionar_cardio_por_pico",
+        description=(
+            "Calcula a QUANTIDADE de aparelhos de cardio (esteira/elíptico/bike/escada) a "
+            "partir do pico de alunos simultâneos (modelo tolera-fila). Chamar quando: "
+            "'quantas esteiras', 'quantos aparelhos de cardio', 'dimensiona o cardio'. "
+            "NUNCA calcular de cabeça."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "pico_simultaneo": {"type": "integer", "description": "Alunos ao mesmo tempo no pico"},
+            },
+            "required": ["pico_simultaneo"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="dimensionar_musculacao",
+        description=(
+            "Calcula a QUANTIDADE de estações/máquinas de musculação a partir do pico "
+            "simultâneo (estações = pico × %musculação / fator_concorrência; alerta se >1,7). "
+            "Chamar quando: 'quantas estações/máquinas de musculação/força'. Não calcular de cabeça."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "pico_simultaneo": {"type": "integer", "description": "Alunos ao mesmo tempo no pico"},
+            },
+            "required": ["pico_simultaneo"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="calcular_equipamentos_por_area",
+        description=(
+            "Calcula QUANTAS máquinas cabem numa área (m²) respeitando passagem/circulação. "
+            "O footprint vem do catálogo: chame consultar_catalogos_equipamentos antes p/ as "
+            "dimensões e passe comprimento_cm+largura_cm (ou footprint_m2). Chamar quando: "
+            "'quantas máquinas cabem em X m²', 'tenho 180 m² de cardio, quantas esteiras'."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "area_disponivel_m2": {"type": "number", "description": "Área dedicada em m²"},
+                "footprint_m2": {"type": "number", "description": "Área da máquina em m² (se souber)"},
+                "comprimento_cm": {"type": "number", "description": "Comprimento da máquina (catálogo)"},
+                "largura_cm": {"type": "number", "description": "Largura da máquina (catálogo)"},
+            },
+            "required": ["area_disponivel_m2"],
+        },
+    ),
 ])
 
 # ─── System prompt do consultor ───────────────────────────────────────────────
@@ -423,6 +473,12 @@ Pergunte APENAS a informação que altera a ESTRUTURA da resposta àquela pergun
 - SPEC/modelo de uma máquina → vá direto ao catálogo (consultar_catalogos_equipamentos), sem perguntar antes.
 Se o usuário já deu o dado necessário, não repergunte — responda na hora. Conduza pra recomendação, não pra um menu de capacidades.
 
+## DIMENSIONAMENTO (use a TOOL, nunca calcule de cabeça)
+- "quantas esteiras / aparelhos de cardio" a partir do PICO de alunos → chame `dimensionar_cardio_por_pico` (devolve esteira/elíptico/bike/escada, modelo tolera-fila).
+- "quantas estações/máquinas de musculação" → chame `dimensionar_musculacao`.
+- "quantas máquinas cabem em X m²" (ex.: "180 m² de cardio") → chame `calcular_equipamentos_por_area`; o footprint vem do catálogo (chame `consultar_catalogos_equipamentos` antes p/ as dimensões e passe comprimento_cm+largura_cm).
+Reporte o número com as premissas que a tool devolve (são de PLANEJAMENTO). NUNCA chute "30-40 esteiras" de cabeça.
+
 ## REGRA DE OURO (FONTE)
 Recomende SEMPRE com base em consultar_catalogos_equipamentos e CITE o fornecedor/catálogo (ex.: Matrix, Life Fitness, Total Health). NUNCA invente specs, modelos ou preços. Catálogo sem valor → "sob consulta". Sem dado no catálogo → diga com transparência e ofereça encaminhar ao time.
 
@@ -459,7 +515,9 @@ _AGENTES_SITE: dict[str, dict] = {
     },
     "responsavel_tecnico": {  # equipamentos — só o RAG de catálogos (gymsite-equip-app)
         "persona": _PERSONA_TECNICO,
-        "tools": frozenset({"consultar_catalogos_equipamentos", "consultar_base_conhecimento"}),
+        "tools": frozenset({"consultar_catalogos_equipamentos", "consultar_base_conhecimento",
+                            "dimensionar_cardio_por_pico", "dimensionar_musculacao",
+                            "calcular_equipamentos_por_area"}),
         "amostra_tools": frozenset(),  # RAG é barato → sem antifatiamento de amostra
     },
     "regulatorio": {  # registro/licença/CREF — só a base de conhecimento (docs CONFEF/Lei 9.696)
@@ -605,6 +663,26 @@ async def _executar_ferramenta(
         elif nome == "consultar_catalogos_equipamentos":
             resultado = await _tool_catalogos_equipamentos(args, projeto)
             resumo = _resumo_base_conhecimento(resultado)
+
+        elif nome == "dimensionar_cardio_por_pico":
+            from agents_site.tools import dimensionar_cardio_por_pico
+            resultado = dimensionar_cardio_por_pico(int(args.get("pico_simultaneo") or 0))
+            resumo = f"esteiras {resultado.get('esteiras', {}).get('min')}-{resultado.get('esteiras', {}).get('max')}"
+
+        elif nome == "dimensionar_musculacao":
+            from agents_site.tools import dimensionar_musculacao
+            resultado = dimensionar_musculacao(int(args.get("pico_simultaneo") or 0))
+            resumo = f"{resultado.get('estacoes')} estações"
+
+        elif nome == "calcular_equipamentos_por_area":
+            from agents_site.tools import calcular_equipamentos_por_area
+            resultado = calcular_equipamentos_por_area(
+                float(args.get("area_disponivel_m2") or 0),
+                footprint_m2=float(args.get("footprint_m2") or 0),
+                comprimento_cm=float(args.get("comprimento_cm") or 0),
+                largura_cm=float(args.get("largura_cm") or 0),
+            )
+            resumo = f"{resultado.get('n_maquinas')} máquinas" if "n_maquinas" in resultado else "erro"
 
         else:
             resultado = {"erro": f"Ferramenta desconhecida: {nome}"}
@@ -1001,6 +1079,9 @@ _CUSTO_BRL_POR_TOOL: dict[str, float] = {
     "gerar_relatorio_formal": 3.50,
     "consultar_base_conhecimento": 0.05,
     "consultar_catalogos_equipamentos": 0.05,
+    "dimensionar_cardio_por_pico": 0.0,
+    "dimensionar_musculacao": 0.0,
+    "calcular_equipamentos_por_area": 0.0,
 }
 
 def _custo_tools(tools_executadas: list[str]) -> float:

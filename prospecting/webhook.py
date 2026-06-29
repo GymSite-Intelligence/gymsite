@@ -171,6 +171,8 @@ def _montar_payload(opp: dict[str, Any]) -> dict[str, Any]:
                 "cargo": contato.get("cargo"),
                 "email": mask_email(contato.get("email")),
                 "whatsapp": mask_phone(contato.get("whatsapp")),
+                "whatsapp_raw": contato.get("whatsapp"),   # NOVO - sem máscara (destino interno Navi/Claw)
+                "email_raw": contato.get("email"),         # NOVO - sem máscara (destino interno Navi/Claw)
                 "linkedin": contato.get("linkedin"),
             },
             "projecao_receita": opp.get("projecao_receita"),

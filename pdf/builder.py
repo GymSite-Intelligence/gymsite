@@ -744,13 +744,13 @@ def _extras_section(model: RelatorioPdfModel, styles: dict) -> list:
 
     if model.entrantes_cnpj_total is not None:
         flow.append(Spacer(1, 8))
-        flow.append(
-            _para(
-                f"Novos entrantes CNPJ (90 dias) na cidade: <b>{model.entrantes_cnpj_total}</b>",
-                "body",
-                styles,
-            ),
-        )
+        _txt_ent = f"Novos entrantes CNPJ (90 dias) na cidade: <b>{model.entrantes_cnpj_total}</b>"
+        if model.entrantes_cnpj_bairro is not None and model.entrantes_cnpj_bairro_nome:
+            _txt_ent += (
+                f" — sendo <b>{model.entrantes_cnpj_bairro}</b> no bairro-alvo "
+                f"({model.entrantes_cnpj_bairro_nome})"
+            )
+        flow.append(_para(_txt_ent, "body", styles))
     return flow
 
 
@@ -1150,13 +1150,13 @@ def _extras_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
 
     if model.entrantes_cnpj_total is not None:
         flow.append(Spacer(1, 8))
-        flow.append(
-            _para(
-                f"Novos entrantes CNPJ (90 dias) na cidade: <b>{model.entrantes_cnpj_total}</b>",
-                "bala_body",
-                styles,
-            ),
-        )
+        _txt_ent = f"Novos entrantes CNPJ (90 dias) na cidade: <b>{model.entrantes_cnpj_total}</b>"
+        if model.entrantes_cnpj_bairro is not None and model.entrantes_cnpj_bairro_nome:
+            _txt_ent += (
+                f" — sendo <b>{model.entrantes_cnpj_bairro}</b> no bairro-alvo "
+                f"({model.entrantes_cnpj_bairro_nome})"
+            )
+        flow.append(_para(_txt_ent, "bala_body", styles))
     return flow
 
 

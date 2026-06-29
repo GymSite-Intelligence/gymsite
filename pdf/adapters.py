@@ -190,8 +190,13 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
 
     entrantes = out.get("entrantes_cnpj_90d")
     entrantes_total = None
+    entrantes_bairro = None
+    entrantes_bairro_nome = None
     if isinstance(entrantes, dict):
         entrantes_total = _int(entrantes.get("total"))
+        if entrantes.get("total_bairro") is not None:
+            entrantes_bairro = _int(entrantes.get("total_bairro"))
+        entrantes_bairro_nome = str(entrantes.get("bairro_alvo") or "") or None
 
     contato = out.get("contato_decisor")
     script = None
@@ -336,6 +341,8 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
         bairros_alternativos=bairros,
         alertas=[str(a) for a in alertas if a],
         entrantes_cnpj_total=entrantes_total,
+        entrantes_cnpj_bairro=entrantes_bairro,
+        entrantes_cnpj_bairro_nome=entrantes_bairro_nome,
         script_abordagem=script,
         metadata={
             "schema_version": header.get("schema_version"),

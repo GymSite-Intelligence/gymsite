@@ -342,6 +342,28 @@ def _bairro_alvo_da_busca(state) -> str:
     return ""
 
 
+def _enriquecer_entrantes_bairro(bloco: dict, bairro_alvo: str) -> dict:
+    """Completa a célula BAIRRO da árvore 2×2 (estoque/entrantes × município/bairro)
+    sobre um bloco de entrantes já carregado: mantém a largura MUNICÍPIO (não filtra
+    fora ninguém) e marca quais entrantes caem no bairro alvo (`bairro_em_alvo`),
+    somando `total_bairro`. Idempotente; no-op sem bairro alvo ou bloco não-ok."""
+    if not (bairro_alvo and isinstance(bloco, dict) and bloco.get("status") == "ok"):
+        return bloco
+    from tools.cnpj_fitness_tools import _filtrar_entrantes_bairro_tipo
+
+    entrantes = bloco.get("entrantes") or []
+    no_bairro = _filtrar_entrantes_bairro_tipo(entrantes, bairro_alvo)
+    cnpjs_bairro = {
+        e.get("cnpj") for e in no_bairro if isinstance(e, dict) and e.get("cnpj")
+    }
+    for e in entrantes:
+        if isinstance(e, dict):
+            e["bairro_em_alvo"] = bool(e.get("cnpj") and e.get("cnpj") in cnpjs_bairro)
+    bloco["bairro_alvo"] = bairro_alvo
+    bloco["total_bairro"] = len(no_bairro)
+    return bloco
+
+
 def bairros_alternativos_inteligentes(tool_context) -> dict:
     """
     Tool determinística que avalia bairros alternativos com base em pesquisa
@@ -673,7 +695,9 @@ def _precompute_entrantes_cnpj(callback_context) -> dict:
         return {"status": "indisponivel", "motivo": "cidade_ausente", "entrantes": []}
 
     # Snapshot RFB no Supabase apenas — Receita/Apollo sob demanda na UI do relatório.
-    return listar_entrantes_cnpj_fitness(cidade, uf, dias=90, limit=50)
+    bloco = listar_entrantes_cnpj_fitness(cidade, uf, dias=90, limit=50)
+    # Completa a célula BAIRRO da árvore 2×2 (mantém a largura município).
+    return _enriquecer_entrantes_bairro(bloco, _bairro_alvo_da_busca(state))
 
 
 _ALERTA_RUIDO_FIN = (
@@ -1120,6 +1144,19 @@ def _renderizar_secao_novos_entrantes(entrantes_block: dict) -> str:
         "do seu relatório. NÃO altere dados, contatos ou links do LinkedIn."
     )
     linhas.append("")
+
+    # Árvore 2×2 (entrantes × município/bairro): quando há bairro alvo, mostra o
+    # recorte do bairro dentro do total municipal e marca as linhas com 📍.
+    total_municipio = entrantes_block.get("total") or len(entrantes)
+    total_bairro = entrantes_block.get("total_bairro")
+    bairro_alvo = entrantes_block.get("bairro_alvo")
+    if bairro_alvo and isinstance(total_bairro, int):
+        linhas.append(
+            f"**Recorte geográfico:** {total_municipio} novo(s) entrante(s) no município · "
+            f"{total_bairro} no bairro-alvo (**{bairro_alvo}**). "
+            "Linhas no bairro-alvo marcadas com 📍 na coluna Bairro."
+        )
+        linhas.append("")
     linhas.append("| Abertura | Nome Fantasia / Razão Social | Segmento | Bairro | Contato PJ | Decisor / Sócio Administrador | CNPJ |")
     linhas.append("|---|---|---|---|---|---|---|")
 
@@ -1145,8 +1182,10 @@ def _renderizar_secao_novos_entrantes(entrantes_block: dict) -> str:
         # Segmento
         segmento = e.get("segmento_label") or e.get("segmento_operacao") or "—"
 
-        # Bairro
+        # Bairro (📍 = dentro do bairro-alvo da pesquisa — célula bairro da árvore 2×2)
         bairro = e.get("bairro") or "—"
+        if e.get("bairro_em_alvo"):
+            bairro = f"📍 {bairro}"
 
         # Contatos PJ
         email_pj = (e.get("email_empresa") or "").strip()
@@ -2295,6 +2334,9 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             uf_mc = (inner_mc.get("uf") or "") if isinstance(inner_mc, dict) else ""
             entrantes_block = listar_entrantes_cnpj_fitness(
                 cidade_efetiva, uf_mc, dias=90, limit=50
+            )
+            entrantes_block = _enriquecer_entrantes_bairro(
+                entrantes_block, _bairro_alvo_da_busca(state)
             )
         except Exception:
             logger.warning(
