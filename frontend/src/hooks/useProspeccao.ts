@@ -158,6 +158,36 @@ export interface EntranteCaptado {
   data_abertura: string | null
   relatorio_id: string
   ja_em_prospeccao: boolean
+  tem_contato: boolean
+}
+
+async function enriquecerEntrante(relatorioId: string, cnpj: string) {
+  const res = await fetch(
+    `${API_BASE}/api/relatorios/${relatorioId}/entrantes-cnpj/enriquecer`,
+    {
+      method: 'POST',
+      headers: await authHeaders(true),
+      // usar_apollo: false — só ReceitaWS (telefone do sócio QSA), sem crédito Apollo.
+      body: JSON.stringify({ cnpj, usar_apollo: false }),
+    },
+  )
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao enriquecer')
+  }
+  return res.json()
+}
+
+/** Enriquece UM entrante (ReceitaWS) e persiste no relatório de origem. */
+export function useEnriquecerEntrante() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ relatorioId, cnpj }: { relatorioId: string; cnpj: string }) =>
+      enriquecerEntrante(relatorioId, cnpj),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prospeccao', 'entrantes-captados'] })
+    },
+  })
 }
 
 async function fetchEntrantesCaptados(): Promise<{

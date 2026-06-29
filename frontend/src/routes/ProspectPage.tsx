@@ -6,10 +6,11 @@
  */
 import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Send, Search } from 'lucide-react'
+import { Send, Search, Sparkles, Phone } from 'lucide-react'
 import {
   useEntrantesCaptados,
   useEnviarEntrantesProspeccao,
+  useEnriquecerEntrante,
   type EntranteCaptado,
 } from '@/hooks/useProspeccao'
 import { Button } from '@/components/ui/button'
@@ -30,11 +31,13 @@ function formatDate(iso: string | null) {
 export function ProspectPage() {
   const { data, isLoading } = useEntrantesCaptados()
   const enviar = useEnviarEntrantesProspeccao()
+  const enriquecer = useEnriquecerEntrante()
 
   const [busca, setBusca] = useState('')
   const [soNovos, setSoNovos] = useState(true)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [enviando, setEnviando] = useState(false)
+  const [enriquecendo, setEnriquecendo] = useState(false)
 
   const lista = useMemo(() => {
     let out: EntranteCaptado[] = data?.entrantes ?? []
@@ -101,6 +104,25 @@ export function ProspectPage() {
     if (falhas) toast.error(`${falhas} falha(s) no envio`)
   }
 
+  async function enriquecerSelecionados() {
+    const escolhidos = (data?.entrantes ?? []).filter((e) => selecionados.has(e.cnpj))
+    if (!escolhidos.length) return
+    setEnriquecendo(true)
+    let ok = 0
+    let falhas = 0
+    for (const e of escolhidos) {
+      try {
+        await enriquecer.mutateAsync({ relatorioId: e.relatorio_id, cnpj: e.cnpj })
+        ok++
+      } catch {
+        falhas++
+      }
+    }
+    setEnriquecendo(false)
+    if (ok) toast.success(`${ok} entrante(s) enriquecido(s) (ReceitaWS)`)
+    if (falhas) toast.error(`${falhas} falha(s) no enriquecimento`)
+  }
+
   return (
     <div className="container max-w-5xl py-8 space-y-6">
       <header className="space-y-1">
@@ -149,10 +171,14 @@ export function ProspectPage() {
         <div className="flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-4 py-2">
           <span className="text-sm font-medium">{selecionados.size} selecionado(s)</span>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setSelecionados(new Set())} disabled={enviando}>
+            <Button variant="ghost" size="sm" onClick={() => setSelecionados(new Set())} disabled={enviando || enriquecendo}>
               Limpar
             </Button>
-            <Button size="sm" onClick={enviarSelecionados} disabled={enviando}>
+            <Button variant="outline" size="sm" onClick={enriquecerSelecionados} disabled={enviando || enriquecendo}>
+              <Sparkles size={14} className="mr-1.5" />
+              {enriquecendo ? 'Enriquecendo…' : `Enriquecer ${selecionados.size}`}
+            </Button>
+            <Button size="sm" onClick={enviarSelecionados} disabled={enviando || enriquecendo}>
               <Send size={14} className="mr-1.5" />
               {enviando ? 'Enviando…' : `Enviar ${selecionados.size} para Prospecção`}
             </Button>
@@ -178,6 +204,7 @@ export function ProspectPage() {
               <th className="text-left px-3 py-2 font-medium">Segmento</th>
               <th className="text-left px-3 py-2 font-medium">Bairro</th>
               <th className="text-left px-3 py-2 font-medium">Abertura</th>
+              <th className="text-left px-3 py-2 font-medium">Contato</th>
               <th className="text-left px-3 py-2 font-medium">Status</th>
             </tr>
           </thead>
@@ -185,14 +212,14 @@ export function ProspectPage() {
             {isLoading &&
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className="border-b">
-                  {Array.from({ length: 7 }).map((__, j) => (
+                  {Array.from({ length: 8 }).map((__, j) => (
                     <td key={j} className="px-3 py-2"><Skeleton className="h-4 w-20" /></td>
                   ))}
                 </tr>
               ))}
             {!isLoading && lista.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
                   {(data?.total ?? 0) === 0
                     ? 'Nenhum entrante captado ainda — gere relatórios com a seção de Novos Entrantes.'
                     : 'Nada para os filtros atuais.'}
@@ -213,6 +240,15 @@ export function ProspectPage() {
                 <td className="px-3 py-2 text-muted-foreground">{e.segmento_operacao || '—'}</td>
                 <td className="px-3 py-2 text-muted-foreground">{e.bairro || '—'}</td>
                 <td className="px-3 py-2 text-muted-foreground">{formatDate(e.data_abertura)}</td>
+                <td className="px-3 py-2">
+                  {e.tem_contato ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                      <Phone size={12} /> ok
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">sem tel.</span>
+                  )}
+                </td>
                 <td className="px-3 py-2">
                   {e.ja_em_prospeccao ? (
                     <span className="text-xs text-teal-600">Em prospecção</span>
