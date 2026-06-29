@@ -9,12 +9,16 @@ Scoring (MODULO_PROSPECCAO §3):
 """
 from __future__ import annotations
 
+import logging
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 from tools.bairro_normalize import normalizar_bairro
 from tools.cno_fitness_tools import _digits, _parse_date_br, cruzar_entrantes_obras_cno
+from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
+
+logger = logging.getLogger(__name__)
 
 _FITNESS_SEGMENT_KEYWORDS = (
     "academia", "fitness", "studio", "crossfit", "musculacao", "pilates", "funcional",
@@ -38,11 +42,11 @@ def match_opportunities(
 
         cno_dir = Config.resolve_cno_dir()
 
+    # CNO é OPCIONAL. Sem dado CNO, o v2 roda CNPJ-only: cada entrante fitness vira
+    # oportunidade (o CNO só reforçaria o score). Mantém o módulo de prospecção
+    # independente do CNO e do pipeline de relatório (v1).
     if cno_dir is None:
-        raise RuntimeError(
-            "CNO_DATA_DIR não configurado. "
-            "Defina a variável de ambiente CNO_DATA_DIR."
-        )
+        return _match_cnpj_only(cidade=cidade, uf=uf, dias=dias, limit=limit)
 
     raw = cruzar_entrantes_obras_cno(
         cno_dir=cno_dir,
@@ -53,7 +57,12 @@ def match_opportunities(
     )
 
     if raw.get("status") != "ok":
-        raise RuntimeError(f"Falha no cruzamento: {raw.get('erro') or raw}")
+        # Degrada pra CNPJ-only em vez de derrubar a execução inteira.
+        logger.warning(
+            "Cruzamento CNO falhou (%s) — caindo pra CNPJ-only em %s/%s",
+            raw.get("erro"), cidade, uf,
+        )
+        return _match_cnpj_only(cidade=cidade, uf=uf, dias=dias, limit=limit)
 
     oportunidades: list[dict[str, Any]] = []
 
@@ -62,46 +71,88 @@ def match_opportunities(
         metodo = item.get("match_cno")
         confianca = item.get("match_confianca")
 
-        score, motivo = _calcular_score(metodo, confianca, item, obra)
+        # Entrante COM match CNO → score composto; SEM match → score CNPJ-only
+        # (não dropa o lead só por ausência de obra).
+        if metodo:
+            score, motivo = _calcular_score(metodo, confianca, item, obra)
+        else:
+            score, motivo = _score_cnpj_only(item)
 
-        opp: dict[str, Any] = {
-            "cnpj": _digits(item.get("cnpj")),
-            "razao_social": item.get("razao_social") or item.get("nome_fantasia"),
-            "nome_fantasia": item.get("nome_fantasia"),
-            "segmento_operacao": item.get("segmento_operacao"),
-            "data_inicio_atividade": item.get("data_abertura"),
-            "situacao_cadastral": item.get("situacao_cadastral"),
-            "cep": _digits(item.get("cep")),
-            "endereco_cnpj": {
-                "logradouro": item.get("logradouro"),
-                "numero": item.get("numero"),
-                "bairro": item.get("bairro"),
-                "cidade": cidade,
-                "uf": uf,
-            },
-            "cno": obra.get("cno") if isinstance(obra, dict) else None,
-            "nome_obra": obra.get("nome_obra") if isinstance(obra, dict) else None,
-            "situacao_obra": obra.get("situacao_obra") if isinstance(obra, dict) else None,
-            "area_total_m2": obra.get("area_m2") if isinstance(obra, dict) else None,
-            "data_inicio_obra": obra.get("data_inicio") if isinstance(obra, dict) else None,
-            "data_situacao_obra": obra.get("data_situacao") if isinstance(obra, dict) else None,
-            "endereco_cno": {
-                "logradouro": obra.get("logradouro") if isinstance(obra, dict) else None,
-                "numero": obra.get("numero") if isinstance(obra, dict) else None,
-                "bairro": obra.get("bairro") if isinstance(obra, dict) else None,
-                "cidade": cidade,
-                "uf": uf,
-            },
-            "score_match": score,
-            "motivo_match": motivo,
-            "match_metodo": metodo,
-            "match_confianca": confianca,
-            "projecao_receita": item.get("projecao_receita_estimada"),
-            "capacidade_matriculas": item.get("capacidade_matriculas_estimada"),
-        }
-        oportunidades.append(opp)
+        oportunidades.append(
+            _build_opp(item, cidade, uf, obra, score, motivo, metodo, confianca)
+        )
 
     return oportunidades
+
+
+def _build_opp(
+    item: dict,
+    cidade: str,
+    uf: str,
+    obra: dict | None,
+    score: float,
+    motivo: str,
+    metodo: str | None,
+    confianca: str | None,
+) -> dict[str, Any]:
+    """Normaliza um entrante (+ obra CNO opcional) no objeto plano persistível."""
+    obra = obra if isinstance(obra, dict) else {}
+    return {
+        "cnpj": _digits(item.get("cnpj") or ""),
+        "razao_social": item.get("razao_social") or item.get("nome_fantasia"),
+        "nome_fantasia": item.get("nome_fantasia"),
+        "segmento_operacao": item.get("segmento_operacao"),
+        "data_inicio_atividade": item.get("data_abertura") or item.get("data_inicio_atividade"),
+        "situacao_cadastral": item.get("situacao_cadastral"),
+        "cep": _digits(item.get("cep") or ""),
+        "endereco_cnpj": {
+            "logradouro": item.get("logradouro"),
+            "numero": item.get("numero"),
+            "bairro": item.get("bairro"),
+            "cidade": cidade,
+            "uf": uf,
+        },
+        "cno": obra.get("cno") or None,
+        "nome_obra": obra.get("nome_obra") or None,
+        "situacao_obra": obra.get("situacao_obra") or None,
+        "area_total_m2": obra.get("area_m2") or None,
+        "data_inicio_obra": obra.get("data_inicio") or None,
+        "data_situacao_obra": obra.get("data_situacao") or None,
+        "endereco_cno": {
+            "logradouro": obra.get("logradouro") or None,
+            "numero": obra.get("numero") or None,
+            "bairro": obra.get("bairro") or None,
+            "cidade": cidade,
+            "uf": uf,
+        },
+        "score_match": score,
+        "motivo_match": motivo,
+        "match_metodo": metodo,
+        "match_confianca": confianca,
+        "projecao_receita": item.get("projecao_receita_estimada"),
+        "capacidade_matriculas": item.get("capacidade_matriculas_estimada"),
+    }
+
+
+def _match_cnpj_only(
+    *, cidade: str, uf: str, dias: int, limit: int
+) -> list[dict[str, Any]]:
+    """v2 sem CNO: cada entrante CNPJ fitness do município vira oportunidade.
+    Independe de obra CNO e do relatório (v1) — fonte única é o snapshot RFB."""
+    res = listar_entrantes_cnpj_fitness(cidade, uf, dias=dias, limit=limit)
+    if res.get("status") != "ok":
+        logger.warning(
+            "listar_entrantes_cnpj_fitness não-ok (%s) p/ %s/%s",
+            res.get("status"), cidade, uf,
+        )
+        return []
+    out: list[dict[str, Any]] = []
+    for e in res.get("entrantes") or []:
+        if not isinstance(e, dict):
+            continue
+        score, motivo = _score_cnpj_only(e)
+        out.append(_build_opp(e, cidade, uf, {}, score, motivo, None, None))
+    return out
 
 
 def _score_area(area_m2: float | None) -> float:
@@ -209,3 +260,39 @@ def _calcular_score(
         f"bairro={s_bairro:.0%} idade={s_idade:.0%}"
     )
     return score, motivo
+
+
+def _score_recencia_abertura(data: str | None) -> float:
+    """Recência da abertura do CNPJ (ISO ou BR). Mais novo = mais quente."""
+    if not data:
+        return 0.5
+    dt = None
+    try:
+        dt = date.fromisoformat(data[:10])
+    except ValueError:
+        dt = _parse_date_br(data)
+    if not dt:
+        return 0.5
+    days = (date.today() - dt).days
+    if days <= 30:
+        return 1.0
+    if days <= 60:
+        return 0.8
+    if days <= 90:
+        return 0.6
+    return 0.4
+
+
+def _score_cnpj_only(item: dict) -> tuple[float, str]:
+    """Score sem CNO: segmento (peso maior) + recência da abertura. Piso =
+    SCORE_MATCH_MIN pra todo entrante fitness virar lead visível na UI v2 —
+    o CNO, quando existe, só reforça o score (não é pré-requisito)."""
+    from prospecting.config import Config
+
+    s_seg = _score_segmento(item.get("segmento_operacao"))
+    s_rec = _score_recencia_abertura(
+        item.get("data_abertura") or item.get("data_inicio_atividade")
+    )
+    base = 0.6 * s_seg + 0.4 * s_rec
+    score = round(min(1.0, max(base, Config.SCORE_MATCH_MIN)), 4)
+    return score, f"Entrante CNPJ sem CNO — segmento={s_seg:.0%} recência={s_rec:.0%}"
