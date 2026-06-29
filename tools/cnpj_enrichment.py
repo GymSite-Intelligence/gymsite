@@ -391,10 +391,13 @@ def aplicar_enriquecimento_entrante(
     if inferido_de:
         out["nome_fantasia_inferido_de"] = inferido_de
 
-    out["razao_social"] = razao or None
-    out["nome_fantasia"] = fantasia_out
-    out["nome_exibicao"] = nome_exib
-    out["bairro"] = bairro or None
+    # Preenche lacunas SEM downgradar: se o recálculo vier vazio (Receita falhou e
+    # fantasia/razão estavam vazios), mantém o que o entrante já tinha — senão o
+    # nome sumia (vira "—") ao enriquecer um lead cujo nome só vivia em nome_exibicao.
+    out["razao_social"] = razao or out.get("razao_social")
+    out["nome_fantasia"] = fantasia_out or out.get("nome_fantasia")
+    out["nome_exibicao"] = nome_exib or out.get("nome_exibicao")
+    out["bairro"] = bairro or out.get("bairro")
     out["dados_completos"] = bool(razao and bairro and out.get("nome_exibicao"))
     out.setdefault("contato_validado", False)
     out.setdefault("contato_validado_em", None)
