@@ -2614,6 +2614,15 @@ def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> di
             c = re.sub(r"\D", "", str(e.get("cnpj") or ""))
             if len(c) != 14 or c in idx:
                 continue
+            # Filtra joio: fora da família fitness / saúde-clínica não são leads.
+            if e.get("segmento_operacao") in ("fora_familia", "saude_clinica") or e.get("incluir_no_parque") is False:
+                continue
+            tem_contato = bool(
+                e.get("telefone_socio_administrador")
+                or e.get("telefone_empresa")
+                or e.get("email_socio_administrador")
+                or e.get("email_empresa")
+            )
             idx[c] = {
                 "cnpj": c,
                 "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
@@ -2622,6 +2631,7 @@ def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> di
                 "data_abertura": e.get("data_abertura"),
                 "relatorio_id": o.get("relatorio_id"),
                 "ja_em_prospeccao": c in ja_set,
+                "tem_contato": tem_contato,
             }
 
     entrantes = sorted(
