@@ -2567,6 +2567,69 @@ def list_oportunidades_prospeccao(
     )
 
 
+@app.get("/api/prospeccao/entrantes-captados")
+def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> dict:
+    """Agrega os entrantes CNPJ captados em TODOS os relatórios da org (fonte de
+    leads do V1, `relatorio_outputs.entrantes_cnpj_90d`), deduplicados por CNPJ.
+    Marca quais já estão em `oportunidades_prospeccao`. Origem do /prospect."""
+    import re
+
+    _, org_id = _require_authenticated(request)
+    sb = _supabase_client()
+
+    rel = (
+        sb.table("relatorios")
+        .select("id, created_at")
+        .eq("org_id", org_id)
+        .order("created_at", desc=True)
+        .limit(max(1, min(limit_relatorios, 1000)))
+        .execute()
+    )
+    rids = [r["id"] for r in (rel.data or []) if r.get("id")]
+    if not rids:
+        return {"entrantes": [], "total": 0, "relatorios": 0}
+
+    outs = (
+        sb.table("relatorio_outputs")
+        .select("relatorio_id, entrantes_cnpj_90d")
+        .in_("relatorio_id", rids)
+        .execute()
+    )
+    ja = (
+        sb.table("oportunidades_prospeccao")
+        .select("cnpj")
+        .eq("org_id", org_id)
+        .execute()
+    )
+    ja_set = {re.sub(r"\D", "", str(r.get("cnpj") or "")) for r in (ja.data or [])}
+
+    idx: dict[str, dict] = {}
+    for o in outs.data or []:
+        blk = o.get("entrantes_cnpj_90d")
+        if not isinstance(blk, dict):
+            continue
+        for e in blk.get("entrantes") or []:
+            if not isinstance(e, dict):
+                continue
+            c = re.sub(r"\D", "", str(e.get("cnpj") or ""))
+            if len(c) != 14 or c in idx:
+                continue
+            idx[c] = {
+                "cnpj": c,
+                "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
+                "segmento_operacao": e.get("segmento_label") or e.get("segmento_operacao"),
+                "bairro": e.get("bairro"),
+                "data_abertura": e.get("data_abertura"),
+                "relatorio_id": o.get("relatorio_id"),
+                "ja_em_prospeccao": c in ja_set,
+            }
+
+    entrantes = sorted(
+        idx.values(), key=lambda x: x.get("data_abertura") or "", reverse=True
+    )
+    return {"entrantes": entrantes, "total": len(entrantes), "relatorios": len(rids)}
+
+
 @app.get("/api/prospeccao/oportunidades/{oportunidade_id}")
 def get_oportunidade_prospeccao(request: Request, oportunidade_id: str) -> dict:
     """Retorna detalhe de uma oportunidade."""

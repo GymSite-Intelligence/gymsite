@@ -6,6 +6,7 @@ import {
   FileTextIcon,
   GitCompareIcon,
   Globe2Icon,
+  InboxIcon,
   LayoutDashboardIcon,
   MapIcon,
   MessageSquareIcon,
@@ -53,6 +54,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Prospecção',
     to: '/prospeccao',
     icon: TargetIcon,
+  },
+  {
+    title: 'Captação de Leads',
+    to: '/prospect',
+    icon: InboxIcon,
   },
   {
     title: 'Consultor',

@@ -150,4 +150,62 @@ export function usePatchStatusOportunidade() {
   })
 }
 
+export interface EntranteCaptado {
+  cnpj: string
+  nome: string
+  segmento_operacao: string | null
+  bairro: string | null
+  data_abertura: string | null
+  relatorio_id: string
+  ja_em_prospeccao: boolean
+}
+
+async function fetchEntrantesCaptados(): Promise<{
+  entrantes: EntranteCaptado[]
+  total: number
+  relatorios: number
+}> {
+  const res = await fetch(`${API_BASE}/api/prospeccao/entrantes-captados`, {
+    headers: await authHeaders(),
+  })
+  if (!res.ok) throw new Error('Falha ao carregar entrantes captados')
+  return res.json()
+}
+
+async function enviarEntrantesParaProspeccao(relatorioId: string, cnpjs: string[]) {
+  const res = await fetch(
+    `${API_BASE}/api/relatorios/${relatorioId}/entrantes-cnpj/prospeccao`,
+    {
+      method: 'POST',
+      headers: await authHeaders(true),
+      body: JSON.stringify({ cnpjs }),
+    },
+  )
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao enviar para prospecção')
+  }
+  return res.json()
+}
+
+/** Entrantes CNPJ captados em todos os relatórios da org (fonte de leads V1). */
+export function useEntrantesCaptados() {
+  return useQuery({
+    queryKey: ['prospeccao', 'entrantes-captados'],
+    queryFn: fetchEntrantesCaptados,
+  })
+}
+
+/** Envia entrantes selecionados de UM relatório para oportunidades_prospeccao. */
+export function useEnviarEntrantesProspeccao() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ relatorioId, cnpjs }: { relatorioId: string; cnpjs: string[] }) =>
+      enviarEntrantesParaProspeccao(relatorioId, cnpjs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prospeccao'] })
+    },
+  })
+}
+
 export { authHeaders as prospeccaoAuthHeaders }

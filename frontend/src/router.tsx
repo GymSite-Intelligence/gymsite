@@ -35,6 +35,7 @@ import { DashboardPage } from '@/routes/DashboardPage'
 import { MarketAtlasPage } from '@/routes/MarketAtlasPage'
 import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
+import { ProspectPage } from '@/routes/ProspectPage'
 import { LeadAccessPage } from '@/routes/LeadAccessPage'
 import { AssistentePage } from '@/routes/AssistentePage'
 import { ConsultorPage } from '@/routes/ConsultorPage'
@@ -255,6 +256,13 @@ const prospeccaoRoute = createRoute({
   component: ProspeccaoPage,
 })
 
+// "/prospect" — hub consolidado de entrantes captados (fonte de leads V1).
+const prospectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prospect',
+  component: ProspectPage,
+})
+
 // "/perfil" — edição de nome + foto do user logado.
 const perfilRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -343,6 +351,7 @@ const routeTree = rootRoute.addChildren([
   comparadorRoute,
   mapaRoute,
   prospeccaoRoute,
+  prospectRoute,
   custosRoute,
   perfilRoute,
   dashboardRoute,
