@@ -32,7 +32,6 @@ debug/
 metrics/
 prints/
 data/
-prospecting/
 eval/
 scratch/
 tools/__pycache__/
