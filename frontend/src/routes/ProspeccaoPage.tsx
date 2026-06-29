@@ -17,7 +17,6 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Settings,
   Download,
   Send,
 } from 'lucide-react'
@@ -26,9 +25,7 @@ import {
   useExecutarProspeccao,
   usePatchStatusOportunidade,
   useReenviarWebhook,
-  prospeccaoAuthHeaders,
 } from '@/hooks/useProspeccao'
-import { API_BASE } from '@/lib/supabase'
 import { StatusBadge } from '@/components/prospeccao/StatusBadge'
 import { PrioridadeBadge } from '@/components/prospeccao/PrioridadeBadge'
 import { OportunidadeDrawer } from '@/components/prospeccao/OportunidadeDrawer'
@@ -127,11 +124,7 @@ export function ProspeccaoPage() {
   const [sortKey, setSortKey] = useState<'score_match' | 'created_at' | 'prioridade' | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
-  // ── Webhook config + seleção em massa + drawer ──
-  const [showWebhookConfig, setShowWebhookConfig] = useState(false)
-  const [webhookUrl, setWebhookUrl] = useState('')
-  const [webhookOrgId, setWebhookOrgId] = useState('')
-  const [savingWebhook, setSavingWebhook] = useState(false)
+  // ── Seleção em massa + drawer ──
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [enviando, setEnviando] = useState(false)
   const [drawerId, setDrawerId] = useState<string | null>(null)
@@ -275,25 +268,6 @@ export function ProspeccaoPage() {
     setSelecionados(new Set())
     if (ok) toast.success(`${ok} oportunidade(s) qualificada(s) e enviada(s) ao Navi`)
     if (falhas) toast.error(`${falhas} falha(s) no envio ao Navi`)
-  }
-
-  async function salvarWebhook() {
-    if (!webhookUrl || !webhookOrgId) return
-    setSavingWebhook(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/prospeccao/webhook/configure`, {
-        method: 'POST',
-        headers: await prospeccaoAuthHeaders(true),
-        body: JSON.stringify({ org_id: webhookOrgId, webhook_url: webhookUrl }),
-      })
-      if (!res.ok) throw new Error('Falha ao salvar')
-      toast.success('Webhook configurado com sucesso!')
-      setShowWebhookConfig(false)
-    } catch {
-      toast.error('Erro ao configurar webhook. Verifique a URL e o org_id.')
-    } finally {
-      setSavingWebhook(false)
-    }
   }
 
   function abrirDrawer(id: string) {
@@ -452,10 +426,6 @@ export function ProspeccaoPage() {
         </div>
 
         <div className="flex items-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowWebhookConfig((v) => !v)}>
-            <Settings size={14} className="mr-1.5" />
-            Webhook Claw
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -492,26 +462,6 @@ export function ProspeccaoPage() {
           </Button>
         </div>
       </div>
-
-      {/* Configuração de webhook */}
-      {showWebhookConfig && (
-        <div className="rounded-md border p-4 space-y-3 bg-muted/20">
-          <p className="text-sm font-medium">Configurar webhook do Claw</p>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Org ID</label>
-              <Input placeholder="UUID da organização" value={webhookOrgId} onChange={(e) => setWebhookOrgId(e.target.value)} className="w-64" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">URL do webhook</label>
-              <Input placeholder="https://..." value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} className="w-80" />
-            </div>
-            <Button size="sm" onClick={salvarWebhook} disabled={savingWebhook || !webhookUrl || !webhookOrgId}>
-              {savingWebhook ? 'Salvando…' : 'Salvar'}
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Barra de ação em massa */}
       {selecionados.size > 0 && (
