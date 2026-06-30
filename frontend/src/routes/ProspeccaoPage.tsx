@@ -252,12 +252,16 @@ export function ProspeccaoPage() {
   async function qualificarEEnviar() {
     const ids = [...selecionados]
     if (!ids.length) return
+    const statusPorId = new Map((data ?? []).map((o) => [o.id, o.status]))
     setEnviando(true)
     let ok = 0
     let falhas = 0
     for (const id of ids) {
       try {
-        await patchStatus.mutateAsync({ id, status: 'qualificado' })
+        // Só qualifica quem está em 'novo' — não regride webhook_enviado/engajado/fechado.
+        if (statusPorId.get(id) === 'novo') {
+          await patchStatus.mutateAsync({ id, status: 'qualificado' })
+        }
         await reenviarWebhook.mutateAsync(id)
         ok++
       } catch {
