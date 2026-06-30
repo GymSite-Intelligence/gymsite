@@ -154,6 +154,9 @@ export interface EntranteCaptado {
   cnpj: string
   nome: string
   segmento_operacao: string | null
+  cidade: string | null
+  cnae: string | null
+  socio_nome: string | null
   bairro: string | null
   data_abertura: string | null
   relatorio_id: string

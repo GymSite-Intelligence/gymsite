@@ -17,6 +17,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 function _norm(s: string | null | undefined): string {
   return (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
@@ -35,24 +42,45 @@ export function ProspectPage() {
 
   const [busca, setBusca] = useState('')
   const [soNovos, setSoNovos] = useState(true)
+  const [fMunicipio, setFMunicipio] = useState('')
+  const [fCnae, setFCnae] = useState('')
+  const [fSegmento, setFSegmento] = useState('')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [enviando, setEnviando] = useState(false)
   const [enriquecendo, setEnriquecendo] = useState(false)
 
+  // Valores distintos p/ os dropdowns (a partir do conjunto completo captado).
+  const opcoes = useMemo(() => {
+    const mun = new Set<string>()
+    const cnae = new Set<string>()
+    const seg = new Set<string>()
+    for (const e of data?.entrantes ?? []) {
+      if (e.cidade) mun.add(e.cidade)
+      if (e.cnae) cnae.add(e.cnae)
+      if (e.segmento_operacao) seg.add(e.segmento_operacao)
+    }
+    const ord = (s: Set<string>) => [...s].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    return { municipios: ord(mun), cnaes: ord(cnae), segmentos: ord(seg) }
+  }, [data])
+
   const lista = useMemo(() => {
     let out: EntranteCaptado[] = data?.entrantes ?? []
     if (soNovos) out = out.filter((e) => !e.ja_em_prospeccao)
+    if (fMunicipio) out = out.filter((e) => e.cidade === fMunicipio)
+    if (fCnae) out = out.filter((e) => e.cnae === fCnae)
+    if (fSegmento) out = out.filter((e) => e.segmento_operacao === fSegmento)
     const q = _norm(busca)
     if (q) {
       out = out.filter(
         (e) =>
           _norm(e.nome).includes(q) ||
           e.cnpj.includes(q.replace(/\D/g, '')) ||
-          _norm(e.bairro).includes(q),
+          _norm(e.bairro).includes(q) ||
+          _norm(e.socio_nome).includes(q),
       )
     }
     return out
-  }, [data, busca, soNovos])
+  }, [data, busca, soNovos, fMunicipio, fCnae, fSegmento])
 
   const idsVisiveis = useMemo(() => lista.map((e) => e.cnpj), [lista])
   const todos = idsVisiveis.length > 0 && idsVisiveis.every((c) => selecionados.has(c))
@@ -149,20 +177,53 @@ export function ProspectPage() {
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Nome, CNPJ ou bairro"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="pl-8 w-72"
-          />
+      {/* Filtros estruturados */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Município</label>
+          <Select value={fMunicipio} onValueChange={setFMunicipio}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos</SelectItem>
+              {opcoes.municipios.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Segmento</label>
+          <Select value={fSegmento} onValueChange={setFSegmento}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos</SelectItem>
+              {opcoes.segmentos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">CNAE</label>
+          <Select value={fCnae} onValueChange={setFCnae}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos</SelectItem>
+              {opcoes.cnaes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Busca</label>
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Nome, CNPJ, bairro ou sócio"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-8 w-64"
+            />
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground pb-2">
           <Checkbox checked={soNovos} onCheckedChange={(v) => setSoNovos(!!v)} />
-          Ocultar os que já estão em prospecção
+          Ocultar já enviados
         </label>
       </div>
 
@@ -202,6 +263,8 @@ export function ProspectPage() {
               <th className="text-left px-3 py-2 font-medium">Empresa</th>
               <th className="text-left px-3 py-2 font-medium">CNPJ</th>
               <th className="text-left px-3 py-2 font-medium">Segmento</th>
+              <th className="text-left px-3 py-2 font-medium">CNAE</th>
+              <th className="text-left px-3 py-2 font-medium">Sócio Adm.</th>
               <th className="text-left px-3 py-2 font-medium">Bairro</th>
               <th className="text-left px-3 py-2 font-medium">Abertura</th>
               <th className="text-left px-3 py-2 font-medium">Contato</th>
@@ -212,14 +275,14 @@ export function ProspectPage() {
             {isLoading &&
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className="border-b">
-                  {Array.from({ length: 8 }).map((__, j) => (
+                  {Array.from({ length: 10 }).map((__, j) => (
                     <td key={j} className="px-3 py-2"><Skeleton className="h-4 w-20" /></td>
                   ))}
                 </tr>
               ))}
             {!isLoading && lista.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
                   {(data?.total ?? 0) === 0
                     ? 'Nenhum entrante captado ainda — gere relatórios com a seção de Novos Entrantes.'
                     : 'Nada para os filtros atuais.'}
@@ -238,6 +301,8 @@ export function ProspectPage() {
                 <td className="px-3 py-2 font-medium">{e.nome}</td>
                 <td className="px-3 py-2 font-mono text-xs">{e.cnpj}</td>
                 <td className="px-3 py-2 text-muted-foreground">{e.segmento_operacao || '—'}</td>
+                <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{e.cnae || '—'}</td>
+                <td className="px-3 py-2 text-muted-foreground">{e.socio_nome || '—'}</td>
                 <td className="px-3 py-2 text-muted-foreground">{e.bairro || '—'}</td>
                 <td className="px-3 py-2 text-muted-foreground">{formatDate(e.data_abertura)}</td>
                 <td className="px-3 py-2">
