@@ -2608,6 +2608,7 @@ def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> di
         blk = o.get("entrantes_cnpj_90d")
         if not isinstance(blk, dict):
             continue
+        cidade_blk = blk.get("cidade") or blk.get("municipio") or ""
         for e in blk.get("entrantes") or []:
             if not isinstance(e, dict):
                 continue
@@ -2623,10 +2624,14 @@ def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> di
                 or e.get("email_socio_administrador")
                 or e.get("email_empresa")
             )
+            socio = e.get("socio_administrador") if isinstance(e.get("socio_administrador"), dict) else {}
             idx[c] = {
                 "cnpj": c,
                 "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
                 "segmento_operacao": e.get("segmento_label") or e.get("segmento_operacao"),
+                "cidade": cidade_blk,
+                "cnae": e.get("cnae_principal") or e.get("cnae_fiscal_principal"),
+                "socio_nome": (socio.get("nome") or "").strip() or None,
                 "bairro": e.get("bairro"),
                 "data_abertura": e.get("data_abertura"),
                 "relatorio_id": o.get("relatorio_id"),
