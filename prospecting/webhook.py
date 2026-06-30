@@ -40,6 +40,15 @@ def send_opportunity_webhook(
 
     # Idempotência — verifica se já enviou com sucesso recente
     if _ja_enviado_com_sucesso(opp_id, evento, client):
+        # Já foi entregue: garante que o status reflita isso (não deixa regredir
+        # pra "qualificado" quando o fluxo bulk re-roda Qualificar+Enviar).
+        if client and opp_id:
+            try:
+                client.table("oportunidades_prospeccao").update(
+                    {"status": "webhook_enviado"}
+                ).eq("id", opp_id).in_("status", ["novo", "qualificado"]).execute()
+            except Exception as db_err:
+                print(f"[webhook] Erro ao reafirmar status {opp_id}: {db_err}")
         return {
             "status": "idempotente",
             "motivo": "Webhook já entregue com sucesso",
