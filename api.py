@@ -2597,11 +2597,15 @@ def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> di
     )
     ja = (
         sb.table("oportunidades_prospeccao")
-        .select("cnpj")
+        .select(
+            "cnpj, razao_social, nome_fantasia, segmento_operacao, cidade, "
+            "data_inicio_atividade, endereco_cnpj, contato_cnpj, motivo_match"
+        )
         .eq("org_id", org_id)
         .execute()
     )
-    ja_set = {re.sub(r"\D", "", str(r.get("cnpj") or "")) for r in (ja.data or [])}
+    ja_rows = ja.data or []
+    ja_set = {re.sub(r"\D", "", str(r.get("cnpj") or "")) for r in ja_rows}
 
     idx: dict[str, dict] = {}
     for o in outs.data or []:
@@ -2639,10 +2643,41 @@ def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> di
                 "tem_contato": tem_contato,
             }
 
+    # Também traz leads da BUSCA DIRETA por município (oportunidades_prospeccao sem
+    # relatório associado). Sem isso o /prospect só listava leads de relatório e o
+    # município buscado "não atualizava" — o lead ia só pro /prospeccao.
+    from tools.cnpj_segment_classifier import segmento_label
+
+    for r in ja_rows:
+        c = re.sub(r"\D", "", str(r.get("cnpj") or ""))
+        if len(c) != 14 or c in idx:
+            continue
+        endereco = r.get("endereco_cnpj") if isinstance(r.get("endereco_cnpj"), dict) else {}
+        contato = r.get("contato_cnpj") if isinstance(r.get("contato_cnpj"), dict) else {}
+        seg = r.get("segmento_operacao")
+        idx[c] = {
+            "cnpj": c,
+            "nome": r.get("nome_fantasia") or r.get("razao_social") or "—",
+            "segmento_operacao": segmento_label(seg) if seg else None,
+            "cidade": r.get("cidade") or endereco.get("cidade") or "",
+            "cnae": None,
+            "socio_nome": (contato.get("decision_maker") or "").strip() or None,
+            "bairro": endereco.get("bairro"),
+            "data_abertura": r.get("data_inicio_atividade"),
+            "relatorio_id": None,
+            "ja_em_prospeccao": True,
+            "tem_contato": bool(contato.get("email") or contato.get("telefone")),
+        }
+
     entrantes = sorted(
         idx.values(), key=lambda x: x.get("data_abertura") or "", reverse=True
     )
-    return {"entrantes": entrantes, "total": len(entrantes), "relatorios": len(rids)}
+    return {
+        "entrantes": entrantes,
+        "total": len(entrantes),
+        "relatorios": len(rids),
+        "busca_direta": sum(1 for e in idx.values() if e["relatorio_id"] is None),
+    }
 
 
 @app.get("/api/prospeccao/buscar-entrantes")
