@@ -89,6 +89,9 @@ export function ProspectPage() {
       const r = await buscarEntrantes.mutateAsync({ cidade, uf, dias: Number(diasBusca) || 90 })
       setResultadoBusca({ entrantes: r.entrantes ?? [], cidade: r.cidade || cidade, uf: r.uf || uf })
       setSelecionados(new Set())
+      // Reseta os filtros estruturados — senão um fMunicipio/fSegmento velho
+      // esconde o resultado da nova busca.
+      setFMunicipio(''); setFCnae(''); setFSegmento(''); setBusca('')
       toast.success(`${r.total ?? 0} entrante(s) encontrado(s) em ${r.cidade || cidade}`)
     } catch (e) {
       toast.error((e as Error).message)
@@ -321,38 +324,43 @@ export function ProspectPage() {
         </div>
       )}
 
-      {/* Filtros estruturados */}
+      {/* Filtros — Município/Segmento/CNAE só no modo CAPTADOS (no modo busca o
+          município já vem da pesquisa; evita o "segundo Município" confuso). */}
       <div className="flex flex-wrap items-end gap-3">
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Município</label>
-          <Select value={fMunicipio} onValueChange={setFMunicipio}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
-              {opcoes.municipios.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Segmento</label>
-          <Select value={fSegmento} onValueChange={setFSegmento}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
-              {opcoes.segmentos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">CNAE</label>
-          <Select value={fCnae} onValueChange={setFCnae}>
-            <SelectTrigger className="w-40"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
-              {opcoes.cnaes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+        {!modoBusca && (
+          <>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Município</label>
+              <Select value={fMunicipio} onValueChange={setFMunicipio}>
+                <SelectTrigger className="w-48"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  {opcoes.municipios.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Segmento</label>
+              <Select value={fSegmento} onValueChange={setFSegmento}>
+                <SelectTrigger className="w-48"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  {opcoes.segmentos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">CNAE</label>
+              <Select value={fCnae} onValueChange={setFCnae}>
+                <SelectTrigger className="w-40"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  {opcoes.cnaes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Busca</label>
           <div className="relative">
