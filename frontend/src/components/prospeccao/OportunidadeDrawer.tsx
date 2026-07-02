@@ -10,7 +10,7 @@ import {
 import { useOportunidade, useReenviarWebhook, usePatchStatusOportunidade } from '@/hooks/useProspeccao'
 import { StatusBadge } from './StatusBadge'
 import { PrioridadeBadge } from './PrioridadeBadge'
-import { RefreshCw, ExternalLink } from 'lucide-react'
+import { RefreshCw, ExternalLink, Braces } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Select,
@@ -30,6 +30,44 @@ export function OportunidadeDrawer({ id, open, onClose }: Props) {
   const { data, isLoading } = useOportunidade(id ?? undefined)
   const reenviar = useReenviarWebhook()
   const patchStatus = usePatchStatusOportunidade()
+
+  function montarJson() {
+    if (!data) return
+    const c = (data.contato_cnpj ?? {}) as Record<string, string | null | undefined>
+    const payload = {
+      id: data.id,
+      empresa: data.nome_fantasia || data.razao_social || null,
+      razao_social: data.razao_social ?? null,
+      nome_fantasia: data.nome_fantasia ?? null,
+      cnpj: data.cnpj,
+      cno: data.cno ?? null,
+      cidade: data.cidade ?? null,
+      uf: data.uf ?? null,
+      area_total_m2: data.area_total_m2 ?? null,
+      status: data.status,
+      prioridade: data.prioridade,
+      score_match: data.score_match ?? null,
+      motivo_match: data.motivo_match ?? null,
+      situacao_obra: data.situacao_obra ?? null,
+      contato: {
+        decision_maker: c.decision_maker ?? null,
+        cargo: c.cargo ?? null,
+        email: c.email ?? null,
+        telefone: c.telefone ?? null,
+        whatsapp_link: c.whatsapp_link ?? null,
+      },
+      webhook: {
+        enviado_at: data.webhook_enviado_at ?? null,
+        resposta_http: data.webhook_resposta_http ?? null,
+        tentativas: data.webhook_tentativas ?? 0,
+      },
+    }
+    const texto = JSON.stringify(payload, null, 2)
+    navigator.clipboard.writeText(texto).then(
+      () => toast.success('JSON copiado para a área de transferência'),
+      () => toast.error('Não foi possível copiar o JSON'),
+    )
+  }
 
   return (
     <Drawer open={open} onOpenChange={(v) => !v && onClose()}>
@@ -153,6 +191,12 @@ export function OportunidadeDrawer({ id, open, onClose }: Props) {
         )}
 
         <DrawerFooter className="flex-row justify-end gap-2">
+          {data && (
+            <Button variant="outline" size="sm" onClick={montarJson}>
+              <Braces size={14} className="mr-1.5" />
+              Copiar JSON
+            </Button>
+          )}
           {data && (
             <Button
               variant="outline"
