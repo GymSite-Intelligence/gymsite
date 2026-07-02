@@ -159,7 +159,7 @@ export interface EntranteCaptado {
   socio_nome: string | null
   bairro: string | null
   data_abertura: string | null
-  relatorio_id: string
+  relatorio_id: string | null
   ja_em_prospeccao: boolean
   tem_contato: boolean
 }
@@ -235,6 +235,55 @@ export function useEnviarEntrantesProspeccao() {
   return useMutation({
     mutationFn: ({ relatorioId, cnpjs }: { relatorioId: string; cnpjs: string[] }) =>
       enviarEntrantesParaProspeccao(relatorioId, cnpjs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prospeccao'] })
+    },
+  })
+}
+
+async function buscarEntrantes(params: {
+  cidade: string; uf?: string; dias?: number; bairro?: string; tipo_negocio?: string
+}): Promise<{ entrantes: EntranteCaptado[]; total: number; cidade: string; uf: string; status: string }> {
+  const q = new URLSearchParams()
+  q.set('cidade', params.cidade)
+  if (params.uf) q.set('uf', params.uf)
+  if (params.dias) q.set('dias', String(params.dias))
+  if (params.bairro) q.set('bairro', params.bairro)
+  if (params.tipo_negocio) q.set('tipo_negocio', params.tipo_negocio)
+  const res = await fetch(`${API_BASE}/api/prospeccao/buscar-entrantes?${q.toString()}`, {
+    headers: await authHeaders(),
+  })
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao buscar entrantes')
+  }
+  return res.json()
+}
+
+async function captarEntrantes(cidade: string, uf: string, cnpjs: string[]) {
+  const res = await fetch(`${API_BASE}/api/prospeccao/captar-entrantes`, {
+    method: 'POST',
+    headers: await authHeaders(true),
+    body: JSON.stringify({ cidade, uf, cnpjs }),
+  })
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao captar entrantes')
+  }
+  return res.json()
+}
+
+/** Busca DIRETA de entrantes por município (independente de relatório). */
+export function useBuscarEntrantes() {
+  return useMutation({ mutationFn: buscarEntrantes })
+}
+
+/** Persiste entrantes buscados direto em oportunidades_prospeccao. */
+export function useCaptarEntrantes() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ cidade, uf, cnpjs }: { cidade: string; uf: string; cnpjs: string[] }) =>
+      captarEntrantes(cidade, uf, cnpjs),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prospeccao'] })
     },

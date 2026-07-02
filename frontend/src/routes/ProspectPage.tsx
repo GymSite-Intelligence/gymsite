@@ -6,11 +6,13 @@
  */
 import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
-import { Send, Search, Sparkles, Phone } from 'lucide-react'
+import { Send, Search, Sparkles, Phone, Radar } from 'lucide-react'
 import {
   useEntrantesCaptados,
   useEnviarEntrantesProspeccao,
   useEnriquecerEntrante,
+  useBuscarEntrantes,
+  useCaptarEntrantes,
   type EntranteCaptado,
 } from '@/hooks/useProspeccao'
 import { Button } from '@/components/ui/button'
@@ -24,6 +26,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { SelectGrouped } from '@/components/ui/select-grouped'
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
+import { UFS_BRASIL, type UF } from '@/data/ufs-brasil'
+import {
+  useMunicipioAutocomplete,
+  type MunicipioIBGE,
+} from '@/hooks/useMunicipioAutocomplete'
+import { useDebounce } from '@/hooks/useDebounce'
+
+const UFS_POR_REGIAO = UFS_BRASIL.reduce<Record<UF['regiao'], UF[]>>(
+  (acc, uf) => {
+    if (!acc[uf.regiao]) acc[uf.regiao] = []
+    acc[uf.regiao].push(uf)
+    return acc
+  },
+  {} as Record<UF['regiao'], UF[]>,
+)
 
 function _norm(s: string | null | undefined): string {
   return (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
@@ -36,9 +55,50 @@ function formatDate(iso: string | null) {
 }
 
 export function ProspectPage() {
-  const { data, isLoading } = useEntrantesCaptados()
+  const { data: agregado, isLoading } = useEntrantesCaptados()
   const enviar = useEnviarEntrantesProspeccao()
   const enriquecer = useEnriquecerEntrante()
+  const buscarEntrantes = useBuscarEntrantes()
+  const captar = useCaptarEntrantes()
+
+  // ── Busca DIRETA por município (independente do pipeline) ──
+  const [ufBusca, setUfBusca] = useState<UF | null>(null)
+  const [munQuery, setMunQuery] = useState('')
+  const [munSel, setMunSel] = useState<MunicipioIBGE | null>(null)
+  const [diasBusca, setDiasBusca] = useState('90')
+  // resultadoBusca !== null → modo BUSCA (mostra o resultado ao vivo, envia via captar).
+  const [resultadoBusca, setResultadoBusca] = useState<{
+    entrantes: EntranteCaptado[]; cidade: string; uf: string
+  } | null>(null)
+
+  const debMun = useDebounce(munQuery, 200)
+  const { sugestoes: munsSugeridos, isLoading: loadingMun, total: totalMun } =
+    useMunicipioAutocomplete(debMun, ufBusca?.sigla ?? '')
+
+  const modoBusca = resultadoBusca !== null
+  // Fonte da tabela: resultado da busca (modo busca) OU o agregado dos relatórios.
+  const data = modoBusca
+    ? { entrantes: resultadoBusca!.entrantes, total: resultadoBusca!.entrantes.length, relatorios: 0 }
+    : agregado
+
+  async function rodarBusca() {
+    const cidade = munSel?.nome ?? ''
+    const uf = ufBusca?.sigla ?? ''
+    if (!cidade || !uf) return
+    try {
+      const r = await buscarEntrantes.mutateAsync({ cidade, uf, dias: Number(diasBusca) || 90 })
+      setResultadoBusca({ entrantes: r.entrantes ?? [], cidade: r.cidade || cidade, uf: r.uf || uf })
+      setSelecionados(new Set())
+      toast.success(`${r.total ?? 0} entrante(s) encontrado(s) em ${r.cidade || cidade}`)
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
+  function limparBusca() {
+    setResultadoBusca(null)
+    setSelecionados(new Set())
+  }
 
   const [busca, setBusca] = useState('')
   const [soNovos, setSoNovos] = useState(true)
@@ -106,16 +166,39 @@ export function ProspectPage() {
   }
 
   async function enviarSelecionados() {
-    const escolhidos = (data?.entrantes ?? []).filter((e) => selecionados.has(e.cnpj))
-    if (!escolhidos.length) return
-    // Agrupa por relatório de origem (o bridge é por-relatório).
+    const cnpjsSel = [...selecionados]
+    if (!cnpjsSel.length) return
+    setEnviando(true)
+
+    // Modo BUSCA: persiste direto via captar-entrantes (enriquece no servidor).
+    if (modoBusca && resultadoBusca) {
+      try {
+        const r = await captar.mutateAsync({
+          cidade: resultadoBusca.cidade, uf: resultadoBusca.uf, cnpjs: cnpjsSel,
+        })
+        toast.success(`${r.total_enviados} enviado(s) para prospecção`)
+        setResultadoBusca((prev) => prev && {
+          ...prev,
+          entrantes: prev.entrantes.map((e) =>
+            cnpjsSel.includes(e.cnpj) ? { ...e, ja_em_prospeccao: true } : e),
+        })
+      } catch (e) {
+        toast.error((e as Error).message)
+      }
+      setEnviando(false)
+      setSelecionados(new Set())
+      return
+    }
+
+    // Modo AGREGADO: bridge por relatório de origem.
+    const escolhidos = (agregado?.entrantes ?? []).filter((e) => selecionados.has(e.cnpj))
     const porRelatorio = new Map<string, string[]>()
     for (const e of escolhidos) {
+      if (!e.relatorio_id) continue
       const arr = porRelatorio.get(e.relatorio_id) ?? []
       arr.push(e.cnpj)
       porRelatorio.set(e.relatorio_id, arr)
     }
-    setEnviando(true)
     let ok = 0
     let falhas = 0
     for (const [relatorioId, cnpjs] of porRelatorio) {
@@ -133,14 +216,17 @@ export function ProspectPage() {
   }
 
   async function enriquecerSelecionados() {
-    const escolhidos = (data?.entrantes ?? []).filter((e) => selecionados.has(e.cnpj))
+    // Só no modo agregado (por-relatório). No modo busca o captar já enriquece.
+    const escolhidos = (agregado?.entrantes ?? []).filter(
+      (e) => selecionados.has(e.cnpj) && e.relatorio_id,
+    )
     if (!escolhidos.length) return
     setEnriquecendo(true)
     let ok = 0
     let falhas = 0
     for (const e of escolhidos) {
       try {
-        await enriquecer.mutateAsync({ relatorioId: e.relatorio_id, cnpj: e.cnpj })
+        await enriquecer.mutateAsync({ relatorioId: e.relatorio_id!, cnpj: e.cnpj })
         ok++
       } catch {
         falhas++
@@ -156,13 +242,71 @@ export function ProspectPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Captação de Leads (Entrantes CNPJ)</h1>
         <p className="text-sm text-muted-foreground">
-          Novos CNPJs fitness encontrados em todos os seus relatórios. Selecione e envie
-          para a Prospecção — de lá você qualifica e dispara o Navi.
+          Busque novos entrantes CNPJ fitness por município (90 dias, direto do RFB) ou
+          use os já captados nos relatórios. Selecione → envie pra Prospecção → Navi.
         </p>
       </header>
 
-      {/* Resumo */}
-      {data && (
+      {/* Busca DIRETA por município (independente do pipeline) */}
+      <div className="rounded-lg border bg-card/40 p-4 space-y-3">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider font-mono font-medium text-muted-foreground">
+          <Radar size={14} /> Buscar novos entrantes por município
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Estado (UF)</label>
+            <SelectGrouped
+              value={ufBusca?.sigla}
+              onChange={(v) => {
+                setUfBusca(UFS_BRASIL.find((u) => u.sigla === v) ?? null)
+                setMunSel(null); setMunQuery('')
+              }}
+              placeholder="— UF —"
+              groups={(['Sudeste', 'Sul', 'Nordeste', 'Centro-Oeste', 'Norte'] as const).map((regiao) => ({
+                label: regiao,
+                options: (UFS_POR_REGIAO[regiao] ?? []).map((u) => ({ value: u.sigla, label: `${u.sigla} — ${u.nome}` })),
+              }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">
+              Município{ufBusca ? ` · ${totalMun} em ${ufBusca.sigla}` : ''}
+            </label>
+            <Combobox<MunicipioIBGE>
+              inputValue={munQuery}
+              onInputChange={(v) => { setMunQuery(v); if (munSel && v !== munSel.nome) setMunSel(null) }}
+              options={munsSugeridos.map((m) => ({ label: m.nome, description: m.uf_nome || m.uf, value: String(m.id), payload: m }))}
+              onSelect={(opt: ComboboxOption<MunicipioIBGE>) => { if (opt.payload) { setMunSel(opt.payload); setMunQuery(opt.payload.nome) } }}
+              isLoading={loadingMun}
+              placeholder={ufBusca ? 'Digite o município…' : 'Selecione a UF primeiro'}
+              disabled={!ufBusca}
+              minChars={0}
+              emptyMessage={<span>Nenhum município em {ufBusca?.sigla} contém "{munQuery}"</span>}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Janela (dias)</label>
+            <Input value={diasBusca} onChange={(e) => setDiasBusca(e.target.value)} className="w-20" type="number" min={7} max={365} />
+          </div>
+          <Button onClick={rodarBusca} disabled={!munSel || !ufBusca || buscarEntrantes.isPending} size="sm">
+            <Radar size={14} className="mr-1.5" />
+            {buscarEntrantes.isPending ? 'Buscando…' : 'Buscar entrantes'}
+          </Button>
+          {modoBusca && (
+            <Button variant="ghost" size="sm" onClick={limparBusca}>Ver captados</Button>
+          )}
+        </div>
+        {modoBusca && (
+          <p className="text-xs text-muted-foreground">
+            Mostrando <strong>{resultadoBusca!.entrantes.length}</strong> entrante(s) ao vivo de{' '}
+            <strong>{resultadoBusca!.cidade}/{resultadoBusca!.uf}</strong> (RFB, últimos {diasBusca}d).
+            Selecionar + Enviar persiste em prospecção (enriquece no envio).
+          </p>
+        )}
+      </div>
+
+      {/* Resumo (só no modo captados) */}
+      {!modoBusca && data && (
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: 'Captados (únicos)', value: data.total },
@@ -235,10 +379,12 @@ export function ProspectPage() {
             <Button variant="ghost" size="sm" onClick={() => setSelecionados(new Set())} disabled={enviando || enriquecendo}>
               Limpar
             </Button>
-            <Button variant="outline" size="sm" onClick={enriquecerSelecionados} disabled={enviando || enriquecendo}>
-              <Sparkles size={14} className="mr-1.5" />
-              {enriquecendo ? 'Enriquecendo…' : `Enriquecer ${selecionados.size}`}
-            </Button>
+            {!modoBusca && (
+              <Button variant="outline" size="sm" onClick={enriquecerSelecionados} disabled={enviando || enriquecendo}>
+                <Sparkles size={14} className="mr-1.5" />
+                {enriquecendo ? 'Enriquecendo…' : `Enriquecer ${selecionados.size}`}
+              </Button>
+            )}
             <Button size="sm" onClick={enviarSelecionados} disabled={enviando || enriquecendo}>
               <Send size={14} className="mr-1.5" />
               {enviando ? 'Enviando…' : `Enviar ${selecionados.size} para Prospecção`}
@@ -283,9 +429,11 @@ export function ProspectPage() {
             {!isLoading && lista.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">
-                  {(data?.total ?? 0) === 0
-                    ? 'Nenhum entrante captado ainda — gere relatórios com a seção de Novos Entrantes.'
-                    : 'Nada para os filtros atuais.'}
+                  {modoBusca
+                    ? `Nenhum entrante fitness (90d) em ${resultadoBusca!.cidade}/${resultadoBusca!.uf}. Tente outro município ou aumente a janela.`
+                    : (data?.total ?? 0) === 0
+                      ? 'Nenhum entrante captado ainda — busque por município acima ou gere relatórios.'
+                      : 'Nada para os filtros atuais.'}
                 </td>
               </tr>
             )}

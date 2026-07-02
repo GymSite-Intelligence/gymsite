@@ -2645,6 +2645,151 @@ def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> di
     return {"entrantes": entrantes, "total": len(entrantes), "relatorios": len(rids)}
 
 
+@app.get("/api/prospeccao/buscar-entrantes")
+def buscar_entrantes_cnpj(
+    request: Request,
+    cidade: str,
+    uf: str = "",
+    dias: int = 90,
+    bairro: str = "",
+    tipo_negocio: Optional[str] = None,
+    limit: int = 100,
+) -> dict:
+    """Busca DIRETA de novos entrantes CNPJ por município — independente do pipeline
+    de relatório. Roda listar_entrantes_cnpj_fitness ao vivo sobre o snapshot RFB.
+    Read-only (não persiste); o envio pra prospecção é o POST /captar-entrantes."""
+    import re
+
+    _, org_id = _require_authenticated(request)
+    if not (cidade or "").strip():
+        raise HTTPException(status_code=400, detail="cidade obrigatória")
+    from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
+
+    block = listar_entrantes_cnpj_fitness(
+        cidade, uf, dias=dias, limit=max(1, min(limit, 200)),
+        bairro=bairro, tipo_negocio=tipo_negocio, enriquecer=False,
+    )
+    if block.get("status") != "ok":
+        return {"entrantes": [], "total": 0, "cidade": cidade, "uf": uf,
+                "status": block.get("status"), "motivo": block.get("motivo")}
+
+    sb = _supabase_client()
+    ja = sb.table("oportunidades_prospeccao").select("cnpj").eq("org_id", org_id).execute()
+    ja_set = {re.sub(r"\D", "", str(r.get("cnpj") or "")) for r in (ja.data or [])}
+
+    out = []
+    for e in block.get("entrantes") or []:
+        if not isinstance(e, dict):
+            continue
+        if e.get("segmento_operacao") in ("fora_familia", "saude_clinica") or e.get("incluir_no_parque") is False:
+            continue
+        c = re.sub(r"\D", "", str(e.get("cnpj") or ""))
+        if len(c) != 14:
+            continue
+        socio = e.get("socio_administrador") if isinstance(e.get("socio_administrador"), dict) else {}
+        out.append({
+            "cnpj": c,
+            "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
+            "segmento_operacao": e.get("segmento_label") or e.get("segmento_operacao"),
+            "cidade": block.get("cidade") or cidade,
+            "cnae": e.get("cnae_principal"),
+            "socio_nome": (socio.get("nome") or "").strip() or None,
+            "bairro": e.get("bairro"),
+            "data_abertura": e.get("data_abertura"),
+            "relatorio_id": None,
+            "ja_em_prospeccao": c in ja_set,
+            "tem_contato": bool(
+                e.get("telefone_socio_administrador") or e.get("telefone_empresa")
+                or e.get("email_socio_administrador") or e.get("email_empresa")
+            ),
+        })
+    return {"entrantes": out, "total": len(out),
+            "cidade": block.get("cidade") or cidade, "uf": (uf or "")[:2].upper(), "status": "ok"}
+
+
+class CaptarEntrantesInput(BaseModel):
+    cidade: str
+    uf: str = ""
+    cnpjs: list[str] = Field(..., min_length=1)
+
+
+@app.post("/api/prospeccao/captar-entrantes")
+def captar_entrantes_cnpj(request: Request, body: CaptarEntrantesInput) -> dict:
+    """Persiste entrantes da busca DIRETA em oportunidades_prospeccao (sem relatório).
+    Enriquece (ReceitaWS) só os CNPJ selecionados e faz upsert (cnpj + cno null)."""
+    import re
+
+    _, org_id = _require_authenticated(request)
+    sb = _supabase_client()
+    from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
+
+    alvo = {re.sub(r"\D", "", c) for c in body.cnpjs}
+    alvo = {c for c in alvo if len(c) == 14}
+    if not alvo:
+        raise HTTPException(status_code=400, detail="nenhum CNPJ válido")
+
+    block = listar_entrantes_cnpj_fitness(body.cidade, body.uf, dias=90, limit=200, enriquecer=False)
+    entrantes = block.get("entrantes") or [] if block.get("status") == "ok" else []
+    selecionados = [
+        e for e in entrantes
+        if isinstance(e, dict) and re.sub(r"\D", "", str(e.get("cnpj") or "")) in alvo
+    ]
+    try:  # enriquece só os selecionados (ReceitaWS → sócio + telefone)
+        from tools.cnpj_enrichment import enriquecer_entrantes
+        selecionados, _meta = enriquecer_entrantes(selecionados)
+    except Exception as exc:
+        logger.warning("captar-entrantes: enriquecimento falhou (segue): %s", exc)
+    idx = {re.sub(r"\D", "", str(e.get("cnpj") or "")): e for e in selecionados if isinstance(e, dict)}
+
+    inseridos: list[str] = []
+    atualizados: list[str] = []
+    erros: list[dict] = []
+    uf_up = (body.uf or "")[:2].upper()
+    for c in alvo:
+        ent = idx.get(c)
+        if not ent:
+            erros.append({"cnpj": c, "motivo": "não encontrado nos entrantes do município"})
+            continue
+        socio = ent.get("socio_administrador") if isinstance(ent.get("socio_administrador"), dict) else {}
+        email = ent.get("email_socio_administrador") or ent.get("email_empresa")
+        telefone = ent.get("telefone_socio_administrador") or ent.get("telefone_empresa")
+        tel_digits = re.sub(r"\D", "", telefone or "")
+        row = {
+            "org_id": org_id, "cnpj": c, "cidade": body.cidade, "uf": uf_up,
+            "razao_social": ent.get("razao_social"),
+            "nome_fantasia": ent.get("nome_fantasia") or ent.get("nome_exibicao"),
+            "segmento_operacao": ent.get("segmento_operacao"),
+            "data_inicio_atividade": ent.get("data_abertura"),
+            "endereco_cnpj": {
+                "logradouro": ent.get("logradouro"), "numero": ent.get("numero"),
+                "bairro": ent.get("bairro"), "cidade": body.cidade, "uf": uf_up,
+            },
+            "contato_cnpj": {
+                "decision_maker": socio.get("nome") if isinstance(socio, dict) else None,
+                "cargo": "Sócio-administrador", "email": email, "telefone": telefone,
+                "whatsapp_link": f"https://wa.me/55{tel_digits}" if tel_digits else None,
+            },
+            "score_match": None, "motivo_match": "busca_direta_municipio",
+            "status": "novo", "prioridade": "media",
+        }
+        try:
+            existing = (
+                sb.table("oportunidades_prospeccao").select("id")
+                .eq("cnpj", c).is_("cno", "null").limit(1).execute()
+            )
+            if existing.data:
+                sb.table("oportunidades_prospeccao").update(row).eq("id", existing.data[0]["id"]).execute()
+                atualizados.append(c)
+            else:
+                sb.table("oportunidades_prospeccao").insert(row).execute()
+                inseridos.append(c)
+        except Exception as e:
+            erros.append({"cnpj": c, "motivo": str(e)})
+
+    return {"ok": True, "inseridos": inseridos, "atualizados": atualizados,
+            "erros": erros, "total_enviados": len(inseridos) + len(atualizados)}
+
+
 @app.get("/api/prospeccao/oportunidades/{oportunidade_id}")
 def get_oportunidade_prospeccao(request: Request, oportunidade_id: str) -> dict:
     """Retorna detalhe de uma oportunidade."""
