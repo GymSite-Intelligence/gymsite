@@ -85,7 +85,14 @@ def _normalize_state(state: dict[str, Any], relatorio: dict[str, Any] | None) ->
     out.setdefault("bairros_alternativos", oc.get("bairros_alternativos") or [])
     out.setdefault("top_3_candidatos", oc.get("top_3_candidatos") or oc.get("candidatos") or [])
     out.setdefault("cobertura_redes_a0", oc.get("cobertura_redes_a0") or rel.get("cobertura_redes_a0") or {})
-    out.setdefault("cenarios_financeiros", rel.get("cenarios") or oc.get("cenarios_financeiros") or [])
+    # Cenários: no JSON pós-A9 vêm como DICT {low,mid,premium} (viabilidade_3_cenarios),
+    # não como lista. Converte pra lista de cenários (cada um com 'viabilidade') senão
+    # o INV-1 (todos inviáveis) nunca dispara — bug pego no teste real (rel c4e143c8).
+    _cen = (rel.get("cenarios") or oc.get("cenarios_financeiros")
+            or oc.get("viabilidade_3_cenarios") or [])
+    if isinstance(_cen, dict):
+        _cen = list(_cen.values())
+    out.setdefault("cenarios_financeiros", _cen if isinstance(_cen, list) else [])
     out.setdefault("score_geral", out.get("score_bairro") or oc.get("score_bairro") or 0)
     return out
 
@@ -415,6 +422,8 @@ class A8ValidadorCruzado:
         Tolerante: sem cenários/posicionamento = no-op. Só dispara quando o A8 roda
         com o posicionamento do A9 disponível (pós-A9)."""
         cenarios = state.get("cenarios_financeiros") or []
+        if isinstance(cenarios, dict):  # {low,mid,premium} → lista
+            cenarios = list(cenarios.values())
         if not isinstance(cenarios, list):
             cenarios = []
         veredito = str(state.get("veredito") or "").upper()
