@@ -105,11 +105,10 @@ ainda não é aplicado (só há Turnstile na 1ª mensagem + cap global/dia). Com
 chegando, é custo de LLM aberto a abuso.
 **Remediação:** aplicar cap por IP/dia nas novas sessões, espelhando `_cap_estourado`.
 
-### P2.2 — `/docs` e `/openapi.json` públicos
-A doc interativa do FastAPI está aberta em produção — expõe a superfície inteira da API a quem
-sondar.
-**Remediação:** `FastAPI(docs_url=None, redoc_url=None, openapi_url=None)` em produção (ou gate
-por env/admin).
+### P2.2 — `/docs` e `/openapi.json` públicos — ✅ RESOLVIDO (2026-07-04)
+A doc interativa do FastAPI estava aberta em produção — expunha a superfície inteira da API.
+**Remediação aplicada:** `docs_url`/`redoc_url`/`openapi_url` gated pela env `EXPOSE_API_DOCS`
+(default off → fechado em prod; dev liga com `EXPOSE_API_DOCS=1`). Teste `tests/test_http_hardening.py`.
 
 ### P2.3 — GraphQL (`pg_graphql`) expõe `gymsite`/`shared` para `anon`
 ~99 findings de `pg_graphql_anon_table_exposed` nos schemas do GymSite. O RLS segura a **leitura**
@@ -133,9 +132,11 @@ GRANT de execução da `sync_*` para remover `anon`.
 `Dockerfile` não define `USER` — o processo roda como root na imagem.
 **Remediação:** criar usuário não-privilegiado e `USER app` antes do `CMD`.
 
-### P3.2 — Sem security headers
-API não envia HSTS, `X-Frame-Options`, `X-Content-Type-Options` nem CSP.
-**Remediação:** middleware de headers (ou configurar no proxy/Cloud Run à frente).
+### P3.2 — Sem security headers — ✅ RESOLVIDO (2026-07-04)
+A API não enviava HSTS, `X-Frame-Options`, `X-Content-Type-Options` nem `Referrer-Policy`.
+**Remediação aplicada:** `SecurityHeadersMiddleware` em `api.py` injeta os 4 headers em toda
+resposta (setdefault — não sobrescreve quem já define). CSP fica de fora por ora (a API serve
+JSON; CSP mal configurado quebra o front servido pelo Cloudflare). Teste `tests/test_http_hardening.py`.
 
 ### P3.3 — Bucket `chat-attachments` permite listing
 Advisor `public_bucket_allows_listing`. Confirmar se o bucket precisa ser público e listável; se
