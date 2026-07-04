@@ -14,13 +14,6 @@ supabase/
 .venv
 .pytest_cache/
 tests/
-# scripts/ fica fora da imagem, MAS os smokes rodados no CI (ci-cd.yml step
-# "Smoke tests in image") precisam estar dentro. Excluir com glob + re-incluir
-# os 2 arquivos (padrão que funciona no Docker; `scripts/` como dir não permite
-# re-inclusão de arquivos internos).
-scripts/*
-!scripts/smoke_a9_langcache_e2e.py
-!scripts/test_a9_integration.py
 *.log
 *.png
 *.jpg
