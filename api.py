@@ -481,10 +481,16 @@ async def lifespan(app: FastAPI):
     logger.info("GymSite API encerrado")
 
 
+# P2.2 (SECURITY_REVIEW.md): /docs, /redoc e /openapi.json ficam FECHADOS por padrão
+# (não vazar a superfície da API em produção). Dev liga com EXPOSE_API_DOCS=1.
+_docs_enabled = os.getenv("EXPOSE_API_DOCS", "0").strip().lower() in ("1", "true", "yes")
 app = FastAPI(
     title="GymSite Intelligence API",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
 )
 
 from backend.routers.parceiros_admin import router as parceiros_admin_router
@@ -531,8 +537,27 @@ _cors_origin_regex = (
     r"|https://([a-z0-9-]+\.)*gym-insight-hub\.pages\.dev"
 )
 
+# P3.2 (SECURITY_REVIEW.md): headers de segurança na resposta da API.
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+
+
+class SecurityHeadersMiddleware(_BaseHTTPMiddleware):
+    """Injeta headers de segurança básicos. setdefault: não sobrescreve quem já define."""
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+        return response
+
+
 # Middleware stack — último add_middleware = mais externo (roda primeiro).
 # CORS deve ser o mais externo para OPTIONS/preflight responder antes de rate limit/cache.
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(_CapturedMetricsMiddleware)
 app.add_middleware(CachingMiddleware)
 app.add_middleware(RedisCacheMiddleware)
