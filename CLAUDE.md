@@ -12,6 +12,13 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 - `.agent/skills/<nome>/SKILL.md` — carregar SÓ a relevante: `gymsite-backend` (FastAPI/Pydantic/Supabase), `gymsite-frontend` (React/rotas), `gymsite-pipeline` (agentes ADK/runner), `gymsite-intelligence` (CNPJ/CNO/Maps), `gymsite-reporting` (PDF/gráficos), `gymsite-prospecting` (lead-gen/webhooks), `gymsite-devops` (deploy/env), `gymsite-testing`.
 - `.agent/workflows/*.md` — procedimentos salvos (prospect, report, deploy, review, debug, test, migrate, backup).
 
+## Fontes de dados do pipeline
+
+- **SearchAPI** (`SEARCHAPI_KEY`) — Google Maps/Search via API paga. Backend PRIMÁRIO de concorrentes (A3a, `engine=google_maps`, ~4× mais barato que Places) E de imóveis/pontos comerciais (cascata `listing_cascata.py`, bairro-scoped). Preferir sempre sobre scraping.
+- **MRLR determinístico** (`aluguel_mrlr.py`) — fonte do ALUGUEL na viabilidade (A4 Tier 0), sobre espelhos BQ. O aluguel NÃO vem de listing raspado.
+- **Playwright** (`imobiliaria_scraper.py`, OLX/ImovelWeb) — legado, FORA do caminho crítico (flag `LISTINGS_PLAYWRIGHT`, default off): era o gargalo que estourava o pipeline (timeouts 45s + Cloudflare). A cascata SearchAPI o substitui.
+- **Vertex AI Search** — RAG qualitativo (base de conhecimento, catálogos de equipamento/regulatório).
+
 ## Regras que mais mordem
 
 - Testes: backend `.venv/Scripts/python.exe -m pytest`; frontend `npx tsc --noEmit`. NUNCA `npm run dev`/`build` pra testar.

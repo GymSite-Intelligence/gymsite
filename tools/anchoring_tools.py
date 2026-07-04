@@ -615,6 +615,7 @@ def _fetch_listings_como_candidatos(
     import asyncio
     import concurrent.futures
     import logging
+    import os
     log = logging.getLogger(__name__)
 
     state = getattr(tool_context, "state", None) if tool_context else None
@@ -652,6 +653,15 @@ def _fetch_listings_como_candidatos(
                 })
         except Exception as e:
             log.warning("cascata P1 falhou — %s", e)
+
+    # Playwright (OLX/ImovelWeb) FORA do caminho crítico por padrão. Era redundante
+    # com a cascata SearchAPI acima (bairro-scoped, mais rápida e precisa) e o maior
+    # gargalo do pipeline: timeouts de 45s + Cloudflare block → pipeline estourava 30min.
+    # O listing NÃO alimenta a viabilidade (aluguel = MRLR determinístico); a cascata
+    # SearchAPI já cobre o valor de exibição (imóvel de exemplo com preço). Opt-in via
+    # LISTINGS_PLAYWRIGHT=1 se algum dia valer o custo.
+    if os.getenv("LISTINGS_PLAYWRIGHT", "0").strip().lower() not in ("1", "true", "yes"):
+        return _anexar_aluguel_mrlr(casc_cands, cidade, _bai)
 
     # Importa só agora pra evitar custo de import (playwright) quando A1 não
     # usa listings (ex: testes unitários focados em âncoras).
