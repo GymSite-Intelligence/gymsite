@@ -1494,26 +1494,31 @@ def _require_org_access(request: Request, org_id: str) -> str:
 
 
 def _assert_relatorio_access(request: Request, sb, rid: str, access_code: str | None = None) -> None:
-    """Se JWT presente, valida org do relatório (espelha RLS Supabase).
-    Se access_code presente, valida com o access_code do relatório e permite acesso."""
-    
+    """Autorização deny-by-default para um relatório. A API roda com service_role
+    (RLS do Supabase não filtra), então o controle de acesso é feito aqui explicitamente.
+
+    Libera SOMENTE quando:
+    - `access_code` confere com o do relatório (link de lead read-only); OU
+    - há JWT válido e o usuário pertence à org dona do relatório.
+
+    Sem access_code e sem JWT → 401. JWT de outra org → 403. Isso mata o IDOR em que
+    qualquer request com o UUID acessava o relatório completo sem credencial."""
+
     if access_code:
         res = sb.table("relatorios").select("access_code").eq("id", rid).maybe_single().execute()
         row = res.data if res else None
         if not row:
             raise HTTPException(status_code=404, detail="relatório não encontrado")
-        
+
         db_code = row.get("access_code")
         if not db_code or str(db_code) != access_code:
             raise HTTPException(status_code=403, detail="access_code inválido ou não autorizado")
-            
+
         from datetime import datetime, timezone
         sb.table("relatorios").update({"access_code_used_at": datetime.now(timezone.utc).isoformat()}).eq("id", rid).execute()
         return
 
-    auth = request.headers.get("authorization") or ""
-    if not auth.lower().startswith("bearer "):
-        return
+    # Sem access_code → exige JWT válido (401 se ausente) + org que possui o relatório.
     user_id, _ = _require_authenticated(request)
     res = (
         sb.table("relatorios")
@@ -1527,10 +1532,8 @@ def _assert_relatorio_access(request: Request, sb, rid: str, access_code: str | 
     if not row:
         raise HTTPException(status_code=404, detail="relatório não encontrado")
     org_id = str(row.get("org_id") or "")
-    if not org_id:
-        return
     orgs = _user_org_ids(sb, user_id)
-    if org_id not in orgs:
+    if org_id and org_id not in orgs:
         raise HTTPException(status_code=403, detail="Sem permissão para este relatório")
 
 
@@ -2137,7 +2140,13 @@ def post_sync_apollo_pendentes(request: Request, limite: int = 20) -> dict:
 
 
 @app.get("/api/relatorios/{relatorio_id}/pdf")
-def get_relatorio_pdf(relatorio_id: str, layout: str = "classic", engine: str = "reportlab") -> Any:
+def get_relatorio_pdf(
+    relatorio_id: str,
+    request: Request,
+    layout: str = "classic",
+    engine: str = "reportlab",
+    access_code: str | None = None,
+) -> Any:
     """PDF estruturado do relatório. engine=reportlab (default) | weasy (HTML/CSS, produção)."""
     from fastapi.responses import Response
 
@@ -2154,6 +2163,7 @@ def get_relatorio_pdf(relatorio_id: str, layout: str = "classic", engine: str = 
 
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _assert_relatorio_access(request, sb, rid, access_code=access_code)
     payload = _fetch_relatorio_payload(sb, rid)
     status = (payload.get("header") or {}).get("status")
     if status and status != "done":
