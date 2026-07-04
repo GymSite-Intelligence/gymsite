@@ -4,7 +4,7 @@ Plataforma de inteligência de mercado para academias: relatórios de viabilidad
 
 ## Fonte de verdade: `.agent/`
 
-O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/Gemini). Ler sob demanda — nunca tudo de uma vez:
+O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS Code/Gemini). Ler sob demanda — nunca tudo de uma vez:
 
 - `.agent/rules/processo-mudanca.md` — **regra mestra** (P-001..P-010, padrões P0–P3, banco). Ler ANTES de qualquer mudança de código/schema/UX.
 - `.agent/rules/workspace.md` — governança (qualidade, naming, git).
