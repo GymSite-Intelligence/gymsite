@@ -36,7 +36,15 @@ Ver [PR #48](https://github.com/Marcelo-Rosas/gymsite/pull/48).
 
 ## 🔴 P1 — antes do MVP público
 
-### P1.1 — Módulo de prospecção (scout) não está isolado no servidor
+### P1.1 — Módulo de prospecção (scout) não está isolado no servidor — ✅ RESOLVIDO (2026-07-04)
+> **Status:** as duas defesas aplicadas. (1) Gate `require_admin` nos 11 endpoints
+> `/api/prospeccao/*` — PR #52, em prod (rev `gymsite-api-00386`), + `ADMIN_EMAILS` configurado.
+> (2) RLS do scout endurecido — migration `20260704_scout_rls_service_role_only.sql`: as tabelas
+> `gymsite.prospects/scout_cadencia/scout_messages` (single-tenant, sem `org_id`) agora só aceitam
+> `service_role` (policies `authenticated` removidas + grants `anon`/`authenticated` revogados).
+> Verificado em prod: só `scout_service_all_*` resta; anon/authenticated sem grant. O texto abaixo
+> é o registro do problema original.
+
 > **Contexto de produto (2026-07-04):** o módulo de prospecção — que coleta dado pessoal de
 > sócios de CNPJ (`email_socio_administrador`, `telefone_socio_administrador`) — é **interno /
 > admin-only**, para prospecção do GymSite + Vectra Cargo, e no futuro vira produto próprio
@@ -61,12 +69,14 @@ recebe um JWT válido; sem gate admin no servidor e com o isolamento de org fura
 um cliente pode alcançar dados de prospecção (incl. contatos de sócios de terceiros — o dado
 LGPD-sensível). Hoje o risco é ~zero (só admins têm conta).
 
-**Gatilho:** fechar **antes de abrir cadastro público**.
-**Remediação (duas defesas, não uma):**
-1. Gate `require_admin` no servidor para todos os endpoints `/api/prospeccao/*` (não confiar na UI).
-2. Trocar `true` por predicado de org nas 4 policies, ex. `org_id = (SELECT ... FROM
-   organization_members WHERE user_id = auth.uid())`. Como a API usa service_role, a checagem de
-   admin/org no código do router é a defesa primária; a policy é defesa em profundidade.
+**Gatilho:** fechar **antes de abrir cadastro público**. ✅ FEITO.
+**Remediação aplicada (duas defesas):**
+1. ✅ Gate `require_admin` no servidor em todos os `/api/prospeccao/*` (PR #52). Defesa primária.
+2. ✅ RLS scout → service_role-only (migration `20260704_scout_rls_service_role_only.sql`). Defesa
+   em profundidade. NOTA: a proposta inicial ("predicado por org") era inválida — as tabelas scout
+   NÃO têm `org_id` (single-tenant interno); o isolamento correto é só service_role, não por org.
+   O padrão por-org (`public.user_org_ids()`) vale para `public.oportunidades_prospeccao` (que tem
+   org_id e já foi hardened em `20260531_prospeccao_rls_hardening.sql`).
 
 > **Nota LGPD (fora do escopo de código):** "uso interno" não isenta o tratamento de dado de sócio
 > pessoa física. Base legal provável = legítimo interesse (prospecção B2B própria), condicionada a
