@@ -912,6 +912,29 @@ async def _tool_relatorio(args: dict, projeto: ProjectState, usuario_id: str) ->
     }
 
 
+async def disparar_relatorio_formal(projeto_id: str, usuario_id: str) -> dict[str, Any]:
+    """Dispara o pipeline A0→A9 de forma DETERMINÍSTICA (não passa pelo LLM).
+
+    Ponto de entrada do endpoint POST /projetos/{id}/relatorio — o disparo é uma
+    decisão de negócio do backend (P-005), nunca uma tool que o Gemini pode ou não
+    escolher chamar. Carrega o projeto, enfileira o pipeline e persiste a mensagem
+    no histórico para auditoria. Retorna {relatorio_id, status, mensagem}.
+    """
+    projeto = await carregar_projeto(projeto_id, usuario_id)
+    resultado = await _tool_relatorio({"projeto_id": projeto_id}, projeto, usuario_id)
+    await salvar_mensagem(
+        projeto_id=projeto_id,
+        role="assistant",
+        content=resultado.get("mensagem", ""),
+        tool_calls=[{
+            "ferramenta": "gerar_relatorio_formal",
+            "status": "sucesso",
+            "resumo": "Relatório em geração",
+        }],
+    )
+    return resultado
+
+
 async def _tool_base_conhecimento(args: dict, projeto: ProjectState) -> dict:
     """Base de conhecimento qualitativa (Vertex AI Search). Retorna trechos + citações;
     o próprio Gemini do Consultor sintetiza. NÃO produz número."""

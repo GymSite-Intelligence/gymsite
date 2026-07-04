@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from services.consultor.consultor_engine import conversar
+from services.consultor.consultor_engine import conversar, disparar_relatorio_formal
 from services.consultor.project_state import (
     listar_projetos,
     carregar_projeto,
@@ -180,14 +180,11 @@ async def gerar_relatorio(
             detail="Projeto sem localização definida. Informe cidade e bairro primeiro.",
         )
 
-    # Delega ao engine (que enfileira no Redis e retorna relatorio_id)
-    resultado = await conversar(
-        mensagem="Gera o relatório formal de viabilidade",
-        usuario_id=user_id,
-        projeto_id=projeto_id,
-    )
+    # Disparo determinístico do pipeline (P-005): decisão de negócio do backend,
+    # não uma tool que o Gemini pode ou não escolher chamar.
+    resultado = await disparar_relatorio_formal(projeto_id, user_id)
 
-    relatorio_id = resultado.get("projeto", {}).get("relatorio_id")
+    relatorio_id = resultado.get("relatorio_id")
     return {
         "relatorio_id": relatorio_id,
         "status": "CONSOLIDANDO",
