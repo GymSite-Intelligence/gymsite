@@ -39,7 +39,7 @@ from tools.supabase_client import load_create_client
 create_client = load_create_client()  # type: ignore[assignment]
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from backend_improvements import (
     setup_json_logging,
@@ -488,6 +488,7 @@ app = FastAPI(
 )
 
 from backend.routers.parceiros_admin import router as parceiros_admin_router
+from backend.routers.parceiros_admin import require_admin
 from backend.routers.execucao import router as execucao_router
 from backend.routers.rebusca import router as rebusca_router
 from backend.routers.leads import router as leads_router
@@ -2065,7 +2066,8 @@ def _persistir_sync_apollo(sb, oportunidade_id: str, result: dict, log_atual: li
 
 @app.post("/api/prospeccao/oportunidades/{oportunidade_id}/sync-apollo")
 def post_sync_apollo_oportunidade(
-    request: Request, oportunidade_id: str, force: bool = False
+    request: Request, oportunidade_id: str, force: bool = False,
+    _admin: dict = Depends(require_admin),
 ) -> dict:
     """Sincroniza UMA oportunidade com o Apollo.io (gatilho manual — consome créditos)."""
     from services.apollo_crm_sync import sync_oportunidade
@@ -2097,7 +2099,10 @@ def post_sync_apollo_oportunidade(
 
 
 @app.post("/api/prospeccao/sync-apollo")
-def post_sync_apollo_pendentes(request: Request, limite: int = 20) -> dict:
+def post_sync_apollo_pendentes(
+    request: Request, limite: int = 20,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Sincroniza oportunidades pendentes com o Apollo.io em lote (gatilho manual)."""
     from services.apollo_crm_sync import sync_oportunidade
 
@@ -2530,6 +2535,7 @@ async def executar_prospeccao(
     request: Request,
     payload: ProspeccaoExecutarInput,
     background: BackgroundTasks,
+    _admin: dict = Depends(require_admin),
 ) -> dict:
     """Enfileira engine de cruzamento CNPJ × CNO no Redis."""
     _, org_id = _require_authenticated(request)
@@ -2561,6 +2567,7 @@ def list_oportunidades_prospeccao(
     score_min: Optional[float] = None,
     limit: int = 100,
     offset: int = 0,
+    _admin: dict = Depends(require_admin),
 ) -> list[dict]:
     """Lista oportunidades de prospecção com filtros."""
     _, org_id = _require_authenticated(request)
@@ -2578,7 +2585,10 @@ def list_oportunidades_prospeccao(
 
 
 @app.get("/api/prospeccao/entrantes-captados")
-def list_entrantes_captados(request: Request, limit_relatorios: int = 300) -> dict:
+def list_entrantes_captados(
+    request: Request, limit_relatorios: int = 300,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Agrega os entrantes CNPJ captados em TODOS os relatórios da org (fonte de
     leads do V1, `relatorio_outputs.entrantes_cnpj_90d`), deduplicados por CNPJ.
     Marca quais já estão em `oportunidades_prospeccao`. Origem do /prospect."""
@@ -2699,6 +2709,7 @@ def buscar_entrantes_cnpj(
     bairro: str = "",
     tipo_negocio: Optional[str] = None,
     limit: int = 100,
+    _admin: dict = Depends(require_admin),
 ) -> dict:
     """Busca DIRETA de novos entrantes CNPJ por município — independente do pipeline
     de relatório. Roda listar_entrantes_cnpj_fitness ao vivo sobre o snapshot RFB.
@@ -2759,7 +2770,10 @@ class CaptarEntrantesInput(BaseModel):
 
 
 @app.post("/api/prospeccao/captar-entrantes")
-def captar_entrantes_cnpj(request: Request, body: CaptarEntrantesInput) -> dict:
+def captar_entrantes_cnpj(
+    request: Request, body: CaptarEntrantesInput,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Persiste entrantes da busca DIRETA em oportunidades_prospeccao (sem relatório).
     Enriquece (ReceitaWS) só os CNPJ selecionados e faz upsert (cnpj + cno null)."""
     import re
@@ -2836,13 +2850,19 @@ def captar_entrantes_cnpj(request: Request, body: CaptarEntrantesInput) -> dict:
 
 
 @app.get("/api/prospeccao/oportunidades/{oportunidade_id}")
-def get_oportunidade_prospeccao(request: Request, oportunidade_id: str) -> dict:
+def get_oportunidade_prospeccao(
+    request: Request, oportunidade_id: str,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Retorna detalhe de uma oportunidade."""
     return _assert_oportunidade_access(request, oportunidade_id)
 
 
 @app.post("/api/prospeccao/oportunidades/{oportunidade_id}/webhook")
-def reenviar_webhook_oportunidade(request: Request, oportunidade_id: str) -> dict:
+def reenviar_webhook_oportunidade(
+    request: Request, oportunidade_id: str,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Reenvia webhook manualmente para o Claw."""
     _assert_oportunidade_access(request, oportunidade_id)
     from prospecting.engine import reenviar_webhook
@@ -2854,6 +2874,7 @@ def patch_status_oportunidade(
     request: Request,
     oportunidade_id: str,
     payload: ProspeccaoStatusPatch,
+    _admin: dict = Depends(require_admin),
 ) -> dict:
     """Atualiza status do pipeline de prospecção."""
     _assert_oportunidade_access(request, oportunidade_id)
@@ -2870,7 +2891,10 @@ def patch_status_oportunidade(
 
 
 @app.post("/api/prospeccao/webhook/configure")
-def configurar_webhook_claw(request: Request, payload: WebhookConfigureInput) -> dict:
+def configurar_webhook_claw(
+    request: Request, payload: WebhookConfigureInput,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Configura URL do webhook do Claw por organização."""
     _require_org_access(request, payload.org_id)
     sb = _supabase_client()
