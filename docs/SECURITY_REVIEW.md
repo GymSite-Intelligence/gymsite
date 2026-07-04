@@ -116,13 +116,13 @@ hoje, mas é superfície desnecessária se o front não usa a API GraphQL do Sup
 **Remediação:** se GraphQL não é usado, remover `gymsite`/`shared` da lista de schemas expostos
 do PostgREST/GraphQL — corta a superfície inteira de uma vez.
 
-### P2.4 — `search_path` mutável + função SECURITY DEFINER executável por `anon`
-- `search_path` não fixado em: `gymsite.marcar_pesquisa`, `gymsite.trg_oportunidade_status_guard`,
-  `public.sync_gymsite_oportunidade_to_prospect` (risco de hijack via schema).
-- `public.sync_gymsite_oportunidade_to_prospect` é SECURITY DEFINER **executável por `anon`**.
-
-**Remediação:** `ALTER FUNCTION ... SET search_path = ''` (qualificar refs) nas três; revisar o
-GRANT de execução da `sync_*` para remover `anon`.
+### P2.4 — `search_path` mutável + função SECURITY DEFINER executável por `anon` — ✅ RESOLVIDO (2026-07-04)
+- `search_path` fixado (`= ''`) nas 3 funções (`marcar_pesquisa`, `trg_oportunidade_status_guard`,
+  `sync_gymsite_oportunidade_to_prospect`) — refs já qualificadas, sem mudança de lógica.
+- `EXECUTE` da `sync` (SECURITY DEFINER) revogado de PUBLIC/anon/authenticated. Era o vetor
+  "anon executa função definer" — o grant vinha de PUBLIC (default do Postgres), não de `anon`
+  direto. É trigger function → revogar não afeta o disparo (verificado: trigger GymSite→Vectra
+  segue ativo). Migration `20260704_p2_4_function_search_path.sql` (em prod).
 
 ---
 
