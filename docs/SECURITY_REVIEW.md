@@ -84,10 +84,15 @@ LGPD-sensível). Hoje o risco é ~zero (só admins têm conta).
 > **comercialização futura** do módulo a fornecedores muda a base legal (fornecer/monetizar contato
 > de PF a terceiro) e é **trava de go-to-market** — conformidade pronta ANTES de comercializar.
 
-### P1.2 — `public.v_relatorios_resumo` é SECURITY DEFINER
-Único ERROR de advisor que toca o GymSite. A view roda com permissões do criador (postgres),
-ignorando o RLS de `relatorios` para quem a consulta.
-**Remediação:** recriar com `security_invoker = on` (fix de 1 linha).
+### P1.2 — `public.v_relatorios_resumo` é SECURITY DEFINER — ✅ RESOLVIDO (2026-07-04)
+Único ERROR de advisor que toca o GymSite. A view rodava com permissões do criador (postgres),
+ignorando o RLS de `relatorios` — e como o front consome a view via Supabase JS (authenticated,
+`useRelatorios.ts`), qualquer usuário logado veria relatórios de TODAS as orgs (vazamento
+cross-tenant, crítico no signup público).
+**Remediação aplicada:** `security_invoker = on` (migration
+`20260704_v_relatorios_resumo_security_invoker.sql`, em prod). O RLS por org das tabelas base
+(policies `mt_*`) passa a valer. Verificado: authenticated tem GRANT nas base; 72 relatórios em
+1 org; 2 membros nessa org; 0 órfãos; API (service_role) não afetada.
 [Doc](https://supabase.com/docs/guides/database/database-linter?lint=0010_security_definer_view)
 
 ---
