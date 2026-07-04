@@ -47,6 +47,24 @@ def test_caso_real_dispara_cascata():
     assert any(a.severidade == "CRITICO" for a in v.alertas)
 
 
+def test_cenarios_como_dict_dispara_inv1():
+    """Formato REAL pós-A9: cenários vêm como dict {low,mid,premium}, não lista.
+    Regressão do rel c4e143c8 — INV-1 (CRÍTICO) não disparava porque o método só
+    aceitava lista. Deve disparar CRÍTICO com o dict."""
+    v = A8ValidadorCruzado()
+    v._validar_coerencia_posicionamento({
+        "veredito": "REPROVADO",
+        "modelo_recomendado": "Low Cost",
+        "cenarios_financeiros": {
+            "low": {"modelo": "low", "viabilidade": "INVIAVEL", "ticket_medio": 100.0},
+            "mid": {"modelo": "mid", "viabilidade": "INVIAVEL", "ticket_medio": 120.0},
+            "premium": {"modelo": "premium", "viabilidade": "INVIAVEL", "ticket_medio": 299.9},
+        },
+    })
+    assert any(a.severidade == "CRITICO" and "todos os cenários INVIÁVEL" in a.claim_relacionada
+               for a in v.alertas), _tipos(v)
+
+
 def test_relatorio_coerente_nao_dispara():
     """Aprovado, low viável, A9 low com ticket alinhado → zero alertas de posicionamento."""
     v = A8ValidadorCruzado()
