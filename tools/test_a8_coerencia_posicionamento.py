@@ -93,3 +93,33 @@ def test_todos_inviaveis_sem_posicionamento_ainda_pega_inv1():
         ],
     })
     assert any(a.severidade == "CRITICO" for a in v.alertas), _tipos(v)
+
+
+async def test_integracao_pos_a9_via_validar(monkeypatch):
+    """Caminho completo (como o A8 roda no after-A9): validar() recebe o relatório
+    com output_consolidado.posicionamento_estrategico → _normalize_state extrai o
+    posicionamento → _validar_coerencia_posicionamento dispara. Prova que a
+    movimentação A6→A9 ativa os INV-3/4/5."""
+    monkeypatch.setenv("A8_USE_KIMI", "0")  # sem chamada de rede
+    relatorio_full = {
+        "id": "6ba4b34a-880b-410a-9e2a-d099bc692c1c",
+        "output_consolidado": {
+            "veredito": "REPROVADO",
+            "modelo_recomendado": "Low Cost",
+            "posicionamento_estrategico": {
+                "veredito_posicionamento": "INDETERMINADO",
+                "headroom_renda": {"tier_modelo_percentil": "Mid Market"},
+                "recomendacao_ticket": {"ticket_recomendado": 341.49},
+            },
+        },
+        "cenarios": [
+            {"modelo": "low", "viabilidade": "INVIAVEL", "ticket_medio": 100.0},
+            {"modelo": "mid", "viabilidade": "INVIAVEL", "ticket_medio": 120.0},
+            {"modelo": "premium", "viabilidade": "INVIAVEL", "ticket_medio": 299.9},
+        ],
+    }
+    res = await A8ValidadorCruzado().validar("", {}, relatorio=relatorio_full)
+    assert res["revisar_manual"] is True  # INV-1 CRITICO → revisar_manual
+    descrs = " | ".join(a["claim_relacionada"] for a in res["alertas"])
+    assert "vs tier A9=mid" in descrs, descrs      # INV-3
+    assert "INDETERMINADO" in descrs, descrs       # INV-5

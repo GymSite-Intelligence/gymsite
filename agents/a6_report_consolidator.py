@@ -3092,39 +3092,16 @@ def _a6_after_agent_callback(callback_context):
                 callback_context.state["relatorio_md"] = markdown
                 relatorio["markdown_alinhado"] = True
             relatorio_id = state.get("relatorio_id") if isinstance(state.get("relatorio_id"), str) else None
-            supabase_uuid = write_relatorio_failsafe(
+            # Persiste no Supabase (efeito colateral). O retorno (uuid) era usado só pelo
+            # A8, que foi movido pro after-A9 — não precisamos mais dele aqui.
+            write_relatorio_failsafe(
                 relatorio, markdown, relatorio_id=relatorio_id
             )
 
-            try:
-                import os
-                from tools.a8_runner import persist_validacao, run_a8_validation
-
-                validacao = run_a8_validation(
-                    markdown or "",
-                    state,
-                    relatorio=relatorio,
-                )
-                if validacao:
-                    relatorio["validacao_a8"] = validacao
-                    path.write_text(
-                        json.dumps(relatorio, ensure_ascii=False, indent=2),
-                        encoding="utf-8",
-                    )
-                    rid = supabase_uuid or relatorio_id or relatorio.get("id")
-                    org_id = (
-                        relatorio.get("org_id")
-                        or os.getenv("SUPABASE_GYMSITE_ORG_ID")
-                        or "00000000-0000-0000-0000-000000000001"
-                    )
-                    if rid:
-                        persist_validacao(str(rid), str(org_id), validacao)
-            except Exception:
-                logger.warning(
-                    "A6 A8 validation/persist falhou",
-                    exc_info=True,
-                    extra={"agent": "A6"},
-                )
+            # A8 (validação cruzada) foi MOVIDO para o after_agent_callback do A9 — só lá
+            # o posicionamento existe, permitindo checar a coerência A4×A9×veredito
+            # (INV-3/4/5). Ver agents/a9_positioning_strategist.py. Rodar aqui deixaria o
+            # A8 cego ao A9 e duplicaria a persistência.
         except Exception:
             logger.warning(
                 "A6 Supabase writer falhou — filesystem é source-of-truth",
