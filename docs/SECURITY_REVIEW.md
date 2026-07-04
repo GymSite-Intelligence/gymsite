@@ -14,6 +14,8 @@
   Cargo). Schemas do GymSite: `gymsite`, `shared`, mais views de compat em `public`.
 - **Endpoint público:** análise gratuita (`backend/routers/site_agent.py`) — única superfície
   aberta sem login.
+- **Módulo interno (admin):** prospecção/scout — coleta dado de sócios de CNPJ, uso interno
+  (GymSite + Vectra), futuro produto para fornecedores. Isolado apenas na UI hoje — ver P1.1.
 - **Advisors:** 818 findings totais no projeto; **232 tocam o GymSite** (0 ERROR nos schemas
   `gymsite`/`shared`, 1 ERROR em `public`).
 
@@ -34,19 +36,43 @@ Ver [PR #48](https://github.com/Marcelo-Rosas/gymsite/pull/48).
 
 ## 🔴 P1 — antes do MVP público
 
-### P1.1 — Policies RLS "always true" no scout (`gymsite`)
-4 policies anulam o isolamento por org para qualquer usuário **autenticado**:
+### P1.1 — Módulo de prospecção (scout) não está isolado no servidor
+> **Contexto de produto (2026-07-04):** o módulo de prospecção — que coleta dado pessoal de
+> sócios de CNPJ (`email_socio_administrador`, `telefone_socio_administrador`) — é **interno /
+> admin-only**, para prospecção do GymSite + Vectra Cargo, e no futuro vira produto próprio
+> vendido a fornecedores de equipamento fitness. **Não** faz parte do produto voltado ao dono de
+> academia. Ver [[decisao-prospeccao-modulo-interno]] na memória.
+
+**O gate "admin-only" existe hoje só no FRONT (as pages), não no backend.** Os endpoints
+`/api/prospeccao/*` (`api.py`) usam apenas `_require_authenticated` (qualquer JWT válido, filtrado
+por org) — não há `require_admin` no servidor. Pelo P-005 do processo de mudança ("cliente é
+cosmético; validação no servidor"), UI não é controle de acesso.
+
+Combinado com as **4 policies RLS "always true"** que anulam o isolamento por org para qualquer
+autenticado:
 - `gymsite.prospects` → `scout_prospects_insert` (INSERT with check `true`) e
   `scout_prospects_update` (UPDATE using/check `true`)
 - `gymsite.scout_cadencia` → `scout_cadencia_update`
 - `gymsite.scout_messages` → `scout_msgs_update`
 
-**Risco:** com signup público do MVP, qualquer usuário logado pode inserir/alterar prospects,
-cadência e mensagens de **outra org** (cross-tenant write). Hoje o risco é baixo (só vocês usam),
-mas escala com o lançamento.
-**Remediação:** trocar `true` por predicado de org, ex. `org_id = (SELECT ... FROM
-organization_members WHERE user_id = auth.uid())`. Como a API usa service_role, reforçar **também**
-a checagem de org no código do router de prospecção (não confiar só no RLS).
+**Risco (vetor corrigido):** não é cross-tenant *entre clientes* — é **vazamento do módulo interno
+de prospecção para clientes do MVP**. Quando o **signup público** abrir, cada dono de academia
+recebe um JWT válido; sem gate admin no servidor e com o isolamento de org furado pelas policies,
+um cliente pode alcançar dados de prospecção (incl. contatos de sócios de terceiros — o dado
+LGPD-sensível). Hoje o risco é ~zero (só admins têm conta).
+
+**Gatilho:** fechar **antes de abrir cadastro público**.
+**Remediação (duas defesas, não uma):**
+1. Gate `require_admin` no servidor para todos os endpoints `/api/prospeccao/*` (não confiar na UI).
+2. Trocar `true` por predicado de org nas 4 policies, ex. `org_id = (SELECT ... FROM
+   organization_members WHERE user_id = auth.uid())`. Como a API usa service_role, a checagem de
+   admin/org no código do router é a defesa primária; a policy é defesa em profundidade.
+
+> **Nota LGPD (fora do escopo de código):** "uso interno" não isenta o tratamento de dado de sócio
+> pessoa física. Base legal provável = legítimo interesse (prospecção B2B própria), condicionada a
+> teste de proporcionalidade documentado + direito de oposição + transparência no 1º contato. A
+> **comercialização futura** do módulo a fornecedores muda a base legal (fornecer/monetizar contato
+> de PF a terceiro) e é **trava de go-to-market** — conformidade pronta ANTES de comercializar.
 
 ### P1.2 — `public.v_relatorios_resumo` é SECURITY DEFINER
 Único ERROR de advisor que toca o GymSite. A view roda com permissões do criador (postgres),
