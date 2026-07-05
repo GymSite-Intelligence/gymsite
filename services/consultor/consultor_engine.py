@@ -342,6 +342,38 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
             "required": ["area_disponivel_m2"],
         },
     ),
+    types.FunctionDeclaration(
+        name="consultar_engenharia_obra",
+        description=(
+            "Consulta a base de ENGENHARIA DE OBRA e PROJETO ARQUITETÔNICO de academia "
+            "(normas ABNT, licenças, estrutura/laje, instalações elétrica/hidráulica/acústica, "
+            "incêndio/AVCB, acessibilidade NBR 9050, vestiários, pisos, etapas de projeto, "
+            "retrofit × obra do zero). Chamar SEMPRE antes de afirmar exigência de obra, norma, "
+            "valor estrutural ou regra de projeto. NUNCA responder de cabeça."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "pergunta": {"type": "string", "description": "Dúvida de obra/projeto/arquitetura"},
+            },
+            "required": ["pergunta"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="calcular_sanitarios_por_lotacao",
+        description=(
+            "Calcula a QUANTIDADE de peças sanitárias (bacias/lavatórios/mictórios/acessíveis) "
+            "por lotação da academia. Chamar quando: 'quantos banheiros/sanitários/vestiários', "
+            "'peças sanitárias pra X pessoas'. Não estimar de cabeça."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "lotacao": {"type": "integer", "description": "Lotação/capacidade de pessoas"},
+            },
+            "required": ["lotacao"],
+        },
+    ),
 ])
 
 # ─── System prompt do consultor ───────────────────────────────────────────────
@@ -504,6 +536,35 @@ Só regulatório de abertura (registro PJ no CREF, responsável técnico, Lei 9.
 Claro e objetivo, sem juridiquês. Cite a fonte. Lembre que a orientação não substitui consulta ao CREF/contador."""
 
 
+_PERSONA_ARQUITETO = """## PAPEL
+Você é o Arquiteto do GymSite Intelligence — projeta o ESPAÇO da academia: zonas (musculação, cardio, funcional, alongamento), fluxos, recepção/vestiários/sanitários, acessibilidade, pisos e as etapas do projeto arquitetônico.
+
+## REGRA DE OURO (FONTE)
+Chame SEMPRE consultar_engenharia_obra ANTES de afirmar regra de projeto, norma, área mínima ou exigência de acessibilidade, e CITE a fonte (NBR 13532, NBR 9050, Código de Obras). Para QUANTIDADE de peças sanitárias, chame calcular_sanitarios_por_lotacao — nunca estime de cabeça. Se a base não cobrir, diga e oriente consultar arquiteto/Código de Obras local. NUNCA invente número ou norma.
+
+## ESCOPO
+Projeto/arquitetura/ambientes/acessibilidade. QUE equipamento e quantos cabem → Responsável Técnico; estrutura/instalações/licenças de obra → Engenheiro de Obra; regras do CREF → Regulatório. Deixe claro que o projeto deve ser assinado por arquiteto (RRT) e aprovado pela prefeitura.
+
+## TOM
+Técnico e didático, frases curtas."""
+
+
+_PERSONA_ENGENHEIRO = """## PAPEL
+Você é o Engenheiro de Obra do GymSite Intelligence — diz se a obra VIABILIZA a academia: estrutura (carga de laje), instalações (elétrica, hidráulica, climatização, acústica), prevenção de incêndio e licenciamento da obra. Distingue sempre RETROFIT de imóvel existente vs. CONSTRUÇÃO DO ZERO.
+
+## COMO AGIR
+Primeiro descubra o CENÁRIO (retrofit ou obra nova) — muda tudo. Depois responda com o checklist do cenário certo.
+
+## REGRA DE OURO (FONTE)
+Chame SEMPRE consultar_engenharia_obra ANTES de afirmar norma, carga estrutural, exigência de instalação ou licença, e CITE a fonte (NBR 6120, NBR 16280, NBR 6122, NBR 5410, NBR 16401, NBR 10152/10151, IT 08 bombeiros). Toda obra/laudo exige profissional com ART (CREA). Em retrofit, recomende SEMPRE laudo estrutural antes de equipamento pesado. Não dê veredito estrutural definitivo — oriente o laudo. NUNCA invente valor estrutural, norma ou prazo.
+
+## ESCOPO
+Obra/estrutura/instalações/licenças. Projeto do espaço → Arquiteto; QUE equipamento → Responsável Técnico; CREF → Regulatório.
+
+## TOM
+Técnico, frases curtas."""
+
+
 # Registry dos agentes do site (RAG SEGMENTADO por agente). Cada agente = persona +
 # whitelist de tools — e cada tool aponta pro SEU data store (mercado/D2 vs equip).
 # Generaliza o modo_site: conversar(modo_site=True, agente="responsavel_tecnico").
@@ -523,6 +584,16 @@ _AGENTES_SITE: dict[str, dict] = {
     "regulatorio": {  # registro/licença/CREF — só a base de conhecimento (docs CONFEF/Lei 9.696)
         "persona": _PERSONA_REGULATORIO,
         "tools": frozenset({"consultar_base_conhecimento"}),
+        "amostra_tools": frozenset(),
+    },
+    "arquiteto": {  # projeto do espaço — base de engenharia/obra + sanitários por lotação
+        "persona": _PERSONA_ARQUITETO,
+        "tools": frozenset({"consultar_engenharia_obra", "calcular_sanitarios_por_lotacao"}),
+        "amostra_tools": frozenset(),
+    },
+    "engenheiro_obra": {  # viabilidade construtiva — base de engenharia/obra
+        "persona": _PERSONA_ENGENHEIRO,
+        "tools": frozenset({"consultar_engenharia_obra"}),
         "amostra_tools": frozenset(),
     },
 }
@@ -683,6 +754,16 @@ async def _executar_ferramenta(
                 largura_cm=float(args.get("largura_cm") or 0),
             )
             resumo = f"{resultado.get('n_maquinas')} máquinas" if "n_maquinas" in resultado else "erro"
+
+        elif nome == "consultar_engenharia_obra":
+            from agents_site.tools import consultar_engenharia_obra
+            resultado = consultar_engenharia_obra(str(args.get("pergunta") or ""))
+            resumo = "base de engenharia/obra consultada"
+
+        elif nome == "calcular_sanitarios_por_lotacao":
+            from agents_site.tools import calcular_sanitarios_por_lotacao
+            resultado = calcular_sanitarios_por_lotacao(int(args.get("lotacao") or 0))
+            resumo = f"sanitários p/ lotação {args.get('lotacao')}"
 
         else:
             resultado = {"erro": f"Ferramenta desconhecida: {nome}"}
