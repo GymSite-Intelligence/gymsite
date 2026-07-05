@@ -14,7 +14,6 @@ supabase/
 .venv
 .pytest_cache/
 tests/
-scripts/
 *.log
 *.png
 *.jpg
@@ -32,7 +31,6 @@ debug/
 metrics/
 prints/
 data/
-prospecting/
 eval/
 scratch/
 tools/__pycache__/

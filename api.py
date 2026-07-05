@@ -39,7 +39,7 @@ from tools.supabase_client import load_create_client
 create_client = load_create_client()  # type: ignore[assignment]
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from backend_improvements import (
     setup_json_logging,
@@ -194,6 +194,23 @@ def _pipeline_stale_cutoff() -> datetime:
     return datetime.now(timezone.utc) - age
 
 
+def _liberar_entitlement_analise_gratuita(sb, relatorio_id: str) -> None:
+    try:
+        from backend.routers.site_agent import _ANON_ORG_ID
+        from tools.db_schema import tbl
+        rel = (
+            tbl(sb, "relatorios").select("org_id")
+            .eq("id", relatorio_id).limit(1).execute()
+        )
+        org = ((rel.data or [{}])[0] or {}).get("org_id")
+        if str(org) != _ANON_ORG_ID:
+            return
+        tbl(sb, "analise_gratuita").delete().eq("relatorio_id", relatorio_id).execute()
+        logger.info("análise gratuita liberada para nova tentativa rel=%s", relatorio_id)
+    except Exception as e:
+        logger.warning("liberação do entitlement falhou (segue) rel=%s: %s", relatorio_id, e)
+
+
 def _mark_pipeline_failed(
     sb,
     relatorio_id: str,
@@ -209,6 +226,7 @@ def _mark_pipeline_failed(
         }).eq("id", relatorio_id).execute()
     except Exception:
         pass
+    _liberar_entitlement_analise_gratuita(sb, relatorio_id)
 
 
 def _recover_stale_running_reports(sb, *, relatorio_id: str | None = None) -> int:
@@ -481,13 +499,20 @@ async def lifespan(app: FastAPI):
     logger.info("GymSite API encerrado")
 
 
+# P2.2 (SECURITY_REVIEW.md): /docs, /redoc e /openapi.json ficam FECHADOS por padrão
+# (não vazar a superfície da API em produção). Dev liga com EXPOSE_API_DOCS=1.
+_docs_enabled = os.getenv("EXPOSE_API_DOCS", "0").strip().lower() in ("1", "true", "yes")
 app = FastAPI(
     title="GymSite Intelligence API",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
 )
 
 from backend.routers.parceiros_admin import router as parceiros_admin_router
+from backend.routers.parceiros_admin import require_admin
 from backend.routers.execucao import router as execucao_router
 from backend.routers.rebusca import router as rebusca_router
 from backend.routers.leads import router as leads_router
@@ -530,8 +555,27 @@ _cors_origin_regex = (
     r"|https://([a-z0-9-]+\.)*gym-insight-hub\.pages\.dev"
 )
 
+# P3.2 (SECURITY_REVIEW.md): headers de segurança na resposta da API.
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+
+
+class SecurityHeadersMiddleware(_BaseHTTPMiddleware):
+    """Injeta headers de segurança básicos. setdefault: não sobrescreve quem já define."""
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+        return response
+
+
 # Middleware stack — último add_middleware = mais externo (roda primeiro).
 # CORS deve ser o mais externo para OPTIONS/preflight responder antes de rate limit/cache.
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(_CapturedMetricsMiddleware)
 app.add_middleware(CachingMiddleware)
 app.add_middleware(RedisCacheMiddleware)
@@ -1494,26 +1538,31 @@ def _require_org_access(request: Request, org_id: str) -> str:
 
 
 def _assert_relatorio_access(request: Request, sb, rid: str, access_code: str | None = None) -> None:
-    """Se JWT presente, valida org do relatório (espelha RLS Supabase).
-    Se access_code presente, valida com o access_code do relatório e permite acesso."""
-    
+    """Autorização deny-by-default para um relatório. A API roda com service_role
+    (RLS do Supabase não filtra), então o controle de acesso é feito aqui explicitamente.
+
+    Libera SOMENTE quando:
+    - `access_code` confere com o do relatório (link de lead read-only); OU
+    - há JWT válido e o usuário pertence à org dona do relatório.
+
+    Sem access_code e sem JWT → 401. JWT de outra org → 403. Isso mata o IDOR em que
+    qualquer request com o UUID acessava o relatório completo sem credencial."""
+
     if access_code:
         res = sb.table("relatorios").select("access_code").eq("id", rid).maybe_single().execute()
         row = res.data if res else None
         if not row:
             raise HTTPException(status_code=404, detail="relatório não encontrado")
-        
+
         db_code = row.get("access_code")
         if not db_code or str(db_code) != access_code:
             raise HTTPException(status_code=403, detail="access_code inválido ou não autorizado")
-            
+
         from datetime import datetime, timezone
         sb.table("relatorios").update({"access_code_used_at": datetime.now(timezone.utc).isoformat()}).eq("id", rid).execute()
         return
 
-    auth = request.headers.get("authorization") or ""
-    if not auth.lower().startswith("bearer "):
-        return
+    # Sem access_code → exige JWT válido (401 se ausente) + org que possui o relatório.
     user_id, _ = _require_authenticated(request)
     res = (
         sb.table("relatorios")
@@ -1527,10 +1576,8 @@ def _assert_relatorio_access(request: Request, sb, rid: str, access_code: str | 
     if not row:
         raise HTTPException(status_code=404, detail="relatório não encontrado")
     org_id = str(row.get("org_id") or "")
-    if not org_id:
-        return
     orgs = _user_org_ids(sb, user_id)
-    if org_id not in orgs:
+    if org_id and org_id not in orgs:
         raise HTTPException(status_code=403, detail="Sem permissão para este relatório")
 
 
@@ -2062,7 +2109,8 @@ def _persistir_sync_apollo(sb, oportunidade_id: str, result: dict, log_atual: li
 
 @app.post("/api/prospeccao/oportunidades/{oportunidade_id}/sync-apollo")
 def post_sync_apollo_oportunidade(
-    request: Request, oportunidade_id: str, force: bool = False
+    request: Request, oportunidade_id: str, force: bool = False,
+    _admin: dict = Depends(require_admin),
 ) -> dict:
     """Sincroniza UMA oportunidade com o Apollo.io (gatilho manual — consome créditos)."""
     from services.apollo_crm_sync import sync_oportunidade
@@ -2094,7 +2142,10 @@ def post_sync_apollo_oportunidade(
 
 
 @app.post("/api/prospeccao/sync-apollo")
-def post_sync_apollo_pendentes(request: Request, limite: int = 20) -> dict:
+def post_sync_apollo_pendentes(
+    request: Request, limite: int = 20,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Sincroniza oportunidades pendentes com o Apollo.io em lote (gatilho manual)."""
     from services.apollo_crm_sync import sync_oportunidade
 
@@ -2137,7 +2188,13 @@ def post_sync_apollo_pendentes(request: Request, limite: int = 20) -> dict:
 
 
 @app.get("/api/relatorios/{relatorio_id}/pdf")
-def get_relatorio_pdf(relatorio_id: str, layout: str = "classic", engine: str = "reportlab") -> Any:
+def get_relatorio_pdf(
+    relatorio_id: str,
+    request: Request,
+    layout: str = "classic",
+    engine: str = "reportlab",
+    access_code: str | None = None,
+) -> Any:
     """PDF estruturado do relatório. engine=reportlab (default) | weasy (HTML/CSS, produção)."""
     from fastapi.responses import Response
 
@@ -2154,6 +2211,7 @@ def get_relatorio_pdf(relatorio_id: str, layout: str = "classic", engine: str = 
 
     sb = _supabase_client()
     rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _assert_relatorio_access(request, sb, rid, access_code=access_code)
     payload = _fetch_relatorio_payload(sb, rid)
     status = (payload.get("header") or {}).get("status")
     if status and status != "done":
@@ -2520,6 +2578,7 @@ async def executar_prospeccao(
     request: Request,
     payload: ProspeccaoExecutarInput,
     background: BackgroundTasks,
+    _admin: dict = Depends(require_admin),
 ) -> dict:
     """Enfileira engine de cruzamento CNPJ × CNO no Redis."""
     _, org_id = _require_authenticated(request)
@@ -2551,6 +2610,7 @@ def list_oportunidades_prospeccao(
     score_min: Optional[float] = None,
     limit: int = 100,
     offset: int = 0,
+    _admin: dict = Depends(require_admin),
 ) -> list[dict]:
     """Lista oportunidades de prospecção com filtros."""
     _, org_id = _require_authenticated(request)
@@ -2567,14 +2627,285 @@ def list_oportunidades_prospeccao(
     )
 
 
+@app.get("/api/prospeccao/entrantes-captados")
+def list_entrantes_captados(
+    request: Request, limit_relatorios: int = 300,
+    _admin: dict = Depends(require_admin),
+) -> dict:
+    """Agrega os entrantes CNPJ captados em TODOS os relatórios da org (fonte de
+    leads do V1, `relatorio_outputs.entrantes_cnpj_90d`), deduplicados por CNPJ.
+    Marca quais já estão em `oportunidades_prospeccao`. Origem do /prospect."""
+    import re
+
+    _, org_id = _require_authenticated(request)
+    sb = _supabase_client()
+
+    rel = (
+        sb.table("relatorios")
+        .select("id, created_at")
+        .eq("org_id", org_id)
+        .order("created_at", desc=True)
+        .limit(max(1, min(limit_relatorios, 1000)))
+        .execute()
+    )
+    rids = [r["id"] for r in (rel.data or []) if r.get("id")]
+    if not rids:
+        return {"entrantes": [], "total": 0, "relatorios": 0}
+
+    outs = (
+        sb.table("relatorio_outputs")
+        .select("relatorio_id, entrantes_cnpj_90d")
+        .in_("relatorio_id", rids)
+        .execute()
+    )
+    ja = (
+        sb.table("oportunidades_prospeccao")
+        .select(
+            "cnpj, razao_social, nome_fantasia, segmento_operacao, cidade, "
+            "data_inicio_atividade, endereco_cnpj, contato_cnpj, motivo_match"
+        )
+        .eq("org_id", org_id)
+        .execute()
+    )
+    ja_rows = ja.data or []
+    ja_set = {re.sub(r"\D", "", str(r.get("cnpj") or "")) for r in ja_rows}
+
+    idx: dict[str, dict] = {}
+    for o in outs.data or []:
+        blk = o.get("entrantes_cnpj_90d")
+        if not isinstance(blk, dict):
+            continue
+        cidade_blk = blk.get("cidade") or blk.get("municipio") or ""
+        for e in blk.get("entrantes") or []:
+            if not isinstance(e, dict):
+                continue
+            c = re.sub(r"\D", "", str(e.get("cnpj") or ""))
+            if len(c) != 14 or c in idx:
+                continue
+            # Filtra joio: fora da família fitness / saúde-clínica não são leads.
+            if e.get("segmento_operacao") in ("fora_familia", "saude_clinica") or e.get("incluir_no_parque") is False:
+                continue
+            tem_contato = bool(
+                e.get("telefone_socio_administrador")
+                or e.get("telefone_empresa")
+                or e.get("email_socio_administrador")
+                or e.get("email_empresa")
+            )
+            socio = e.get("socio_administrador") if isinstance(e.get("socio_administrador"), dict) else {}
+            idx[c] = {
+                "cnpj": c,
+                "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
+                "segmento_operacao": e.get("segmento_label") or e.get("segmento_operacao"),
+                "cidade": cidade_blk,
+                "cnae": e.get("cnae_principal") or e.get("cnae_fiscal_principal"),
+                "socio_nome": (socio.get("nome") or "").strip() or None,
+                "bairro": e.get("bairro"),
+                "data_abertura": e.get("data_abertura"),
+                "relatorio_id": o.get("relatorio_id"),
+                "ja_em_prospeccao": c in ja_set,
+                "tem_contato": tem_contato,
+            }
+
+    # Também traz leads da BUSCA DIRETA por município (oportunidades_prospeccao sem
+    # relatório associado). Sem isso o /prospect só listava leads de relatório e o
+    # município buscado "não atualizava" — o lead ia só pro /prospeccao.
+    from tools.cnpj_segment_classifier import segmento_label
+
+    for r in ja_rows:
+        c = re.sub(r"\D", "", str(r.get("cnpj") or ""))
+        if len(c) != 14 or c in idx:
+            continue
+        endereco = r.get("endereco_cnpj") if isinstance(r.get("endereco_cnpj"), dict) else {}
+        contato = r.get("contato_cnpj") if isinstance(r.get("contato_cnpj"), dict) else {}
+        seg = r.get("segmento_operacao")
+        idx[c] = {
+            "cnpj": c,
+            "nome": r.get("nome_fantasia") or r.get("razao_social") or "—",
+            "segmento_operacao": segmento_label(seg) if seg else None,
+            "cidade": r.get("cidade") or endereco.get("cidade") or "",
+            "cnae": None,
+            "socio_nome": (contato.get("decision_maker") or "").strip() or None,
+            "bairro": endereco.get("bairro"),
+            "data_abertura": r.get("data_inicio_atividade"),
+            "relatorio_id": None,
+            "ja_em_prospeccao": True,
+            "tem_contato": bool(contato.get("email") or contato.get("telefone")),
+        }
+
+    entrantes = sorted(
+        idx.values(), key=lambda x: x.get("data_abertura") or "", reverse=True
+    )
+    return {
+        "entrantes": entrantes,
+        "total": len(entrantes),
+        "relatorios": len(rids),
+        "busca_direta": sum(1 for e in idx.values() if e["relatorio_id"] is None),
+    }
+
+
+@app.get("/api/prospeccao/buscar-entrantes")
+def buscar_entrantes_cnpj(
+    request: Request,
+    cidade: str,
+    uf: str = "",
+    dias: int = 90,
+    bairro: str = "",
+    tipo_negocio: Optional[str] = None,
+    limit: int = 100,
+    _admin: dict = Depends(require_admin),
+) -> dict:
+    """Busca DIRETA de novos entrantes CNPJ por município — independente do pipeline
+    de relatório. Roda listar_entrantes_cnpj_fitness ao vivo sobre o snapshot RFB.
+    Read-only (não persiste); o envio pra prospecção é o POST /captar-entrantes."""
+    import re
+
+    _, org_id = _require_authenticated(request)
+    if not (cidade or "").strip():
+        raise HTTPException(status_code=400, detail="cidade obrigatória")
+    from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
+
+    block = listar_entrantes_cnpj_fitness(
+        cidade, uf, dias=dias, limit=max(1, min(limit, 200)),
+        bairro=bairro, tipo_negocio=tipo_negocio, enriquecer=False,
+    )
+    if block.get("status") != "ok":
+        return {"entrantes": [], "total": 0, "cidade": cidade, "uf": uf,
+                "status": block.get("status"), "motivo": block.get("motivo")}
+
+    sb = _supabase_client()
+    ja = sb.table("oportunidades_prospeccao").select("cnpj").eq("org_id", org_id).execute()
+    ja_set = {re.sub(r"\D", "", str(r.get("cnpj") or "")) for r in (ja.data or [])}
+
+    out = []
+    for e in block.get("entrantes") or []:
+        if not isinstance(e, dict):
+            continue
+        if e.get("segmento_operacao") in ("fora_familia", "saude_clinica") or e.get("incluir_no_parque") is False:
+            continue
+        c = re.sub(r"\D", "", str(e.get("cnpj") or ""))
+        if len(c) != 14:
+            continue
+        socio = e.get("socio_administrador") if isinstance(e.get("socio_administrador"), dict) else {}
+        out.append({
+            "cnpj": c,
+            "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
+            "segmento_operacao": e.get("segmento_label") or e.get("segmento_operacao"),
+            "cidade": block.get("cidade") or cidade,
+            "cnae": e.get("cnae_principal"),
+            "socio_nome": (socio.get("nome") or "").strip() or None,
+            "bairro": e.get("bairro"),
+            "data_abertura": e.get("data_abertura"),
+            "relatorio_id": None,
+            "ja_em_prospeccao": c in ja_set,
+            "tem_contato": bool(
+                e.get("telefone_socio_administrador") or e.get("telefone_empresa")
+                or e.get("email_socio_administrador") or e.get("email_empresa")
+            ),
+        })
+    return {"entrantes": out, "total": len(out),
+            "cidade": block.get("cidade") or cidade, "uf": (uf or "")[:2].upper(), "status": "ok"}
+
+
+class CaptarEntrantesInput(BaseModel):
+    cidade: str
+    uf: str = ""
+    cnpjs: list[str] = Field(..., min_length=1)
+
+
+@app.post("/api/prospeccao/captar-entrantes")
+def captar_entrantes_cnpj(
+    request: Request, body: CaptarEntrantesInput,
+    _admin: dict = Depends(require_admin),
+) -> dict:
+    """Persiste entrantes da busca DIRETA em oportunidades_prospeccao (sem relatório).
+    Enriquece (ReceitaWS) só os CNPJ selecionados e faz upsert (cnpj + cno null)."""
+    import re
+
+    _, org_id = _require_authenticated(request)
+    sb = _supabase_client()
+    from tools.cnpj_fitness_tools import listar_entrantes_cnpj_fitness
+
+    alvo = {re.sub(r"\D", "", c) for c in body.cnpjs}
+    alvo = {c for c in alvo if len(c) == 14}
+    if not alvo:
+        raise HTTPException(status_code=400, detail="nenhum CNPJ válido")
+
+    block = listar_entrantes_cnpj_fitness(body.cidade, body.uf, dias=90, limit=200, enriquecer=False)
+    entrantes = block.get("entrantes") or [] if block.get("status") == "ok" else []
+    selecionados = [
+        e for e in entrantes
+        if isinstance(e, dict) and re.sub(r"\D", "", str(e.get("cnpj") or "")) in alvo
+    ]
+    try:  # enriquece só os selecionados (ReceitaWS → sócio + telefone)
+        from tools.cnpj_enrichment import enriquecer_entrantes
+        selecionados, _meta = enriquecer_entrantes(selecionados)
+    except Exception as exc:
+        logger.warning("captar-entrantes: enriquecimento falhou (segue): %s", exc)
+    idx = {re.sub(r"\D", "", str(e.get("cnpj") or "")): e for e in selecionados if isinstance(e, dict)}
+
+    inseridos: list[str] = []
+    atualizados: list[str] = []
+    erros: list[dict] = []
+    uf_up = (body.uf or "")[:2].upper()
+    for c in alvo:
+        ent = idx.get(c)
+        if not ent:
+            erros.append({"cnpj": c, "motivo": "não encontrado nos entrantes do município"})
+            continue
+        socio = ent.get("socio_administrador") if isinstance(ent.get("socio_administrador"), dict) else {}
+        email = ent.get("email_socio_administrador") or ent.get("email_empresa")
+        telefone = ent.get("telefone_socio_administrador") or ent.get("telefone_empresa")
+        tel_digits = re.sub(r"\D", "", telefone or "")
+        row = {
+            "org_id": org_id, "cnpj": c, "cidade": body.cidade, "uf": uf_up,
+            "razao_social": ent.get("razao_social"),
+            "nome_fantasia": ent.get("nome_fantasia") or ent.get("nome_exibicao"),
+            "segmento_operacao": ent.get("segmento_operacao"),
+            "data_inicio_atividade": ent.get("data_abertura"),
+            "endereco_cnpj": {
+                "logradouro": ent.get("logradouro"), "numero": ent.get("numero"),
+                "bairro": ent.get("bairro"), "cidade": body.cidade, "uf": uf_up,
+            },
+            "contato_cnpj": {
+                "decision_maker": socio.get("nome") if isinstance(socio, dict) else None,
+                "cargo": "Sócio-administrador", "email": email, "telefone": telefone,
+                "whatsapp_link": f"https://wa.me/55{tel_digits}" if tel_digits else None,
+            },
+            "score_match": None, "motivo_match": "busca_direta_municipio",
+            "status": "novo", "prioridade": "media",
+        }
+        try:
+            existing = (
+                sb.table("oportunidades_prospeccao").select("id")
+                .eq("cnpj", c).is_("cno", "null").limit(1).execute()
+            )
+            if existing.data:
+                sb.table("oportunidades_prospeccao").update(row).eq("id", existing.data[0]["id"]).execute()
+                atualizados.append(c)
+            else:
+                sb.table("oportunidades_prospeccao").insert(row).execute()
+                inseridos.append(c)
+        except Exception as e:
+            erros.append({"cnpj": c, "motivo": str(e)})
+
+    return {"ok": True, "inseridos": inseridos, "atualizados": atualizados,
+            "erros": erros, "total_enviados": len(inseridos) + len(atualizados)}
+
+
 @app.get("/api/prospeccao/oportunidades/{oportunidade_id}")
-def get_oportunidade_prospeccao(request: Request, oportunidade_id: str) -> dict:
+def get_oportunidade_prospeccao(
+    request: Request, oportunidade_id: str,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Retorna detalhe de uma oportunidade."""
     return _assert_oportunidade_access(request, oportunidade_id)
 
 
 @app.post("/api/prospeccao/oportunidades/{oportunidade_id}/webhook")
-def reenviar_webhook_oportunidade(request: Request, oportunidade_id: str) -> dict:
+def reenviar_webhook_oportunidade(
+    request: Request, oportunidade_id: str,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Reenvia webhook manualmente para o Claw."""
     _assert_oportunidade_access(request, oportunidade_id)
     from prospecting.engine import reenviar_webhook
@@ -2586,6 +2917,7 @@ def patch_status_oportunidade(
     request: Request,
     oportunidade_id: str,
     payload: ProspeccaoStatusPatch,
+    _admin: dict = Depends(require_admin),
 ) -> dict:
     """Atualiza status do pipeline de prospecção."""
     _assert_oportunidade_access(request, oportunidade_id)
@@ -2602,7 +2934,10 @@ def patch_status_oportunidade(
 
 
 @app.post("/api/prospeccao/webhook/configure")
-def configurar_webhook_claw(request: Request, payload: WebhookConfigureInput) -> dict:
+def configurar_webhook_claw(
+    request: Request, payload: WebhookConfigureInput,
+    _admin: dict = Depends(require_admin),
+) -> dict:
     """Configura URL do webhook do Claw por organização."""
     _require_org_access(request, payload.org_id)
     sb = _supabase_client()
@@ -2627,6 +2962,31 @@ class AssistenteChatOutput(BaseModel):
     interacao_id: str | None = None  # referência pro feedback (FT dataset)
 
 
+def _plano_permite_assistente(org_id: str | None) -> bool:
+    permitidos = {p.strip().lower() for p in (os.getenv("ASSISTENTE_PLANOS_PERMITIDOS") or "").split(",") if p.strip()}
+    if not permitidos:
+        return True
+    if not org_id:
+        return False
+    try:
+        from tools.db_schema import tbl
+        sb = _supabase_client()
+        res = tbl(sb, "organizations").select("plano").eq("id", org_id).limit(1).execute()
+        plano = ((res.data or [{}])[0].get("plano") or "").strip().lower()
+        return plano in permitidos
+    except Exception as exc:
+        logger.warning("checagem de plano do assistente falhou (liberando): %s", exc)
+        return True
+
+
+def _exigir_plano_assistente(org_id: str | None) -> None:
+    if not _plano_permite_assistente(org_id):
+        raise HTTPException(
+            status_code=403,
+            detail="O consultor é exclusivo dos planos com consultoria. Fale com a gente pra ativar no seu plano.",
+        )
+
+
 @app.post("/api/assistente/chat", response_model=AssistenteChatOutput)
 async def assistente_chat(request: Request, payload: AssistenteChatInput) -> AssistenteChatOutput:
     """Endpoint do GymSite Assistant — responde perguntas usando Tinker SamplingClient.
@@ -2634,7 +2994,8 @@ async def assistente_chat(request: Request, payload: AssistenteChatInput) -> Ass
     Requer autenticação JWT. Opcionalmente aceita um relatorio_id para
     contextualizar a resposta em um relatório específico.
     """
-    user_id, _ = _require_authenticated(request)
+    user_id, org_id = _require_authenticated(request)
+    _exigir_plano_assistente(org_id)
 
     # Lazy imports — evita quebra no startup se tinker não estiver instalado
     try:
@@ -2741,6 +3102,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput, backgr
     from services.chat_state import atualizar_sessao
 
     user_id, org_from_jwt = _require_authenticated(request)
+    _exigir_plano_assistente(org_from_jwt)
 
     try:
         resultado = processar_mensagem(

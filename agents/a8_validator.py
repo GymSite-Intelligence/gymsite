@@ -77,13 +77,22 @@ def _normalize_state(state: dict[str, Any], relatorio: dict[str, Any] | None) ->
 
     out.setdefault("score_bairro", oc.get("score_bairro"))
     out.setdefault("veredito", oc.get("veredito"))
+    out.setdefault("modelo_recomendado", oc.get("modelo_recomendado"))
+    out.setdefault("posicionamento_estrategico", oc.get("posicionamento_estrategico") or rel.get("posicionamento_estrategico"))
     out.setdefault("posicionamento_recomendado", oc.get("posicionamento_recomendado"))
     out.setdefault("resumo_executivo", oc.get("resumo_executivo"))
     out.setdefault("total_concorrentes_analisados", oc.get("total_concorrentes_analisados"))
     out.setdefault("bairros_alternativos", oc.get("bairros_alternativos") or [])
     out.setdefault("top_3_candidatos", oc.get("top_3_candidatos") or oc.get("candidatos") or [])
     out.setdefault("cobertura_redes_a0", oc.get("cobertura_redes_a0") or rel.get("cobertura_redes_a0") or {})
-    out.setdefault("cenarios_financeiros", rel.get("cenarios") or oc.get("cenarios_financeiros") or [])
+    # Cenários: no JSON pós-A9 vêm como DICT {low,mid,premium} (viabilidade_3_cenarios),
+    # não como lista. Converte pra lista de cenários (cada um com 'viabilidade') senão
+    # o INV-1 (todos inviáveis) nunca dispara — bug pego no teste real (rel c4e143c8).
+    _cen = (rel.get("cenarios") or oc.get("cenarios_financeiros")
+            or oc.get("viabilidade_3_cenarios") or [])
+    if isinstance(_cen, dict):
+        _cen = list(_cen.values())
+    out.setdefault("cenarios_financeiros", _cen if isinstance(_cen, list) else [])
     out.setdefault("score_geral", out.get("score_bairro") or oc.get("score_bairro") or 0)
     return out
 
@@ -116,6 +125,7 @@ class A8ValidadorCruzado:
         self._validar_veredito(md, claims, state)
         self._validar_narrativa_vs_financeiro(md, state)
         self._validar_evidencia_oportunidade(state)
+        self._validar_coerencia_posicionamento(state)
 
         score_validacao = self._calcular_score_validacao()
         return {
@@ -384,6 +394,121 @@ class A8ValidadorCruzado:
                 f"score_oportunidade_mercado={score:g} com {informativos} review(s) informativo(s)",
                 "Score de oportunidade máximo sustentado por reviews vazios ('Top') — ausência de dado não é oportunidade.",
                 "Coletar mais evidência (reviews, oferta real do A3b) ou rebaixar score no A3b.",
+                "ALTA",
+            )
+
+    # Equivalência modelo (A4) ↔ tier (A9) — mesmo eixo de posicionamento.
+    _EIXO_POSICAO = {
+        "low cost": "low", "low": "low", "econômico": "low", "economico": "low", "budget": "low",
+        "mid market": "mid", "mid": "mid", "intermediário": "mid", "intermediario": "mid", "médio": "mid", "medio": "mid",
+        "premium": "premium", "high": "premium", "alto padrão": "premium", "alto padrao": "premium",
+    }
+
+    @staticmethod
+    def _canon_posicao(txt: Any) -> Optional[str]:
+        t = str(txt or "").strip().lower()
+        if not t:
+            return None
+        for k, v in A8ValidadorCruzado._EIXO_POSICAO.items():
+            if k in t:
+                return v
+        return None
+
+    def _validar_coerencia_posicionamento(self, state: dict) -> None:
+        """Invariantes cross-agente: A4 (modelo/cenários) × A9 (tier/ticket/veredito)
+        × veredito global. Detecta a cascata desencontrada (caso 6ba4b34a: REPROVADO +
+        3 cenários INVIÁVEL + modelo Low Cost + A9 Mid Market R$341 INDETERMINADO).
+
+        Tolerante: sem cenários/posicionamento = no-op. Só dispara quando o A8 roda
+        com o posicionamento do A9 disponível (pós-A9)."""
+        cenarios = state.get("cenarios_financeiros") or []
+        if isinstance(cenarios, dict):  # {low,mid,premium} → lista
+            cenarios = list(cenarios.values())
+        if not isinstance(cenarios, list):
+            cenarios = []
+        veredito = str(state.get("veredito") or "").upper()
+        modelo_rec = str(state.get("modelo_recomendado") or "").strip()
+        pos = state.get("posicionamento_estrategico")
+        pos = pos if isinstance(pos, dict) else {}
+
+        viabs = [
+            str((c or {}).get("viabilidade") or "").upper()
+            for c in cenarios if isinstance(c, dict) and c.get("viabilidade")
+        ]
+        todos_inviaveis = bool(viabs) and all(
+            v in ("INVIAVEL", "INVIÁVEL") for v in viabs
+        )
+        reprovado = any(t in veredito for t in ("REPROVAD", "INVIAVEL", "INVIÁVEL", "VERMELHO"))
+        tem_modelo = bool(modelo_rec) and modelo_rec.lower() not in ("nenhum", "n/a", "none", "-")
+
+        # INV-1 — recomendar modelo com TODOS os cenários inviáveis
+        if tem_modelo and todos_inviaveis:
+            self._add(
+                "inconsistencia",
+                f"modelo_recomendado='{modelo_rec}' com todos os cenários INVIÁVEL",
+                "A4 recomenda um modelo mas os cenários financeiros são todos inviáveis — recomendação sem lastro.",
+                "Quando nenhum cenário é viável, modelo_recomendado deve ser 'nenhum' (A4/A6).",
+                "CRITICO",
+            )
+        # INV-2 — veredito reprovado mas ainda recomenda modelo
+        elif tem_modelo and reprovado:
+            self._add(
+                "inconsistencia",
+                f"veredito {veredito} com modelo_recomendado='{modelo_rec}'",
+                "Relatório reprovado/inviável mas ainda recomenda um modelo de negócio — dois vereditos opostos ao leitor.",
+                "Condicionar a recomendação de modelo ao veredito global (A6).",
+                "ALTA",
+            )
+
+        if not pos:
+            return  # sem A9 no state (A8 rodou pré-A9): nada mais a checar
+
+        eixo_a4 = self._canon_posicao(modelo_rec)
+        eixo_a9 = self._canon_posicao((pos.get("headroom_renda") or {}).get("tier_modelo_percentil"))
+        pos_veredito = str(pos.get("veredito_posicionamento") or "").upper()
+        ticket_a9 = (pos.get("recomendacao_ticket") or {}).get("ticket_recomendado")
+
+        # INV-3 — modelo (A4) e tier (A9) em eixos divergentes
+        if eixo_a4 and eixo_a9 and eixo_a4 != eixo_a9:
+            self._add(
+                "inconsistencia",
+                f"modelo A4='{modelo_rec}' ({eixo_a4}) vs tier A9={eixo_a9}",
+                "A4 e A9 apontam posicionamentos diferentes — a cascata não reconcilia modelo × tier.",
+                "A9 deve ancorar no modelo do A4 ou registrar a divergência explicitamente.",
+                "ALTA",
+            )
+
+        # INV-5 — A9 indeterminado mas crava ticket/tier (falsa precisão)
+        if pos_veredito in ("INDETERMINADO", "") and (ticket_a9 or eixo_a9):
+            self._add(
+                "dado_nao_verificavel",
+                f"A9 veredito_posicionamento={pos_veredito or 'vazio'} mas ticket={ticket_a9} tier={eixo_a9}",
+                "A9 marca posicionamento indeterminado mas ainda emite ticket/tier numéricos — falsa precisão.",
+                "Quando indeterminado, A9 não deve cravar ticket/tier (ou marcar baixa confiança).",
+                "ALTA",
+            )
+
+        # INV-4 — ticket (A9) fora da faixa do modelo recomendado (A4)
+        alvo = next(
+            (c for c in cenarios if isinstance(c, dict) and self._canon_posicao(c.get("modelo")) == eixo_a4),
+            None,
+        )
+        tk_a4 = tk_a9 = None
+        if alvo:
+            try:
+                tk_a4 = float(alvo.get("ticket_medio"))
+            except (TypeError, ValueError):
+                tk_a4 = None
+        try:
+            tk_a9 = float(ticket_a9) if ticket_a9 is not None else None
+        except (TypeError, ValueError):
+            tk_a9 = None
+        if tk_a4 and tk_a9 and (tk_a9 > tk_a4 * 1.8 or tk_a9 < tk_a4 * 0.55):
+            self._add(
+                "inconsistencia",
+                f"ticket A9=R${tk_a9:g} fora da faixa do modelo A4 '{modelo_rec}' (ticket A4=R${tk_a4:g})",
+                "Ticket recomendado pelo A9 destoa do ticket do modelo recomendado pelo A4.",
+                "Alinhar ticket A9 à faixa do modelo A4, ou reconciliar o modelo.",
                 "ALTA",
             )
 

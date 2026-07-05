@@ -150,4 +150,144 @@ export function usePatchStatusOportunidade() {
   })
 }
 
+export interface EntranteCaptado {
+  cnpj: string
+  nome: string
+  segmento_operacao: string | null
+  cidade: string | null
+  cnae: string | null
+  socio_nome: string | null
+  bairro: string | null
+  data_abertura: string | null
+  relatorio_id: string | null
+  ja_em_prospeccao: boolean
+  tem_contato: boolean
+}
+
+async function enriquecerEntrante(relatorioId: string, cnpj: string) {
+  const res = await fetch(
+    `${API_BASE}/api/relatorios/${relatorioId}/entrantes-cnpj/enriquecer`,
+    {
+      method: 'POST',
+      headers: await authHeaders(true),
+      // usar_apollo: false — só ReceitaWS (telefone do sócio QSA), sem crédito Apollo.
+      body: JSON.stringify({ cnpj, usar_apollo: false }),
+    },
+  )
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao enriquecer')
+  }
+  return res.json()
+}
+
+/** Enriquece UM entrante (ReceitaWS) e persiste no relatório de origem. */
+export function useEnriquecerEntrante() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ relatorioId, cnpj }: { relatorioId: string; cnpj: string }) =>
+      enriquecerEntrante(relatorioId, cnpj),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prospeccao', 'entrantes-captados'] })
+    },
+  })
+}
+
+async function fetchEntrantesCaptados(): Promise<{
+  entrantes: EntranteCaptado[]
+  total: number
+  relatorios: number
+}> {
+  const res = await fetch(`${API_BASE}/api/prospeccao/entrantes-captados`, {
+    headers: await authHeaders(),
+  })
+  if (!res.ok) throw new Error('Falha ao carregar entrantes captados')
+  return res.json()
+}
+
+async function enviarEntrantesParaProspeccao(relatorioId: string, cnpjs: string[]) {
+  const res = await fetch(
+    `${API_BASE}/api/relatorios/${relatorioId}/entrantes-cnpj/prospeccao`,
+    {
+      method: 'POST',
+      headers: await authHeaders(true),
+      body: JSON.stringify({ cnpjs }),
+    },
+  )
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao enviar para prospecção')
+  }
+  return res.json()
+}
+
+/** Entrantes CNPJ captados em todos os relatórios da org (fonte de leads V1). */
+export function useEntrantesCaptados() {
+  return useQuery({
+    queryKey: ['prospeccao', 'entrantes-captados'],
+    queryFn: fetchEntrantesCaptados,
+  })
+}
+
+/** Envia entrantes selecionados de UM relatório para oportunidades_prospeccao. */
+export function useEnviarEntrantesProspeccao() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ relatorioId, cnpjs }: { relatorioId: string; cnpjs: string[] }) =>
+      enviarEntrantesParaProspeccao(relatorioId, cnpjs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prospeccao'] })
+    },
+  })
+}
+
+async function buscarEntrantes(params: {
+  cidade: string; uf?: string; dias?: number; bairro?: string; tipo_negocio?: string
+}): Promise<{ entrantes: EntranteCaptado[]; total: number; cidade: string; uf: string; status: string }> {
+  const q = new URLSearchParams()
+  q.set('cidade', params.cidade)
+  if (params.uf) q.set('uf', params.uf)
+  if (params.dias) q.set('dias', String(params.dias))
+  if (params.bairro) q.set('bairro', params.bairro)
+  if (params.tipo_negocio) q.set('tipo_negocio', params.tipo_negocio)
+  const res = await fetch(`${API_BASE}/api/prospeccao/buscar-entrantes?${q.toString()}`, {
+    headers: await authHeaders(),
+  })
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao buscar entrantes')
+  }
+  return res.json()
+}
+
+async function captarEntrantes(cidade: string, uf: string, cnpjs: string[]) {
+  const res = await fetch(`${API_BASE}/api/prospeccao/captar-entrantes`, {
+    method: 'POST',
+    headers: await authHeaders(true),
+    body: JSON.stringify({ cidade, uf, cnpjs }),
+  })
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}))
+    throw new Error(e.detail || 'Falha ao captar entrantes')
+  }
+  return res.json()
+}
+
+/** Busca DIRETA de entrantes por município (independente de relatório). */
+export function useBuscarEntrantes() {
+  return useMutation({ mutationFn: buscarEntrantes })
+}
+
+/** Persiste entrantes buscados direto em oportunidades_prospeccao. */
+export function useCaptarEntrantes() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ cidade, uf, cnpjs }: { cidade: string; uf: string; cnpjs: string[] }) =>
+      captarEntrantes(cidade, uf, cnpjs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prospeccao'] })
+    },
+  })
+}
+
 export { authHeaders as prospeccaoAuthHeaders }

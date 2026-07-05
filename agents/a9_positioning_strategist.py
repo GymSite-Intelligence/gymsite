@@ -925,6 +925,42 @@ def _a9_after_agent_callback(callback_context):
                     extra={"agent": "A9"},
                 )
 
+        # A8 roda AQUI (pós-A9), não mais no after-A6: só neste ponto o posicionamento
+        # do A9 está disponível, então o validador enxerga modelo (A4) × tier/ticket (A9)
+        # × veredito e checa a coerência cross-agente (INV-3/4/5). Recarrega o JSON local,
+        # que _patch_relatorio_json acabou de atualizar com o posicionamento. Fail-safe.
+        try:
+            from tools.a8_runner import persist_validacao, run_a8_validation
+
+            relatorio_full = None
+            if isinstance(local_id, str) and local_id:
+                _p = _RELATORIOS_DIR / f"{local_id}.json"
+                if _p.is_file():
+                    relatorio_full = json.loads(_p.read_text(encoding="utf-8"))
+            markdown = state.get("relatorio_md") if isinstance(state.get("relatorio_md"), str) else ""
+            validacao = run_a8_validation(markdown, state, relatorio=relatorio_full)
+            if validacao:
+                if relatorio_full is not None and isinstance(local_id, str):
+                    relatorio_full["validacao_a8"] = validacao
+                    (_RELATORIOS_DIR / f"{local_id}.json").write_text(
+                        json.dumps(relatorio_full, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                rid = rel_uuid or local_id
+                org_id = (
+                    (relatorio_full or {}).get("org_id")
+                    or os.getenv("SUPABASE_GYMSITE_ORG_ID")
+                    or "00000000-0000-0000-0000-000000000001"
+                )
+                if rid:
+                    persist_validacao(str(rid), str(org_id), validacao)
+        except Exception:
+            logger.warning(
+                "A9 A8 validation/persist falhou",
+                exc_info=True,
+                extra={"agent": "A9"},
+            )
+
         elapsed = time.perf_counter() - start
         logger.info(
             "A9 after_agent completed in %.2fs",

@@ -40,6 +40,15 @@ def send_opportunity_webhook(
 
     # Idempotência — verifica se já enviou com sucesso recente
     if _ja_enviado_com_sucesso(opp_id, evento, client):
+        # Já foi entregue: garante que o status reflita isso (não deixa regredir
+        # pra "qualificado" quando o fluxo bulk re-roda Qualificar+Enviar).
+        if client and opp_id:
+            try:
+                client.table("oportunidades_prospeccao").update(
+                    {"status": "webhook_enviado"}
+                ).eq("id", opp_id).in_("status", ["novo", "qualificado"]).execute()
+            except Exception as db_err:
+                print(f"[webhook] Erro ao reafirmar status {opp_id}: {db_err}")
         return {
             "status": "idempotente",
             "motivo": "Webhook já entregue com sucesso",
@@ -137,6 +146,9 @@ def send_opportunity_webhook(
 def _montar_payload(opp: dict[str, Any]) -> dict[str, Any]:
     """Monta o payload canônico do webhook com sanitização LGPD."""
     contato = opp.get("contato_cnpj") or {}
+    # endereco_cnpj é dict (jsonb) — mask_address espera string no 1º arg, então
+    # extraímos o bairro e passamos via kwarg (evita TypeError no re.sub do dict).
+    endereco = opp.get("endereco_cnpj") if isinstance(opp.get("endereco_cnpj"), dict) else {}
     return {
         "event": "prospeccao.oportunidade.qualificada",
         "version": "1.0",
@@ -152,9 +164,10 @@ def _montar_payload(opp: dict[str, Any]) -> dict[str, Any]:
             "cidade": opp.get("cidade"),
             "uf": opp.get("uf"),
             "endereco": mask_address(
-                opp.get("endereco_cnpj"),
+                None,
                 cidade=opp.get("cidade"),
                 uf=opp.get("uf"),
+                bairro=endereco.get("bairro"),
             ),
             "obra": {
                 "nome": opp.get("nome_obra"),
@@ -166,16 +179,28 @@ def _montar_payload(opp: dict[str, Any]) -> dict[str, Any]:
             "score_match": opp.get("score_match"),
             "motivo_match": opp.get("motivo_match"),
             "prioridade": opp.get("prioridade"),
-            "contato": {
-                "decision_maker": contato.get("decision_maker"),
-                "cargo": contato.get("cargo"),
-                "email": mask_email(contato.get("email")),
-                "whatsapp": mask_phone(contato.get("whatsapp")),
-                "linkedin": contato.get("linkedin"),
-            },
+            "contato": _montar_contato(contato),
             "projecao_receita": opp.get("projecao_receita"),
             "capacidade_matriculas": opp.get("capacidade_matriculas"),
         },
+    }
+
+
+def _montar_contato(contato: dict[str, Any]) -> dict[str, Any]:
+    """Contato pro Navi. whatsapp_raw = telefone real — o bridge grava `telefone`
+    (+ `whatsapp_link`), não `whatsapp`, então usamos telefone como fonte. Mantém
+    versões mascaradas p/ logs/exibição; *_raw vão só pro destino interno."""
+    contato = contato if isinstance(contato, dict) else {}
+    tel = contato.get("whatsapp") or contato.get("telefone")
+    email = contato.get("email")
+    return {
+        "decision_maker": contato.get("decision_maker"),
+        "cargo": contato.get("cargo"),
+        "email": mask_email(email),
+        "whatsapp": mask_phone(tel),
+        "whatsapp_raw": tel,
+        "email_raw": email,
+        "linkedin": contato.get("linkedin"),
     }
 
 

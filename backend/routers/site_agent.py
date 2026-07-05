@@ -17,6 +17,7 @@ _enqueue_ou_background, NovoRelatorioInput, _supabase_client.
 """
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import uuid
@@ -38,6 +39,70 @@ _FONTE = "landing-getgymsite"
 _CAP_IP_DIA = int(os.getenv("SITE_AGENT_CAP_IP_DIA") or "5")
 _CAP_GLOBAL_DIA = int(os.getenv("SITE_AGENT_CAP_GLOBAL_DIA") or "100")
 _ETA_MIN = 5
+_CHAT_SESSOES_IP_DIA = int(os.getenv("SITE_CHAT_SESSOES_IP_DIA") or "2")
+_CHAT_TURNOS_PROJETO = int(os.getenv("SITE_CHAT_TURNOS_PROJETO") or "10")
+_CHAT_MODO_DEGUSTACAO = (os.getenv("SITE_CHAT_MODO_DEGUSTACAO") or "0").strip().lower() in ("1", "true", "yes")
+_CHAT_BYPASS_TOKEN = (os.getenv("SITE_CHAT_BYPASS_TOKEN") or "").strip()
+_EMAILS_BYPASS_ANALISE = {
+    e.strip().lower()
+    for e in (os.getenv("SITE_ANALISE_EMAIL_BYPASS") or "teste@gymsite.com.br").split(",")
+    if e.strip()
+}
+
+
+def _email_com_bypass(email: str) -> bool:
+    return email.lower().strip() in _EMAILS_BYPASS_ANALISE
+
+
+def _ip_na_allowlist(ip: str | None) -> bool:
+    allow = {x.strip() for x in (os.getenv("SITE_CHAT_IP_ALLOWLIST") or "").split(",") if x.strip()}
+    return bool(ip and ip in allow)
+
+
+def _bypass_autorizado(request: Request, dev_token: str | None, ip: str | None) -> bool:
+    if _ip_na_allowlist(ip):
+        return True
+    if not _CHAT_BYPASS_TOKEN:
+        return False
+    candidato = (request.headers.get("x-site-chat-token") or dev_token or "").strip()
+    return bool(candidato) and hmac.compare_digest(candidato, _CHAT_BYPASS_TOKEN)
+
+
+async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessao: bool, agente: str) -> str | None:
+    try:
+        from tools.redis_client import get_redis
+        r = await get_redis()
+    except Exception:
+        return None
+    try:
+        hoje = datetime.now(timezone.utc).strftime("%Y%m%d")
+        if nova_sessao and ip:
+            chave = f"site_chat:sessoes:{ip}:{hoje}"
+            n = await r.incr(chave)
+            if n == 1:
+                await r.expire(chave, 86400)
+            if n > _CHAT_SESSOES_IP_DIA:
+                logger.warning("cap sessoes chat/dia atingido ip=%s (%s)", ip, _CHAT_SESSOES_IP_DIA)
+                return "sessoes"
+        if _CHAT_MODO_DEGUSTACAO and ip:
+            chave = f"site_chat:agente:{ip}:{agente}:{hoje}"
+            n = await r.incr(chave)
+            if n == 1:
+                await r.expire(chave, 86400)
+            if n > 1:
+                logger.warning("degustacao: pergunta extra bloqueada ip=%s agente=%s", ip, agente)
+                return "agente"
+        if not nova_sessao and projeto_id:
+            chave = f"site_chat:turnos:{projeto_id}"
+            n = await r.incr(chave)
+            if n == 1:
+                await r.expire(chave, 86400)
+            if n > _CHAT_TURNOS_PROJETO:
+                logger.warning("cap turnos chat atingido projeto=%s (%s)", projeto_id, _CHAT_TURNOS_PROJETO)
+                return "turnos"
+    except Exception:
+        return None
+    return None
 
 
 # ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -70,6 +135,7 @@ class ConversarSiteInput(BaseModel):
     projeto_id: Optional[str] = None          # None = nova sessão (exige Turnstile)
     turnstile_token: Optional[str] = None      # obrigatório só na 1ª mensagem
     agente: Optional[str] = None               # degustacao (default) | responsavel_tecnico (RAG segmentado)
+    dev_token: Optional[str] = Field(default=None, max_length=120)
 
 
 class ConversarSiteResposta(BaseModel):
@@ -178,16 +244,19 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
                             detail="Verificação anti-bot falhou.")
 
     sb = _sb()
+    bypass = _email_com_bypass(data.email)
+    if bypass:
+        logger.info("analise gratuita com bypass de entitlement email=%s", data.email)
 
     # 2. Entitlement: 1 grátis por email.
-    if _email_ja_usou(sb, data.email):
+    if not bypass and _email_ja_usou(sb, data.email):
         return AnaliseResposta(
             status="quota_used",
             mensagem="Você já usou sua análise gratuita. Fale com nosso time para o relatório completo.",
         )
 
     # 3. Caps (IP/dia, global/dia) e 4. allowance SearchAPI → overflow.
-    if _cap_estourado(sb, ip) or _searchapi_sem_folga():
+    if not bypass and (_cap_estourado(sb, ip) or _searchapi_sem_folga()):
         # Captura o lead ANTES de retornar — a mensagem promete follow-up por
         # e-mail; sem isso o contato se perderia. Não consome o entitlement.
         _capturar_lead(sb, data, background)
@@ -217,22 +286,24 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
     tbl(sb,"relatorios").update({"access_token": access_token}).eq("id", relatorio_id).execute()
 
     # 6. Grava entitlement (unique(email) é o guard duro contra corrida).
-    try:
-        tbl(sb,"analise_gratuita").insert({
-            "email": data.email.lower().strip(),
-            "ip": ip,
-            "relatorio_id": relatorio_id,
-            "user_agent": request.headers.get("user-agent"),
-            "utm": {"source": data.utm_source, "medium": data.utm_medium, "campaign": data.utm_campaign},
-        }).execute()
-    except Exception:  # corrida: outro request do mesmo email ganhou
-        return AnaliseResposta(
-            status="quota_used",
-            mensagem="Você já usou sua análise gratuita. Fale com nosso time para o relatório completo.",
-        )
+    if not bypass:
+        try:
+            tbl(sb,"analise_gratuita").insert({
+                "email": data.email.lower().strip(),
+                "ip": ip,
+                "relatorio_id": relatorio_id,
+                "user_agent": request.headers.get("user-agent"),
+                "utm": {"source": data.utm_source, "medium": data.utm_medium, "campaign": data.utm_campaign},
+            }).execute()
+        except Exception:  # corrida: outro request do mesmo email ganhou
+            return AnaliseResposta(
+                status="quota_used",
+                mensagem="Você já usou sua análise gratuita. Fale com nosso time para o relatório completo.",
+            )
 
     # 7. Lead pro CRM/Apollo (best-effort, não bloqueia).
-    _capturar_lead(sb, data, background)
+    if not bypass:
+        _capturar_lead(sb, data, background)
 
     # 8. Enfileira o MESMO pipeline.
     await _enqueue_ou_background({
@@ -275,6 +346,24 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
     if nova_sessao and not await verificar_turnstile(data.turnstile_token, ip):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Verificação anti-bot falhou.")
+
+    if not _bypass_autorizado(request, data.dev_token, ip):
+        motivo = await _cap_chat_estourado(ip, data.projeto_id, nova_sessao, data.agente or "degustacao")
+        if motivo == "sessoes":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Você já usou a degustação de hoje. Peça a análise gratuita do seu ponto — é bem mais completa.",
+            )
+        if motivo == "agente":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Você já fez sua pergunta pra esse especialista hoje. Escolha outro agente — ou peça a análise gratuita do seu ponto.",
+            )
+        if motivo == "turnos":
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Essa conversa chegou ao limite da degustação. Peça a análise gratuita do seu ponto pra ir mais fundo.",
+            )
 
     try:
         projeto_id = data.projeto_id
@@ -355,7 +444,12 @@ async def status_analise(relatorio_id: str, token: str, request: Request):
     if st != "done":
         # queued | running → ainda processando; failed/cancelled → erro amigável.
         if st in ("failed", "cancelled"):
-            return {"status": "erro", "mensagem": "Não conseguimos concluir sua análise. Nosso time vai te contatar."}
+            try:
+                tbl(sb, "analise_gratuita").delete().eq("relatorio_id", relatorio_id).execute()
+                logger.info("entitlement liberado no polling de falha rel=%s", relatorio_id)
+            except Exception as e:
+                logger.warning("liberação de entitlement no polling falhou (segue) rel=%s: %s", relatorio_id, e)
+            return {"status": "erro", "mensagem": "Não conseguimos concluir sua análise. Você pode tentar de novo com o mesmo e-mail — ou nosso time te contata."}
         return {"status": "processando", "eta_min": _ETA_MIN}
 
     # SUBSET free (gateia A9/concorrentes completos/financeiro/PDF — só no pago).
