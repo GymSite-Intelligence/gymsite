@@ -2,6 +2,14 @@
 
 Plataforma de inteligência de mercado para academias: relatórios de viabilidade cruzando CNPJ, CNO, Google Maps e análise financeira (pipeline de agentes Google ADK A0–A9). Backend Python/FastAPI + Supabase; frontend React/Vite; deploy Cloud Run.
 
+## Como falar com o Marcelo
+
+Linguagem natural, menos técnica. Ele é o dono do produto, não precisa de jargão de implementação pra decidir. Ao reportar:
+
+- **Erro:** descrever curto e em português comum o que quebrou e o efeito prático, ANTES do detalhe técnico. Ex.: "O botão de gerar de novo não funcionava porque o navegador travava antes de mandar o pedido" — não "fetchRelatorioInputsForRerun rejeita a Promise antes do POST".
+- **Melhoria:** sempre dar um **exemplo de uso** de como fica melhor pra quem usa. Ex.: "Agora, se o relatório falhar no meio, o mesmo e-mail pode pedir de novo sem ficar travado" — não só "libera o entitlement no mark_failed".
+- Nome de arquivo/função/erro exato pode entrar, mas depois da explicação simples, não no lugar dela.
+
 ## Fonte de verdade: `.agent/`
 
 O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS Code/Gemini). Ler sob demanda — nunca tudo de uma vez:
