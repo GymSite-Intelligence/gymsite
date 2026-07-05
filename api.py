@@ -194,6 +194,23 @@ def _pipeline_stale_cutoff() -> datetime:
     return datetime.now(timezone.utc) - age
 
 
+def _liberar_entitlement_analise_gratuita(sb, relatorio_id: str) -> None:
+    try:
+        from backend.routers.site_agent import _ANON_ORG_ID
+        from tools.db_schema import tbl
+        rel = (
+            tbl(sb, "relatorios").select("org_id")
+            .eq("id", relatorio_id).limit(1).execute()
+        )
+        org = ((rel.data or [{}])[0] or {}).get("org_id")
+        if str(org) != _ANON_ORG_ID:
+            return
+        tbl(sb, "analise_gratuita").delete().eq("relatorio_id", relatorio_id).execute()
+        logger.info("análise gratuita liberada para nova tentativa rel=%s", relatorio_id)
+    except Exception as e:
+        logger.warning("liberação do entitlement falhou (segue) rel=%s: %s", relatorio_id, e)
+
+
 def _mark_pipeline_failed(
     sb,
     relatorio_id: str,
@@ -209,6 +226,7 @@ def _mark_pipeline_failed(
         }).eq("id", relatorio_id).execute()
     except Exception:
         pass
+    _liberar_entitlement_analise_gratuita(sb, relatorio_id)
 
 
 def _recover_stale_running_reports(sb, *, relatorio_id: str | None = None) -> int:
@@ -2944,6 +2962,31 @@ class AssistenteChatOutput(BaseModel):
     interacao_id: str | None = None  # referência pro feedback (FT dataset)
 
 
+def _plano_permite_assistente(org_id: str | None) -> bool:
+    permitidos = {p.strip().lower() for p in (os.getenv("ASSISTENTE_PLANOS_PERMITIDOS") or "").split(",") if p.strip()}
+    if not permitidos:
+        return True
+    if not org_id:
+        return False
+    try:
+        from tools.db_schema import tbl
+        sb = _supabase_client()
+        res = tbl(sb, "organizations").select("plano").eq("id", org_id).limit(1).execute()
+        plano = ((res.data or [{}])[0].get("plano") or "").strip().lower()
+        return plano in permitidos
+    except Exception as exc:
+        logger.warning("checagem de plano do assistente falhou (liberando): %s", exc)
+        return True
+
+
+def _exigir_plano_assistente(org_id: str | None) -> None:
+    if not _plano_permite_assistente(org_id):
+        raise HTTPException(
+            status_code=403,
+            detail="O consultor é exclusivo dos planos com consultoria. Fale com a gente pra ativar no seu plano.",
+        )
+
+
 @app.post("/api/assistente/chat", response_model=AssistenteChatOutput)
 async def assistente_chat(request: Request, payload: AssistenteChatInput) -> AssistenteChatOutput:
     """Endpoint do GymSite Assistant — responde perguntas usando Tinker SamplingClient.
@@ -2951,7 +2994,8 @@ async def assistente_chat(request: Request, payload: AssistenteChatInput) -> Ass
     Requer autenticação JWT. Opcionalmente aceita um relatorio_id para
     contextualizar a resposta em um relatório específico.
     """
-    user_id, _ = _require_authenticated(request)
+    user_id, org_id = _require_authenticated(request)
+    _exigir_plano_assistente(org_id)
 
     # Lazy imports — evita quebra no startup se tinker não estiver instalado
     try:
@@ -3058,6 +3102,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput, backgr
     from services.chat_state import atualizar_sessao
 
     user_id, org_from_jwt = _require_authenticated(request)
+    _exigir_plano_assistente(org_from_jwt)
 
     try:
         resultado = processar_mensagem(
