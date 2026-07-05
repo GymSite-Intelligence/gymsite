@@ -43,6 +43,15 @@ _CHAT_SESSOES_IP_DIA = int(os.getenv("SITE_CHAT_SESSOES_IP_DIA") or "2")
 _CHAT_TURNOS_PROJETO = int(os.getenv("SITE_CHAT_TURNOS_PROJETO") or "10")
 _CHAT_MODO_DEGUSTACAO = (os.getenv("SITE_CHAT_MODO_DEGUSTACAO") or "0").strip().lower() in ("1", "true", "yes")
 _CHAT_BYPASS_TOKEN = (os.getenv("SITE_CHAT_BYPASS_TOKEN") or "").strip()
+_EMAILS_BYPASS_ANALISE = {
+    e.strip().lower()
+    for e in (os.getenv("SITE_ANALISE_EMAIL_BYPASS") or "teste@gymsite.com.br").split(",")
+    if e.strip()
+}
+
+
+def _email_com_bypass(email: str) -> bool:
+    return email.lower().strip() in _EMAILS_BYPASS_ANALISE
 
 
 def _ip_na_allowlist(ip: str | None) -> bool:
@@ -235,16 +244,19 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
                             detail="Verificação anti-bot falhou.")
 
     sb = _sb()
+    bypass = _email_com_bypass(data.email)
+    if bypass:
+        logger.info("analise gratuita com bypass de entitlement email=%s", data.email)
 
     # 2. Entitlement: 1 grátis por email.
-    if _email_ja_usou(sb, data.email):
+    if not bypass and _email_ja_usou(sb, data.email):
         return AnaliseResposta(
             status="quota_used",
             mensagem="Você já usou sua análise gratuita. Fale com nosso time para o relatório completo.",
         )
 
     # 3. Caps (IP/dia, global/dia) e 4. allowance SearchAPI → overflow.
-    if _cap_estourado(sb, ip) or _searchapi_sem_folga():
+    if not bypass and (_cap_estourado(sb, ip) or _searchapi_sem_folga()):
         # Captura o lead ANTES de retornar — a mensagem promete follow-up por
         # e-mail; sem isso o contato se perderia. Não consome o entitlement.
         _capturar_lead(sb, data, background)
@@ -274,22 +286,24 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
     tbl(sb,"relatorios").update({"access_token": access_token}).eq("id", relatorio_id).execute()
 
     # 6. Grava entitlement (unique(email) é o guard duro contra corrida).
-    try:
-        tbl(sb,"analise_gratuita").insert({
-            "email": data.email.lower().strip(),
-            "ip": ip,
-            "relatorio_id": relatorio_id,
-            "user_agent": request.headers.get("user-agent"),
-            "utm": {"source": data.utm_source, "medium": data.utm_medium, "campaign": data.utm_campaign},
-        }).execute()
-    except Exception:  # corrida: outro request do mesmo email ganhou
-        return AnaliseResposta(
-            status="quota_used",
-            mensagem="Você já usou sua análise gratuita. Fale com nosso time para o relatório completo.",
-        )
+    if not bypass:
+        try:
+            tbl(sb,"analise_gratuita").insert({
+                "email": data.email.lower().strip(),
+                "ip": ip,
+                "relatorio_id": relatorio_id,
+                "user_agent": request.headers.get("user-agent"),
+                "utm": {"source": data.utm_source, "medium": data.utm_medium, "campaign": data.utm_campaign},
+            }).execute()
+        except Exception:  # corrida: outro request do mesmo email ganhou
+            return AnaliseResposta(
+                status="quota_used",
+                mensagem="Você já usou sua análise gratuita. Fale com nosso time para o relatório completo.",
+            )
 
     # 7. Lead pro CRM/Apollo (best-effort, não bloqueia).
-    _capturar_lead(sb, data, background)
+    if not bypass:
+        _capturar_lead(sb, data, background)
 
     # 8. Enfileira o MESMO pipeline.
     await _enqueue_ou_background({
