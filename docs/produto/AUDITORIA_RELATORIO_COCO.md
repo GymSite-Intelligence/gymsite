@@ -190,6 +190,35 @@ narrativo demografia→elasticidade→posicionamento entre os blocos; coluna de 
 tabela de empreendimentos. Diferencial nosso a preservar: reproduzibilidade das contas
 (que ele não tem) + consistência interna.
 
+## 7. Etapa 2 EXECUTADA — memória de cálculo dos scores (07/07)
+
+**Reprodução completa do 5.97/6.0 do Cocó, componente a componente:**
+
+- **Demográfico 10.0 ✓**: pop_faixa ≥ 50.000 (+4) + renda 4.953 ≥ R$ 2.500 (+4) +
+  base 2.0 = 10.0 (`calcular_score_demografico`, cortes em parametros_metodologia).
+- **Competitivo 1.9 ✓ — e aqui morava um BUG**: a fórmula
+  `bonus(saturação) + (10 − min(n×0,4, 4)×2)/10 − rating/5×2` com n=10 e rating 4,5
+  dá 1.9 SOMENTE com saturação MEDIO (bônus 3,5). Com o rótulo EXIBIDO no relatório
+  (SATURADO, bônus 0) dá **0.0**. Causa: o score era calculado com
+  `classificar_saturacao(n, raio 3km)` — densidade que DILUI (10÷28,3 km² = MEDIO) —
+  e depois o cross-check trocava o rótulo pra SATURADO (contagem no bairro ≥10)
+  **sem recalcular o score**. Mesma família do bug do INDETERMINADO×resumo.
+  **FIX aplicado no A6**: após o gate, recalcula score_concorrencia + score_bairro +
+  score_top1 (antes/depois gravados no cross_check pra auditoria).
+- **Viabilidade 6.0 ✓** (plausível): payback 26m na banda regular (+2) + ocupação no
+  break-even na banda boa (+2) + base 2.0 = 6.0 (`calcular_score_viabilidade`).
+- **score_bairro = MÉDIA SIMPLES das 3 dimensões**: (10 + 1,9 + 6)/3 = **5,97** ✓
+  (o PDF exibe 6.0 arredondado). **Pós-fix, o Cocó recalcula pra (10 + 0 + 6)/3 =
+  5,33** — mais conservador e coerente com o rótulo SATURADO.
+- Sobre o run de junho (score_concorrencia = 0.0): consistente com a mesma fórmula
+  recebendo SATURADO — os dois runs divergiam porque o INSUMO saturação vinha de
+  réguas diferentes (densidade × contagem), não por mudança de fórmula.
+- Regressão da memória de cálculo: `tools/test_score_metodologia.py` — se fórmula ou
+  parâmetro mudar, os números mudam e o teste acusa.
+- PENDÊNCIA menor registrada: o veredito heurístico do top1 é calculado ANTES do
+  cross-check — com o score recalculado depois, pode ficar um degrau mais otimista
+  que o score final (só afeta borda; revisar quando mexer no A8/veredito).
+
 ## 6. Fila da Etapa 2
 
 - Metodologia dos NOSSOS scores: auditar como o motor calcula score_bairro,

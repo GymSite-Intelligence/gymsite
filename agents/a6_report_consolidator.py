@@ -2574,6 +2574,25 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 cross_check_concorrentes["nivel_saturacao_anterior"] = nivel_saturacao
                 cross_check_concorrentes["nivel_saturacao_bairro"] = _sat_novo
                 nivel_saturacao = _sat_novo
+                # Propaga ao SCORE (auditoria Cocó 4b211a02): o score_concorrencia foi
+                # calculado com a saturação por DENSIDADE do raio 3km (10÷28km² = MEDIO
+                # → 1.9) e o relatório exibia SATURADO do gate — a fórmula com o rótulo
+                # exibido dá 0.0. Recalcula score_concorrencia + médias com o gate.
+                try:
+                    from tools.competitor_tools import calcular_score_concorrencia
+
+                    _rmed_cc = _safe_float(comp.get("rating_medio")) or 0.0
+                    cross_check_concorrentes["score_concorrencia_anterior"] = score_concorrencia
+                    score_concorrencia = calcular_score_concorrencia(_gated, _rmed_cc, _sat_novo)
+                    cross_check_concorrentes["score_concorrencia_pos_gate"] = score_concorrencia
+                    _dims = [s for s in [score_demografico, score_concorrencia, score_viab] if s is not None]
+                    if _dims:
+                        score_bairro = round(sum(_safe_float(s) for s in _dims) / len(_dims), 2)
+                    _dims_t1 = [s for s in [top1_geoscout, score_demografico, score_concorrencia, score_viab] if s is not None]
+                    if _dims_t1:
+                        score_top1_candidato = round(sum(_safe_float(s) for s in _dims_t1) / len(_dims_t1), 2)
+                except Exception:
+                    logger.warning("A6 recalc score pós-gate falhou", exc_info=True, extra={"agent": "A6"})
             # Persiste aninhado no bloco de anéis (coluna jsonb existente).
             if isinstance(aneis_competitivos_resumo, dict) and cross_check_concorrentes:
                 aneis_competitivos_resumo["cross_check"] = cross_check_concorrentes
