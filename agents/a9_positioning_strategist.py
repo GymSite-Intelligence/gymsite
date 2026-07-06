@@ -361,20 +361,37 @@ def _concorrentes_para_oferta(state: dict) -> list[dict]:
     return out
 
 
+def _servicos_minerados_state(state: dict) -> set[str]:
+    """Serviços minerados pelo offer_mapper (site+IG, praça inteira) direto do state —
+    cobre os concorrentes fora do detalhado (CT Greenlife) cuja oferta não chega
+    mesclada em nenhum dict do A3b/A6."""
+    om = state.get("oferta_concorrentes")
+    if isinstance(om, str):
+        try:
+            om = json.loads(om)
+        except Exception:
+            return set()
+    inner = om.get("oferta_concorrentes") if isinstance(om, dict) else None
+    svcs: set[str] = set()
+    for v in (inner or {}).values():
+        if isinstance(v, dict):
+            svcs |= {_SERVICOS_CATALOGO[k] for k in (v.get("modalidades") or []) if k in _SERVICOS_CATALOGO}
+    return svcs
+
+
 def _gaps_reais(state: dict) -> list[str] | None:
     """Lista determinística dos serviços que NENHUM concorrente da praça ANUNCIA
-    (nome + planos_precos.inclui + modalidades + servicos_ig, sobre a praça inteira).
-    Substrato da dimensão CRIAR da ERRC — SOBREPÕE o gaps do LLM (que chutava genérico)."""
-    from collections import Counter
-
+    (nome + planos_precos.inclui + modalidades + servicos_ig + oferta minerada do
+    state, sobre a praça inteira). Substrato da dimensão CRIAR da ERRC — SOBREPÕE
+    o gaps do LLM (que chutava genérico)."""
     concs = _concorrentes_para_oferta(state)
-    if not concs:
+    minerados = _servicos_minerados_state(state)
+    if not concs and not minerados:
         return None
-    pen: Counter = Counter()
+    oferecidos: set[str] = set(minerados)
     for c in concs:
-        for s in _servicos_do_concorrente(c):
-            pen[s] += 1
-    return sorted(r for r in set(_SERVICOS_CATALOGO.values()) if pen.get(r, 0) == 0)
+        oferecidos |= _servicos_do_concorrente(c)
+    return sorted(r for r in set(_SERVICOS_CATALOGO.values()) if r not in oferecidos)
 
 
 def _resumo_oferta_e_gaps(state: dict) -> str | None:
