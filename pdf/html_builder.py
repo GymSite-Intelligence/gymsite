@@ -327,11 +327,17 @@ table.d thead { display:table-header-group; }
 </div>
 <div class="timing-d"><strong>Diretriz de timing:</strong> {{ demanda.moradores }} novos moradores em obra. Upside captável com marketing, sem CAPEX extra. <em>Fonte: CNO/RFB + IBGE Censo 2022.</em></div>
 {% if demanda.obras %}
-<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Fonte</th><th>Planta</th><th>Entrega</th><th>Fitness</th><th>Moradores</th><th>Leads</th><th>Receita/mês</th></tr>
-{% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}</td><td>{% if o.real %}<span class="pill ok">real</span>{% else %}<span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>{{ o.moradores }}</td><td>~{{ o.captura }}</td><td>R$ {{ o.receita }}</td></tr>{% endfor %}
-<tr class="rec"><td>Total (residenciais)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ demanda.moradores }}</td><td>~{{ demanda.captura }}</td><td>R$ {{ demanda.receita }}</td></tr>
+<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Fonte</th><th>Planta</th><th>Entrega</th><th>Fitness</th><th>Aderência</th><th>Moradores</th><th>Leads</th><th>Receita/mês</th></tr>
+{% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}</td><td>{% if o.real %}<span class="pill ok">real</span>{% else %}<span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>{% if o.aderencia %}<span class="pill {{ o.aderencia_cls }}">{{ o.aderencia }}</span>{% else %}—{% endif %}</td><td>{{ o.moradores }}</td><td>~{{ o.captura }}</td><td>R$ {{ o.receita }}</td></tr>{% endfor %}
+<tr class="rec"><td>Total (residenciais)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ demanda.moradores }}</td><td>~{{ demanda.captura }}</td><td>R$ {{ demanda.receita }}</td></tr>
 </table>
-<div class="note">Cadeia: moradores (área-média ÷ m²/morador, clamp teto IBGE) → leads = moradores × penetração fitness × market share → receita/mês. Unidades <strong>real</strong> = página do lançamento; <strong>proxy</strong> = área÷m².</div>{% endif %}{% endif %}
+<div class="note">Cadeia: moradores (área-média ÷ m²/morador, clamp teto IBGE) → leads = moradores × penetração fitness × market share → receita/mês. Unidades <strong>real</strong> = página do lançamento; <strong>proxy</strong> = área÷m². <strong>Aderência</strong> ao modelo recomendado: planta ≤ 90 m² = alvo primário; ≥ 140 m² ou imóvel ≥ R$ 1,5 mi = baixa (padrão luxo — academia própria/personal); imóvel ≤ R$ 600 mil confirma alta.</div>{% endif %}
+{% if demanda.radar %}
+<div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Radar de pré-lançamentos (sem registro CNO — informativo, FORA dos totais)</div>
+<table class="d" style="margin-top:6px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Planta</th><th>Preço base</th><th>Entrega</th></tr>
+{% for r in demanda.radar %}<tr><td>{{ r.nome }}</td><td>{{ r.unidades }}</td><td>{{ r.planta }}</td><td>{{ r.preco }}</td><td>{{ r.entrega }}</td></tr>{% endfor %}
+</table>
+<div class="note">Empreendimentos em VENDA que ainda não iniciaram obra (sem CNO): sinal de demanda futura e de parceria de estande, mas sem carimbo registral — por isso NÃO somam na captura/receita acima.</div>{% endif %}{% endif %}
 
 {% if bairros_viz %}
 <div class="sec">Bairros Vizinhos Recomendados</div>
@@ -410,6 +416,43 @@ def _int(v) -> str:
         return f"{int(v):,}".replace(",", ".")
     except (TypeError, ValueError):
         return "—"
+
+
+# Aderência do empreendimento ao modelo recomendado, pela planta média (proxy de
+# padrão — auditoria Gemini 05/07: BS Rubi/Casa Monã ≥150m² têm academia própria no
+# condomínio = baixa aderência; Sensia/Mood/Like 50-80m² são o alvo do Mid Market).
+_ADERENCIA_AREA_ALTA_MAX_M2 = 90.0
+_ADERENCIA_AREA_BAIXA_MIN_M2 = 140.0
+
+
+_ADERENCIA_PRECO_BAIXA_MIN = 1_500_000.0  # imóvel ≥ 1,5mi → academia própria/personal
+_ADERENCIA_PRECO_ALTA_MAX = 600_000.0     # imóvel ≤ 600k → alvo primário do Mid
+
+
+def _aderencia_modelo(area_media, preco_max=None) -> tuple[str | None, str | None]:
+    """Aderência v2 (SPEC_REFINO_LANCAMENTO): planta é a régua-base; o PREÇO do
+    imóvel, quando capturado da página do lançamento, rebaixa/confirma — BS Rubi
+    tem planta 'só' 154-229m² mas ticket de R$ 2,2mi+ (baixa aderência por renda)."""
+    try:
+        p = float(preco_max) if preco_max is not None else None
+    except (TypeError, ValueError):
+        p = None
+    if p is not None and p >= _ADERENCIA_PRECO_BAIXA_MIN:
+        return "BAIXA", "no"
+    try:
+        a = float(area_media)
+    except (TypeError, ValueError):
+        return (("ALTA", "ok") if p is not None and p <= _ADERENCIA_PRECO_ALTA_MAX
+                else (None, None))
+    if a <= 0:
+        return None, None
+    if a <= _ADERENCIA_AREA_ALTA_MAX_M2:
+        return "ALTA", "ok"
+    if a >= _ADERENCIA_AREA_BAIXA_MIN_M2:
+        return "BAIXA", "no"
+    if p is not None and p <= _ADERENCIA_PRECO_ALTA_MAX:
+        return "ALTA", "ok"
+    return "MÉDIA", "mid"
 
 
 def _coerce_int(v) -> int | None:
@@ -954,6 +997,9 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         for ob in (df.get("obras") or []):
             if not isinstance(ob, dict) or not ob.get("provavel_residencial"):
                 continue
+            _pb = ob.get("preco_base") if isinstance(ob.get("preco_base"), dict) else {}
+            aderencia, aderencia_cls = _aderencia_modelo(
+                ob.get("area_privativa_media"), _pb.get("max"))
             obras_ficha.append({
                 "nome": str(ob.get("empreendimento") or ob.get("construtora") or "—")[:28],
                 "unidades": _int(ob.get("unidades_est")),
@@ -961,6 +1007,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
                 "area": f"{ob.get('area_privativa_media')} m²" if ob.get("area_privativa_media") else "—",
                 "entrega": str(ob.get("entrega") or "—")[:7],
                 "fitness": bool(ob.get("amenidade_fitness")),
+                "aderencia": aderencia,
+                "aderencia_cls": aderencia_cls,
                 "moradores": _int(ob.get("moradores_est")) if ob.get("moradores_est") else "—",
                 "captura": (round(float(ob.get("captura_est"))) if ob.get("captura_est") else "—"),
                 "receita": _brl(ob.get("receita_mensal_est")) if ob.get("receita_mensal_est") else "—",
@@ -980,11 +1028,26 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
                 "responsavel": (resp.get("responsavel_parceria") or "")[:40] or None,
                 "contato": (resp.get("contato") or "")[:30] or None,
             })
+        radar_ficha = []
+        for r in (df.get("radar_pre_lancamentos") or [])[:4]:
+            if not isinstance(r, dict):
+                continue
+            _rp = r.get("preco_base") if isinstance(r.get("preco_base"), dict) else {}
+            _pl = r.get("areas_plantas") or []
+            radar_ficha.append({
+                "nome": str(r.get("empreendimento") or "—")[:34],
+                "unidades": _int(r.get("unidades_est")) if r.get("unidades_est") else "—",
+                "planta": (f"{_pl[0]:.0f}–{_pl[-1]:.0f} m²" if len(_pl) > 1
+                           else (f"{_pl[0]:.0f} m²" if _pl else "—")),
+                "preco": f"R$ {_brl(_rp.get('min'))}" if _rp.get("min") else "—",
+                "entrega": str(r.get("previsao_entrega") or "—"),
+            })
         demanda = {
             "n": int(df.get("provavel_residencial_n") or 0),
             "captura": int(float(df.get("captura_total_est") or 0)),
             "receita": _brl(df.get("receita_total_mensal_est")),
             "moradores": _brl(df.get("moradores_total_est")),
+            "radar": radar_ficha,
             "obras": obras_ficha[:6],
             "janela_quente_n": int(df.get("janela_quente_n") or 0),
             "janelas": janelas[:4],

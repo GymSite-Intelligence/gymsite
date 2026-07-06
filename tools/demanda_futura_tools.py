@@ -384,6 +384,7 @@ def demanda_futura_detalhada(
     market_share: float | None = None,
     ticket_brl: float | None = None,
     _refino_fn: Any = None,
+    _refino_det_fn: Any = None,
     _censo_fn: Any = None,
     _demo_fn: Any = None,
 ) -> dict[str, Any]:
@@ -438,10 +439,18 @@ def demanda_futura_detalhada(
 
     linhas: list[dict] = []
     tot = {"captura_est": 0.0, "moradores_est": 0.0, "receita_est": 0.0}
+    from tools.lancamento_fetcher import refinar_lancamento_deterministico
+
+    refino_det_fn = _refino_det_fn or refinar_lancamento_deterministico
     for i, o in enumerate(obras):
-        if i < top_n:
-            o = {**o, "cidade": cidade, "uf": uf}  # query do refino precisa de cidade/uf
-        refino = refino_fn(o) if i < top_n else None
+        o = {**o, "cidade": cidade, "uf": uf}  # query dos refinos precisa de cidade/uf
+        # Camada determinística PRIMEIRO (barata → TODAS as obras): página do
+        # lançamento via SearchAPI+httpx (SPEC_REFINO_LANCAMENTO_DETERMINISTICO —
+        # o proxy área/75 inventava unidades, ex.: Like 129 vs 88 reais). Grounding
+        # LLM vira FALLBACK e continua restrito às top_n (custo).
+        refino = refino_det_fn(o)
+        if refino is None and i < top_n:
+            refino = refino_fn(o)
         unid_exatas = (refino or {}).get("unidades_exatas")
         tipologia = (refino or {}).get("tipologia")
         areas_plantas = (refino or {}).get("areas_plantas")
@@ -492,8 +501,20 @@ def demanda_futura_detalhada(
             "fonte_url": (refino or {}).get("fonte_url"),
         })
 
+    # Radar de pré-lançamentos (Task #12): venda SEM CNO ainda — informativo,
+    # NUNCA soma nos totais (sem registro = sem carimbo). Fail-soft.
+    radar_pre = []
+    try:
+        from tools.lancamento_fetcher import radar_pre_lancamentos
+
+        if bairro:
+            radar_pre = radar_pre_lancamentos(bairro, cidade, obras_cno=obras)
+    except Exception:
+        logger.warning("radar pré-lançamentos falhou", exc_info=True)
+
     return {
         "status": "ok", "cidade": cidade, "uf": uf, "bairro": bairro,
+        "radar_pre_lancamentos": radar_pre,
         "n_obras": len(obras), "refinadas": min(top_n, len(obras)),
         "provavel_residencial_n": sum(1 for l in linhas if l["provavel_residencial"]),
         # Transparência: de ONDE veio a classificação residencial (fonte por contagem).
