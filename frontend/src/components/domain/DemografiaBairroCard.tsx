@@ -56,7 +56,11 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
             icon={Banknote}
             label="renda per capita"
             value={_brl(block.renda_media as number)}
-            sub={`ref. ${block.renda_data_referencia ?? '—'} (Censo/IDH)`}
+            sub={
+              block.idh_renda != null
+                ? `ref. ${block.renda_data_referencia ?? '—'} · IDH-Renda (Atlas/CKAN)`
+                : `proxy: rend. do responsável ÷ moradores/dom. · IBGE Censo ${block.renda_data_referencia ?? '2022'}`
+            }
           />
         )}
         {block.idh_renda != null && (

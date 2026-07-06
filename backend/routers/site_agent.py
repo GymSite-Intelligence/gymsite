@@ -117,6 +117,7 @@ class AnaliseInput(BaseModel):
     perfil: Optional[str] = Field(default=None, max_length=40)        # vou_abrir | ja_opero
     tipo_negocio: str = Field(default="academia", max_length=40)
     turnstile_token: Optional[str] = None
+    dev_token: Optional[str] = Field(default=None, max_length=120)
     utm_source: Optional[str] = Field(default=None, max_length=120)
     utm_medium: Optional[str] = Field(default=None, max_length=120)
     utm_campaign: Optional[str] = Field(default=None, max_length=160)
@@ -238,10 +239,12 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
 
     ip = _client_ip(request)
 
-    # 1. Anti-bot (fail-closed — o run gasta dinheiro).
-    if not await verificar_turnstile(data.turnstile_token, ip):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Verificação anti-bot falhou.")
+    # 1. Anti-bot (fail-closed — o run gasta dinheiro). Dev/owner pula via
+    #    allowlist de IP ou token (mesmo mecanismo do chat).
+    if not _bypass_autorizado(request, data.dev_token, ip):
+        if not await verificar_turnstile(data.turnstile_token, ip):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Verificação anti-bot falhou.")
 
     sb = _sb()
     bypass = _email_com_bypass(data.email)
@@ -455,8 +458,7 @@ async def status_analise(relatorio_id: str, token: str, request: Request):
     # SUBSET free (gateia A9/concorrentes completos/financeiro/PDF — só no pago).
     out = (
         tbl(sb,"relatorio_outputs")
-        .select("veredito, resumo_executivo, nivel_saturacao, score_bairro, "
-                "total_concorrentes_analisados, rating_medio_concorrentes, modelo_recomendado")
+        .select("*")
         .eq("relatorio_id", relatorio_id).maybe_single().execute()
     ).data or {}
 
@@ -467,6 +469,11 @@ async def status_analise(relatorio_id: str, token: str, request: Request):
         .order("rating_oficial", desc=True)
         .limit(3).execute()
     ).data or []
+
+    rel_meta = (
+        tbl(sb,"relatorios").select("bairro")
+        .eq("id", relatorio_id).maybe_single().execute()
+    ).data or {}
 
     return {
         "status": "pronto",
@@ -479,8 +486,56 @@ async def status_analise(relatorio_id: str, token: str, request: Request):
             "rating_medio_concorrentes": out.get("rating_medio_concorrentes"),
             "modelo_recomendado": out.get("modelo_recomendado"),
             "top_concorrentes": comp,
+            "extras": _extras_teaser(out, rel_meta.get("bairro")),
         },
         "upsell": "Veja o relatório completo: concorrência detalhada, planos/preços, cenários financeiros e posicionamento.",
+    }
+
+
+def _extras_teaser(out: dict, bairro_analisado: str | None) -> dict:
+    def _lista(v):
+        return v if isinstance(v, list) else []
+
+    dores = _lista(out.get("dores_dominantes"))
+    dor_top = dores[0] if dores and isinstance(dores[0], dict) else {}
+
+    brechas = [s for s in _lista(out.get("servicos_nao_oferecidos")) if isinstance(s, str)]
+
+    entrantes = out.get("entrantes_cnpj_90d")
+    entrantes_total = None
+    if isinstance(entrantes, dict):
+        entrantes_total = (
+            entrantes.get("total")
+            or entrantes.get("count")
+            or (len(entrantes.get("empresas")) if isinstance(entrantes.get("empresas"), list) else None)
+        )
+    elif isinstance(entrantes, list):
+        entrantes_total = len(entrantes)
+
+    alternativos = _lista(out.get("bairros_alternativos"))
+    alt_motivo = None
+    if alternativos and isinstance(alternativos[0], dict):
+        alt_motivo = alternativos[0].get("motivo")
+
+    cenarios = out.get("viabilidade_3_cenarios")
+    payback_mid = None
+    if isinstance(cenarios, dict) and isinstance(cenarios.get("mid"), dict):
+        payback_mid = cenarios["mid"].get("payback_meses") or cenarios["mid"].get("payback")
+
+    return {
+        "bairro_analisado": bairro_analisado,
+        "dor_top": {"dor": dor_top.get("dor"), "mencoes": dor_top.get("mencoes")} if dor_top else None,
+        "dores_total": len(dores) or None,
+        "brechas_amostra": brechas[:2] or None,
+        "brechas_total": len(brechas) or None,
+        "entrantes_90d_total": entrantes_total,
+        "aluguel_m2": {
+            "min": out.get("aluguel_min_m2"),
+            "max": out.get("aluguel_max_m2"),
+            "mediana": out.get("aluguel_mediana_m2"),
+        } if out.get("aluguel_mediana_m2") or out.get("aluguel_min_m2") else None,
+        "bairro_alternativo_motivo": alt_motivo,
+        "payback_mid_meses": payback_mid,
     }
 
 
