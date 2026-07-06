@@ -1,0 +1,160 @@
+# Auditoria cruzada — Relatório Cocó (4b211a02) · Etapa 1
+
+> 2026-07-05, disparada pela comparação com OndeAbrir. Escopo: demografia, scores,
+> viabilidade×resumo, ERRC, preços/banda tarifária, quadro Demanda (matemática + legendas).
+
+## 1. Demografia — número CONFERE, rótulo não
+
+- **60.165 hab no bairro** é internamente consistente: 22.645 domicílios × 2,66
+  moradores/dom = 60.236 ≈ 60.165 ✓; 22.645 ÷ 105 setores = 216 dom/setor (faixa IBGE) ✓.
+- ⚠️ Inconsistência de RÓTULO na própria seção: card diz "105 setores censitários",
+  rodapé do quadro etário diz "183 setores agregados". Um dos dois está errado ou são
+  bases diferentes sem explicação. Corrigir + carimbar TODO número: "X hab · base Y ·
+  Censo 2022" (mesma régua que cobramos do OndeAbrir).
+- Comparação com OndeAbrir é maçã×laranja legítima: nosso 60,1k = BAIRRO REAL (polígono);
+  os 27,6k deles = raio de 1 km (3,14 km²). Ambos certos, bases diferentes — rotular sempre.
+
+## 2. Viabilidade "Indeterminado" × Resumo "Mid Market" — contradição de propagação
+
+Causa provável (evidência do run de junho): `score_concorrencia = 0.0` e
+`panorama_competitivo = None` → A8 marca viabilidade/oceano INDETERMINADO. Mas o A4 roda
+os benchmarks financeiros mesmo assim e recomenda modelo; o Resumo Executivo consome
+`modelo_recomendado` sem checar o veredito de viabilidade. **Fix:** quando viabilidade =
+INDETERMINADO, o resumo deve dizer "Mid Market sugerido POR BENCHMARK — demanda local não
+validada neste run" (propagar o estado, não escondê-lo). Investigar por que
+score_concorrencia zerou com 20+ concorrentes coletados (guard do A8?).
+
+## 3. Matriz ERRC — determinística, MAS com base enviesada (bug confirmado)
+
+- **Não é hardcode nem chute de LLM**: `_gaps_reais()` (a9_positioning_strategist.py:315)
+  calcula penetração de serviços sobre `concorrentes_detalhados` usando oferta real
+  extraída de site+Instagram (`competitor_offer_mapper.py`, keyword matching, sem LLM).
+  O LLM é SOBREPOSTO pelo dado ("fonte_gaps: deterministico_oferta_concorrentes").
+- **O bug:** a base só contém as academias TRADICIONAIS analisadas — o filtro de
+  relevância do A3b (competitor_tools.py:315-393) REMOVE crossfit/lutas/studios de um
+  relatório tipo "academia". Resultado: Eikō Artes Marciais, Krav Maga FSAKM e TBOX/box
+  estão na praça mas invisíveis pro cálculo → "artes marciais/crossfit: nenhum concorrente
+  oferece" com porta especializada na esquina. Além disso, Smart Fit tem site JS-rendered
+  (mapper pula, documentado) → oferta dela também não entra.
+- **Fix em 2 camadas:** (a) penetração calculada sobre o PARQUE do raio (incluindo
+  especializados excluídos do relatório-alvo), com peso "porta especializada existe";
+  (b) rotular honestamente: "entre as N academias tradicionais com oferta mapeada".
+- **Avaliação física como gap:** legislação federal NÃO obriga avaliação física de entrada
+  (CREF exige profissional habilitado; anamnese é recomendação; alguns estados exigem
+  atestado médico). Mas academias grandes costumam oferecer — "nenhum oferece" é
+  implausível; provável falha de extração (serviço não anunciado em site/IG ≠ não
+  oferecido). TODO: validar enunciado com o agente Regulatório e trocar "não oferece"
+  por "não anuncia" quando a fonte é site/IG.
+
+## 4. Preços e banda tarifária
+
+- **Indicador "R$ 69,99–107,00/mês":** hipótese forte = faixa de mensalidade do segmento
+  econômico da cidade vinda do A7/market_context (benchmark), NÃO medição dos concorrentes
+  do raio. Confirmar campo de origem e ROTULAR ("benchmark econômico Fortaleza", não
+  "preços da concorrência").
+- **Posicionamento R$ 185 · banda R$ 100–350:** determinístico do A4 (`parametros_
+  metodologia` + renda do bairro): piso = ticket mínimo sustentável do modelo; teto =
+  % da renda local + percentil do tier. Documentar as variáveis NA LEGENDA do quadro
+  (o leitor não tem como saber).
+- **Preços reais da concorrência (coletados à mão pelo Marcelo):** Smart Fit Papicu
+  129,90/149,90/159,90/169,90 · VS Club 70,00 · Parque Esportes 319,99. O
+  `competitor_offer_mapper` JÁ tenta capturar planos_precos, mas Smart Fit é JS (pulada)
+  e cobertura é parcial. **Feature:** seção "Planos e preços da concorrência" no
+  relatório com os capturados + banda observada (min 70 – max 319,99 valida a banda
+  calculada 100–350 ✓, e mostra que o low-cost real da praça fura o piso).
+
+## 5. Quadro "Demanda — Matrículas vs Capacidade": MATEMÁTICA ✓, LEGENDAS DESALINHADAS
+
+**Auditoria numérica (área de referência 900 m², reproduzida):**
+- Matrículas: 1,5/2,2/3,0 ×900 = 1.350/1.980/2.700 (low) ✓ · mid e premium idem ✓
+- Capacidade física: 0,55/0,40/0,25 ×900 = 495/360/225 ✓
+- Pico realista: matr × freq ÷7 ×25% → low 1.980×2,5/7×0,25 = 176,8 ✓ · mid 90 ✓ · prem 34,7 ✓
+- Folga: 1−176/495 = 64,4% ✓ · 75,0% ✓ · 84,9% ✓
+- Pico agressivo: 2.700×2,5/7×0,25 = 241≈240 ✓ · 116 ✓ · 52≈51 ✓
+- Receita destravável: (teto−realista)×ticket → tickets implícitos R$ 95/178/341
+  (coerentes com banda 100–350) ✓
+- Colchão 85%: (0,85×capacidade − pico)÷fator pico → +2.741≈2.752 ✓ · +3.024 ✓ · ~2.497 ✓
+**Conclusão: o motor calcula certo e é reproduzível.**
+
+**O problema são as LEGENDAS: estão deslocadas (off-by-one) e duplicadas.** Ex.: o texto
+sob "Colchão até reclamação" explica a Receita destravável; o de "Share de pico" explica
+o Colchão; "m² por pessoa" carrega o texto do Break-even; "Pico no agressivo" repete a
+legenda de Frequência. Bug de mapeamento métrica→tooltip no builder do quadro (A6/pdf).
+
+**Legendas corrigidas em linguagem simples (colar no builder, na ordem):**
+1. *Matrículas conservador* — "Piso: se a conta fechar já neste cenário pessimista, o risco é baixo."
+2. *Matrículas realista* — "Base das projeções de receita (benchmark nacional ACAD/Sebrae; calibração com a demanda do bairro entra na próxima versão)."
+3. *Matrículas agressivo* — "Teto que a indústria comprova: a Smart Fit média ~2,5 mil matrículas/clube. Estreante não começa aqui."
+4. *Capacidade física simultânea* — "Quantas pessoas treinam AO MESMO TEMPO com conforto. Varia por modelo porque cada um ocupa o espaço de um jeito."
+5. *Teto de mercado* — "Máximo de matrículas que o MERCADO sustenta nesta área (≠ teto físico do prédio)."
+6. *Pico calculado* — "Pessoas dentro da academia no horário mais cheio: matrículas × idas/semana ÷ 7 × 25% (fatia do pico)."
+7. *Folga de capacidade* — "Quanto sobra no horário de pico. Ideal 40–70%: menos = fila e cancelamento; muito mais = aluguel pago por espaço vazio."
+8. *Freq. semanal* — "Vezes que o aluno treina por semana (setor: 2,0–2,5x)."
+9. *Pico agressivo × capacidade* — "Teste de estresse: mesmo no cenário máximo da indústria, o prédio aguenta? ✓ = sim."
+10. *Receita destravável* — "Quanto dá pra faturar A MAIS crescendo do realista até o teto de mercado — marketing, sem obra."
+11. *Colchão até reclamação (85%)* — "Matrículas a mais que cabem antes do pico bater 85% da capacidade — o ponto onde nascem as reclamações de lotação (visto nos reviews da praça)."
+12. *Break-even ÷ teto* — "Fatia do teto de mercado necessária só pra pagar as contas. Acima de ~60%, o modelo exige execução quase perfeita."
+13. *Share de pico medido* — "No SEU bairro, o pico real concentra 17% dos alunos (medido em 3 concorrentes) vs 25% assumido — a premissa está conservadora a seu favor."
+14. *m² por pessoa no pico* — "Espaço por aluno no horário cheio (conforto percebido)."
+
+## 5b. Achados da leitura do PDF real (4b211a02, 05/07 — 8 págs)
+
+**CORREÇÕES à auditoria acima:**
+- §4: a seção "Planos e preços da concorrência" **JÁ EXISTE** no PDF (pág. 2: Smart Fit
+  129,90/169,90 · VS Club 70 · Parque/Wellhub 319,99, via SearchAPI) + tertis de ticket
+  por segmento (pág. 3). O "não está no relatório" valia pro mini/versão anterior.
+  O "Ticket médio local R$ 69,99–107,00" provavelmente deriva desses planos coletados
+  (faixa do segmento econômico/mediano) — confirmar fórmula na Etapa 2 e ROTULAR.
+- §5: as legendas do quadro Demanda estão **corretas no frontend** (verificado em
+  CenarioFinanceiroTable.tsx — cada métrica com seu tooltip). O quadro nem existe no PDF.
+  O desalinhamento colado na revisão foi artefato da extração manual (tooltips copiados
+  em sequência). NÃO-BUG; fica a sugestão de levar o quadro ao PDF um dia.
+
+**BUGS NOVOS (mais graves que os anteriores):**
+1. **Parque Estadual do Cocó (26.383 avaliações!) e ARENA COCÓ BEACH listados como
+   "concorrentes no bairro"** (pág. 4) — o gate bairro+tipo deixou passar um parque
+   público e uma arena de beach tennis como academias. Falso positivo que mina a
+   credibilidade da contagem autoritativa (10).
+2. **"Analisados a fundo: 1"** (cross-check, pág. 3). A oferta-base do ERRC vem de 1
+   concorrente analisado + 3 com planos coletados → serviços entregues mapeados = só
+   "Musculação" → TUDO vira "oportunidade de CRIAR". Confirma e agrava o §3: o gap não
+   é só o filtro de especializados; é a base de oferta minúscula. Com TBOX (crossfit),
+   Krav Maga (artes marciais) e S3 (personal) MAPEADOS na própria página, o ERRC diz
+   "nenhum concorrente oferece crossfit/artes marciais/personal".
+3. **Célula "População" VAZIA** na tabela Demografia do PDF (pág. 2) — o dado existe
+   (60.165 no front) mas não renderiza no PDF.
+4. **Selo INVIAVEL sem motivo:** Econômico tem margem 32% e payback 16m e recebe
+   INVIAVEL (pág. 4) — o guardrail que reprova (piso de ticket? aluguel?) não é
+   explicado ao leitor. Premium idem (10%/172m — esse é óbvio). Exibir o MOTIVO.
+5. **Contagens múltiplas sem reconciliação no topo:** Sumário diz "Concorrentes 10";
+   Inteligência Competitiva mostra 3; Anéis 3; cross-check 20/10/1/9. O cross-check
+   (ótimo!) reconcilia — mas está na pág. 3 e o Sumário da pág. 1 não aponta pra ele.
+6. Rótulo "Rating médio 4.5 (recom.)" — "(recom.)" sem explicação.
+
+**Rastreabilidade fonte→fórmula (auditoria de metodologia, não de telas):**
+
+- **Renda "per capita" R$ 4.953 — fórmula encontrada e reproduzida** (`renda_bairro_loader.py`):
+  `renda_pc = V06004 (rendimento médio do RESPONSÁVEL, Censo 2022 agregados por bairro)
+  ÷ moradores_por_domicílio` → 13.175 ÷ 2,66 = 4.953 ✓ reproduz.
+  **Dois achados:** (1) isso é uma PROXY de per capita (dilui a renda do responsável pelos
+  moradores; ignora a renda dos demais) — não a renda domiciliar per capita oficial;
+  (2) o rótulo do front "ref. 2022 (Censo/IDH)" está errado no "IDH": o caminho IDH-Renda
+  (CKAN, inversão Atlas) NÃO pode ter gerado esse valor — a fórmula Atlas tem teto
+  matemático de R$ 4.034 (`_ATLAS_RENDA_MAX`) e 4.953 o excede. Fonte real: IBGE 2022.
+  **Fix de rótulo:** "Renda per capita (proxy: rendimento do responsável ÷ moradores/dom.)
+  · IBGE Censo 2022". O viés (subestima domicílios com 2 rendas) entra na metodologia.
+- **Novos CNPJ 90d = 31:** fórmula em api.py (bloco entrantes_cnpj_90d) sobre espelho RFB,
+  janela 90d, CNAE fitness, cidade. Reproduzir contagem na Etapa 2 (exige acesso ao espelho).
+- **Score 6.0 (bairro):** fórmula/pesos ainda NÃO auditados — item nº 1 da Etapa 2
+  (reproduzir o 5.97→6.0 a partir de `parametros_metodologia` + componentes 10.0/1.9/6.0).
+- Zoneamento: fonte CKAN/LUOS 236/2017 declarada no código e no PDF ✓ (metodologia visível).
+
+## 6. Fila da Etapa 2
+
+- Metodologia dos NOSSOS scores: auditar como o motor calcula score_bairro,
+  score_demografico, score_concorrencia e score_viabilidade — fórmulas, pesos e parâmetros
+  (`parametros_metodologia`), reproduzindo a conta do 5.97 do Cocó passo a passo.
+- Origem exata do indicador R$ 69,99–107 e das variáveis da banda (ler A4/A7 + params).
+- Por que score_concorrencia=0 no run (guard A8).
+- Contexto e Panorama de Mercado (coerência com market_context).
+- Perguntar ao agente Regulatório sobre avaliação física/CREF (enunciado jurídico correto).

@@ -322,6 +322,14 @@ _TIPO_ON_KW = {
     "studio_pilates": ("pilates",),
     "studio_funcional": ("funcional", "treinamento funcional", "personal", "cross training"),
 }
+# Sinal POSITIVO de fitness no nome (quando o Places/A3b não traz `tipos`): sem
+# nenhum destes E sem tipo gym/fitness_center, o candidato é fora-de-domínio
+# (parque, praça, arena de beach, shopping) mesmo carregando o bairro no nome.
+_FITNESS_NOME_KW = (
+    "academia", "fitness", "gym", "studio", "estudio", "training", "treinamento",
+    "musculacao", "esporte", "cia atletica", "companhia atletica",
+)
+
 # OFF (só p/ alvo genérico 'academia') = categorias especializadas que não são academia.
 _TIPO_OFF_ACADEMIA = (
     "crossfit", "cross training", "cross fit", "artes marciais", "jiu", "muay", "boxe",
@@ -389,11 +397,22 @@ def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
     - especializado (crossfit_box/pilates/funcional): dentro só se categoria/nome bate
       a especialidade. 'outro'/desconhecido → sem filtro."""
     tn = (tipo_negocio or "academia").strip().lower()
-    tipos = [t for t in (c.get("tipos") or []) if t not in ("gym", "fitness_center")]
+    tipos_raw = [str(t) for t in (c.get("tipos") or [])]
+    tipos = [t for t in tipos_raw if t not in ("gym", "fitness_center")]
     tipos_blob = _norm_txt(" ".join(str(x) for x in tipos))
     nome_blob = _norm_txt(c.get("nome") or "")
 
     if tn == "academia":
+        # Gate POSITIVO primeiro: precisa ter sinal de fitness na categoria do Google
+        # OU no nome — sem isso, parque estadual/arena de beach/praça que carregam o
+        # bairro no nome passavam só por não estarem na blocklist (bug Cocó 4b211a02).
+        tem_tipo_fitness = any(t in _FITNESS_TYPES for t in tipos_raw)
+        sinal_blob = nome_blob + " " + tipos_blob
+        tem_nome_fitness = any(
+            _norm_txt(k) in sinal_blob for k in _FITNESS_NOME_KW
+        )
+        if not tem_tipo_fitness and not tem_nome_fitness:
+            return False
         # categoria especializada (ex.: "Academia de crossfit", "Artes marciais") → fora.
         # Também checa o NOME (o A3b-LLM às vezes dropa `tipos`; REK/Eikō trazem a
         # especialidade no nome). Off-list do nome SEM 'natacao' (academia c/ piscina fica).

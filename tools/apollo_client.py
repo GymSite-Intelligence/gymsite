@@ -135,11 +135,29 @@ def _add_to_sequence(contact_id: str, sequence_id: str, headers: dict) -> None:
     try:
         import httpx
 
+        email_account_id = (os.getenv("APOLLO_EMAIL_ACCOUNT_ID") or "").strip() or None
+        if not email_account_id:
+            logger.warning(
+                "APOLLO_EMAIL_ACCOUNT_ID ausente — contato %s NAO entra na sequence %s",
+                contact_id, sequence_id,
+            )
+            return
+
         with httpx.Client(timeout=_TIMEOUT_S) as client:
-            client.post(
+            resp = client.post(
                 f"{_base_url()}/emailer_campaigns/{sequence_id}/add_contact_ids",
                 headers=headers,
-                json={"contact_ids": [contact_id], "send_email_from_email_account_id": None},
+                json={
+                    "contact_ids": [contact_id],
+                    "emailer_campaign_id": sequence_id,
+                    "send_email_from_email_account_id": email_account_id,
+                },
             )
+            if resp.status_code >= 400:
+                logger.warning(
+                    "Apollo add_to_sequence HTTP %s: %s", resp.status_code, resp.text[:200]
+                )
+            else:
+                logger.info("contato %s adicionado a sequence %s", contact_id, sequence_id)
     except Exception as e:  # noqa: BLE001
         logger.info("Apollo add_to_sequence ignorado: %s", e)

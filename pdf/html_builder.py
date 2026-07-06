@@ -150,7 +150,7 @@ table.d thead { display:table-header-group; }
 {% if demografia %}
 <div class="sec">Demografia do Bairro</div>
 {% if demografia.renda or demografia.pop %}<table class="d"><tr><th>Dimensão</th><th>Valor (fonte real do bairro)</th></tr>
-  {% if demografia.renda %}<tr><td>Renda per capita</td><td>{{ demografia.renda }}</td></tr>{% endif %}
+  {% if demografia.renda %}<tr><td>Renda per capita <span style="font-size:8px;color:#667">(proxy: rend. do responsável ÷ moradores/dom. · IBGE Censo 2022)</span></td><td>{{ demografia.renda }}</td></tr>{% endif %}
   {% if demografia.pop %}<tr><td>População</td><td>{{ demografia.pop }}</td></tr>{% endif %}
 </table>{% endif %}
 {% if demografia.piramide %}
