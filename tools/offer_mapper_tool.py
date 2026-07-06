@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 MAX_CONCURRENT_FETCHES = 5
 CONFIABILIDADE_MIN_SUCESSO = 0.30
 
-# Limite de academias mapeadas por relatório. A3b entrega ~10 concorrentes;
-# pegamos os primeiros N que TÊM website ou Instagram (ordem do A3b é
-# preservada pra manter o ranking de relevância). Override via env var
-# A3C_MAX_COMPETIDORES sem precisar deploy.
-DEFAULT_MAX_COMPETIDORES = 5
+# Limite de academias mapeadas por relatório. Ordem: detalhados do A3b primeiro
+# (ranking de relevância), depois o resto da praça (brutos do A3a) por nº de
+# avaliações. 10 cobre o bairro típico; o cache em disco do IG zera o custo das
+# rodadas seguintes. Override via env var A3C_MAX_COMPETIDORES sem precisar deploy.
+DEFAULT_MAX_COMPETIDORES = 10
 
 
 def _max_competidores() -> int:
@@ -100,6 +100,55 @@ def _chave_concorrente(c: dict, idx: int) -> str:
     return c.get("place_id") or c.get("nome") or f"idx_{idx}"
 
 
+def _nome_de(c: dict) -> str:
+    dn = c.get("displayName")
+    return str(c.get("nome") or (dn.get("text") if isinstance(dn, dict) else "") or "").strip()
+
+
+def _eh_fitness_positivo(c: dict) -> bool:
+    """Mesmo sinal positivo do gate do A6 (sem a blocklist de especializadas — aqui
+    QUEREMOS minerar crossfit/lutas: a oferta delas mata falso gap do ERRC)."""
+    from tools.competitor_tools import _FITNESS_NOME_KW, _FITNESS_TYPES, _norm_txt
+
+    tipos = [str(t) for t in (c.get("tipos") or c.get("types") or [])]
+    if any(t in _FITNESS_TYPES for t in tipos):
+        return True
+    blob = _norm_txt(_nome_de(c) + " " + " ".join(tipos))
+    return any(_norm_txt(k) in blob for k in _FITNESS_NOME_KW)
+
+
+def _expandir_com_brutos(concorrentes: list[dict], state) -> list[dict]:
+    """PRAÇA INTEIRA (bug CT Greenlife 4b211a02): os detalhados do A3b são 1–3 e a
+    oferta dos demais concorrentes do bairro ficava invisível — CT Greenlife (crossfit,
+    recovery, nutricionista, kids) era 'mapeado 3.9' e seus serviços viravam falso
+    'oportunidade de CRIAR'. Anexa os brutos do A3a com sinal fitness, dedupe por
+    nome, ordenados por nº de avaliações (proxy de relevância na praça)."""
+    from tools.competitor_tools import _norm_txt
+
+    brutos = state.get("concorrentes_brutos")
+    if not isinstance(brutos, list):
+        return concorrentes
+    vistos = {_norm_txt(_nome_de(c)) for c in concorrentes if isinstance(c, dict) and _nome_de(c)}
+    extras: list[dict] = []
+    for b in brutos:
+        if not isinstance(b, dict):
+            continue
+        nome_b = _nome_de(b)
+        chave = _norm_txt(nome_b)
+        if not chave or chave in vistos or not _eh_fitness_positivo(b):
+            continue
+        vistos.add(chave)
+        extras.append({
+            "nome": nome_b,
+            "website": b.get("website") or b.get("websiteUri") or None,
+            "instagram": b.get("instagram") or b.get("instagram_handle"),
+            "place_id": b.get("place_id") or b.get("id"),
+            "num_avaliacoes": b.get("num_avaliacoes") or b.get("userRatingCount") or 0,
+        })
+    extras.sort(key=lambda x: -(int(x.get("num_avaliacoes") or 0)))
+    return list(concorrentes) + extras
+
+
 def mapear_oferta_competidores_completo(tool_context) -> dict:
     """
     Macro-tool de oferta, chamada pelo A3b determinístico (ex-A3c).
@@ -133,6 +182,9 @@ def mapear_oferta_competidores_completo(tool_context) -> dict:
         concorrentes = intel.get("concorrentes_detalhados", [])
         if not isinstance(concorrentes, list):
             concorrentes = []
+
+    # Praça inteira: detalhados do A3b + brutos fitness do A3a (dedupe por nome).
+    concorrentes = _expandir_com_brutos(concorrentes, state)
 
     # Filtra os que TÊM website ou IG (ordem do A3b preservada = ranking
     # de relevância) e limita a MAX_COMPETIDORES pra controlar latência e

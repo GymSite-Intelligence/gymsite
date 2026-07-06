@@ -29,8 +29,104 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 
 ## Regras que mais mordem
 
-- Testes: backend `.venv/Scripts/python.exe -m pytest`; frontend `npx tsc --noEmit`. NUNCA `npm run dev`/`build` pra testar.
+- Testes: backend SEMPRE `.venv/Scripts/python.exe -m pytest` (o `pytest` solto usa o
+  Python global 3.13, sem as dependências do projeto, e quebra na importação); frontend
+  `npx tsc --noEmit`. NUNCA `npm run dev`/`build` pra testar. Teste que valida correção
+  roda ANTES do commit — fecha a etapa com o teste, não com o diff.
 - Dinheiro em centavos (integer) no banco; datas `timestamptz` UTC.
-- NUNCA comentários no código.
+- Comentário no código só quando registra DECISÃO ou armadilha não-óbvia (o PORQUÊ —
+  ex.: "peso por anel: concorrente distante pressiona menos"); nunca comentário que
+  repete o que o código já diz.
+- **Todo número exibido ao usuário carrega carimbo: valor · base · fonte · janela.**
+  Ex.: "60.165 hab · 105 setores (raio do centróide) · IBGE Censo 2022". Número sem
+  base rotulada foi a doença encontrada em TODOS os concorrentes auditados — e em nós
+  (auditoria Cocó 4b211a02). Rótulo de proxy é obrigatório (renda per capita = rend. do
+  responsável ÷ moradores).
+- Jinja/PDF: NUNCA usar chave de contexto com nome de método de dict (`pop`, `get`,
+  `items`, `keys`, `values`) — `demografia.pop` resolve pro MÉTODO dict.pop, o repr
+  vira pseudo-tag e o WeasyPrint renderiza célula vazia (bug da População no PDF).
+- Git: binário pesado (`docs/produto/brand/`) NÃO entra em commit de código — push HTTPS
+  estoura ("remote end hung up"). Assets de marca em commit próprio; se precisar,
+  `git config http.postBuffer 524288000`.
 - `gymsite-worker` compartilha a imagem da api e NÃO auto-deploya — após rebuild da api: `gcloud run services update gymsite-worker --image <api_image>`.
 - Front sobe via trigger Cloud Build `gymsite-frontend-main` (publishable via build-arg em `cloudbuild.frontend.yaml`); Actions `pages.yml` falha por billing — ignorar.
+
+## Documentos vivos (ler quando o assunto aparecer)
+
+- `docs/produto/AUDITORIA_RELATORIO_COCO.md` — auditoria de metodologia do relatório
+  (fila de correções, rastreabilidade fonte→fórmula, confronto com auditores externos).
+- `docs/produto/CONCORRENTE_ONDEABRIR.md` — dossiê competitivo (benchmarks, o que copiar,
+  onde ganhamos).
+- `agents/specs/SPEC_TENDENCIA_CNPJ_BAIRROS.md` — feature Tendência CNPJ por bairro
+  (RFB determinístico, 3 anos, red flag).
+
+Diretrizes comportamentais para reduzir erros comuns de codificação em LLM. Faça a mistura com instruções específicas do projeto conforme necessário.
+
+**Compromisso: Essas diretrizes tendem a favorecer a cautela em vez da velocidade. Para tarefas triviais, use julgamento.**
+
+## 1. Pense antes de programar
+
+**Não presuma. Não esconda confusão. Exponha os trade-offs.**
+
+Antes de implementar:
+
+- Declare suas suposições explicitamente. Se tiver dúvidas, pergunte.
+
+- Se existirem múltiplas interpretações, apresente-as – não escolha silenciosamente.
+- Se existir uma abordagem mais simples, diga isso. Resista quando necessário.
+- Se algo estiver confuso, pare. Diga o que está confuso. Pergunte.
+- Quando me pedir para rodar algum comando seja especifico quando estivermos trabalhando com arquivos separados de backend e frontend.
+
+## 2. Simplicidade em primeiro lugar
+
+**Código mínimo que resolve o problema. Nada especulativo.**
+
+- Nenhuma característica além do que foi pedido.
+
+- Sem abstrações para código de uso único.
+- Nenhuma "flexibilidade" ou "configurabilidade" que não tenha sido solicitada.
+- Sem lidar com erros para cenários impossíveis.
+- Se você escrever 200 linhas e pode ser 50, reescreva.
+Pergunte a si mesmo: "Um engenheiro sênior diria que isso é complicado demais?" Se sim, simplifique.
+
+## 3. Mudanças cirúrgicas
+
+**Toque apenas no que for preciso. Limpe só a sua própria bagunça.**
+
+Ao editar código existente:
+
+- Não "melhore" código, comentários ou formatação adjacentes.
+- Não refatore coisas que não estão quebradas.
+- Combine com o estilo existente, mesmo que você faça de forma diferente.
+- Se você notar código morto não relacionado, mencione – não delete.
+
+Quando suas mudanças criam órfãos:
+
+- Remova importações/variáveis/funções que SUAS alterações fizeram sem uso.
+- Não remova código pré-existente a menos que seja solicitado.
+O teste: Cada linha alterada deve rastrear diretamente o pedido do usuário.
+
+## 4. Execução Orientada por Metas
+
+**Defina critérios de sucesso. Repita até ser verificado.**
+
+Transforme tarefas em objetivos verificáveis:
+
+- "Adicionar validação" → "Escrever testes para entradas inválidas, depois fazê-los passar"
+- "Corrigir o bug" → "Escrever um teste que o reproduza e depois fazê-lo passar"
+- "Refactoring X" → "Garantir que os testes passem antes e depois"
+
+Para tarefas em múltiplas etapas, estabeleça um plano breve:
+
+```
+1. [Passo] → verificar: [confere]
+2. [Passo] → verificar: [confere]
+3. [Passo] → verificar: [conferir]
+
+```
+
+Critérios fortes de sucesso permitem que você faça o loop de forma independente. Critérios fracos ("faça funcionar") exigem esclarecimento constante.
+
+---
+
+**Essas diretrizes funcionam se: menos mudanças desnecessárias nos diferenciais, menos reescritas devido a complicações excessivas e perguntas esclarecedoras vêm antes da implementação, e não após erros.**
