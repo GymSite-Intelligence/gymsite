@@ -86,6 +86,7 @@ def _map_cenario_row(row: dict[str, Any]) -> CenarioPdf:
         capex_equipamentos=_num(row.get("capex_equipamentos")),
         capex_contingencia=_num(row.get("capex_contingencia_valor")),
         viabilidade=str(row.get("viabilidade") or "") or None,
+        justificativa=str(row.get("justificativa") or "") or None,
         matriculas_realista=_int(row.get("matriculas_realista") or row.get("alunos_projetados")),
         # V3 (A4) — tributos & ocupação; frações ficam como float cru (formatadas no builder).
         tributos_mensal=_num(row.get("tributos_mensal")),

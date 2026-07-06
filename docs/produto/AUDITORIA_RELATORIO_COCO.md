@@ -149,6 +149,47 @@ legenda de Frequência. Bug de mapeamento métrica→tooltip no builder do quadr
   (reproduzir o 5.97→6.0 a partir de `parametros_metodologia` + componentes 10.0/1.9/6.0).
 - Zoneamento: fonte CKAN/LUOS 236/2017 declarada no código e no PDF ✓ (metodologia visível).
 
+## 5c. Confronto com a auditoria externa (Gemini Deep Research, 05/07)
+
+Terceiro auditor independente sobre o MESMO PDF. Balanço:
+
+**Confirmou nossos achados (com fontes):** Parque Estadual como concorrente (fix feito ✓);
+ERRC com falsos gaps (fix feito ✓); rótulo da renda (fix feito ✓ — e a renda do responsável
+que ele traz do Ipece, R$ 13.372, BATE com nossa base: 13.175 ✓ nosso espelho está certo,
+só exibíamos a métrica sem rótulo adequado).
+
+**O que ele achou e nós NÃO (vira trabalho):**
+1. **CT Greenlife é o concorrente mais perigoso da praça e nosso relatório o tratou como
+   "mapeado 3.9"**: 3.000 m², crossfit, recovery/crioterapia, nutricionista, nutrólogo,
+   fisio, kids, lutas (fontes: site oficial + Wellhub). Nosso offer_mapper só minera os
+   ANALISADOS — o fix da praça inteira (por nome) não alcança serviço que não está no nome.
+   → Camada 2 pendente: rodar offer_mapper (site+IG) em TODOS os concorrentes do bairro.
+2. **Preços multi-fonte:** VS Club R$ 173–247 no Gurupass vs R$ 70 no nosso (capturamos o
+   menor plano público sem rotular). Agregadores (Wellhub/Gurupass/TotalPass) são fonte
+   rica de planos que não usamos — com ressalva: preço de agregador tem markup/condições
+   próprias, rotular fonte em cada preço.
+3. **Aderência por empreendimento** na Janela de Entrada: BS Rubi/Casa Monã (ultra-premium
+   com academia no condomínio) = baixa aderência ao Mid Market; Sensia/Mood/Like
+   (50–80 m²) = alvo primário. Classificável deterministicamente por m²/ticket.
+4. **Like Residencial: 88 unidades, não 129** — nosso proxy superestimou. Validar fonte.
+5. GTM acionável: pré-venda "Founder's Club" nos estandes das construtoras.
+
+**Onde ELE erra (nossa vantagem estrutural):**
+- **Contradição interna no aluguel:** afirma mercado a R$ 39,10/m² "consideravelmente
+  abaixo do nosso piso de 60" (fonte que mistura residencial+comercial) e, páginas depois,
+  que o aluguel real "supera com folga os R$ 60–75". As duas coisas ao mesmo tempo.
+- **Conclusão dupla:** elogia nosso INDETERMINADO como cautela correta E decreta
+  "VIABILIDADE COMPROVADA E ALTAMENTE RECOMENDADA" no mesmo capítulo.
+- Casa Monã com duas datas de entrega (2026 e fev/2028) em trechos diferentes.
+- Zero memória de cálculo: nenhum número reproduzível; prosa adjetivada no lugar de conta.
+- Trata preço de agregador como "preço de balcão auditado" sem ressalva.
+
+**Lições de FORMATO a adotar:** tabela de confronto por concorrente (estimado × auditado ×
+serviços comprovados × risco); referências numeradas com URL + data de acesso; fio
+narrativo demografia→elasticidade→posicionamento entre os blocos; coluna de aderência na
+tabela de empreendimentos. Diferencial nosso a preservar: reproduzibilidade das contas
+(que ele não tem) + consistência interna.
+
 ## 6. Fila da Etapa 2
 
 - Metodologia dos NOSSOS scores: auditar como o motor calcula score_bairro,
