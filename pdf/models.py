@@ -86,6 +86,9 @@ class CompetidorPdf:
     # Camada 3 — agregadores (tier corporativo ≠ preço de balcão; rating com fonte).
     tier_agregador: dict | None = None
     rating_agregador: dict | None = None
+    oferta_modalidades: list | None = None   # chaves canônicas do catálogo (minerado)
+    oferta_comodidades: list | None = None   # texto livre do Wellhub
+    oferta_fontes: list | None = None        # ["website", "instagram", "wellhub"]
 
 
 @dataclass

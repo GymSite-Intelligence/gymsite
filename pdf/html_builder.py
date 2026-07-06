@@ -186,6 +186,13 @@ table.d thead { display:table-header-group; }
 </table>
 <div class="note">Planos públicos coletados via SearchAPI (busca web) por academia. Referência para o posicionamento tarifário vs concorrência.</div>{% endif %}
 
+{% if oferta_mapeada %}
+<div class="sec">Oferta mapeada por concorrente</div>
+<table class="d"><tr><th>Academia</th><th>Tier (Wellhub)</th><th>Serviços entregues</th><th>Comodidades</th><th>Fontes</th></tr>
+{% for o in oferta_mapeada %}<tr><td>{{ o.nome }}</td><td>{{ o.tier }}</td><td style="font-size:8pt;">{{ o.modalidades }}</td><td style="font-size:8pt;">{{ o.comodidades }}</td><td style="font-size:7.5pt;">{{ o.fontes }}</td></tr>{% endfor %}
+</table>
+<div class="note">Serviços ANUNCIADOS por cada concorrente (site oficial, Instagram e página de parceiro no Wellhub) — é o substrato determinístico dos GAPs do posicionamento: serviço que nenhuma linha desta tabela entrega vira "oportunidade de CRIAR". Tier = menor plano corporativo com acesso, <strong>não é mensalidade de balcão</strong>.</div>{% endif %}
+
 {% if ticket_segmentos %}
 <div class="sec">Ticket por segmento e serviços entregues</div>
 <table class="d"><tr><th>Segmento</th><th>Faixa de ticket</th><th>Planos</th><th>Serviços entregues</th><th>Academias</th></tr>
@@ -417,6 +424,19 @@ def _int(v) -> str:
         return f"{int(v):,}".replace(",", ".")
     except (TypeError, ValueError):
         return "—"
+
+
+# Espelho de _SERVICOS_CATALOGO (agents/a9) — rótulos legíveis das chaves canônicas
+# do detector de modalidades. PDF não importa agents (ciclo/peso); manter em sincronia.
+_SERVICO_LABEL = {
+    "musculacao": "Musculação", "funcional": "Treino funcional/HIIT",
+    "danca": "Aulas de dança", "spinning": "Spinning", "lutas": "Artes marciais",
+    "yoga": "Yoga/Pilates", "pilates": "Yoga/Pilates", "crossfit": "Crossfit",
+    "piscina": "Natação/Hidro", "nutricao": "Nutrição integrada",
+    "avaliacao": "Avaliação física", "personal": "Personal (PT)",
+    "recovery": "Recovery/fisioterapia", "estetica": "Sauna/estética",
+    "area_kids": "Aulas/espaço kids",
+}
 
 
 # Aderência do empreendimento ao modelo recomendado, pela planta média (proxy de
@@ -945,6 +965,22 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     } for c in (model.competidores or [])]
     tem_tier = any(x["tier"] != "—" for x in competidores)
 
+    # Seção "Oferta mapeada por concorrente" (contrato Wellhub + site/IG): serviços
+    # ENTREGUES por academia com fonte — substrato visível do ERRC/gaps.
+    oferta_mapeada = []
+    for c in (model.competidores or []):
+        mods = c.oferta_modalidades or []
+        if not mods and not (c.oferta_comodidades or []):
+            continue
+        oferta_mapeada.append({
+            "nome": c.nome[:34],
+            "tier": _tier_txt(c.tier_agregador),
+            "modalidades": ", ".join(
+                _SERVICO_LABEL.get(m, m) for m in mods[:10]) or "—",
+            "comodidades": ", ".join((c.oferta_comodidades or [])[:6]) or "—",
+            "fontes": ", ".join(c.oferta_fontes or []) or "—",
+        })
+
     # Quadro planos × preços da concorrência (SearchAPI). Só com dado real.
     planos = []
     for c in (model.competidores or []):
@@ -1144,6 +1180,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "cenarios_tem_fiscal": cenarios_tem_fiscal, "ocupacao_alertas": ocupacao_alertas,
         "zona": zona, "alertas_ff": alertas_ff,
         "competidores": competidores, "competidores_tem_tier": tem_tier,
+        "oferta_mapeada": oferta_mapeada,
         "planos": planos[:12],
         "ticket_segmentos": _ticket_segmentos(model.competidores),
         "dores_quadro": _dores_quadro(meta.get("dores_consolidadas")), "pico": meta.get("pico"),

@@ -164,7 +164,11 @@ async def coletar_agregadores(
     extras: dict[str, Any] = {}
     fontes_ok: list[str] = []
     cidade = cidade or ""
-    for fonte in ("wellhub", "gurupass", "totalpass"):
+    # CONTRATO (decisão 06/07, run 3f4e0b82): Wellhub como fonte ÚNICA de agregador —
+    # SSR confiável com modalidades+comodidades+tier+rating. Gurupass (preço só via JS)
+    # e TotalPass (página vazia via HTTP) ficam desligados; parsers preservados caso
+    # o contrato mude.
+    for fonte in ("wellhub",):
         try:
             hit = await asyncio.to_thread(_buscar_url_parceiro, fonte, nome, cidade)
             if not hit:
