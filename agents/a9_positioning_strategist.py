@@ -350,6 +350,18 @@ def _concorrentes_para_oferta(state: dict) -> list[dict]:
             if v:
                 fontes.extend(x for x in v if isinstance(x, dict))
                 break
+    # Brutos do A3a: a praça inteira PELO NOME (run 3f4e0b82: Krav Maga e S3 estavam
+    # 'mapeados' mas invisíveis pro ERRC — academias_analisadas é chave do A6 e não
+    # existe no state que o A9 lê; os brutos existem e carregam o nome).
+    brutos = state.get("concorrentes_brutos")
+    if isinstance(brutos, list):
+        for x in brutos:
+            if not isinstance(x, dict):
+                continue
+            dn = x.get("displayName")
+            nm = x.get("nome") or (dn.get("text") if isinstance(dn, dict) else "")
+            if nm:
+                fontes.append({**x, "nome": nm})
     vistos: set[str] = set()
     out: list[dict] = []
     for c in fontes:

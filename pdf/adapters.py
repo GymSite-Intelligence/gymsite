@@ -141,6 +141,9 @@ def _map_competidor(row: dict[str, Any]) -> CompetidorPdf:
         planos_precos=row.get("planos_precos") if isinstance(row.get("planos_precos"), list) else None,
         tier_agregador=om.get("tier_agregador") if isinstance(om.get("tier_agregador"), dict) else None,
         rating_agregador=om.get("rating_agregador") if isinstance(om.get("rating_agregador"), dict) else None,
+        oferta_modalidades=om.get("modalidades") if isinstance(om.get("modalidades"), list) else None,
+        oferta_comodidades=om.get("comodidades") if isinstance(om.get("comodidades"), list) else None,
+        oferta_fontes=om.get("fontes") if isinstance(om.get("fontes"), list) else None,
     )
 
 
