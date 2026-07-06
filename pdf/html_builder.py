@@ -149,9 +149,10 @@ table.d thead { display:table-header-group; }
 
 {% if demografia %}
 <div class="sec">Demografia do Bairro</div>
-{% if demografia.renda or demografia.pop %}<table class="d"><tr><th>Dimensão</th><th>Valor (fonte real do bairro)</th></tr>
+{% if demografia.renda or demografia.populacao %}<table class="d"><tr><th>Dimensão</th><th>Valor (fonte real do bairro)</th></tr>
   {% if demografia.renda %}<tr><td>Renda per capita <span style="font-size:8px;color:#667">(proxy: rend. do responsável ÷ moradores/dom. · IBGE Censo 2022)</span></td><td>{{ demografia.renda }}</td></tr>{% endif %}
-  {% if demografia.pop %}<tr><td>População</td><td>{{ demografia.pop }}</td></tr>{% endif %}
+  {% if demografia.populacao %}<tr><td>População (bairro)</td><td>{{ demografia.populacao }}</td></tr>{% endif %}
+  {% if demografia.dom %}<tr><td>Domicílios</td><td>{{ demografia.dom }}</td></tr>{% endif %}
 </table>{% endif %}
 {% if demografia.piramide %}
 <div style="margin-top:10px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Público por idade × sexo (bairro real, Censo 2022 por setor)</div>
@@ -162,7 +163,7 @@ table.d thead { display:table-header-group; }
     <span class="num">{{ p.total }}</span><span class="sx">{{ p.m }}♀/{{ p.h }}♂</span></div>
 {% endfor %}
 </div>
-<div class="note">Público predominante: <strong>{{ demografia.dominante }}</strong> · perfil <strong>{{ demografia.tendencia }}</strong>. Idade REAL do bairro (agregação de {{ demografia.n_setores }} setores) — não herdada do município.</div>
+<div class="note">Público predominante: <strong>{{ demografia.dominante }}</strong> · perfil <strong>{{ demografia.tendencia }}</strong>. Idade REAL do bairro — {{ demografia.n_setores }} setores IBGE agregados em torno do centróide até cobrir a população do bairro (base distinta da contagem de população) — não herdada do município.</div>
 {% endif %}{% endif %}
 
 {% if competidores %}
@@ -236,7 +237,7 @@ table.d thead { display:table-header-group; }
 </div>{% endif %}
 {% if cenarios %}<table class="d" style="margin-top:6px;"><tr><th>Modelo</th><th>Ticket</th><th>Receita/mês</th><th>Lucro/mês</th><th>Margem</th><th>Payback</th><th>Alunos</th><th>Viabilidade</th></tr>
 {% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}{{ ' ★' if c.recomendado }}</td><td>{{ c.ticket }}</td><td>{{ c.receita }}</td><td>{{ c.lucro }}</td><td>{{ c.margem }}</td><td>{{ c.payback }}</td><td>{{ c.alunos }}</td>
-  <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span></td></tr>{% endfor %}
+  <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span>{% if c.justificativa %}<div style="font-size:6.5pt; color:#64748B; margin-top:2px;">{{ c.justificativa }}</div>{% endif %}</td></tr>{% endfor %}
 </table>{% endif %}
 {% if cenarios_tem_fiscal %}
 <div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Tributos &amp; Ocupação por cenário (Simples Nacional · Fator R · teto de ocupação imobiliária)</div>
@@ -409,6 +410,24 @@ def _int(v) -> str:
         return f"{int(v):,}".replace(",", ".")
     except (TypeError, ValueError):
         return "—"
+
+
+def _coerce_int(v) -> int | None:
+    """Aceita 60165, 60165.0, '60165', '60165.0', '60.165', '22.645,00' — o Supabase/JSON
+    às vezes devolve a população como string/float e a célula do PDF saía vazia (bug
+    4b1a02). Formato BR (ponto de milhar) é detectado por PADRÃO, não por ordem —
+    float('60.165') daria 60."""
+    if v in (None, "", False):
+        return None
+    if isinstance(v, (int, float)):
+        return int(v)
+    s = str(v).strip()
+    if re.fullmatch(r"\d{1,3}(\.\d{3})+(,\d+)?", s):
+        s = s.replace(".", "").replace(",", ".")
+    try:
+        return int(float(s))
+    except (TypeError, ValueError):
+        return None
 
 
 def _norm_txt(s: str) -> str:
@@ -759,11 +778,16 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     pir = _piramide(demo_b)
     demografia = None
     renda_b = demo_b.get("renda_media")
-    pop_b = demo_b.get("populacao")
+    pop_b = _coerce_int(demo_b.get("populacao"))
+    dom_b = _coerce_int(demo_b.get("domicilios"))
+    nset_b = _coerce_int(demo_b.get("censo_n_setores"))
     if pir or renda_b or pop_b:
         demografia = {
             "renda": f"R$ {_brl(renda_b)}" if renda_b else None,
-            "pop": _int(pop_b) if pop_b else None,
+            # NUNCA usar chave "pop": Jinja resolve demografia.pop como o MÉTODO dict.pop
+            # e o WeasyPrint engole o repr como tag — era a célula vazia do bug 4b211a02.
+            "populacao": (f"{_int(pop_b)} hab" + (f" · {nset_b} setores (raio do centróide)" if nset_b else "")) if pop_b else None,
+            "dom": _int(dom_b) if dom_b else None,
             **(pir or {}),
         }
 
@@ -794,6 +818,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "payback": f"{c.payback_meses}m" if c.payback_meses else "—",
             "alunos": _int(c.matriculas_realista) if c.matriculas_realista else "—",
             "viab": c.viabilidade or "—", "viab_cls": _viab_cls(c.viabilidade or ""),
+            "justificativa": c.justificativa,
             "recomendado": is_rec,
             # V3 (A4) — tributos & ocupação por cenário (frações → %, valores → R$).
             "anexo": c.anexo_simples or "—",

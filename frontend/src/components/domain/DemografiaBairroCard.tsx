@@ -76,7 +76,7 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
             icon={Users}
             label="população (bairro)"
             value={_int(block.populacao as number)}
-            sub={block.censo_n_setores ? `${block.censo_n_setores} setores censitários` : undefined}
+            sub={block.censo_n_setores ? `${block.censo_n_setores} setores · raio do centróide · IBGE 2022` : undefined}
           />
         )}
         {block.media_moradores != null && (
@@ -144,8 +144,9 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
               perfil <span className="font-semibold">{tendencia}</span>.
             </div>
             <div className="mt-0.5 text-[10px] text-muted-foreground leading-tight">
-              IBGE Censo 2022 por setor ({block.perfil_idade_sexo_bairro?.n_setores ?? '—'} setores agregados) — idade
-              real do bairro, não herdada do município.
+              IBGE Censo 2022 por setor ({block.perfil_idade_sexo_bairro?.n_setores ?? '—'} setores agregados em torno
+              do centróide até cobrir a população do bairro — base distinta do card de população) — idade real do
+              bairro, não herdada do município.
             </div>
           </div>
         )

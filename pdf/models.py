@@ -72,6 +72,7 @@ class CenarioPdf:
     teto_ocupacao: float | None = None  # fração (ex 0.15)
     ticket_piso_ocupacao: float | None = None  # R$
     ocupacao_estoura: bool | None = None
+    justificativa: str | None = None  # motivo do selo de viabilidade (A4 _classificar_viabilidade)
 
 
 @dataclass
