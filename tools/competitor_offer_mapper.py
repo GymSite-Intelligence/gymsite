@@ -154,6 +154,12 @@ class OfertaMapeada:
     precos_encontrados: list[dict] = field(default_factory=list)
     confiabilidade_fonte: float = 0.0
     erros: list[str] = field(default_factory=list)
+    # Camada 3 — agregadores (SPEC_OFERTA_AGREGADORES): tier corporativo NUNCA se
+    # mistura com preço de balcão (precos_encontrados); campos separados e rotulados.
+    fontes_agregador: list[str] = field(default_factory=list)
+    tier_agregador: Optional[dict] = None
+    rating_agregador: Optional[dict] = None
+    comodidades_agregador: list[str] = field(default_factory=list)
 
     def asdict(self) -> dict:
         return {
@@ -171,6 +177,10 @@ class OfertaMapeada:
             "precos_encontrados": self.precos_encontrados,
             "confiabilidade_fonte": self.confiabilidade_fonte,
             "erros": self.erros,
+            "fontes_agregador": self.fontes_agregador,
+            "tier_agregador": self.tier_agregador,
+            "rating_agregador": self.rating_agregador,
+            "comodidades_agregador": self.comodidades_agregador,
         }
 
 
@@ -259,6 +269,7 @@ def _calcular_confiabilidade(o: OfertaMapeada) -> float:
     if o.fonte_instagram_ok:   score += 0.30
     if o.modalidades_keywords: score += 0.15
     if o.precos_encontrados:   score += 0.15
+    if o.fontes_agregador:     score += 0.20
     return round(min(score, 1.0), 2)
 
 
@@ -490,6 +501,7 @@ async def mapear_oferta_concorrente(
     website: Optional[str] = None,
     instagram_handle: Optional[str] = None,
     place_id: Optional[str] = None,
+    cidade: Optional[str] = None,
 ) -> dict:
     """
     Coleta sinais públicos do site + Instagram do concorrente. Sem LLM.
@@ -509,9 +521,10 @@ async def mapear_oferta_concorrente(
     handle = _normalizar_handle(instagram_handle)
     o.fonte_instagram = f"@{handle}" if handle else None
 
+    # Sem site nem IG NÃO é mais beco sem saída: a camada 3 (agregadores) ainda
+    # pode achar o parceiro no Wellhub/Gurupass pelo nome (SPEC_OFERTA_AGREGADORES).
     if not o.fonte_url and not handle:
         o.erros.append("sem_site_nem_instagram")
-        return o.asdict()
 
     headers = {
         "User-Agent": USER_AGENT,
@@ -584,11 +597,36 @@ async def mapear_oferta_concorrente(
                         textos_pra_analise.append(composto)
                     o.erros.append("instagram_via_searchapi")  # marcador, não é erro real
 
+        # Camada 3 — agregadores (Wellhub SSR, Gurupass parcial, TotalPass snippet).
+        # Fail-soft total; extras vão pra campos próprios. Textos de agregador ficam
+        # num blob SEPARADO: contêm preços de TIER (199/319/439) e de vizinhos — se
+        # entrassem no blob geral virariam falso preço de balcão em precos_encontrados.
+        textos_agregador: list[str] = []
+        try:
+            from tools.agregadores_fetcher import coletar_agregadores
+
+            ag = await coletar_agregadores(client, nome, cidade)
+            if ag.get("fontes_ok"):
+                o.fontes_agregador = ag["fontes_ok"]
+                textos_agregador = [t for t in ag.get("textos", []) if t]
+                extras = ag.get("extras") or {}
+                o.tier_agregador = extras.get("tier_agregador")
+                o.rating_agregador = extras.get("rating_agregador")
+                o.comodidades_agregador = extras.get("comodidades") or []
+                if not handle and extras.get("instagram_handle"):
+                    o.fonte_instagram = f"@{extras['instagram_handle']}"
+        except Exception as exc:
+            o.erros.append(f"agregadores_falhou:{type(exc).__name__}")
+
     texto_completo = " ".join(t for t in textos_pra_analise if t)
     if texto_completo:
         o.modalidades_keywords = _detectar_modalidades(texto_completo)
         o.diferenciais_keywords = _detectar_diferenciais(texto_completo)
         o.precos_encontrados = _detectar_precos(texto_completo)
+    if textos_agregador:
+        texto_ag = " ".join(textos_agregador)
+        o.modalidades_keywords = sorted(set(o.modalidades_keywords) | set(_detectar_modalidades(texto_ag)))
+        o.diferenciais_keywords = sorted(set(o.diferenciais_keywords) | set(_detectar_diferenciais(texto_ag)))
 
     o.confiabilidade_fonte = _calcular_confiabilidade(o)
     return o.asdict()
