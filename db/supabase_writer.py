@@ -795,3 +795,32 @@ def write_posicionamento_failsafe(relatorio_id: str, posicionamento: dict) -> bo
             "traceback": traceback.format_exc()[:500],
         })
         return False
+
+
+def append_ressalva_resumo_failsafe(relatorio_id: str, ressalva: str) -> bool:
+    """Emenda idempotente da ressalva de veredito INDETERMINADO no resumo_executivo
+    (relatorio_outputs). Chamado pelo A9 quando o headroom/posicionamento fica
+    indeterminado DEPOIS de o A6 já ter consolidado o resumo — sem isso o resumo
+    recomenda modelo sem avisar que a demanda local não foi validada."""
+    try:
+        client = _get_client()
+        if client is None or not relatorio_id or not ressalva:
+            return False
+        atual = (
+            client.table("relatorio_outputs").select("resumo_executivo")
+            .eq("relatorio_id", relatorio_id).maybe_single().execute()
+        )
+        resumo = ((atual.data or {}).get("resumo_executivo") or "").strip()
+        if not resumo or ressalva in resumo:
+            return False
+        client.table("relatorio_outputs").update(
+            {"resumo_executivo": f"{resumo} {ressalva}"},
+        ).eq("relatorio_id", relatorio_id).execute()
+        _log("success", "ressalva de indeterminado emendada no resumo", {"relatorio_id": relatorio_id})
+        return True
+    except Exception as e:
+        _log("error", f"falha emendar ressalva no resumo: {e}", {
+            "relatorio_id": relatorio_id,
+            "exception": type(e).__name__,
+        })
+        return False
