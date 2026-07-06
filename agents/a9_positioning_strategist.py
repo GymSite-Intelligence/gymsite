@@ -62,8 +62,23 @@ def _parse_json_from_text(raw: str) -> dict:
     return parsed
 
 
+_RESSALVA_INDETERMINADO = (
+    "Ressalva: modelo sugerido por benchmark do setor — o cruzamento renda local × "
+    "concorrência ficou indeterminado neste run (validar demanda do bairro antes de decidir)."
+)
+
+
+def _emendar_ressalva(texto: str | None) -> str | None:
+    """Append idempotente da ressalva de INDETERMINADO num resumo já consolidado."""
+    if not texto or _RESSALVA_INDETERMINADO in texto:
+        return texto
+    return f"{texto.rstrip()} {_RESSALVA_INDETERMINADO}"
+
+
 def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None:
-    """Atualiza metrics/relatorios/<id>.json com posicionamento_estrategico."""
+    """Atualiza metrics/relatorios/<id>.json com posicionamento_estrategico. Se o
+    veredito ficou INDETERMINADO, emenda a ressalva no resumo_executivo já gravado
+    pelo A6 (o resumo nasce ANTES do A9 — sem isso ele recomenda modelo sem aviso)."""
     if not relatorio_local_id:
         return
     path = _RELATORIOS_DIR / f"{relatorio_local_id}.json"
@@ -81,6 +96,12 @@ def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None
             out = {}
             rel["output_consolidado"] = out
         out["posicionamento_estrategico"] = posicionamento
+        if str(posicionamento.get("veredito_posicionamento") or "").upper() == "INDETERMINADO":
+            contato = out.get("contato_decisor")
+            if isinstance(contato, dict) and contato.get("resumo_executivo"):
+                contato["resumo_executivo"] = _emendar_ressalva(contato["resumo_executivo"])
+            if out.get("resumo_executivo"):
+                out["resumo_executivo"] = _emendar_ressalva(out["resumo_executivo"])
         path.write_text(json.dumps(rel, ensure_ascii=False, indent=2), encoding="utf-8")
         logger.info(
             "A9 patch JSON local OK id=%s",
@@ -192,7 +213,7 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
             if llm_gaps:
                 parsed["gaps_identificados_llm"] = llm_gaps
             parsed["gaps_identificados"] = [
-                f"{g} — nenhum concorrente da praça oferece (oportunidade de CRIAR)" for g in gaps_reais
+                f"{g} — nenhum concorrente da praça anuncia (oportunidade de CRIAR)" for g in gaps_reais
             ] if gaps_reais else ["Mercado coberto nos serviços-núcleo — foco em AUMENTAR/REDUZIR (qualidade/preço), não em CRIAR"]
             parsed["fonte_gaps"] = "deterministico_oferta_concorrentes (planos+IG)"
         vd = hr.get("veredito_posicionamento")
@@ -312,18 +333,41 @@ def _servicos_do_concorrente(c: dict) -> set[str]:
     return svc
 
 
-def _gaps_reais(state: dict) -> list[str] | None:
-    """Lista determinística dos serviços que NENHUM concorrente oferece (do dado real:
-    planos_precos.inclui + modalidades + servicos_ig). É o substrato da dimensão CRIAR
-    da ERRC — usado pra SOBREPOR o gaps_identificados do LLM (que chutava genérico)."""
-    from collections import Counter
-
+def _concorrentes_para_oferta(state: dict) -> list[dict]:
+    """Base da penetração de serviços = a PRAÇA inteira do bairro, não só os detalhados.
+    União com dedupe por nome de concorrentes_detalhados + academias_analisadas +
+    top_independentes. Bug Cocó (4b211a02): com 'analisados a fundo: 1', TBOX (crossfit),
+    Krav Maga (artes marciais) e S3 (personal) estavam MAPEADOS na praça mas fora da
+    base — e viravam 'oportunidade de CRIAR' com porta especializada aberta na esquina."""
     from tools.competitor_tools import _parse_market_context
 
     ic = _parse_market_context(state.get("inteligencia_competitiva"))
     inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
-    concs = (inner.get("concorrentes_detalhados") if isinstance(inner, dict) else None) or []
-    concs = [c for c in concs if isinstance(c, dict)]
+    fontes: list[dict] = []
+    for chave in ("concorrentes_detalhados", "academias_analisadas", "top_independentes"):
+        for origem in (inner, ic):
+            v = origem.get(chave) if isinstance(origem, dict) else None
+            if v:
+                fontes.extend(x for x in v if isinstance(x, dict))
+                break
+    vistos: set[str] = set()
+    out: list[dict] = []
+    for c in fontes:
+        nome = str(c.get("nome") or "").strip().lower()
+        if not nome or nome in vistos:
+            continue
+        vistos.add(nome)
+        out.append(c)
+    return out
+
+
+def _gaps_reais(state: dict) -> list[str] | None:
+    """Lista determinística dos serviços que NENHUM concorrente da praça ANUNCIA
+    (nome + planos_precos.inclui + modalidades + servicos_ig, sobre a praça inteira).
+    Substrato da dimensão CRIAR da ERRC — SOBREPÕE o gaps do LLM (que chutava genérico)."""
+    from collections import Counter
+
+    concs = _concorrentes_para_oferta(state)
     if not concs:
         return None
     pen: Counter = Counter()
@@ -665,7 +709,7 @@ def _errc_deterministica(state: dict) -> dict:
     else:
         aumentar.append("Retenção, NPS e comunidade — diferenciação por experiência (sem lastro premium).")
     aumentar.append("Ticket médio rumo ao teto sustentável da renda local.")
-    criar = ([f"{g} — nenhum concorrente da praça oferece." for g in gaps]
+    criar = ([f"{g} — nenhum concorrente da praça anuncia." for g in gaps]
              if gaps else ["Mercado coberto nos serviços-núcleo — sem CRIAR; foco em AUMENTAR/REDUZIR."])
 
     # ── markdown ──
@@ -729,7 +773,7 @@ def _errc_deterministica(state: dict) -> dict:
             "fonte": "ticket_teto_sustentavel = renda_pc × ticket_renda_pct_premium (param); piso de ocupação do A4",
         },
         "gaps_identificados": (
-            [f"{g} — nenhum concorrente da praça oferece (oportunidade de CRIAR)" for g in gaps]
+            [f"{g} — nenhum concorrente da praça anuncia (oportunidade de CRIAR)" for g in gaps]
             if gaps else ["Mercado coberto nos serviços-núcleo — foco em AUMENTAR/REDUZIR"]
         ),
         "fonte_gaps": "deterministico_oferta_concorrentes (planos+IG)",
@@ -914,9 +958,14 @@ def _a9_after_agent_callback(callback_context):
         rel_uuid = state.get("relatorio_id")
         if isinstance(rel_uuid, str) and rel_uuid:
             try:
-                from db.supabase_writer import write_posicionamento_failsafe
+                from db.supabase_writer import (
+                    append_ressalva_resumo_failsafe,
+                    write_posicionamento_failsafe,
+                )
 
                 write_posicionamento_failsafe(rel_uuid, parsed)
+                if str(parsed.get("veredito_posicionamento") or "").upper() == "INDETERMINADO":
+                    append_ressalva_resumo_failsafe(rel_uuid, _RESSALVA_INDETERMINADO)
             except Exception as e:
                 logger.warning(
                     "A9 Supabase posicionamento falhou: %s",
