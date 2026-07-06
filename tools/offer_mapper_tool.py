@@ -60,6 +60,7 @@ async def _mapear_lote_async(concorrentes: list[dict]) -> list[dict]:
                 website=c.get("website") or None,
                 instagram_handle=c.get("instagram") or c.get("instagram_handle"),
                 place_id=c.get("place_id"),
+                cidade=c.get("cidade"),
             )
 
     return await asyncio.gather(*(_one(c) for c in concorrentes))
@@ -185,6 +186,13 @@ def mapear_oferta_competidores_completo(tool_context) -> dict:
 
     # Praça inteira: detalhados do A3b + brutos fitness do A3a (dedupe por nome).
     concorrentes = _expandir_com_brutos(concorrentes, state)
+
+    # Cidade pro matching de agregadores (camada 3) — cada concorrente leva a sua.
+    cidade_run = str(state.get("cidade") or "").strip()
+    if cidade_run:
+        for c in concorrentes:
+            if isinstance(c, dict):
+                c.setdefault("cidade", cidade_run)
 
     # Filtra os que TÊM website ou IG (ordem do A3b preservada = ranking
     # de relevância) e limita a MAX_COMPETIDORES pra controlar latência e
