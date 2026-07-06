@@ -131,6 +131,7 @@ def _map_candidato(row: dict[str, Any], pos: int) -> CandidatoPdf:
 
 def _map_competidor(row: dict[str, Any]) -> CompetidorPdf:
     rating = _num(row.get("rating_oficial") or row.get("rating_geral"))
+    om = row.get("oferta_mapeada") if isinstance(row.get("oferta_mapeada"), dict) else {}
     return CompetidorPdf(
         nome=str(row.get("nome") or "—"),
         rating=rating,
@@ -138,6 +139,8 @@ def _map_competidor(row: dict[str, Any]) -> CompetidorPdf:
         bairro=str(row.get("bairro_concorrente") or "") or None,
         tem_24h=bool(row.get("tem_24h")) if row.get("tem_24h") is not None else None,
         planos_precos=row.get("planos_precos") if isinstance(row.get("planos_precos"), list) else None,
+        tier_agregador=om.get("tier_agregador") if isinstance(om.get("tier_agregador"), dict) else None,
+        rating_agregador=om.get("rating_agregador") if isinstance(om.get("rating_agregador"), dict) else None,
     )
 
 

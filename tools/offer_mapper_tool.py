@@ -269,12 +269,19 @@ def mapear_oferta_competidores_completo(tool_context) -> dict:
             fontes = []
             if raw.get("fonte_url_ok"):       fontes.append("website")
             if raw.get("fonte_instagram_ok"): fontes.append("instagram")
+            if raw.get("fontes_agregador"):
+                fontes.extend(raw["fontes_agregador"])
             normalizado[chave] = {
                 "nome": raw.get("nome"),
                 "modalidades": raw.get("modalidades_keywords") or [],
                 "diferenciais": raw.get("diferenciais_keywords") or [],
                 "faixa_preco_brl": faixa,
                 "fontes": fontes,
+                # Camada 3 (SPEC_OFERTA_AGREGADORES): tier corporativo NUNCA vira
+                # preço de balcão — campo próprio, rotulado, até a vitrine do PDF.
+                "tier_agregador": raw.get("tier_agregador"),
+                "rating_agregador": raw.get("rating_agregador"),
+                "comodidades": raw.get("comodidades_agregador") or [],
                 "confiabilidade_oferta": conf_label,
                 "observacoes": "" if conf > 0 else "sem evidência",
                 "_persistido_pela_macro": True,
