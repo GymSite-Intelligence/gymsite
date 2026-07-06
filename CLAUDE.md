@@ -48,7 +48,12 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 - Git: binário pesado (`docs/produto/brand/`) NÃO entra em commit de código — push HTTPS
   estoura ("remote end hung up"). Assets de marca em commit próprio; se precisar,
   `git config http.postBuffer 524288000`.
-- `gymsite-worker` compartilha a imagem da api e NÃO auto-deploya — após rebuild da api: `gcloud run services update gymsite-worker --image <api_image>`.
+- Cloud Run: projeto `gen-lang-client-0106729343` ("Navi Vectra" — nome engana, é o do
+  GymSite), região `us-central1` (NÃO southamerica-east1). `gymsite-worker` compartilha
+  a imagem da api e NÃO auto-deploya — após rebuild da api:
+  `IMG=$(gcloud run services describe gymsite-api --region=us-central1 --project=gen-lang-client-0106729343 --format="value(spec.template.spec.containers[0].image)")`
+  e `gcloud run services update gymsite-worker --region=us-central1 --project=gen-lang-client-0106729343 --image $IMG`.
+  Existe um `gymsite-api` ÓRFÃO no projeto gen-lang-client-0662901510 ("GymSite") — não é a produção.
 - Front sobe via trigger Cloud Build `gymsite-frontend-main` (publishable via build-arg em `cloudbuild.frontend.yaml`); Actions `pages.yml` falha por billing — ignorar.
 
 ## Documentos vivos (ler quando o assunto aparecer)

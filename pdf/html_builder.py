@@ -168,9 +168,10 @@ table.d thead { display:table-header-group; }
 
 {% if competidores %}
 <div class="sec">Inteligência Competitiva</div>
-<table class="d"><tr><th>Concorrente</th><th>Rating</th><th>Avaliações</th><th>Bairro</th><th>24h</th></tr>
-{% for c in competidores %}<tr><td>{{ c.nome }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td></tr>{% endfor %}
+<table class="d"><tr><th>Concorrente</th><th>Rating</th><th>Avaliações</th><th>Bairro</th><th>24h</th>{% if competidores_tem_tier %}<th>Tier agregador</th>{% endif %}</tr>
+{% for c in competidores %}<tr><td>{{ c.nome }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td>{% if competidores_tem_tier %}<td>{{ c.tier }}</td>{% endif %}</tr>{% endfor %}
 </table>
+{% if competidores_tem_tier %}<div class="note">Rating adicional e <strong>tier</strong> = menor plano corporativo que dá acesso ao concorrente no agregador (Wellhub/similares) — sinal de posicionamento, <strong>não é mensalidade de balcão</strong>.</div>{% endif %}
 {% if pico %}
 <div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Janela de demanda — lotação agregada dos concorrentes por hora</div>
 <div class="pico">{% for b in pico.barras %}<div class="col {{ 'hot' if b.hora in pico.horas }}" style="height:{{ b.pct }}%;"></div>{% endfor %}</div>
@@ -920,11 +921,29 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
                 "itens": [{"label": lab, "valor": _brl(v), "pct": round(100 * v / tot)} for lab, v in itens_raw],
             }
 
+    def _tier_txt(t: dict | None) -> str:
+        if not isinstance(t, dict) or not t.get("plano"):
+            return "—"
+        p = t.get("preco_mensal_brl")
+        try:
+            preco = f" · R$ {float(p):,.2f}".replace(",", "@").replace(".", ",").replace("@", ".") if p else ""
+        except (TypeError, ValueError):
+            preco = ""
+        return f"{t['plano']}{preco}"
+
+    def _rating_ag_txt(r: dict | None) -> str:
+        if not isinstance(r, dict) or r.get("nota") is None:
+            return ""
+        return f" | {r['nota']} ({_int(r.get('avaliacoes'))} · {r.get('fonte', 'agregador')})"
+
     competidores = [{
-        "nome": c.nome[:38], "rating": c.rating if c.rating is not None else "—",
+        "nome": c.nome[:38],
+        "rating": (f"{c.rating}" if c.rating is not None else "—") + _rating_ag_txt(c.rating_agregador),
         "aval": _int(c.num_avaliacoes) if c.num_avaliacoes else "—",
         "bairro": _limpar_bairro(c.bairro), "h24": "sim" if c.tem_24h else "—",
+        "tier": _tier_txt(c.tier_agregador),
     } for c in (model.competidores or [])]
+    tem_tier = any(x["tier"] != "—" for x in competidores)
 
     # Quadro planos × preços da concorrência (SearchAPI). Só com dado real.
     planos = []
@@ -1124,7 +1143,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
         "cenarios_tem_fiscal": cenarios_tem_fiscal, "ocupacao_alertas": ocupacao_alertas,
         "zona": zona, "alertas_ff": alertas_ff,
-        "competidores": competidores, "planos": planos[:12],
+        "competidores": competidores, "competidores_tem_tier": tem_tier,
+        "planos": planos[:12],
         "ticket_segmentos": _ticket_segmentos(model.competidores),
         "dores_quadro": _dores_quadro(meta.get("dores_consolidadas")), "pico": meta.get("pico"),
         "aneis": _aneis(meta.get("aneis_competitivos")),

@@ -83,6 +83,9 @@ class CompetidorPdf:
     bairro: str | None
     tem_24h: bool | None
     planos_precos: list | None = None
+    # Camada 3 — agregadores (tier corporativo ≠ preço de balcão; rating com fonte).
+    tier_agregador: dict | None = None
+    rating_agregador: dict | None = None
 
 
 @dataclass
