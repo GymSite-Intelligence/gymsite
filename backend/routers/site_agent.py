@@ -25,8 +25,9 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from agents_site.catalog import AGENTES_VALIDOS  # sem dependência do ADK (import barato)
 from tools.turnstile import verificar_turnstile
 from tools.db_schema import tbl  # roteia gymsite/shared (flags ON em prod; tbl(sb,) cru = public)
 
@@ -141,8 +142,19 @@ class ConversarSiteInput(BaseModel):
     mensagem: str = Field(min_length=1, max_length=2000)
     projeto_id: Optional[str] = None          # None = nova sessão (exige Turnstile)
     turnstile_token: Optional[str] = None      # obrigatório só na 1ª mensagem
-    agente: Optional[str] = None               # degustacao (default) | responsavel_tecnico (RAG segmentado)
+    agente: Optional[str] = None               # None/degustacao = roteador; senão, id de agents_site/catalog.py
     dev_token: Optional[str] = Field(default=None, max_length=120)
+
+    @field_validator("agente")
+    @classmethod
+    def _agente_conhecido(cls, v: Optional[str]) -> Optional[str]:
+        # P-005: string livre aqui entra CRUA na chave do cap por especialista
+        # (`site_chat:agente:{ip}:{agente}:{dia}`). Sem whitelist, mandar um `agente`
+        # diferente a cada request zera o contador e o cap nunca estoura — e `:` no
+        # valor forja a chave. Fonte única das chaves: agents_site/catalog.py.
+        if v is not None and v not in AGENTES_VALIDOS:
+            raise ValueError(f"agente desconhecido: {v!r}")
+        return v
 
 
 class ConversarSiteResposta(BaseModel):
