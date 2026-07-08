@@ -1,0 +1,324 @@
+REFERÊNCIA REGULATÓRIA — ABERTURA E FUNCIONAMENTO LEGAL DE ACADEMIAS (BRASIL)
+Base de conhecimento do agente Regulatório do GymSite.
+Compilado 2026-07-08 a partir de pesquisa documental (Deep Research) + verificação crítica.
+
+=====================================================================
+COMO USAR ESTE DOCUMENTO (regras de citação para o agente)
+=====================================================================
+- Valor de anuidade, taxa e prazo VENCE. Sempre cite o ANO e oriente confirmar no CREF
+  regional / prefeitura. Se não houver valor aqui, diga "consultar o CREF regional" —
+  NUNCA invente valor.
+- Jurisdição de CREF está EM TRANSIÇÃO: novos regionais (CREF23 a CREF27) foram desmembrados
+  de CREF8/14/15/18. Vários estados aparecem em dois conselhos. Ver a seção 3 — sempre
+  oriente confirmar a jurisdição vigente no CONFEF.
+- Vigilância sanitária, Corpo de Bombeiros e alvará são ESTADUAIS/MUNICIPAIS. Os parâmetros
+  abaixo têm o estado/município de origem declarado. NÃO extrapole de um estado para outro.
+- A orientação não substitui consulta ao CREF, à prefeitura, ao Corpo de Bombeiros ou ao contador.
+
+=====================================================================
+1. REGISTRO DE PESSOA JURÍDICA NO SISTEMA CONFEF/CREF
+Base: Resolução CONFEF nº 477/2023 · Lei Federal nº 6.839/1980
+=====================================================================
+Inscrição da PJ no CREF da jurisdição é PRÉ-REQUISITO para operar. A Lei 6.839/1980 obriga
+o registro da empresa no conselho profissional correspondente à sua atividade-fim.
+
+Documentação exigida (Res. CONFEF 477/2023):
+  · Instrumento de constituição (contrato social / requerimento de empresário / estatuto /
+    ata), arquivado na Junta Comercial
+  · Cartão CNPJ ativo
+  · RG e CPF do representante legal e dos sócios
+  · Alvará de funcionamento e localização, alvará sanitário municipal, licença do Corpo de Bombeiros
+  · TRT — Termo de Compromisso de Responsabilidade Técnica, assinado pelo representante legal
+    e pelo Profissional de Educação Física indicado como Responsável Técnico
+  · Relação nominal dos profissionais de Educação Física do quadro, com assinatura e nº de registro
+  · Relação dos serviços e modalidades oferecidos, assinada pelo representante legal e pelo RT
+  · Comprovante de pagamento da taxa de inscrição
+
+Isenção: Pessoas Jurídicas de Direito Público (União/estados/municípios) são isentas de taxa
+de inscrição, anuidade e emolumentos — mas continuam obrigadas a registrar os profissionais.
+
+Prazo de decisão do CREF: até 30 dias após protocolo completo + pagamento.
+  Variação regional observada: CREF4/SP até 30 dias úteis; CREF8 até 60 dias;
+  CREF19/AL 30 dias prorrogáveis por igual período.
+  · janela: 2026 · confirmar no regional
+
+Prazos de comunicação de alteração (Res. CONFEF 477/2023):
+  48 horas .... alteração de Responsável Técnico ou do quadro técnico
+  5 dias ...... alteração de ato constitutivo ou de dados cadastrais gerais
+  24 horas .... indicar RT substituto em caso de ausência/desligamento do RT
+                (sob pena de fechamento imediato e sanção por funcionamento irregular)
+
+=====================================================================
+2. RESPONSÁVEL TÉCNICO (RT) E A LEI Nº 9.696/1998
+Base: Lei Federal 9.696/1998 · Resolução CONFEF nº 134/2007 (art. 4º) · Lei 6.839/1980
+=====================================================================
+- A Lei 9.696/1998 regulamentou a profissão: coordenar, planejar, programar, supervisionar
+  e dirigir atividades físicas são prerrogativas de profissional habilitado e inscrito no CREF.
+- A indicação de RT é exigida pela Resolução CONFEF nº 134/2007 (art. 4º).
+- O RT responde perante autoridades sanitárias, o conselho e os órgãos de defesa do consumidor
+  pela qualidade ética, técnica e estrutural das intervenções do estabelecimento.
+- Limite de acúmulo: um mesmo profissional pode assumir no máximo 2 responsabilidades técnicas
+  simultâneas.  ⚠ CONFIRMAR a resolução CONFEF/CREF que fixa esse limite antes de afirmar.
+
+Penalidades por operar sem RT / com profissional não habilitado:
+  · Multa administrativa — faixa observada de 1 a 5 anuidades vigentes do CREF regional.
+    ⚠ CORREÇÃO DE FONTE: a Lei 9.696/1998 NÃO fixa valor de multa. A gradação vem de
+    RESOLUÇÃO DO CREF REGIONAL (ex.: Resolução CREF14/GO-TO nº 122/2023, que dispõe sobre
+    multas por infração). Cite a resolução do regional, não a Lei 9.696, ao falar de valor.
+  · Sanções operacionais — lacre de equipamento, suspensão de turma sem profissional
+    habilitado, interdição do estabelecimento.
+  · Enquadramento penal — exercício ilegal da profissão (art. 47 da Lei de Contravenções
+    Penais) e, conforme o caso, CDC (propaganda enganosa / exposição a risco).
+
+=====================================================================
+3. ANUIDADE DE PESSOA JURÍDICA E JURISDIÇÃO DOS CREFs REGIONAIS
+Base: art. 149 da CF · Lei Federal 12.514/2011 · Resolução CONFEF nº 596/2025
+=====================================================================
+Natureza jurídica: contribuição social (tributária).
+
+VALOR PADRÃO NACIONAL DA ANUIDADE DE PESSOA JURÍDICA — EXERCÍCIO 2026: R$ 1.569,68
+  · valor: R$ 1.569,68 · base: Resolução CONFEF nº 596/2025 · fonte: CONFEF
+  · janela: exercício 2026 (confirmar o valor do exercício corrente)
+
+Os regionais têm autonomia para calendário, parcelamento e DESCONTO por faixa de capital
+social e por modelo societário (Sociedade Limitada Unipessoal — SLU), chegando a até 70%.
+
+PROPORCIONALIDADE (duodécimos): inscrição ou reativação no curso do ano gera cobrança
+proporcional aos meses remanescentes do ano civil.
+  Exemplo aritmético: registro aberto em setembro → 4/12 de R$ 1.569,68 = R$ 523,23.
+Baixa de registro protocolada até 31/03/2026 isenta a anuidade do exercício.
+  ⚠ Regra de calendário do regional — confirmar no CREF de origem.
+
+--- JURISDIÇÃO: EM QUAL CREF REGISTRAR A ACADEMIA (mapeamento verificado em 08/07/2026) ---
+
+FATO ESTRUTURAL: existem 27 CREFs INSTITUÍDOS, mas apenas 22 OPERANDO (recebendo registro de
+pessoa jurídica). Os CREF23/RO, CREF24/TO, CREF25/AP, CREF26/AC e CREF27/RR foram criados pelas
+Resoluções CONFEF nº 623 a 627/2026 (plenário de 12/06/2026, publicadas entre 16 e 18/06/2026).
+Nessas resoluções: §1º atividades administrativas internas desde 01/07/2026; §2º atendimento
+externo (inclusive registro) só a partir de 02/01/2027. Até essa data, quem recebe o registro é
+o CREF de origem. Por isso três regionais ainda atendem mais de uma UF: CREF8/AM-AC-RO-RR,
+CREF14/GO-TO e CREF18/PA-AP.
+· base: mapa oficial confef.org.br/crefs + Resoluções CONFEF 623–627/2026
+· janela: válido em 08/07/2026 — REVERIFICAR após 02/01/2027
+
+ONDE REGISTRAR HOJE (uma linha por unidade da federação):
+
+Academia no ACRE (AC): registre no CREF8/AM-AC-RO-RR. O CREF26/AC já foi instituído (Res. CONFEF
+nº 626/2026) mas NÃO recebe registro ainda; o Acre passa para o CREF26/AC em 02/01/2027.
+Academia em ALAGOAS (AL): registre no CREF19/AL. Jurisdição estável.
+Academia no AMAPÁ (AP): registre no CREF18/PA-AP. O CREF25/AP já foi instituído (Res. CONFEF
+nº 625/2026) mas NÃO recebe registro ainda; o Amapá passa para o CREF25/AP em 02/01/2027.
+Academia no AMAZONAS (AM): registre no CREF8/AM-AC-RO-RR. O Amazonas permanece no CREF8.
+Academia na BAHIA (BA): registre no CREF13/BA. Jurisdição estável.
+Academia no CEARÁ (CE): registre no CREF5/CE. Jurisdição estável.
+Academia no DISTRITO FEDERAL (DF): registre no CREF7/DF. Jurisdição estável.
+Academia no ESPÍRITO SANTO (ES): registre no CREF22/ES. Jurisdição estável.
+Academia em GOIÁS (GO): registre no CREF14/GO-TO. Goiás permanece no CREF14 (que ainda atende TO).
+Academia no MARANHÃO (MA): registre no CREF21/MA. Jurisdição estável — o Maranhão NÃO está em
+transição; já é regional próprio.
+Academia em MATO GROSSO (MT): registre no CREF17/MT. Jurisdição estável.
+Academia em MATO GROSSO DO SUL (MS): registre no CREF11/MS. Jurisdição estável.
+Academia em MINAS GERAIS (MG): registre no CREF6/MG. Jurisdição estável.
+Academia no PARÁ (PA): registre no CREF18/PA-AP. O Pará permanece no CREF18 (que ainda atende AP).
+Academia na PARAÍBA (PB): registre no CREF10/PB. Jurisdição estável.
+Academia no PARANÁ (PR): registre no CREF9/PR. Jurisdição estável.
+Academia em PERNAMBUCO (PE): registre no CREF12/PE. Jurisdição estável.
+Academia no PIAUÍ (PI): registre no CREF15/PI. Jurisdição estável.
+Academia no RIO DE JANEIRO (RJ): registre no CREF1/RJ. Jurisdição estável.
+Academia no RIO GRANDE DO NORTE (RN): registre no CREF16/RN. Jurisdição estável.
+Academia no RIO GRANDE DO SUL (RS): registre no CREF2/RS. Jurisdição estável.
+Academia em RONDÔNIA (RO): registre no CREF8/AM-AC-RO-RR. O CREF23/RO já foi instituído (Res.
+CONFEF nº 623/2026) mas NÃO recebe registro ainda; Rondônia passa para o CREF23/RO em 02/01/2027.
+Academia em RORAIMA (RR): registre no CREF8/AM-AC-RO-RR. O CREF27/RR já foi instituído (Res.
+CONFEF nº 627/2026) mas NÃO recebe registro ainda; Roraima passa para o CREF27/RR em 02/01/2027.
+Academia em SANTA CATARINA (SC): registre no CREF3/SC. Jurisdição estável.
+Academia em SÃO PAULO (SP): registre no CREF4/SP. Jurisdição estável.
+Academia em SERGIPE (SE): registre no CREF20/SE. Jurisdição estável.
+Academia no TOCANTINS (TO): registre no CREF14/GO-TO. O CREF24/TO já foi instituído (Res. CONFEF
+nº 624/2026) mas NÃO recebe registro ainda; o Tocantins passa para o CREF24/TO em 02/01/2027.
+
+REGRA DO AGENTE: para AC, RO, RR, TO e AP, diga onde registrar HOJE (o CREF de origem) E avise
+que o novo regional assume em 02/01/2027. Nunca mande o usuário registrar num CREF que ainda não
+opera. Distinga sempre "conselho instituído" de "conselho recebendo registro".
+
+--- ⚠ MAPEAMENTOS ANTIGOS QUE AINDA CIRCULAM E ESTÃO ERRADOS ---
+Alguns documentos e páginas desatualizadas trazem a composição anterior dos regionais. NÃO use:
+  ERRADO: CREF1/RJ-ES        → o Espírito Santo hoje é CREF22/ES
+  ERRADO: CREF5/CE-MA-PI     → o Maranhão é CREF21/MA e o Piauí é CREF15/PI
+  ERRADO: CREF7/DF-GO-TO     → Goiás e Tocantins são CREF14/GO-TO; o CREF7 é só o DF
+  ERRADO: CREF10/PB-RN       → o Rio Grande do Norte hoje é CREF16/RN
+  ERRADO: CREF11/MS-MT       → o Mato Grosso hoje é CREF17/MT
+  ERRADO: CREF13/BA-SE       → Sergipe hoje é CREF20/SE
+  ERRADO: CREF8 com PA e AP  → Pará e Amapá nunca foram do CREF8; são CREF18/PA-AP
+Se um trecho recuperado apresentar qualquer uma dessas composições, ele está DESATUALIZADO.
+Prevalece o mapeamento verificado acima (08/07/2026).
+
+CORREÇÃO DE FONTE: a Resolução CONFEF nº 584/2025 (11/04/2025) é o REGULAMENTO GERAL de
+procedimentos para implantação de novos CREFs — ela NÃO cria o CREF27/RR nem qualquer regional
+específico. As criadoras são as Resoluções CONFEF nº 623/2026 (CREF23/RO), 624/2026 (CREF24/TO),
+625/2026 (CREF25/AP), 626/2026 (CREF26/AC) e 627/2026 (CREF27/RR).
+
+--- DESCONTOS 2026 COM RESOLUÇÃO CITADA (confirmar vigência) ---
+  CREF1/RJ ... capital > R$ 200 mil a R$ 500 mil: R$ 941,00 · Res. CREF1 nº 144/2025
+  CREF3/SC ... 50% p/ capital até R$ 200 mil (R$ 784,84) até 10/09/2026; SLU R$ 470,90
+               · Res. nº 285/2025/CREF3/SC
+  CREF6/MG ... SLU R$ 470,90; capital até R$ 50 mil R$ 784,84 até 31/03/2026
+  CREF9/PR ... 40% em jan/fev p/ capital até R$ 200 mil (R$ 941,81)
+  CREF10/PB .. até 50% até 11/07/2026 (R$ 784,84 a R$ 1.491,20) · Res. CREF10 nº 150/2025
+  CREF12/PE .. 50% p/ capital até R$ 200 mil (R$ 784,84), de 02/01 a 30/06/2026
+               · Res. CREF12/PE nº 123/2025
+  CREF13/BA .. 50% de 01/01 a 31/03/2026 p/ capital até R$ 50 mil (R$ 784,84)
+               · Res. CREF13/BA nº 081/2025
+  CREF18/PA .. 50% até 02/02/2026 p/ capital até R$ 200 mil (R$ 784,84)
+  CREF20/SE .. 40% p/ capital até R$ 50 mil (R$ 941,81) até 31/05/2026
+  CREF21/MA .. 50% p/ capital até R$ 50 mil ou SLU (R$ 784,84) até 10/04/2026
+               · Res. CREF21 nº 055/2025
+
+REGIONAIS SEM TABELA PÚBLICA CONSOLIDADA PARA 2026 — responder "consultar o CREF regional":
+  CREF2/RS, CREF4/SP, CREF5/CE, CREF7/DF, CREF8, CREF11/MS, CREF14/GO-TO, CREF15/PI,
+  CREF16/RN, CREF17/MT, CREF19/AL, CREF22/ES, CREF23/RO, CREF24/TO, CREF25/AP,
+  CREF26/AC, CREF27/RR
+
+=====================================================================
+4. ALVARÁ DE LOCALIZAÇÃO E FUNCIONAMENTO (MUNICIPAL)
+Regra: é MUNICIPAL. O roteiro abaixo é o padrão; os exemplos são de capitais específicas.
+=====================================================================
+Roteiro padrão:
+  1) Consulta de viabilidade urbana — a prefeitura confirma se academia é permitida na zona
+  2) Validação estrutural — habite-se comercial e acessibilidade
+  3) Laudos de base — atestado do Corpo de Bombeiros + licença sanitária
+  4) Inscrição municipal — cadastro tributário do prestador de serviço
+  5) Recolhimento de taxa + emissão do alvará (afixar em local visível na recepção)
+
+Exemplos por capital (⚠ valores e limiares vencem — confirmar na prefeitura):
+  SÃO PAULO (SP) — Lei nº 16.402/2016 / Decreto nº 49.969/2008; portal Aprova Digital.
+    Capacidade acima de 250 pessoas → classificado como Local de Reunião, análise do
+    CONTRU/DLR. Taxas básicas a partir de R$ 169,84 (verificar exercício).
+  FORTALEZA (CE) — Decreto Municipal nº 15.114/2021; plataforma de licenciamento urbano.
+    Até 200 m² de área construída e baixo risco estrutural/sanitário: Isenção Única de
+    Funcionamento, automática e sem custo.
+  RIO DE JANEIRO (RJ) — legislação municipal de uso do solo; REGIN + portal Carioca.rio.
+    Exige vínculo entre CNPJ da academia, IPTU do imóvel e contrato de locação.
+
+=====================================================================
+5. VIGILÂNCIA SANITÁRIA
+⚠ ATENÇÃO: os parâmetros abaixo vêm de REGULAMENTO SANITÁRIO ESTADUAL (referência principal:
+Resolução Normativa DIVS/SUV/SES nº 001/2016 — Santa Catarina). Cada estado/município tem o
+seu. NÃO apresente como regra nacional. Oriente confirmar na vigilância sanitária local.
+=====================================================================
+Estrutura física:
+  · Vestiários e sanitários coletivos separados por sexo, com divisões estanques; vaso
+    sifonado com assento e tampa; lavatório com água corrente, sabão líquido e papel toalha.
+  · Lixeiras com tampa de acionamento por pedal ou automático (sem contato manual).
+  · DML (Depósito de Material de Limpeza): compartimento fechado, área mínima 1,5 m²,
+    tanque para lavagem, armário com porta para saneantes, piso e parede impermeáveis,
+    lisos, laváveis e de cor clara.
+  · Circulação principal com largura mínima livre de 1,20 m.
+    (cross-check: coincide com a NBR 9050 — ver base de conhecimento de obra/projeto)
+
+Climatização:
+  · Central de ar-condicionado com capacidade ≥ 60.000 BTU/h obriga PMOC (Plano de
+    Manutenção, Operação e Controle), com limpeza de filtros, manutenção de dutos e
+    análises periódicas de qualidade do ar.
+    · base: Lei Federal 13.589/2018 e Portaria MS 3.523/1998
+
+DEA (Desfibrilador Externo Automático):
+  · Exigência de DEA operacional e de acesso imediato, com manutenção preventiva registrada.
+    ⚠ CONFIRMAR a base legal aplicável: há norma federal sobre DEA em locais de grande
+    circulação, além de regras sanitárias estaduais/municipais. Não afirme a periodicidade
+    de calibragem sem confirmar o regulamento do estado do usuário.
+
+Advertência sobre anabolizantes:
+  · Afixação de cartazes visíveis nos pavimentos de treino alertando sobre riscos do uso
+    de esteroides anabolizantes.  (exigência de regulamento sanitário — confirmar no estado)
+
+Piscinas (⚠ parâmetros do regulamento estadual de referência — confirmar no estado):
+  · pH entre 7,0 e 8,0
+  · cloro livre ativo entre 0,4 e 1,0 mg/L
+  · lava-pés de 1,00 m × 1,00 m × 0,20 m, com cloro livre ativo ≥ 3,0 mg/L
+  · piscina com dimensão superior a 6 m × 6 m exige salva-vidas/guardião de plantão
+
+=====================================================================
+6. CORPO DE BOMBEIROS — AVCB E CLCB
+⚠ Os limiares abaixo são do regime de SÃO PAULO (Decreto nº 63.911/2018 / ITs do CBPMESP).
+A numeração das Instruções Técnicas e os limiares MUDAM POR ESTADO. Confirmar no CBM local.
+=====================================================================
+Duas rotas de licenciamento:
+
+  CLCB / PTS (simplificado) — quando TODOS os limiares abaixo forem atendidos:
+    área total construída ≤ 750 m²  ·  até 3 pavimentos  ·  lotação ≤ 250 pessoas
+    ·  estoque de GLP até 190 kg
+    Emissão simplificada (autoatendimento em portal estadual, ex.: Via Fácil Bombeiros/SP).
+    Preventivos: extintores classes A, B e C, sinalização de emergência, rotas de fuga.
+
+  AVCB / Projeto Técnico (PT) — quando QUALQUER limiar for superado:
+    área > 750 m²  ·  subsolo com reunião de público  ·  lotação > 250 pessoas simultâneas
+    Exige projeto técnico completo assinado por engenheiro habilitado, laudos sob ART e
+    vistoria prévia. Preventivos: hidrantes de parede, mangotinhos, sprinklers, alarme e
+    detecção de fumaça, brigada de incêndio treinada.
+
+Parâmetros de instalação (referência SP — confirmar no estado):
+  · Mínimo de 2 extintores por pavimento.
+  · 1 extintor a no máximo 5 m do acesso principal da edificação.
+  · Caminhamento máximo até um extintor: 25 m em linha de percurso.
+  · Sinalização fotoluminescente obrigatória.
+  · Escadas internas: material incombustível, piso antiderrapante, corrimão duplo em ambos
+    os lados, largura livre mínima constante de 1,20 m sem obstáculos.
+
+(cross-check: os limiares 750 m² / 250 pessoas / 3 pavimentos coincidem com o enquadramento
+PTS×PT descrito na base de conhecimento de obra/projeto. Mesma origem: regime de SP.)
+
+=====================================================================
+7. QUEM PODE ATUAR: HABILITAÇÃO PROFISSIONAL E LIMITES DO ESTÁGIO
+Base: Lei 9.696/1998 · Lei 11.788/2008 (Lei do Estágio)
+=====================================================================
+Somente graduado em Educação Física com registro ATIVO no CREF da jurisdição pode atuar no
+salão, prescrever exercício ou conduzir turma.
+
+  BACHAREL em Educação Física — habilitado para treinamento esportivo, prescrição de
+    musculação, ginástica coletiva e personal trainer em academia, clube e condomínio.
+
+  PROVISIONADO — registro excepcional homologado antes de 1998 por comprovação de atuação
+    fática. Atuação limitada à modalidade declarada na Cédula de Identidade Profissional (CIP).
+
+  LICENCIADO em Educação Física — habilitado para a docência na Educação Básica (infantil,
+    fundamental, médio).
+    ⚠ Segundo a posição do CONFEF/CREF, o licenciado NÃO tem amparo para atuar na musculação,
+    prescrição de treino ou orientação esportiva em academia. Existe DISCUSSÃO JUDICIAL sobre
+    esse limite — apresente como posição do conselho, não como questão pacificada, e oriente
+    consultar o CREF regional.
+
+Estágio (Lei 11.788/2008 — ato educativo supervisionado; vedada substituição de mão de obra):
+  PROIBIDO ..... prescrever treino, fazer avaliação física de forma independente, conduzir
+                 turma sozinho
+  PERMITIDO .... auxiliar o professor tutor, monitorar a execução sob supervisão, apoiar recepção
+  REQUISITO .... matrícula regular + TCE (Termo de Compromisso de Estágio) ativo, homologado
+                 perante a IES; supervisor do quadro técnico, profissional habilitado e registrado
+  LIMITE ....... 1 supervisor para no máximo 10 estagiários simultâneos (Lei 11.788, art. 9º)
+
+Consequência de descaracterizar o estágio (estagiário assumindo turma/autonomia técnica):
+  autuação do CREF por incentivo ao exercício ilegal, multa administrativa e reconhecimento
+  de vínculo de emprego pela CLT.
+
+=====================================================================
+8. QUADRO-RESUMO — EXIGÊNCIAS PARA ABRIR
+=====================================================================
+  Registro de PJ ......... CREF regional ......... Res. CONFEF 477/2023
+  Responsável Técnico .... CREF regional ......... Lei 9.696/1998 + Res. CONFEF 134/2007
+  Anuidade PJ 2026 ....... Sistema CONFEF/CREFs .. Res. CONFEF 596/2025 — R$ 1.569,68 (padrão)
+  Alvará de funcionamento  Prefeitura ............ Código de Posturas / lei municipal
+  Licença sanitária ...... Vigilância Sanitária .. regulamento ESTADUAL/municipal
+  AVCB ou CLCB ........... Corpo de Bombeiros .... regulamento ESTADUAL de segurança contra incêndio
+  Supervisão de estágio .. CREF + MPT ............ Lei 11.788/2008
+
+=====================================================================
+RESSALVAS DE PROCEDÊNCIA (obrigatório o agente respeitar)
+=====================================================================
+- Valor de anuidade, taxa, desconto e prazo referem-se ao EXERCÍCIO 2026. Sempre declare o ano
+  e oriente confirmar no CREF regional / prefeitura. Sem valor confirmado → "consultar o regional".
+- Jurisdição de CREF em transição (CREF23–CREF27): nunca afirme categoricamente; confirme no CONFEF.
+- Vigilância sanitária, bombeiros e alvará variam por estado/município. Os parâmetros aqui têm
+  a origem declarada (SC para sanitária; SP para bombeiros/alvará). Não extrapole.
+- A multa por infração é fixada por RESOLUÇÃO DO CREF REGIONAL, não pela Lei 9.696/1998.
+- Atuação do licenciado em academia: posição do CONFEF, com discussão judicial em curso.
+- Esta orientação não substitui consulta ao CREF, à prefeitura, ao Corpo de Bombeiros ou ao contador.
