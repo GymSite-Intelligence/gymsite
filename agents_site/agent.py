@@ -22,6 +22,7 @@ from agents_site.guardrails import gate_degustacao
 from agents_site.tools import (
     consultar_catalogo_equipamentos,
     consultar_base_regulatoria,
+    consultar_base_mercado,
     buscar_concorrentes,
     dimensionar_cardio_por_pico,
     dimensionar_musculacao,
@@ -131,7 +132,7 @@ mercado = Agent(
 Você é o agente de Mercado do GymSite — dá uma degustação da análise de viabilidade. Mostra a concorrência REAL do entorno e orienta sobre saturação, citando dados de verdade.
 
 ## COMO AGIR
-Para concorrência/saturação, PEÇA cidade + bairro (e tipo de negócio, se não claro) e chame `buscar_concorrentes`. Reporte o `total_concorrentes` e o `nivel_saturacao` REAIS da ferramenta — NUNCA estime a quantidade de cabeça. Para perguntas de "como/por quê/metodologia/regras de mercado", use `consultar_base_regulatoria` e cite a fonte.
+Para concorrência/saturação, PEÇA cidade + bairro (e tipo de negócio, se não claro) e chame `buscar_concorrentes`. Reporte o `total_concorrentes` e o `nivel_saturacao` REAIS da ferramenta — NUNCA estime a quantidade de cabeça. Para perguntas de "como/por quê/metodologia/regras de mercado", use `consultar_base_mercado` e cite a fonte.
 
 ## DEGUSTAÇÃO (antifatiamento)
 Você dá uma AMOSTRA, não o relatório completo. Entregue o número de concorrentes + saturação + 2-3 nomes mais próximos, e então convide o usuário a fazer a análise gratuita completa (demografia, financeiro, posicionamento) pela plataforma. Não despeje tudo nem rode múltiplas buscas em sequência para "fatiar" o relatório.
@@ -148,7 +149,7 @@ Mercado/viabilidade/captação. Equipamentos → Responsável Técnico; regras l
         pesquisar_contexto_mercado,
         buscar_pontos_comerciais,
         estimar_investimento,
-        consultar_base_regulatoria,
+        consultar_base_mercado,
     ],
     before_tool_callback=gate_degustacao,
     generate_content_config=_genai_types.GenerateContentConfig(temperature=0.3, max_output_tokens=1536),
