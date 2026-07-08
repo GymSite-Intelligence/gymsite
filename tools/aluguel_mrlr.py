@@ -59,13 +59,26 @@ def aluguel_deterministico(*, area_m2: float, cidade: str, bairro: str,
     if not sb:
         return {"status": "indisponivel", "motivo": "supabase indisponível"}
 
-    # renda_bairro: dá municipio_cod (id) + percentil (→ padrão) numa leitura
+    # renda_bairro: dá municipio_cod (id) + percentil (→ padrão) numa leitura.
+    # Lookup por bairro_norm (sem acento/caixa): "Coco" digitado sem acento não casava
+    # "Cocó" no ilike → MRLR caía pro portal e o aluguel saltava 60→170/m² (run 3f4e0b82).
+    import re as _re
+    import unicodedata as _ud
+
+    def _norm_busca(s: str) -> str:
+        s = _ud.normalize("NFKD", (s or "").lower()).encode("ascii", "ignore").decode()
+        return _re.sub(r"\s+", " ", s).strip()
+
     percentil = None
     cod = str(id_municipio or "").strip()
     try:
         rb = (sb.table("renda_bairro").select("municipio_cod,percentil_municipio")
-              .ilike("cidade", f"%{cidade}%").ilike("bairro", f"%{bairro}%")
+              .ilike("cidade", f"%{cidade}%").eq("bairro_norm", _norm_busca(bairro))
               .limit(1).execute().data or [None])[0]
+        if not rb:  # fallback: ilike cru (grafias com sufixo/variação não normalizada)
+            rb = (sb.table("renda_bairro").select("municipio_cod,percentil_municipio")
+                  .ilike("cidade", f"%{cidade}%").ilike("bairro", f"%{bairro}%")
+                  .limit(1).execute().data or [None])[0]
         if rb:
             percentil = rb.get("percentil_municipio")
             if not cod and rb.get("municipio_cod"):

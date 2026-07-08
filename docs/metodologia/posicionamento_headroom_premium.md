@@ -1,6 +1,8 @@
 # Spec — Posicionamento por Headroom de Renda (IPECE Censo 2022)
 
-> Status: **especificação** (pré-wire). Fonte de renda: IPECE Informe 272 (Censo 2022, 121 bairros de Fortaleza).
+> Status: **IMPLEMENTADO** no A9 PositioningStrategist (veredito do headroom/zona de
+> percepção no relatório desde jun/2026) — status atualizado em 2026-07-06; o "pré-wire"
+> anterior estava defasado. Fonte de renda: IPECE Informe 272 (Censo 2022, 121 bairros de Fortaleza).
 > Relacionado: regra de ouro zero-hardcode (`tools/parametros_metodologia.py`), perfil A/B (`classificar_perfil_bairro`), A9 PositioningStrategist.
 
 ## ELI5

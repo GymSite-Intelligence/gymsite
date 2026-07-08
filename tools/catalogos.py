@@ -34,6 +34,28 @@ def _fallback(nome: str) -> list[dict[str, Any]]:
             ]
         except Exception:
             return []
+    # MRLR (IBAPE-GO, R²=0,8633) — seed espelhando a tabela (lida em 2026-07-06; conta
+    # reproduzida na mão: Cocó 900m²/padrão 3/local 2/porte 4/PIB Fortaleza →
+    # VU 26,37/m² × 900 = R$ 23.733, EXATO o run de 05/07). Antes os coeficientes
+    # viviam SÓ no banco: a pausa do Supabase deixou o motor sem aluguel determinístico
+    # e sem reprodutibilidade (auditoria 06/07). Calibração original em Goiás —
+    # aplicação fora é extrapolação geográfica rotulada na metodologia.
+    if nome == "mrlr_coef":
+        return [{"chave": k, "valor": str(v), "sinonimos": [], "metadata": {"valor": v}}
+                for k, v in {
+                    "intercepto": 4.313769885, "ln_area": -0.8626002338,
+                    "ln_padrao": 1.864588423, "local": 0.9845380613,
+                    "ln_porte": 0.6497837846, "inv_pib": -74535651.84,
+                    "fator_economico": 1.7713348,
+                }.items()]
+    if nome == "mrlr_escala":
+        return [{"chave": k, "valor": str(v), "sinonimos": [], "metadata": {"valor": v}}
+                for k, v in {
+                    "local_zedus_zoc": 2, "local_zeis_zea": 1,
+                    "porte_ate30k": 1, "porte_30a50k": 2, "porte_50a100k": 3,
+                    "porte_acima100k": 4, "padrao_baixo": 1, "padrao_normal": 2,
+                    "padrao_alto": 3, "fator_pibpc_corte": 50000,
+                }.items()]
     return []
 
 
