@@ -16,6 +16,7 @@ from google.api_core.client_options import ClientOptions
 
 _DEFAULT_ENGINE = "gymsite-market-app_1782013373452"
 _DEFAULT_EQUIP_ENGINE = "gymsite-equip-app"  # engine só de catálogos de equipamento
+_DEFAULT_CONSULTOR_ENGINE = "gymsite-consultor-app"  # BI/estratégia INTERNO — só consultor logado, NUNCA degustação
 _DEFAULT_SERVING = "default_search"
 _FONTE = "Vertex AI Search (gymsite-market-app)"
 
@@ -107,6 +108,16 @@ def buscar_catalogos_equipamentos(pergunta: str, n: int = 4) -> dict:
     engine = os.environ.get("DISCOVERY_EQUIP_ENGINE_ID", _DEFAULT_EQUIP_ENGINE)
     r = buscar_conhecimento(pergunta, n=n, engine_id=engine)
     r["fonte"] = "Vertex AI Search (catálogos de equipamento)"
+    return r
+
+
+def buscar_conhecimento_consultor(pergunta: str, n: int = 4) -> dict:
+    """Busca na base INTERNA de BI/estratégia (`gymsite-consultor-docs`/`gymsite-consultor-app`).
+    Conteúdo sensível (posicionamento próprio, pricing, análise competitiva) — só o consultor
+    LOGADO pode consultar. NUNCA exposto à degustação pública (barreira anti-vazamento no engine)."""
+    engine = os.environ.get("DISCOVERY_CONSULTOR_ENGINE_ID", _DEFAULT_CONSULTOR_ENGINE)
+    r = buscar_conhecimento(pergunta, n=n, engine_id=engine)
+    r["fonte"] = "Vertex AI Search (consultor interno)"
     return r
 
 
