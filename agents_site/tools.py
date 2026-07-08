@@ -358,9 +358,12 @@ def calcular_sanitarios_por_lotacao(
 
 
 def consultar_base_regulatoria(pergunta: str) -> dict:
-    """Consulta a base de conhecimento regulatória/de mercado (documentos CONFEF/CREF,
-    Lei 9.696/1998, anuidades, licenças, metodologia e pesquisa de mercado). Use SEMPRE
-    antes de afirmar uma exigência legal, valor de anuidade, prazo ou regra.
+    """Consulta a base REGULATÓRIA dedicada (documentos CONFEF/CREF, Lei 9.696/1998,
+    anuidades, registro PJ, licenças de funcionamento). Use SEMPRE antes de afirmar uma
+    exigência legal, valor de anuidade, prazo ou regra.
+
+    Aponta pro engine `gymsite-regulatorio-app` (store gymsite-regulatorio-docs) — NÃO o
+    market. Antes disso caía no default market e respondia CREF com doc de mercado.
 
     Args:
         pergunta: o que buscar, em linguagem natural
@@ -370,11 +373,35 @@ def consultar_base_regulatoria(pergunta: str) -> dict:
         dict com `resultados` (lista de {titulo, uri, trecho}), `n_docs` e `fonte`.
         Se vier vazio, a base não cobre — oriente confirmar no CREF/prefeitura, não invente.
     """
+    import os
+    from tools.discovery_engine_tools import buscar_conhecimento
+    engine = os.environ.get("DISCOVERY_REGULATORIO_ENGINE_ID", "gymsite-regulatorio-app")
+    try:
+        r = buscar_conhecimento(pergunta, n=4, engine_id=engine)
+        r["fonte"] = "Vertex AI Search (regulatório CREF/Lei)"
+        return r
+    except Exception as e:  # noqa: BLE001
+        logger.exception("consultar_base_regulatoria falhou")
+        return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
+
+
+def consultar_base_mercado(pergunta: str) -> dict:
+    """Consulta a base de MERCADO (metodologia GymSite, benchmarks do setor, franquias,
+    tendências, dores). Use para "como vocês calculam viabilidade", "tendência do setor",
+    "boas práticas" — NÃO para exigência legal (isso é `consultar_base_regulatoria`).
+
+    Aponta pro engine `gymsite-market-app` (default). Separada da regulatória pra não
+    misturar fato de mercado com norma legal.
+
+    Returns:
+        dict com `resultados` (lista de {titulo, uri, trecho}), `n_docs` e `fonte`.
+        Se vier vazio, a base não cobre — diga com transparência, não invente.
+    """
     from tools.discovery_engine_tools import buscar_conhecimento
     try:
         return buscar_conhecimento(pergunta, n=4)
     except Exception as e:  # noqa: BLE001
-        logger.exception("consultar_base_regulatoria falhou")
+        logger.exception("consultar_base_mercado falhou")
         return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
 
 
