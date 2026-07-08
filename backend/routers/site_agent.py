@@ -346,7 +346,11 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
     ip = _client_ip(request)
     nova_sessao = not data.projeto_id
 
-    if nova_sessao and not await verificar_turnstile(data.turnstile_token, ip):
+    # Anti-bot na 1ª msg (fail-closed). Dev/owner pula via allowlist de IP ou token
+    # (x-site-chat-token / dev_token) — mesmo mecanismo do /analise.
+    if (nova_sessao
+            and not _bypass_autorizado(request, data.dev_token, ip)
+            and not await verificar_turnstile(data.turnstile_token, ip)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Verificação anti-bot falhou.")
 
