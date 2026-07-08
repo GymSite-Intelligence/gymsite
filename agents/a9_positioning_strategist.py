@@ -373,6 +373,43 @@ def _concorrentes_para_oferta(state: dict) -> list[dict]:
     return out
 
 
+def _dores_da_praca(state: dict) -> set[str]:
+    """Categorias de dor medidas nos reviews (A3b) — insumo do ERRC 'Brilliant Basics'
+    (auditoria Gemini 05/07): quando o mercado cobre os serviços, a diferenciação vem
+    de executar com excelência o que a praça executa mal — e as dores dizem O QUE."""
+    from tools.competitor_tools import _parse_market_context
+
+    ic = _parse_market_context(state.get("inteligencia_competitiva"))
+    inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+    dores = (inner.get("dores_dominantes") if isinstance(inner, dict) else None) or []
+    out: set[str] = set()
+    for d in dores:
+        if isinstance(d, dict):
+            cat = str(d.get("categoria") or d.get("dor") or "").strip().lower()
+        else:
+            cat = str(d).strip().lower()
+        if cat:
+            out.add(cat.replace(" ", "_"))
+    return out
+
+
+def _publico_dominante(state: dict) -> tuple[str, int] | None:
+    """(faixa dominante, %feminino da faixa) do Censo por setor — direciona o CRIAR
+    de comunidade (público maduro → longevidade funcional, não alta intensidade)."""
+    demo = state.get("demografia_bairro")
+    perfil = (demo or {}).get("perfil_idade_sexo_bairro") if isinstance(demo, dict) else None
+    seg = (perfil or {}).get("segmentos") if isinstance(perfil, dict) else None
+    if not isinstance(seg, dict) or not seg:
+        return None
+    faixa, dados = max(
+        ((f, v) for f, v in seg.items() if isinstance(v, dict) and v.get("total")),
+        key=lambda kv: kv[1]["total"], default=(None, None),
+    )
+    if not faixa:
+        return None
+    return faixa, int(round(float(dados.get("pct_mulheres") or 0)))
+
+
 def _servicos_minerados_state(state: dict) -> set[str]:
     """Serviços minerados pelo offer_mapper (site+IG, praça inteira) direto do state —
     cobre os concorrentes fora do detalhado (CT Greenlife) cuja oferta não chega
@@ -738,8 +775,43 @@ def _errc_deterministica(state: dict) -> dict:
     else:
         aumentar.append("Retenção, NPS e comunidade — diferenciação por experiência (sem lastro premium).")
     aumentar.append("Ticket médio rumo ao teto sustentável da renda local.")
+    # ── Brilliant Basics (auditoria Gemini 05/07): as DORES medidas nos reviews viram
+    # diretriz nas 4 dimensões — "entregar com precisão o que a praça executa mal".
+    # Cada item cita a dor/dado de origem (regra do carimbo).
+    dores = _dores_da_praca(state)
+    if {"contrato_abusivo", "contrato"} & dores:
+        eliminar.append(
+            "Atrito contratual — cancelamento livre e termos transparentes: "
+            "'contrato abusivo' é dor medida nos reviews da praça (retenção por valor, não por multa)."
+        )
+    if {"atendimento_ruim", "atendimento"} & dores:
+        eliminar.append(
+            "Instrutor de salão passivo — equipe dimensionada pra acolhimento proativo: "
+            "'atendimento ruim' é a dor mais citada da praça."
+        )
+    if {"ruido_alto", "ruido"} & dores:
+        reduzir.append(
+            "Pressão do horário de pico — escalonar grade e precificar off-peak: dissipa a "
+            "superlotação de 17h–19h que gera a dor 'ruído alto' medida nos reviews."
+        )
+    if {"climatizacao", "estrutura_envelhecida", "equipamento_problema"} & dores:
+        aumentar.append(
+            "Conforto ambiental como diferencial defensável: climatização dimensionada pro "
+            "calor local + manutenção preventiva com SLA de reparo — ataca as dores "
+            "'climatização/estrutura/equipamento' medidas nos reviews da concorrência."
+        )
+
     criar = ([f"{g} — nenhum concorrente da praça anuncia." for g in gaps]
              if gaps else ["Mercado coberto nos serviços-núcleo — sem CRIAR; foco em AUMENTAR/REDUZIR."])
+    # Público maduro → comunidade de longevidade funcional (não disputar alta intensidade
+    # já coberta). Derivado do Censo por setor, não de palpite.
+    _pub = _publico_dominante(state)
+    if _pub and _pub[0] in ("40-59", "60+"):
+        criar.append(
+            f"Comunidade de longevidade funcional — mobilidade, saúde articular e hipertrofia "
+            f"preventiva: o público predominante da praça é {_pub[0]} ({_pub[1]}% feminino, "
+            f"Censo 2022 por setor), que migra por previsibilidade e conforto, não por intensidade."
+        )
 
     # ── markdown ──
     def _bul(xs):

@@ -164,7 +164,8 @@ table.d thead { display:table-header-group; }
 {% endfor %}
 </div>
 <div class="note">Público predominante: <strong>{{ demografia.dominante }}</strong> · perfil <strong>{{ demografia.tendencia }}</strong>. Idade REAL do bairro — {{ demografia.n_setores }} setores IBGE agregados em torno do centróide até cobrir a população do bairro (base distinta da contagem de população) — não herdada do município.</div>
-{% endif %}{% endif %}
+{% endif %}
+{% if narrativa.demografia %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.demografia }}</div>{% endif %}{% endif %}
 
 {% if competidores %}
 <div class="sec">Inteligência Competitiva</div>
@@ -172,6 +173,7 @@ table.d thead { display:table-header-group; }
 {% for c in competidores %}<tr><td>{{ c.nome }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td>{% if competidores_tem_tier %}<td>{{ c.tier }}</td>{% endif %}</tr>{% endfor %}
 </table>
 {% if competidores_tem_tier %}<div class="note">Rating adicional e <strong>tier</strong> = menor plano corporativo que dá acesso ao concorrente no agregador (Wellhub/similares) — sinal de posicionamento, <strong>não é mensalidade de balcão</strong>.</div>{% endif %}
+{% if narrativa.competitiva %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.competitiva }}</div>{% endif %}
 {% if pico %}
 <div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Janela de demanda — lotação agregada dos concorrentes por hora</div>
 <div class="pico">{% for b in pico.barras %}<div class="col {{ 'hot' if b.hora in pico.horas }}" style="height:{{ b.pct }}%;"></div>{% endfor %}</div>
@@ -246,7 +248,8 @@ table.d thead { display:table-header-group; }
 {% if cenarios %}<table class="d" style="margin-top:6px;"><tr><th>Modelo</th><th>Ticket</th><th>Receita/mês</th><th>Lucro/mês</th><th>Margem</th><th>Payback</th><th>Alunos</th><th>Viabilidade</th></tr>
 {% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}{{ ' ★' if c.recomendado }}</td><td>{{ c.ticket }}</td><td>{{ c.receita }}</td><td>{{ c.lucro }}</td><td>{{ c.margem }}</td><td>{{ c.payback }}</td><td>{{ c.alunos }}</td>
   <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span>{% if c.justificativa %}<div style="font-size:6.5pt; color:#64748B; margin-top:2px;">{{ c.justificativa }}</div>{% endif %}</td></tr>{% endfor %}
-</table>{% endif %}
+</table>
+{% if narrativa.financeira %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.financeira }}</div>{% endif %}{% endif %}
 {% if cenarios_tem_fiscal %}
 <div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Tributos &amp; Ocupação por cenário (Simples Nacional · Fator R · teto de ocupação imobiliária)</div>
 <table class="d" style="margin-top:6px;"><tr><th>Modelo</th><th>Folha %fat</th><th>Fator R</th><th>Anexo</th><th>Alíquota</th><th>Tributos/mês</th><th>Ocupação</th><th>Teto</th><th>Ticket-piso</th></tr>
@@ -345,7 +348,8 @@ table.d thead { display:table-header-group; }
 <table class="d" style="margin-top:6px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Planta</th><th>Preço base</th><th>Entrega</th></tr>
 {% for r in demanda.radar %}<tr><td>{{ r.nome }}</td><td>{{ r.unidades }}</td><td>{{ r.planta }}</td><td>{{ r.preco }}</td><td>{{ r.entrega }}</td></tr>{% endfor %}
 </table>
-<div class="note">Empreendimentos em VENDA que ainda não iniciaram obra (sem CNO): sinal de demanda futura e de parceria de estande, mas sem carimbo registral — por isso NÃO somam na captura/receita acima.</div>{% endif %}{% endif %}
+<div class="note">Empreendimentos em VENDA que ainda não iniciaram obra (sem CNO): sinal de demanda futura e de parceria de estande, mas sem carimbo registral — por isso NÃO somam na captura/receita acima.</div>{% endif %}
+{% if narrativa.demanda %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.demanda }}</div>{% endif %}{% endif %}
 
 {% if bairros_viz %}
 <div class="sec">Bairros Vizinhos Recomendados</div>
@@ -1153,7 +1157,64 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "severidade": str(a.get("severidade") or "").strip() or None,
         })
 
+    # ── Relatório HÍBRIDO: narrativa executiva determinística por seção (f-strings
+    # sobre o MESMO contexto das tabelas — zero LLM, zero número novo). Fecha cada
+    # seção explicando o que os dados dizem, com carimbo de base/fonte.
+    narrativa: dict[str, str] = {}
+    try:
+        if demografia:
+            _pir_dom = demografia.get("dominante") or ""
+            _tend = demografia.get("tendencia") or ""
+            narrativa["demografia"] = (
+                f"Leitura executiva: o bairro concentra {demografia.get('populacao') or 'população não disponível'}"
+                f" em {demografia.get('dom') or '—'} domicílios, com renda per capita (proxy do responsável) de "
+                f"{demografia.get('renda') or '—'}. O público dominante é a faixa {_pir_dom}"
+                f"{', perfil ' + _tend if _tend else ''} — é para esse perfil que posicionamento, grade e "
+                f"conforto devem ser dimensionados. Base: IBGE Censo 2022 por setor censitário."
+            )
+        if competidores:
+            _n_comp = len(competidores)
+            _com_tier = sum(1 for x in competidores if x.get("tier") not in (None, "—"))
+            _sat = (panorama or {}).get("saturacao") or model.nivel_saturacao or "—"
+            narrativa["competitiva"] = (
+                f"Leitura executiva: {_n_comp} concorrente{'s' if _n_comp != 1 else ''} com reviews analisados na praça, "
+                f"saturação {_sat} pela contagem no bairro. "
+                + (f"{_com_tier} deles com presença em agregador corporativo (tier Wellhub) — sinal de disputa também "
+                   f"pelo público de benefício-empresa. " if _com_tier else "")
+                + "As dores medidas nos reviews são o mapa da diferenciação: o que a praça executa "
+                  "mal é o que o entrante deve executar com excelência."
+            )
+        if cenarios:
+            _rec = next((c for c in cenarios if c.get("recomendado")), None)
+            _inv = sum(1 for c in cenarios if "INVI" in str(c.get("viab") or "").upper())
+            _rec_txt = (
+                f"O cenário recomendado ({_rec['modelo']}) projeta receita {_rec['receita']}/mês com margem "
+                f"{_rec['margem']} e payback {_rec['payback']}. " if _rec else
+                "Nenhum cenário atingiu o critério de recomendação neste run. "
+            )
+            narrativa["financeira"] = (
+                "Leitura executiva: " + _rec_txt
+                + (f"{_inv} dos {len(cenarios)} cenários reprovaram — o motivo de cada selo está na própria tabela "
+                   f"(quando é ocupação imobiliária, confirme a cotação real de aluguel antes de descartar a praça). "
+                   if _inv else "")
+                + "Valores estimados por benchmark setorial calibrado pela renda local — validar em due diligence."
+            )
+        if demanda:
+            narrativa["demanda"] = (
+                f"Leitura executiva: {demanda.get('n')} obra{'s' if demanda.get('n') != 1 else ''} residenciais com "
+                f"registro CNO no horizonte T+24 somam {demanda.get('moradores')} novos moradores — captura estimada "
+                f"de ~{demanda.get('captura')} alunos (R$ {demanda.get('receita')}/mês) sem CAPEX extra, via parceria "
+                f"de estande e marketing de pré-entrega. "
+                + (f"O radar lista ainda {len(demanda.get('radar') or [])} pré-lançamento(s) sem CNO — informativos, "
+                   f"fora dos totais. " if demanda.get("radar") else "")
+                + "Fonte: CNO/RFB + páginas de lançamento + IBGE Censo 2022."
+            )
+    except Exception:
+        # narrativa é acessório: falha silenciosa preserva o relatório tabular.
+        narrativa = {}
+
     return {
+        "narrativa": narrativa,
         "bairro": model.bairro, "cidade": model.cidade, "uf": model.uf,
         "tipo": (model.tipo_negocio or "").replace("_", " "),
         "area": f"{model.area_m2_min}–{model.area_m2_max} m²",

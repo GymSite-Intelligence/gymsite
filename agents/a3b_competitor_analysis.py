@@ -110,14 +110,18 @@ def _sintetizar_textos(envelope: dict) -> tuple[str, str]:
         partes.append(f"Melhor avaliada: {melhor.get('nome')} ({melhor.get('rating')}★)")
     resumo_executivo = ". ".join(partes) + "."
 
-    # Posicionamento recomendado (a partir do gap)
+    # Posicionamento recomendado (a partir do gap). Nome de categoria interna
+    # (atendimento_ruim) NUNCA vaza pro cliente — humanizar antes de frasear.
+    def _humano(s) -> str:
+        return str(s or "").replace("_", " ").strip()
+
     rec = []
     if top_serv:
-        rec.append(f"Gap de oferta: {top_serv}")
+        rec.append(f"Gap de oferta: {_humano(top_serv)}")
     if top_dor:
-        rec.append(f"atacar a dor '{top_dor}' que os concorrentes não resolvem")
+        rec.append(f"atacar a dor \"{_humano(top_dor)}\" que os concorrentes não resolvem")
     if top_opp:
-        rec.append(f"explorar {top_opp}")
+        rec.append(f"explorar {_humano(top_opp)}")
     posicionamento_recomendado = (
         "; ".join(rec).capitalize() + "."
         if rec
