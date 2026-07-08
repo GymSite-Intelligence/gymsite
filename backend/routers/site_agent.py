@@ -27,7 +27,7 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from agents_site.catalog import AGENTES_VALIDOS  # sem dependência do ADK (import barato)
+from agents_site.catalog import AGENTES_VALIDOS, id_publico  # sem dependência do ADK (import barato)
 from tools.turnstile import verificar_turnstile
 from tools.db_schema import tbl  # roteia gymsite/shared (flags ON em prod; tbl(sb,) cru = public)
 
@@ -436,10 +436,15 @@ async def conversar_mensagens(projeto_id: str, desde: Optional[str] = None):
     if not proj or proj.get("user_id") != _ANON_SITE_USER_ID:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
 
-    q = tbl(sb, "project_messages").select("role, content, created_at").eq("projeto_id", projeto_id)
+    q = tbl(sb, "project_messages").select("role, content, created_at, agente").eq("projeto_id", projeto_id)
     if desde:
         q = q.gt("created_at", desde)
     msgs = q.order("created_at").execute().data or []
+    # A coluna guarda o nome ADK (Event.author); a API fala id público nos dois sentidos.
+    # É este campo que acende o crachá do especialista em cada balão — com o roteador,
+    # quem respondeu só se sabe DEPOIS do turno.
+    for m in msgs:
+        m["agente"] = id_publico(m.get("agente"))
 
     mn = dict(proj.get("modelo_negocio") or {})
     mn.pop("_site", None)
