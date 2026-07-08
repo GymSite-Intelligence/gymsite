@@ -69,11 +69,16 @@ def _bypass_autorizado(request: Request, dev_token: str | None, ip: str | None) 
 
 
 async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessao: bool, agente: str) -> str | None:
+    # Fail-CLOSED: sem Redis não há teto, e o mesmo evento faz `_enqueue_ou_background`
+    # degradar pra BackgroundTasks — o turno roda dentro da api (maxScale=20), não no
+    # worker. Sem cap + execução inline = gasto de Gemini sem teto. O /analise capeia
+    # via Supabase, então o funil de lead sobrevive a uma queda do Redis; só o chat cai.
     try:
         from tools.redis_client import get_redis
         r = await get_redis()
     except Exception:
-        return None
+        logger.exception("cap de chat indisponível (redis inacessível) — bloqueando")
+        return "indisponivel"
     try:
         hoje = datetime.now(timezone.utc).strftime("%Y%m%d")
         if nova_sessao and ip:
@@ -101,7 +106,8 @@ async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessa
                 logger.warning("cap turnos chat atingido projeto=%s (%s)", projeto_id, _CHAT_TURNOS_PROJETO)
                 return "turnos"
     except Exception:
-        return None
+        logger.exception("cap de chat falhou no meio (redis) — bloqueando")
+        return "indisponivel"
     return None
 
 
@@ -356,6 +362,11 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
 
     if not _bypass_autorizado(request, data.dev_token, ip):
         motivo = await _cap_chat_estourado(ip, data.projeto_id, nova_sessao, data.agente or "degustacao")
+        if motivo == "indisponivel":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="O chat está indisponível no momento. Tente de novo em alguns minutos — ou peça a análise gratuita do seu ponto.",
+            )
         if motivo == "sessoes":
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
