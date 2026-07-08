@@ -31,11 +31,35 @@ from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 
 from agents_site.agent import root_agent
+from agents_site.catalog import ESPECIALISTAS
 from services.consultor.project_messages import carregar_historico, salvar_mensagem
 
 logger = logging.getLogger("gymsite.site_adk")
 
 _APP = "gymsite_site"
+
+# Especialista escolhido pelo usuário roda como RAIZ, não via roteador. Precisa de cópia:
+# o original tem `parent_agent` = roteador, e o ADK só usa SingleFlow (sem a tool
+# transfer_to_agent) quando as duas flags de disallow estão ligadas E não há sub_agents
+# — senão monta AutoFlow com pai e irmãos como alvos, e o Regulatório fixado salta pro
+# Mercado. O roteador segue com os originais intactos.
+_PINADOS = {
+    _id: sub.model_copy(
+        update={
+            "parent_agent": None,
+            "disallow_transfer_to_parent": True,
+            "disallow_transfer_to_peers": True,
+        }
+    )
+    for _id, _nome in ESPECIALISTAS.items()
+    for sub in root_agent.sub_agents
+    if sub.name == _nome
+}
+
+
+def _resolver_agente(agente: str):
+    """`degustacao` (ou desconhecido) → roteador; id de especialista → ele mesmo, fixo."""
+    return _PINADOS.get(agente, root_agent)
 
 # Tools de amostra que o gate_degustacao conta pro corte K=2. Usadas para re-hidratar
 # o contador a partir do histórico (o state ADK não sobrevive entre jobs do worker).
@@ -114,20 +138,29 @@ async def run_site_agent_adk(
     for ev in _historico_para_eventos(historico):
         await session_service.append_event(session, ev)
 
-    runner = Runner(agent=root_agent, app_name=_APP, session_service=session_service)
+    escolhido = _resolver_agente(agente)
+    runner = Runner(agent=escolhido, app_name=_APP, session_service=session_service)
     partes: list[str] = []
+    autor: str | None = None
     async for event in runner.run_async(
         user_id=projeto_id,
         session_id=projeto_id,
         new_message=Content(role="user", parts=[Part(text=mensagem)]),
     ):
-        partes.append(_extrair_resposta(event))
+        texto = _extrair_resposta(event)
+        if texto:
+            # Quem de fato respondeu. Com roteador, é o sub-agente pra quem transferiu —
+            # não dá pra inferir do `agente` pedido. Alimenta a UI e a roda de aprendizado.
+            autor = event.author
+        partes.append(texto)
 
     resposta = "".join(partes).strip() or "Desculpe, não consegui responder agora."
-    await salvar_mensagem(projeto_id, role="assistant", content=resposta)
+    await salvar_mensagem(projeto_id, role="assistant", content=resposta, agente=autor)
     logger.info(
-        "site_agent_adk turno OK projeto=%s len_resp=%d",
+        "site_agent_adk turno OK projeto=%s pedido=%s respondeu=%s len_resp=%d",
         projeto_id,
+        agente,
+        autor,
         len(resposta),
         extra={"agent": "SITE_ADK"},
     )
