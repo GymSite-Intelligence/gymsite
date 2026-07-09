@@ -3,6 +3,7 @@ import {
   BarChart3Icon,
   BotIcon,
   ClipboardListIcon,
+  Building2Icon,
   FileTextIcon,
   GitCompareIcon,
   Globe2Icon,
@@ -69,6 +70,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Assistente',
     to: '/assistente',
     icon: MessageSquareIcon,
+  },
+  {
+    title: 'Obras CNO',
+    to: '/cno-obras',
+    icon: Building2Icon,
   },
 ]
 
