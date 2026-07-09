@@ -574,9 +574,15 @@ def _rows_cenarios(rel: dict, relatorio_id: str) -> list[dict]:
             "tir_anual_pct": c.get("tir_anual_pct"),
             "vpl_5_anos": c.get("vpl_5_anos"),
 
-            # Veredito
+            # Veredito. INVIAVEL persiste o motivo REALISTA: financial_tools sobrescreve
+            # `justificativa` com o racional do teto de captação, e o selo INVIAVEL
+            # acabava explicando uma recomendação que não houve (task #17, run b7199c7c).
             "viabilidade": c.get("viabilidade") or "INVIAVEL",
-            "justificativa": c.get("justificativa"),
+            "justificativa": (
+                c.get("justificativa_realista") or c.get("justificativa")
+                if (c.get("viabilidade") or "INVIAVEL") == "INVIAVEL"
+                else c.get("justificativa")
+            ),
 
             # Backward-compat
             "capex_estimado": c.get("capex_estimado") or capex_total,

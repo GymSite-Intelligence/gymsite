@@ -186,7 +186,7 @@ table.d thead { display:table-header-group; }
 <table class="d"><tr><th>Academia</th><th>Plano</th><th>Preço/mês</th><th>Fidelidade</th><th>Inclui</th></tr>
 {% for p in planos %}<tr><td>{{ p.academia }}</td><td>{{ p.plano }}</td><td>{{ p.preco }}</td><td>{{ p.fidelidade }}</td><td style="font-size:8pt;">{{ p.inclui }}</td></tr>{% endfor %}
 </table>
-<div class="note">Planos públicos coletados via SearchAPI (busca web) por academia. Referência para o posicionamento tarifário vs concorrência.</div>{% endif %}
+<div class="note">Planos públicos coletados via busca web por academia — a coleta NÃO distingue fonte: linhas marcadas <strong>[agregador]</strong> são o tier corporativo (Wellhub/similares), <strong>não mensalidade de balcão</strong>; as demais vêm de site/anúncio da própria academia. Referência para o posicionamento tarifário vs concorrência.</div>{% endif %}
 
 {% if oferta_mapeada %}
 <div class="sec">Oferta mapeada por concorrente</div>
@@ -501,7 +501,7 @@ def _coerce_int(v) -> int | None:
 def _norm_txt(s: str) -> str:
     """Normaliza p/ comparação tolerante a acento/caixa (bairro vs endereço)."""
     import unicodedata
-    t = unicodedata.normalize("NFKD", str(s or ""))
+    t = unicodedata.normalize("NFKD", s or "")
     return "".join(c for c in t if not unicodedata.combining(c)).lower().strip()
 
 
@@ -551,9 +551,9 @@ def _prio_cls(v: str) -> str:
 
 def _limpar_md(texto: str | None, max_paragrafos: int = 3) -> list[str]:
     """Markdown do A6 → parágrafos de texto plano (tira #, **, listas, links)."""
-    if not texto or not str(texto).strip():
+    if not texto or not texto.strip():
         return []
-    t = str(texto)
+    t = texto
     t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)          # **bold** → bold
     t = re.sub(r"`([^`]+)`", r"\1", t)               # `code`
     t = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", t)   # [txt](url) → txt
@@ -595,7 +595,7 @@ def _piramide(demo_bairro: dict) -> dict | None:
             "h": round(s.get("pct_homens") or 0),
         } for f, s in rows],
         "dominante": f"{dom[0]} ({_NOME_FAIXA.get(dom[0], '')})",
-        "tendencia": tend, "n_setores": perfil.get("n_setores") or "—",
+        "tendencia": tend, "n_setores": (perfil or {}).get("n_setores") or "—",
     }
 
 
@@ -733,7 +733,7 @@ def _dores_quadro(dores_cons) -> list[dict] | None:
 def _limpar_bairro(b: str | None) -> str:
     """'Lojas 2/3/12/13 - Cocó' → 'Cocó'. Tira prefixo de loja/sala/quadra/lote do
     endereço que o parser às vezes deixa no campo bairro."""
-    s = str(b or "").strip()
+    s = (b or "").strip()
     if not s:
         return "—"
     # se houver ' - ', o bairro real costuma ser o ÚLTIMO segmento
@@ -827,7 +827,17 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     mercado = None
     if mkt is not None:
         mercado = {
-            "ticket": _mc_money(mkt.ticket_mercado), "aluguel": _mc_money(mkt.aluguel_m2, sufixo="/m²"),
+            "ticket": _mc_money(mkt.ticket_mercado),
+            # Carimbo do aluguel: fonte USADA na viabilidade (A4), não a pesquisa do
+            # Deep Research — auditoria b7199c7c (task #29). Pesquisa só entra quando
+            # a A4 não decidiu valor.
+            "aluguel": (
+                f"{_brl(model.aluguel_mensal)}/mês · metodologia MRLR"
+                if model.aluguel_mensal and "mrlr" in str(model.aluguel_fonte or "").lower()
+                else (f"{_brl(model.aluguel_mensal)}/mês · {model.aluguel_fonte}"
+                      if model.aluguel_mensal and model.aluguel_fonte
+                      else _mc_money(mkt.aluguel_m2, sufixo="/m²"))
+            ),
             "renda": _mc_money(mkt.renda), "tendencia": mkt.tendencia,
             "parque": _int(mkt.parque_ativo) if mkt.parque_ativo else None,
             "novos": mkt.novos_cnpj_90d,
@@ -937,7 +947,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             ("Equipamentos", cap_cen.capex_equipamentos),
             ("Contingência", cap_cen.capex_contingencia),
         ]
-        itens_raw = [(lab, float(v)) for lab, v in itens_raw if v]
+        # values are already numeric (float/int); avoid unnecessary conversion
+        itens_raw = [(lab, v) for lab, v in itens_raw if v]
         tot = sum(v for _, v in itens_raw)
         if tot > 0:
             capex = {
@@ -986,17 +997,40 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         })
 
     # Quadro planos × preços da concorrência (SearchAPI). Só com dado real.
+    # HIGIENE DE FONTE (run b7199c7c): a busca web captura QUALQUER fonte pública —
+    # inclusive páginas de agregador (Wellhub/Gurupass) — e o tier corporativo aparecia
+    # como mensalidade de balcão nesta tabela, violando a regra tier ≠ balcão. Plano
+    # de agregador ganha rótulo explícito; o tier "oficial" já sai na Inteligência
+    # Competitiva pela camada 3.
+    _KW_AGREGADOR = ("wellhub", "gympass", "gurupass", "totalpass")
+
+    def _corta_palavra(txt: str, limite: int) -> str:
+        """Trunca em fronteira de PALAVRA com reticências (o corte cego em 46 chars
+        deixava frase pela metade: '...e a outras opções de')."""
+        txt = (txt or "").strip()
+        if len(txt) <= limite:
+            return txt
+        corte = txt[:limite].rsplit(" ", 1)[0].rstrip(",;")
+        return f"{corte}…"
+
     planos = []
     for c in (model.competidores or []):
         for p in (c.planos_precos or [])[:2]:
             if isinstance(p, dict) and p.get("preco_mensal"):
                 inclui = p.get("inclui") or []
+                blob_fonte = f"{p.get('plano') or ''} {' '.join(str(x) for x in inclui) if isinstance(inclui, list) else ''}".lower()
+                eh_agregador = any(k in blob_fonte for k in _KW_AGREGADOR)
+                plano_txt = _corta_palavra(str(p.get("plano") or "—"), 34)
+                if eh_agregador:
+                    plano_txt = f"{plano_txt} [agregador]"
                 planos.append({
-                    "academia": (c.nome or "—")[:24],
-                    "plano": str(p.get("plano") or "—")[:24],
+                    "academia": _corta_palavra(c.nome or "—", 26),
+                    "plano": plano_txt,
                     "preco": str(p.get("preco_mensal") or "—")[:14],
                     "fidelidade": str(p.get("fidelidade") or "—")[:16],
-                    "inclui": ", ".join(str(x) for x in inclui[:2])[:46] if isinstance(inclui, list) else "—",
+                    "inclui": _corta_palavra(
+                        ", ".join(str(x) for x in inclui[:3]), 80
+                    ) if isinstance(inclui, list) and inclui else "—",
                 })
 
     # Candidato fora do bairro/cidade-alvo: GeoScout às vezes devolve imóvel de outra
@@ -1038,7 +1072,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "compat": zm.get("compatibilidade"),
             "cor": _zcor.get(zm.get("compatibilidade"), "#0E5C66"),
             "compat_raw": zm.get("compat_raw") or "—",
-            "compat_cls": {"A": "ok", "P": "mid"}.get(zm.get("compat_raw"), "no"),
+            "compat_cls": {"A": "ok", "P": "mid"}.get(str(zm.get("compat_raw") or ""), "no"),
             "subgrupo": zm.get("subgrupo") or "SE", "classe": zm.get("classe") or 1,
             "descricao": zm.get("descricao") or "",
             "ia": zm.get("ia_maximo"), "tx": zm.get("taxa_ocupacao"), "alt": zm.get("altura_max"),
@@ -1163,7 +1197,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     narrativa: dict[str, str] = {}
     try:
         if demografia:
-            _pir_dom = demografia.get("dominante") or ""
+            _pir_dom = demografia.get("dominante") or "não disponível"
             _tend = demografia.get("tendencia") or ""
             narrativa["demografia"] = (
                 f"Leitura executiva: o bairro concentra {demografia.get('populacao') or 'população não disponível'}"
@@ -1200,13 +1234,16 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
                 + "Valores estimados por benchmark setorial calibrado pela renda local — validar em due diligence."
             )
         if demanda:
+            # demanda.get('radar') may be non-iterable; defensively compute length
+            _radar = demanda.get('radar')
+            _radar_len = len(_radar) if isinstance(_radar, (list, tuple)) else 0
             narrativa["demanda"] = (
                 f"Leitura executiva: {demanda.get('n')} obra{'s' if demanda.get('n') != 1 else ''} residenciais com "
                 f"registro CNO no horizonte T+24 somam {demanda.get('moradores')} novos moradores — captura estimada "
                 f"de ~{demanda.get('captura')} alunos (R$ {demanda.get('receita')}/mês) sem CAPEX extra, via parceria "
                 f"de estande e marketing de pré-entrega. "
-                + (f"O radar lista ainda {len(demanda.get('radar') or [])} pré-lançamento(s) sem CNO — informativos, "
-                   f"fora dos totais. " if demanda.get("radar") else "")
+                + (f"O radar lista ainda {_radar_len} pré-lançamento(s) sem CNO — informativos, "
+                   f"fora dos totais. " if _radar_len else "")
                 + "Fonte: CNO/RFB + páginas de lançamento + IBGE Censo 2022."
             )
     except Exception:
@@ -1245,9 +1282,9 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "planos": planos[:12],
         "ticket_segmentos": _ticket_segmentos(model.competidores),
         "dores_quadro": _dores_quadro(meta.get("dores_consolidadas")), "pico": meta.get("pico"),
-        "aneis": _aneis(meta.get("aneis_competitivos")),
-        "cobertura": _cobertura(meta.get("cobertura_redes_a0")),
-        "obras": _obras(meta.get("obras_cno_em_curso")),
+        "aneis": _aneis(meta.get("aneis_competitivos") or {}),
+        "cobertura": _cobertura(meta.get("cobertura_redes_a0")) if meta.get("cobertura_redes_a0") is not None else None,
+        "obras": _obras(meta.get("obras_cno_em_curso")) if meta.get("obras_cno_em_curso") is not None else None,
         "novas_unidades": novas_unidades,
         "candidatos": candidatos, "candidatos_descartados": _descartados_fora,
         "zoneamento": zoneamento,

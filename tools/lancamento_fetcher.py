@@ -41,6 +41,31 @@ _KW_RESIDENCIAL = ("apartament", "residencial", "studio", "dormit", "suíte", "s
 
 _PRECO_IMOVEL_MIN, _PRECO_IMOVEL_MAX = 100_000, 100_000_000
 
+# Blocklist anti-portal (run 3f4e0b82/b7199c7c): página de LISTAGEM de portal cita o
+# logradouro (passa no gate!) mas lista N imóveis da rua — virou "Apartamentos à Venda
+# na Rua" 138m² substituindo Mood/BS Rubi/Casa Monã. Lançamento de verdade tem página
+# própria (construtora/apto.vc/expoimovel) com NOME PRÓPRIO no título.
+_DOMINIOS_PORTAL_LISTAGEM = (
+    "vivareal", "zapimoveis", "olx.com", "imovelweb", "chavesnamao", "quintoandar",
+    "fzimoveis", "imovelguide", "dfimoveis", "wimoveis", "netimoveis", "casamineira",
+    "trovit", "properati", "mitula", "imovirtual",
+)
+_TITULOS_GENERICOS = (
+    "apartamentos à venda", "apartamentos a venda", "apartamento à venda",
+    "apartamento a venda", "imóveis à venda", "imoveis a venda", "imóveis em",
+    "imoveis em", "casas à venda", "casas a venda", "à venda em", "a venda em",
+    "para alugar", "na planta à venda", "na planta a venda", "comprar apartamento",
+)
+
+
+def _candidato_valido(url: str, titulo: str) -> bool:
+    """Rejeita portal de listagem e título genérico — só página de LANÇAMENTO passa."""
+    u = (url or "").lower()
+    if any(d in u for d in _DOMINIOS_PORTAL_LISTAGEM):
+        return False
+    t = _norm(titulo)
+    return not any(_norm(g) in t for g in _TITULOS_GENERICOS)
+
 
 def _norm(s: str) -> str:
     s = unicodedata.normalize("NFKD", (s or "").lower()).encode("ascii", "ignore").decode()
@@ -161,9 +186,11 @@ def refinar_lancamento_deterministico(
     buscar = _buscar_fn or _buscar_paginas
     fetch = _fetch_fn or _fetch_url
     try:
-        for res in (buscar(obra) or [])[:3]:
+        for res in (buscar(obra) or [])[:5]:
             url = res.get("url")
             if not url:
+                continue
+            if not _candidato_valido(url, str(res.get("titulo") or "")):
                 continue
             html = fetch(url)
             if not html or len(html) < 500:
@@ -220,6 +247,8 @@ def radar_pre_lancamentos(
             url = res.get("url")
             titulo = str(res.get("titulo") or "")
             if not url:
+                continue
+            if not _candidato_valido(url, titulo):
                 continue
             t_norm = _norm(titulo)
             if any(c and c in t_norm for c in ja_no_cno):

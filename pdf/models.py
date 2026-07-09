@@ -141,6 +141,7 @@ class RelatorioPdfModel:
     modelo_recomendado: str | None = None
     aluguel_mensal: float | None = None
     aluguel_mediana_m2: float | None = None
+    aluguel_fonte: str | None = None
 
     competidores: list[CompetidorPdf] = field(default_factory=list)
     bairros_alternativos: list[BairroAltPdf] = field(default_factory=list)
