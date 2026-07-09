@@ -25,8 +25,9 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from agents_site.catalog import AGENTES_VALIDOS, id_publico  # sem dependência do ADK (import barato)
 from tools.turnstile import verificar_turnstile
 from tools.db_schema import tbl  # roteia gymsite/shared (flags ON em prod; tbl(sb,) cru = public)
 
@@ -69,11 +70,16 @@ def _bypass_autorizado(request: Request, dev_token: str | None, ip: str | None) 
 
 
 async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessao: bool, agente: str) -> str | None:
+    # Fail-CLOSED: sem Redis não há teto, e o mesmo evento faz `_enqueue_ou_background`
+    # degradar pra BackgroundTasks — o turno roda dentro da api (maxScale=20), não no
+    # worker. Sem cap + execução inline = gasto de Gemini sem teto. O /analise capeia
+    # via Supabase, então o funil de lead sobrevive a uma queda do Redis; só o chat cai.
     try:
         from tools.redis_client import get_redis
         r = await get_redis()
     except Exception:
-        return None
+        logger.exception("cap de chat indisponível (redis inacessível) — bloqueando")
+        return "indisponivel"
     try:
         hoje = datetime.now(timezone.utc).strftime("%Y%m%d")
         if nova_sessao and ip:
@@ -84,7 +90,10 @@ async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessa
             if n > _CHAT_SESSOES_IP_DIA:
                 logger.warning("cap sessoes chat/dia atingido ip=%s (%s)", ip, _CHAT_SESSOES_IP_DIA)
                 return "sessoes"
-        if _CHAT_MODO_DEGUSTACAO and ip:
+        # 1 DEGUSTAÇÃO (conversa) por especialista/dia — só conta na ABERTURA (nova_sessao).
+        # A clarificação (usuário responde a pergunta do agente) é parte da MESMA pergunta,
+        # não uma nova — não pode queimar a cota. Continuação já é limitada pelo cap `turnos`.
+        if _CHAT_MODO_DEGUSTACAO and nova_sessao and ip:
             chave = f"site_chat:agente:{ip}:{agente}:{hoje}"
             n = await r.incr(chave)
             if n == 1:
@@ -101,7 +110,8 @@ async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessa
                 logger.warning("cap turnos chat atingido projeto=%s (%s)", projeto_id, _CHAT_TURNOS_PROJETO)
                 return "turnos"
     except Exception:
-        return None
+        logger.exception("cap de chat falhou no meio (redis) — bloqueando")
+        return "indisponivel"
     return None
 
 
@@ -135,8 +145,19 @@ class ConversarSiteInput(BaseModel):
     mensagem: str = Field(min_length=1, max_length=2000)
     projeto_id: Optional[str] = None          # None = nova sessão (exige Turnstile)
     turnstile_token: Optional[str] = None      # obrigatório só na 1ª mensagem
-    agente: Optional[str] = None               # degustacao (default) | responsavel_tecnico (RAG segmentado)
+    agente: Optional[str] = None               # None/degustacao = roteador; senão, id de agents_site/catalog.py
     dev_token: Optional[str] = Field(default=None, max_length=120)
+
+    @field_validator("agente")
+    @classmethod
+    def _agente_conhecido(cls, v: Optional[str]) -> Optional[str]:
+        # P-005: string livre aqui entra CRUA na chave do cap por especialista
+        # (`site_chat:agente:{ip}:{agente}:{dia}`). Sem whitelist, mandar um `agente`
+        # diferente a cada request zera o contador e o cap nunca estoura — e `:` no
+        # valor forja a chave. Fonte única das chaves: agents_site/catalog.py.
+        if v is not None and v not in AGENTES_VALIDOS:
+            raise ValueError(f"agente desconhecido: {v!r}")
+        return v
 
 
 class ConversarSiteResposta(BaseModel):
@@ -346,12 +367,21 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
     ip = _client_ip(request)
     nova_sessao = not data.projeto_id
 
-    if nova_sessao and not await verificar_turnstile(data.turnstile_token, ip):
+    # Anti-bot na 1ª msg (fail-closed). Dev/owner pula via allowlist de IP ou token
+    # (x-site-chat-token / dev_token) — mesmo mecanismo do /analise.
+    if (nova_sessao
+            and not _bypass_autorizado(request, data.dev_token, ip)
+            and not await verificar_turnstile(data.turnstile_token, ip)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Verificação anti-bot falhou.")
 
     if not _bypass_autorizado(request, data.dev_token, ip):
         motivo = await _cap_chat_estourado(ip, data.projeto_id, nova_sessao, data.agente or "degustacao")
+        if motivo == "indisponivel":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="O chat está indisponível no momento. Tente de novo em alguns minutos — ou peça a análise gratuita do seu ponto.",
+            )
         if motivo == "sessoes":
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -409,10 +439,15 @@ async def conversar_mensagens(projeto_id: str, desde: Optional[str] = None):
     if not proj or proj.get("user_id") != _ANON_SITE_USER_ID:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
 
-    q = tbl(sb, "project_messages").select("role, content, created_at").eq("projeto_id", projeto_id)
+    q = tbl(sb, "project_messages").select("role, content, created_at, agente").eq("projeto_id", projeto_id)
     if desde:
         q = q.gt("created_at", desde)
     msgs = q.order("created_at").execute().data or []
+    # A coluna guarda o nome ADK (Event.author); a API fala id público nos dois sentidos.
+    # É este campo que acende o crachá do especialista em cada balão — com o roteador,
+    # quem respondeu só se sabe DEPOIS do turno.
+    for m in msgs:
+        m["agente"] = id_publico(m.get("agente"))
 
     mn = dict(proj.get("modelo_negocio") or {})
     mn.pop("_site", None)

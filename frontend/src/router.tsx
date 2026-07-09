@@ -27,6 +27,7 @@ import { RelatorioAguardandoPage } from '@/routes/RelatorioAguardandoPage'
 import { ComparadorPage } from '@/routes/ComparadorPage'
 import { MapaRelatoriosPage } from '@/routes/MapaRelatoriosPage'
 import { CustosPage } from '@/routes/CustosPage'
+import { CnoObrasPage } from '@/routes/CnoObrasPage'
 import { PerfilPage } from '@/routes/PerfilPage'
 import { LoginPage } from '@/routes/LoginPage'
 import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
@@ -240,6 +241,12 @@ const custosRoute = createRoute({
   component: CustosPage,
 })
 
+const cnoObrasRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cno-obras',
+  component: CnoObrasPage,
+})
+
 interface ProspeccaoSearch {
   cidade?: string
   status?: string
@@ -353,6 +360,7 @@ const routeTree = rootRoute.addChildren([
   prospeccaoRoute,
   prospectRoute,
   custosRoute,
+  cnoObrasRoute,
   perfilRoute,
   dashboardRoute,
   marketAtlasRoute,

@@ -526,6 +526,8 @@ app.include_router(rebusca_router)
 app.include_router(leads_router)
 app.include_router(chat_router)
 app.include_router(router_site_agent)
+from backend.routers.cno import router_cno
+app.include_router(router_cno)
 app.include_router(router_market_tools)
 
 # CORS: dev libera localhost:* via regex; producao vem de CORS_ORIGINS (.env),

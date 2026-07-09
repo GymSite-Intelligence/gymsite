@@ -22,11 +22,13 @@ async def salvar_mensagem(
     tool_results: list[dict] | None = None,
     tokens_entrada: int | None = None,
     tokens_saida: int | None = None,
+    agente: str | None = None,
 ) -> str:
     """
     Persiste uma mensagem no projeto.
     Retorna o ID da mensagem criada.
     role: 'user' | 'assistant' | 'system' | 'tool'
+    agente: qual agente PRODUZIU a resposta (nome ADK). None para user/system.
     """
     db = _client()
     data: dict[str, Any] = {
@@ -42,6 +44,8 @@ async def salvar_mensagem(
         data["tokens_entrada"] = tokens_entrada
     if tokens_saida is not None:
         data["tokens_saida"] = tokens_saida
+    if agente is not None:
+        data["agente"] = agente
 
     result = await asyncio.to_thread(
         lambda: tbl(db, "project_messages").insert(data).execute()
