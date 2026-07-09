@@ -318,6 +318,68 @@ def calcular_viabilidade(aluguel_mensal: float, investimento_total: float,
     }
 
 
+def cac_teto_reposicao(marketing_mensal: float, matriculas: int, churn_mensal: float) -> dict:
+    """Churn deixa de ser decorativo (task #34): quanto custa MANTER a base.
+
+    reposicoes = matrículas × churn (quem sai todo mês e precisa ser reposto
+    só pra receita ficar de pé). cac_teto = verba de marketing ÷ reposições —
+    se o CAC real da praça passar disso, a base encolhe com a verba atual.
+    """
+    reposicoes = int(round(matriculas * churn_mensal))
+    return {
+        "reposicoes_mes_churn": reposicoes,
+        "cac_teto_reposicao": (
+            round(marketing_mensal / reposicoes, 2) if reposicoes > 0 else None
+        ),
+    }
+
+
+def custo_agua_mensal(area_m2: float, agua_por_m2: float, visitas_mes: float) -> float:
+    """Água escala com VISITAS, não só com m² (task #33, confronto Gemini).
+
+    Antes era area × R$/m² → idêntico nos 3 modelos, otimista pro low-cost
+    (~4× mais gente = mais chuveiro/bebedouro). Premissas rotuladas:
+    13 L/visita (5 L base sanitário/bebedouro + 20% das visitas tomam banho
+    de 40 L) × tarifa comercial R$ 15/m³. O m² vira PISO (banheiros/limpeza
+    existem mesmo com academia vazia).
+    """
+    piso = area_m2 * agua_por_m2
+    consumo_m3 = visitas_mes * 0.013          # 13 L/visita
+    variavel = consumo_m3 * 15.0              # R$/m³ comercial (banda conservadora)
+    return round(max(piso, variavel), 2)
+
+
+def custo_sistema_gestao(base_mensal: float, matriculas: int) -> float:
+    """ERP fitness escala com a base de alunos (task #32, confronto Gemini).
+
+    Contratos Pacto/Evo/Next são escalonados por tamanho do banco de alunos;
+    acima de ~1.500 vidas a franquia comum rompe e o contrato sobe pra faixa
+    de R$ 1.200+ (1,5× a base de R$ 800). Antes era constante — subdimensionava
+    exatamente o modelo low-cost, que tem a maior base.
+    """
+    return round(base_mensal * (1.5 if matriculas > 1500 else 1.0), 2)
+
+
+def calcular_break_even_alunos(
+    custos_fixos_puros: float,
+    ticket_realizado: float,
+    mkt_pct: float = 0.0,
+    outros_pct: float = 0.0,
+    aliquota_tributos: float = 0.0,
+) -> int:
+    """Break-even em alunos por margem de contribuição (task #31).
+
+    Margem unitária = ticket_realizado × (1 − mkt% − outros% − alíquota Simples):
+    marketing, "outros" e tributos são % da RECEITA — no BE a receita é menor,
+    então esses custos encolhem junto. Tratá-los como fixos (fórmula antiga
+    custos_totais ÷ ticket) superestimava o BE em ~8%.
+    """
+    margem_unit = ticket_realizado * (1.0 - mkt_pct - outros_pct - aliquota_tributos)
+    if margem_unit <= 0:
+        return 0
+    return int(custos_fixos_puros / margem_unit) + 1
+
+
 def calcular_viabilidade_3_cenarios(
     area_m2: float,
     aluguel_mensal: float,
@@ -450,14 +512,17 @@ def calcular_viabilidade_3_cenarios(
                 * (1.5 if faixa_key == "premium" else 1.0),  # premium gasta 50% mais
                 2,
             ),
-            "agua": round(area_m2 * CUSTOS_DETALHADOS_BASE["agua_por_m2"], 2),
+            "agua": custo_agua_mensal(
+                area_m2, CUSTOS_DETALHADOS_BASE["agua_por_m2"],
+                visitas_mes=matr_real * freq_semanal * 4.345,  # semanas/mês
+            ),
             "internet": round(internet, 2),
             "folha": round(folha, 2),
             "manutencao": round(
                 capex_total * CUSTOS_DETALHADOS_BASE["manutencao_pct_capex"], 2
             ),
             "contabilidade": round(contabilidade, 2),
-            "sistema_gestao": round(sistema, 2),
+            "sistema_gestao": custo_sistema_gestao(sistema, matr_real),
             "seguro": round(
                 capex_total * CUSTOS_DETALHADOS_BASE["seguro_pct_capex"], 2
             ),
@@ -503,9 +568,16 @@ def calcular_viabilidade_3_cenarios(
         # 1.3: lucro agora é LÍQUIDO de imposto (receita − custos − tributos).
         lucro_mensal = receita_mensal - custos_totais - tributos_mensal
         margem_pct = (lucro_mensal / receita_mensal * 100) if receita_mensal > 0 else 0
-        alunos_break_even = (
-            int(custos_totais / ticket_realizado) + 1
-            if ticket_realizado > 0 else 0
+        # 1.7 (task #31): BE por MARGEM DE CONTRIBUIÇÃO. A fórmula antiga
+        # (custos_totais ÷ ticket) tratava marketing/outros/tributos — todos %
+        # da receita — como fixos, superestimando o BE em ~8% (confronto Gemini,
+        # auditoria b7199c7c). Fixos puros = custos_fixos_total − outros.
+        alunos_break_even = calcular_break_even_alunos(
+            custos_fixos_puros=custos_fixos_total - custos["outros"],
+            ticket_realizado=ticket_realizado,
+            mkt_pct=mkt_pct,
+            outros_pct=CUSTOS_DETALHADOS_BASE["outros_pct_receita"],
+            aliquota_tributos=aliquota_tributos,
         )
 
         # ── INVESTIMENTO ──
@@ -577,6 +649,8 @@ def calcular_viabilidade_3_cenarios(
             "ticket_realizado_estimado": round(ticket_realizado, 2),
             "taxa_inadimplencia": inadimplencia,
             "taxa_cancelamento_mensal": churn_mensal,
+            # Task #34: churn operacionalizado — custo de manter a base de pé.
+            **cac_teto_reposicao(marketing_mensal, matr_real, churn_mensal),
             "receita_mensal": round(receita_mensal, 2),
 
             # Custos (12 linhas + agregado)

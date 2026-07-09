@@ -567,6 +567,13 @@ def _rows_cenarios(rel: dict, relatorio_id: str) -> list[dict]:
             "capex_contingencia_valor": capex_d.get("contingencia_valor"),
             "capex_total": capex_total,
 
+            # Motor fiscal v1.3 (task #30): sem persistir, o quadro não fecha
+            # na conferência (lucro é líquido mas o imposto ficava invisível).
+            "fator_r": c.get("fator_r"),
+            "anexo_simples": c.get("anexo_simples"),
+            "aliquota_tributos": c.get("aliquota_tributos"),
+            "tributos_mensal": c.get("tributos_mensal"),
+
             "capital_giro_meses": c.get("capital_giro_meses"),
             "capital_giro": c.get("capital_giro"),
             "investimento_total": c.get("investimento_total"),

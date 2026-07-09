@@ -249,6 +249,7 @@ table.d thead { display:table-header-group; }
 {% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}{{ ' ★' if c.recomendado }}</td><td>{{ c.ticket }}</td><td>{{ c.receita }}</td><td>{{ c.lucro }}</td><td>{{ c.margem }}</td><td>{{ c.payback }}</td><td>{{ c.alunos }}</td>
   <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span>{% if c.justificativa %}<div style="font-size:6.5pt; color:#64748B; margin-top:2px;">{{ c.justificativa }}</div>{% endif %}</td></tr>{% endfor %}
 </table>
+{% if cenarios_tem_fiscal %}<div class="note">Lucro/mês já é LÍQUIDO do Simples Nacional — a conferência fecha com Receita − Custos − Tributos (valores no quadro Tributos &amp; Ocupação abaixo).</div>{% endif %}
 {% if narrativa.financeira %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.financeira }}</div>{% endif %}{% endif %}
 {% if cenarios_tem_fiscal %}
 <div style="margin-top:12px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Tributos &amp; Ocupação por cenário (Simples Nacional · Fator R · teto de ocupação imobiliária)</div>

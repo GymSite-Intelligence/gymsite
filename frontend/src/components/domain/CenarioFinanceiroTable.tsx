@@ -563,7 +563,14 @@ export function CenarioFinanceiroTable({
       ),
       values: (c) => formatBRL(c?.custos_detalhados?.condominio),
     },
-    { label: 'IPTU', values: (c) => formatBRL(c?.custos_detalhados?.iptu) },
+    {
+      label: (
+        <TooltipLabel help="Premissa parametrizada (catálogo de metodologia): edificação comercial de uso intensivo, ~R$ 24 mil/ano. NÃO vem de cadastro municipal — refinamento previsto: cruzar com dado aberto da prefeitura quando disponível.">
+          IPTU
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.iptu),
+    },
     {
       label: (
         <TooltipLabel help="Premium estima +50% de energia (climatização integral, sauna, equipamentos de recovery). Low e mid compartilham a base da faixa de área.">
@@ -574,16 +581,23 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="⚠️ Premissa FIXA nas 3 colunas — leitura conservadora pro premium e otimista pro low-cost (3-4× mais visitas = mais chuveiro). Refinamento previsto: escalar com visitas projetadas.">
+        <TooltipLabel help="Escala com VISITAS projetadas: matrículas × frequência semanal × 4,345 sem/mês × 13 L/visita (5 L base + 20% tomam banho de 40 L) × R$ 15/m³ comercial. O m² é o PISO (banheiros/limpeza existem mesmo vazia) — por isso low-cost paga mais que premium.">
           Água
         </TooltipLabel>
       ),
       values: (c) => formatBRL(c?.custos_detalhados?.agua),
     },
-    { label: 'Internet', values: (c) => formatBRL(c?.custos_detalhados?.internet) },
     {
       label: (
-        <TooltipLabel help="Escala com o modelo: low opera com equipe enxuta (recepção + instrutores mínimos); premium soma personal trainers, atendimento e operação de serviços (spa/recovery).">
+        <TooltipLabel help="Link corporativo dedicado com redundância (catraca biométrica e pagamento recorrente não podem cair) — benchmark de oferta metropolitana. Parametrizado no catálogo de metodologia.">
+          Internet
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.internet),
+    },
+    {
+      label: (
+        <TooltipLabel help="Fórmula: max(piso do modelo, % do faturamento por modelo) — Benchmark Financeiro Academias 2024, parametrizado no catálogo. Low opera enxuto (recepção + instrutores mínimos); premium soma personals, atendimento e operação de spa/recovery. A % efetiva alimenta o Fator R (linha Tributos).">
           Folha de pagamento
         </TooltipLabel>
       ),
@@ -597,8 +611,22 @@ export function CenarioFinanceiroTable({
       ),
       values: (c) => formatBRL(c?.custos_detalhados?.manutencao),
     },
-    { label: 'Contabilidade', values: (c) => formatBRL(c?.custos_detalhados?.contabilidade) },
-    { label: 'Sistema de gestão', values: (c) => formatBRL(c?.custos_detalhados?.sistema_gestao) },
+    {
+      label: (
+        <TooltipLabel help="Honorários de escritório terceirizado pra PJ de serviços no Simples — benchmark de mercado. São só os honorários: os TRIBUTOS em si têm linha própria abaixo.">
+          Contabilidade
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.contabilidade),
+    },
+    {
+      label: (
+        <TooltipLabel help="ERP fitness (Pacto/Evo/Next) — contratos escalonados pelo tamanho da base: acima de 1.500 alunos a franquia comum rompe e o valor sobe 1,5× (é o caso típico do low-cost). Base parametrizada no catálogo.">
+          Sistema de gestão
+        </TooltipLabel>
+      ),
+      values: (c) => formatBRL(c?.custos_detalhados?.sistema_gestao),
+    },
     {
       label: (
         <TooltipLabel help="0,2% ao mês do CAPEX do modelo — mesmo racional da manutenção, auditável contra o quadro Investimento.">
@@ -631,7 +659,27 @@ export function CenarioFinanceiroTable({
       emphasize: true,
     },
     {
-      label: 'Lucro mensal',
+      label: (
+        <TooltipLabel help="Simples Nacional estimado (receita × alíquota do anexo). Enquadramento pelo Fator R (LC 123/2006): folha ≥ 28% da receita → Anexo III (6% faixa inicial); abaixo → Anexo V (15,5%). Runs anteriores ao motor fiscal mostram '—'.">
+          Tributos (Simples)
+        </TooltipLabel>
+      ),
+      values: (c) => {
+        const t = c?.tributos_mensal
+        if (t == null) return '—'
+        const anexo = c?.anexo_simples
+        const aliq = c?.aliquota_tributos
+        const sufixo =
+          anexo && aliq != null ? ` (Anexo ${anexo} · ${(aliq * 100).toFixed(1)}%)` : ''
+        return `${formatBRL(t)}${sufixo}`
+      },
+    },
+    {
+      label: (
+        <TooltipLabel help="Receita − Custos totais − Tributos (Simples). Já é LÍQUIDO de imposto — a conferência fecha somando as três linhas acima.">
+          Lucro mensal
+        </TooltipLabel>
+      ),
       values: (c) => {
         const v = c?.lucro_mensal_estimado
         if (v == null) return '—'
@@ -661,11 +709,40 @@ export function CenarioFinanceiroTable({
     },
     {
       label: (
-        <TooltipLabel help="Custos totais do cenário ÷ ticket realizado — alunos mínimos pra zerar o mês. Leitura CONSERVADORA: trata marketing e 'outros' (que são % da receita) como fixos; o break-even real é levemente menor. Compare com o teto de mercado no quadro Demanda: BE acima de 60% do teto = modelo exige execução quase perfeita.">
+        <TooltipLabel help="Custos fixos puros ÷ margem de contribuição unitária — alunos mínimos pra zerar o mês. Margem unitária = ticket realizado × (1 − marketing% − outros% − alíquota Simples): custos que são % da receita encolhem junto com ela no BE, por isso não entram como fixos. Compare com o teto de mercado no quadro Demanda: BE acima de 60% do teto = modelo exige execução quase perfeita.">
           Break-even (alunos)
         </TooltipLabel>
       ),
       values: (c) => formatInt(c?.alunos_break_even),
+    },
+    {
+      label: (
+        <TooltipLabel help="Evasão mensal (cancelamentos ÷ base) — não confundir com inadimplência (atraso). Benchmark por modelo parametrizado no catálogo: low-cost tem churn maior (baixa fricção de entrada E de saída); premium retém mais. Sem repor essa perda, a receita encolhe todo mês.">
+          Churn mensal (evasão)
+        </TooltipLabel>
+      ),
+      values: (c) => {
+        const ch = c?.taxa_cancelamento_mensal
+        return ch != null ? `${(ch * 100).toFixed(1)}%` : '—'
+      },
+    },
+    {
+      label: (
+        <TooltipLabel help="Verba de marketing ÷ reposições necessárias (matrículas × churn) — o CAC máximo que a praça pode cobrar pra base ficar DE PÉ com a verba atual. CAC real acima disso = base encolhe silenciosamente mesmo batendo a meta de vendas.">
+          CAC-teto de reposição
+        </TooltipLabel>
+      ),
+      values: (c) => {
+        // Preferir o valor do motor; fallback client-side pra runs antigos.
+        const direto = c?.cac_teto_reposicao
+        if (direto != null) return formatBRL(direto)
+        const mkt = c?.marketing_mensal
+        const matr = c?.matriculas?.realista?.valor ?? c?.matriculas_realista
+        const ch = c?.taxa_cancelamento_mensal
+        if (mkt == null || matr == null || ch == null) return '—'
+        const repos = Math.round(matr * ch)
+        return repos > 0 ? formatBRL(mkt / repos) : '—'
+      },
     },
   ]
 
