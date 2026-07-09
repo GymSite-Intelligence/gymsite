@@ -60,7 +60,19 @@ Só a regra "sem asteriscos visíveis" prestava — virou o `renderRich()` no fr
 - **Worker:** deployado manualmente pro `ffeef0d` (roda o `runner.py` — o fix #88 do travou só vale no worker).
 - **RAG (#87):** já ingerido nos stores; não depende de deploy de código.
 
+## CTAs da landing removidos (ajuste pós-handoff)
+Com o CTA inline do chat funcionando, os 3 botões que abriam o FORMULÁRIO direto (`modo="formulario"`,
+pulava a degustação) viraram redundantes e saíram de `gym-insight-hub/src/routes/index.tsx`: header
+"Análise gratuita", hero "Ver minha análise gratuita" e CTA final "Ver minha análise gratuita". Removida
+também a função `openChat` (órfã). **Entrada única do chat agora é a página `/agentes`** → seleciona o
+especialista → "Voltar" abre `/?abrir=diagnostico-interno&agente=<id>` (`modo="chat"`). Typecheck verde.
+- ÓRFÃO a limpar depois (não removido — fora do pedido): o branch `modo="formulario"` em `ChatAgent.tsx` e
+  o `AnaliseGratuitaFlow` renderizado direto só são alcançáveis por `?abrir=analise|formulario` — sem botão
+  que os acione. Decidir se apaga a rota-formulário de vez.
+
 ## Pendências (próxima sessão)
+- **LGPD — refatorar a seção:** o `#lgpd` da landing (selo marketing) precisa alinhar com o texto da
+  Anthropic (colado pelo Marcelo) e o link PRD↔LGPD. Ficou de fora deste handoff; ainda ABERTO.
 - Roteador às vezes pede clarificação já dada (usuário disse "engenheiro E arquiteto", roteador perguntou
   "arquiteto ou obra?") — nuance de prompt do roteador, não bug crítico.
 - Title da aba do gym-insight-hub ainda "Lovable App" → trocar pra "GymSite Intelligence".
