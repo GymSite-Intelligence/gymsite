@@ -90,7 +90,10 @@ async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessa
             if n > _CHAT_SESSOES_IP_DIA:
                 logger.warning("cap sessoes chat/dia atingido ip=%s (%s)", ip, _CHAT_SESSOES_IP_DIA)
                 return "sessoes"
-        if _CHAT_MODO_DEGUSTACAO and ip:
+        # 1 DEGUSTAÇÃO (conversa) por especialista/dia — só conta na ABERTURA (nova_sessao).
+        # A clarificação (usuário responde a pergunta do agente) é parte da MESMA pergunta,
+        # não uma nova — não pode queimar a cota. Continuação já é limitada pelo cap `turnos`.
+        if _CHAT_MODO_DEGUSTACAO and nova_sessao and ip:
             chave = f"site_chat:agente:{ip}:{agente}:{hoje}"
             n = await r.incr(chave)
             if n == 1:
