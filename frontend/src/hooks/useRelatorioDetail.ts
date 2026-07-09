@@ -624,6 +624,17 @@ export interface CenarioJSON {
   marketing_mensal?: number
   custos_totais?: number
 
+  // ── Churn operacionalizado (task #34; NULL em runs antigos) ──
+  reposicoes_mes_churn?: number
+  cac_teto_reposicao?: number
+  matriculas_realista?: number
+
+  // ── Fiscal (motor v1.3 — Fator R / Simples Nacional; NULL em runs antigos) ──
+  fator_r?: number
+  anexo_simples?: string
+  aliquota_tributos?: number
+  tributos_mensal?: number
+
   // ── Resultado ──
   lucro_mensal_estimado: number
   margem_percentual?: number
