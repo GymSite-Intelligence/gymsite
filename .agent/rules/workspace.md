@@ -93,10 +93,15 @@ Every module/file must have:
 
 ## 7. Git Hygiene
 
+- **Fluxo: branch → main, SEM PR (decidido 2026-07-09).** Toda mudança nasce numa branch
+  (NUNCA commitar/editar direto na main), mas o merge é **direto na main via fast-forward** —
+  **não abrir Pull Request**. Motivo: PRs auto-resolvidos/conflitados pelo GitHub quebravam o
+  merge; branch local + fast-forward mantém o controle da resolução. Fluxo:
+  `cria branch → commita → merge --ff-only na main → push`.
 - Commits in English, present tense: "Add prospecting pagination"
 - One logical change per commit
-- No WIP commits in PRs
-- Rebase before merging to keep linear history
+- No WIP commits on shared branches
+- Fast-forward/rebase before merging to keep linear history
 
 ## 8. Análise e Correção de Erros
 

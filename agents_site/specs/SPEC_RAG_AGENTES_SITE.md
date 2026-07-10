@@ -82,12 +82,35 @@ fonte nem data.** Trazem `62.700 estabelecimentos ativos em 2025`, `13,65 milhõ
 eleger UM valor de faturamento com fonte declarada. É curadoria de conteúdo, não de índice —
 merece sessão própria.
 
-## ⚠ `regulatorio-docs` ainda contaminado (ABERTO)
-- `estudo_dimensionamento_layout_ginasios.pdf` — é obra, já está em `obra-docs`.
-- `regulatorio_valores_crefs.txt` — nome diz "Valores e anuidades", tem **zero valores
-  monetários** e **19 mapeamentos CREF/UF obsoletos** (`CREF13/BA-SE`, `CREF11/MS-MT`...).
-  Hoje só não faz estrago porque `mapa_uf_cref_registro.txt` o desmente nominalmente.
-  Apagar os dois (2 `delete_document`) mata o último resto do mapeamento errado.
+## Reconciliação bucket↔índice (2026-07-09) — verificado
+
+Auditoria do drift repo ↔ bucket GCS ↔ índice Vertex. Método: rodar a busca REAL de cada
+engine (read-only) e ver o que volta, N≥3 por variância (regra 4e).
+
+**Contaminantes purgados do índice E apagados do bucket (landmine morto):**
+- `regulatorio_valores_crefs.txt` — **0/5** no índice Regulatório (incl. query da assinatura
+  obsoleta `CREF13/BA-SE`). Apagado de `gs://gymsite-market-docs-…/regulatorio/`.
+- `fornecedores-fitness-brasil-v2.txt` — **0/4** no índice Equip. Apagado de
+  `gs://gymsite-market-docs-…/equipamentos/`.
+- Apagar do bucket NÃO mexe no índice (índice é cópia importada) — serve só pra um re-import
+  futuro não ressuscitar. Por isso a ordem: provar 0/N no índice → então apagar do bucket.
+
+**AINDA ABERTO — `estudo_dimensionamento_layout_ginasios.pdf`:** está **VIVO no índice Obra
+(3/3)** e aparece também no Equip — NÃO é landmine dormindo, é doc ativo. Apagar do bucket não
+o tira do índice; sumir da busca exige `delete_document` no Obra. É **decisão de conteúdo**, não
+faxina: tem material de layout útil, MAS é PDF (número vira math-span) e traz faturamento sem
+fonte (R$ 12 bi — um dos 3 valores conflitantes). Curadoria: re-ingerir a parte de layout como
+`.txt` carimbado → depois `delete_document` do PDF.
+
+**Achados de drift (relevantes pro plano dos agentes de descoberta):**
+- `gymsite-market-docs` é **gaveta de tranqueira** (72 objetos): equip + market + marketing +
+  prefixos `obra/` e `regulatorio/` de outros stores.
+- O engine **Regulatório indexa também `market-docs/regulatorio/`** (`registro_pj`, `lei_base`,
+  `leis_funcionamento` são buscáveis de lá — **NÃO são órfãos**, não varrer o prefixo inteiro).
+- O store **Equip não tem bucket próprio** (404) — importa de `market-docs/equipamentos/`.
+- Repo `rag/` (12 .txt curados) ≠ buckets. Normalizar (repo=fonte, 1 bucket por store,
+  ingest-no-merge) é **pré-requisito dos agentes de descoberta** (re-import tem que ser seguro),
+  mas **não urgente pro usuário** (índice já limpo). Fazer junto com a construção dos agentes.
 
 ## Parte 4 — CURADORIA POR AGENTE + FAXINA DE CONTAMINAÇÃO (2026-07-09)
 
@@ -171,6 +194,23 @@ Regra: valor sempre com CREF regional + ano + fonte; sem valor atual → "consul
 
 ### Restrições
 - Regra de ouro: número/norma citado ao usuário vem do store; store vazio = "não sei/confirme na fonte", nunca inventar.
+- **CARIMBO OBRIGATÓRIO em toda LEI/CÓDIGO/NORMA no output — vale para TODOS os agentes** que
+  citem legislação da sua especialidade (Regulatório: CREF/Lei 9.696/anuidade/licença; Arquiteto:
+  NBR/COE municipal; Engenheiro: NBR de obra; e qualquer outro que cite lei). Nenhuma fonte legal
+  sai sem **valor · base · fonte · janela**: o número/exigência, sobre o que se aplica, de qual
+  lei/artigo/órgão, e de que ano/atualização. Ex.: "7 bacias femininas · para 100 alunas · COE
+  João Pessoa art. X · lei de 1971". Sem carimbo completo, não cita. Complementa a Regra de ouro
+  acima: o grounding diz DE ONDE veio; o carimbo obriga a MOSTRAR ao usuário.
+- **FONTE precisa + link profundo (senão sem link).** A FONTE nomeia a norma: **lei nº + ano +
+  artigo** (ex.: "Lei nº 1.347/1971, art. 3.570") — nunca "art. X", nome vago ou só o órgão.
+  Quando houver URL, ela abre a **norma específica** (deep-link), NUNCA o portal genérico da
+  prefeitura/órgão. Sem deep-link pra norma exata → a fonte fica em **texto preciso, sem link**:
+  link pra página genérica é citação falsa (parece prova, não abre a lei). Vale pra todos os
+  agentes; a URL boa vem naturalmente da busca ao vivo (`pesquisar_norma_municipal`), que retorna
+  o endereço da norma, não da home. **NUNCA inventar/adivinhar URL** (ex.: chutar `/norma/<nº da
+  lei>` não resolve — SAPL não indexa assim): só linkar endereço que a busca RETORNOU e que se
+  confirmou abrir a norma; na dúvida, texto sem link. URL chutada é o pior caso — parece prova e
+  leva a lugar errado.
 - LGPD/Fase 0: não ingerir dado de cliente nem material com preço público.
 - Dado regional/municipal vence → re-scraping periódico + carimbo de data.
 
