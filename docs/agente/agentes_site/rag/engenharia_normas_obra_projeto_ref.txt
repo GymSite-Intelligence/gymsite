@@ -1,0 +1,360 @@
+REFERÊNCIA TÉCNICA — NORMAS DE OBRA E PROJETO PARA ACADEMIAS (BRASIL)
+Base de conhecimento dos agentes Arquiteto e Engenheiro de Obra do GymSite.
+Compilado 2026-07-08 a partir de pesquisa documental (Deep Research) + verificação.
+
+=====================================================================
+COMO USAR ESTE DOCUMENTO (regras de citação para o agente)
+=====================================================================
+- Cite SEMPRE o NÚMERO da norma e o requisito. As normas ABNT NBR são pagas: o texto
+  normativo integral NÃO está reproduzido aqui, apenas os requisitos de conhecimento público.
+- Instrução Técnica (IT) de bombeiros é ESTADUAL. Os números abaixo são de SÃO PAULO
+  (CBPMESP). Em outros estados a numeração muda (ex.: em Minas Gerais, IT-08 trata de
+  saídas de emergência, enquanto em SP a IT-11 trata de saídas e a IT-08 de resistência
+  ao fogo). SEMPRE oriente confirmar no Corpo de Bombeiros do estado do usuário.
+- Dimensionamento de sanitários/vestiários é MUNICIPAL (Código de Obras). Os exemplos
+  abaixo (SP, RJ, BH) são referência; para outro município, oriente consultar a prefeitura.
+- Espessura de piso emborrachado NÃO é objeto de norma ABNT — é prática de mercado.
+  Ver a nota de divergência na seção correspondente.
+- Se a pergunta não for coberta aqui, diga que não há cobertura e oriente consultar
+  engenheiro/arquiteto habilitado. NUNCA invente valor, norma ou prazo.
+
+=====================================================================
+1. CARGA DE LAJE — ÁREA DE MUSCULAÇÃO E PESO LIVRE
+Norma: ABNT NBR 6120:2019 (Ações para o cálculo de estruturas de edificações)
+=====================================================================
+- Sobrecarga acidental (carga variável q) para salas de treino/musculação, classificadas
+  no item de clubes e locais de esportes: 5,0 kN/m² (≈ 500 kgf/m²).
+  · valor: 5,0 kN/m² · base: NBR 6120:2019 · fonte: norma ABNT · janela: 2019–atual
+
+- Comparação crítica para RETROFIT: lajes de edifícios de ESCRITÓRIO são dimensionadas
+  originalmente para apenas 2,0 kN/m². Converter escritório em musculação exige
+  comprovação estrutural (ver seção 2).
+  · valor: 2,0 kN/m² · base: NBR 6120:2019 (uso escritório) · fonte: norma ABNT
+
+Cargas permanentes (g) típicas para composição do cálculo:
+  Laje maciça de concreto armado (e = 12 cm) ........... 3,00 kN/m²
+  Argamassa de regularização do contrapiso (e = 2 cm) .. 0,42 kN/m²
+  Revestimento cerâmico/vinílico (e = 1 cm) ............ 0,18 kN/m²
+  Alvenaria de bloco cerâmico vazado (acabada 14 cm) ... 1,90 kN/m²
+Pesos específicos de referência (NBR 6120):
+  Concreto armado ....... 25,0 kN/m³
+  Argamassa cimento/areia 21,0 kN/m³
+  Revestimento cerâmico . 18,0 kN/m³
+
+O engenheiro deve separar ações permanentes (g) das variáveis (q). Sobrecarga estática
+não cobre IMPACTO: a queda de anilhas gera força dinâmica pontual que pode superar a
+capacidade de projeto de uma laje convencional em regime estático — daí a exigência de
+amortecimento (piso), tratada abaixo.
+
+--- ESPESSURA DE PISO EMBORRACHADO (PRÁTICA DE MERCADO — NÃO-NORMATIVO) ---
+NÃO existe NBR que fixe espessura de piso emborrachado de academia. É especificação de
+projeto/fornecedor. A espessura escala com a SEVERIDADE DO IMPACTO da zona:
+
+  15 mm a 16 mm — PISO PADRÃO DE ACADEMIA (caso mais comum). Musculação guiada, cardio,
+    circulação. Formato usual: placas de 1,00 m × 1,00 m ou 50 cm × 50 cm (intertravadas).
+    · base: prática dominante do mercado brasileiro · fonte: fornecedores nacionais de piso
+      para academia (ex.: pisocom.com.br/academia.php, playfitpisos.com.br)
+
+  20 mm a 27 mm — ZONA DE QUEDA / PESO LIVRE convencional (halteres, anilhas, peso morto).
+    · base: compilado de dimensionamento e layout de academias
+
+  40 mm a 50 mm — LEVANTAMENTO DE PESO OLÍMPICO / queda severa de anilhas. Tipicamente
+    associado a contrapiso flutuante com elastômero de poliuretano microcelular.
+    · base: pesquisa documental 2026-07-08
+
+REGRA DO AGENTE: a pergunta genérica "que piso usar na academia" → responda 15–16 mm
+(padrão de mercado, placa 1×1 m ou 50×50 cm). Só suba a espessura quando a pergunta for
+sobre ZONA DE QUEDA (20–27 mm) ou LEVANTAMENTO OLÍMPICO (40–50 mm + piso flutuante).
+Declare SEMPRE que é prática de mercado, não requisito normativo, e que a especificação
+final é do engenheiro/fornecedor. Nunca cite espessura como se fosse exigência de NBR.
+
+=====================================================================
+2. LAUDO E AVALIAÇÃO ESTRUTURAL EM REFORMA
+Normas: ABNT NBR 16280:2020 (gestão de reformas) · NBR 6118 (estruturas de concreto)
+=====================================================================
+- A NBR 16280:2020 rege qualquer intervenção que altere o sistema de cargas, vedações
+  internas ou compartimentação da edificação.
+- Laudo de Inspeção Técnica de Edificação (LITE) / parecer de viabilidade estrutural é
+  obrigatório ANTES da obra sempre que houver instalação de equipamento concentrado
+  (racks, leg press, baterias de esteiras, ergômetros pesados).
+- O recálculo de capacidade de suporte e a definição de reforços seguem a NBR 6118.
+- Toda intervenção exige comunicação formal por escrito à administração do condomínio,
+  acompanhada de ART (engenheiro/CREA) ou RRT (arquiteto/CAU).
+- Descumprir a NBR 16280 sujeita a: embargo da obra, multa administrativa e
+  responsabilidade civil solidária por patologias decorrentes de sobrecarga não autorizada.
+
+Fluxo obrigatório em retrofit:
+  1) Notificação formal à administração/síndico (NBR 16280)
+  2) Vistoria técnica cautelar (NBR 6118 / NBR 16280)
+  3) Emissão do laudo (LITE) com memorial de capacidade de carga
+  4) Abertura de ART/RRT e execução controlada
+
+Regra de ouro do agente: nunca dê veredito estrutural definitivo. Oriente o laudo técnico.
+
+=====================================================================
+3. INVESTIGAÇÃO GEOTÉCNICA E SONDAGEM DE SOLO (OBRA NOVA)
+Normas: ABNT NBR 6122:2019 (fundações) · NBR 6484 (SPT) · NBR 8036 (nº de furos)
+=====================================================================
+- Obra civil NOVA exige campanha prévia de reconhecimento geotécnico (NBR 6122:2019).
+- Método padrão: sondagem SPT (Standard Penetration Test), regida pela NBR 6484. Fornece
+  perfil estratigráfico, nível do lençol freático e resistência (índice N_SPT).
+- Nº mínimo de furos: NBR 8036, variando com a área de projeção horizontal da edificação.
+- Ampliação/mezanino com pilares próprios NÃO é isenta por sondagem antiga do edifício
+  principal — o solo varia em distâncias curtas.
+- Análise de interação solo-estrutura (ISE) é obrigatória para edifícios com mais de 55 m
+  de altura ou relação altura/largura > 4 (NBR 6122:2019).
+
+Investigação por tipo de terreno:
+  Urbano padrão ............. Sondagem a percussão (SPT) → camadas, nível d'água, N_SPT
+  Rochoso / transição ....... Sondagem rotativa ou mista → testemunhos p/ fundação profunda
+  Solo mole / litorâneo ..... Sondagem por cone (CPT ou DMT) → adensamento e recalque
+
+Em RETROFIT sem ampliação física, dispensa escavação pesada; verificação só em sobrelevação.
+
+=====================================================================
+4. INSTALAÇÕES ELÉTRICAS DE BAIXA TENSÃO
+Norma: ABNT NBR 5410:2004
+=====================================================================
+- Cargas de alta intensidade ou de operação contínua exigem circuitos terminais exclusivos.
+- Esteira comercial de alto padrão consome tipicamente 1,5 kW a 2,2 kW em pleno esforço.
+- Ramais de esteira: condutor flexível PVC antichama, seção mínima 4,0 mm² ou 6,0 mm²;
+  máximo de 2 esteiras por circuito; disjuntor termomagnético curva C (correntes de partida).
+- Áreas molhadas e vestiários: Interruptor Diferencial Residual (DR) de alta sensibilidade
+  ≤ 30 mA é requisito indispensável.
+- Aterramento de proteção equipotencial ligando chassis metálicos (esteiras, bebedouros,
+  luminárias); malha com hastes de cobre; validação com terrômetro.
+
+Setorização de referência:
+  Ergômetros (cardio) ...... 1,5–2,2 kW/esteira · disjuntor curva C + DPS · circuito dedicado 4,0–6,0 mm²
+  Área de musculação ....... baixa intensidade (telas/LED) · disjuntor comum · circuito compartilhado
+  Sanitários / chuveiros ... 5,5–7,5 kW/chuveiro · DR ≤ 30 mA + aterramento · circuito exclusivo 10 mm²
+  Climatização ............. 3,0–10,0 TR/máquina · disjuntor dedicado + contatoras · trifásico/monofásico dedicado
+
+=====================================================================
+5. CLIMATIZAÇÃO E RENOVAÇÃO DE AR (QUALIDADE DO AR INTERIOR)
+Normas: ABNT NBR 16401:2024 (partes 1 e 3) · Lei 13.589/2018 (PMOC) · Portaria MS 3.523/1998
+=====================================================================
+- Vazão mínima de ar exterior:  V_ef = (P_z × F_p) + (A_z × F_a)
+    P_z = nº de ocupantes estimados da sala de treino
+    F_p = vazão por pessoa — mínimo 5,0 l/s por pessoa para locais esportivos (Nível 1)
+    A_z = área útil ocupada (m²)
+    F_a = vazão por área — 0,6 l/s por m² para academias
+  · base: NBR 16401-3:2024 · fonte: norma ABNT
+- A revisão de 2024 da NBR 16401-3 substituiu vazões fixas por análise do projetista,
+  correlacionando PM2,5 externo e CO₂ local com a emissão metabólica dos ocupantes.
+- Split High Wall e ar-condicionado de janela NÃO renovam ar (recirculação em ciclo
+  fechado). Instalá-los sem ventilação/exaustão mecânica complementar é NÃO CONFORMIDADE
+  técnica severa sob a NBR 16401.
+- Exige-se captação de ar externo com caixa de filtragem + exaustão mecânica contínua.
+- PMOC (Plano de Manutenção, Operação e Controle) é obrigatório — Lei Federal 13.589/2018
+  e Portaria 3.523/1998 do Ministério da Saúde — atestado por engenheiro mecânico com ART.
+
+=====================================================================
+6. ACÚSTICA E CONTROLE DE RUÍDO DE IMPACTO
+Normas: ABNT NBR 10152:2017 (níveis internos) · NBR 10151:2019 (medição/avaliação)
+=====================================================================
+Níveis de ruído de fundo (RLAeq) recomendados por recinto:
+  Salas de musculação e aparelhos fixos ..... 45 a 55 dB(A)
+  Salas de dança e ginástica rítmica ........ 35 a 45 dB(A)
+  Recepção / estar / atendimento ............ 40 a 45 dB(A)
+
+- Medições de caso em salas de musculação em operação (com música e impacto) registram
+  75 a 76 dB(A) — muito acima do ruído de fundo recomendado. Sem tratamento, há
+  desconforto imediato e risco de conflito de vizinhança.
+- Barreira acústica de referência: drywall com placas DUPLAS em cada face, preenchimento
+  interno com lã de rocha de densidade ≥ 40 kg/m³.
+- Atenuação de impacto (queda de carga): contrapiso isolado por elastômero resiliente de
+  poliuretano microcelular (piso flutuante) + placas de borracha vulcanizada
+  (ver "Espessura de piso emborrachado" na seção 1 — 40–50 mm nesta aplicação).
+- Medição oficial de ruído de vizinhança (NBR 10151): decibelímetro com certificado de
+  calibração RBC vigente, posicionado a no mínimo 1,0 m de paredes e 1,5 m de janelas.
+
+=====================================================================
+7. PREVENÇÃO CONTRA INCÊNDIO E PÂNICO / AVCB
+ATENÇÃO: numeração de IT é ESTADUAL. Os números abaixo são de SÃO PAULO (CBPMESP).
+Em Minas Gerais, por exemplo, a IT-08 trata de saídas de emergência. SEMPRE confirmar
+no Corpo de Bombeiros do ESTADO do usuário.
+=====================================================================
+- Academia exige AVCB (Auto de Vistoria do Corpo de Bombeiros) ou licenciamento equivalente.
+- Classificação de ocupação: Grupo F (Locais de Reunião de Público), Divisão F-3
+  (centros esportivos e de exibição / prática de atividade física de caráter permanente).
+- Saídas de emergência (SP: IT-11). População de projeto = área útil de treino ÷ densidade
+  de ocupação do F-3, que é 1 pessoa para cada 2,0 m² de área útil de pavimento de treino.
+- Dimensionamento da largura das saídas:  N = P / C
+    N = nº de unidades de passagem (U.P.)
+    P = população calculada do pavimento/setor
+    C = capacidade da U.P. (Grupo F): 100 pessoas/U.P. em portas e rampas;
+                                      75 pessoas/U.P. em escadas internas
+  Cada U.P. = 0,55 m de largura. Largura mínima livre recomendada para o Grupo F: 1,20 m.
+- Escadas coletivas: material incombustível com TRRF de 120 minutos (SP: IT-08, resistência
+  ao fogo dos elementos de construção). Portas corta-fogo em caixa de escada: PCF-60
+  (resistência mínima de 60 minutos).
+- Lotação simultânea acima de 2.500 pessoas: enquadra nas diretrizes especiais de centros
+  esportivos e de exibição (SP: IT-12).
+
+Enquadramento do processo (SP: IT-42 — Projeto Técnico Simplificado):
+  Parâmetro                  PTS (simplificado)        PT (projeto técnico completo)
+  Área total construída      até 750 m²                acima de 750 m²
+  Lotação máxima             até 250 pessoas           acima de 250 pessoas
+  Nº de pavimentos           até 3                     acima de 3
+  Exigências básicas         extintores, blocos        hidrantes com reserva dedicada,
+                             autônomos de emergência,  detectores e central de alarme
+                             sinalização fotoluminesc. endereçável
+
+=====================================================================
+8. ACESSIBILIDADE E DESENHO UNIVERSAL
+Norma: ABNT NBR 9050:2020 · Lei Brasileira de Inclusão (Estatuto da Pessoa com Deficiência)
+=====================================================================
+Circulação e rotas
+  Largura mínima de corredores / rota acessível ......... 1,20 m
+  Rampa — inclinação máxima padrão ...................... 8,33% (1:12)
+  Rampa — inclinação excepcional (só em reforma, com
+    impraticabilidade comprovada), desnível ≤ 75 mm ..... até 12,5% (1:8)
+  Portas do trajeto acessível — vão livre mínimo ........ 0,80 m
+  Portas do trajeto acessível — altura livre mínima ..... 2,10 m
+  Soleiras chanfradas, sem ressaltos verticais.
+
+Sanitário e vestiário acessíveis
+  Proporção mínima de peças adaptadas ................... 5% do total instalado por sexo,
+                                                          por pavimento, no mínimo 1 conjunto
+                                                          feminino e 1 masculino
+  Área de giro interna (rotação 360° de cadeira) ........ diâmetro livre ≥ 1,50 m
+  Altura da bacia (borda superior, sem assento) ......... 0,43 m a 0,45 m (máx. 0,46 m com assento)
+  Barras de apoio — diâmetro externo .................... 30 mm a 40 mm
+  Barras de apoio — afastamento mínimo da parede ........ 40 mm
+  Barras de apoio — resistência à tração ................ até 150 kg
+  Boxe de banho acessível — área mínima livre ........... 0,90 m × 0,95 m
+  Banco do boxe (articulado ou fixo) .................... 0,70 m larg. × 0,45 m prof., a 0,46 m do piso
+
+Mobiliário e equipamento
+  Balcão de atendimento — altura útil ................... 0,75 m a 0,85 m; largura livre sob a
+                                                          superfície de trabalho ≥ 0,80 m
+  Bebedouro coletivo — altura da bica .................. 0,90 m do piso; vão inferior livre ≥ 0,73 m
+  Espelho do vestiário — borda inferior ................ ≤ 0,90 m do piso (ou de corpo inteiro até 0,50 m)
+  Portas de sanitário — vão livre ...................... ≥ 0,80 m; puxador horizontal de 0,40 m
+  Aparelhos de treino — área de aproximação ............ 0,80 m × 1,20 m; 5% do total adaptados,
+                                                          ou no mínimo 1 por tipo de aparelho
+
+Piscina (hidroginástica/natação/reabilitação): acesso por equipamento mecânico de
+transferência, rampa submersa com inclinação máxima 8,33%, degraus submersos com
+corrimãos paralelos em duas alturas, ou banco de transferência a 0,46 m do deck seco.
+
+=====================================================================
+9. ETAPAS DO PROJETO ARQUITETÔNICO
+Normas: ABNT NBR 13532:1995 (elaboração de projetos de arquitetura) · NBR 6492 (representação)
+=====================================================================
+1) LEVANTAMENTO DE DADOS (LV) — medição cadastral/as-built ou topografia; consulta de
+   viabilidade urbana na prefeitura (zoneamento, recuos); diagnóstico acústico e
+   estrutural inicial da vizinhança.
+2) PROGRAMA DE NECESSIDADES (PN) — público-alvo, capacidade máxima simultânea no pico,
+   mix de modalidades (musculação, box funcional, bike/spinning, recepção, vestiários),
+   estimativa de custo de obra.
+3) ESTUDO PRELIMINAR (EP) — layout de fluxo de circulação, posicionamento preliminar de
+   cardio e musculação em planta, volumetria conceitual.
+4) ANTEPROJETO (AP) — detalhamento dimensional e compatibilização com estrutura,
+   climatização (dutos × vigas) e elétrica (tomadas sob piso para ergômetros centrais).
+5) PROJETO LEGAL (PL) — pranchas para aprovação na prefeitura (alvará de construção ou
+   certidão de mudança de uso).
+6) PROJETO EXECUTIVO (PE) — paginação de pisos emborrachados, materiais de atenuação
+   acústica, quadros elétricos, portas corta-fogo, barras e bacias acessíveis.
+   Representação gráfica conforme NBR 6492.
+
+O projeto deve ser assinado por arquiteto (RRT) ou engenheiro (ART) e aprovado pela prefeitura.
+
+=====================================================================
+10. DIMENSIONAMENTO DE SANITÁRIOS E VESTIÁRIOS POR LOTAÇÃO
+Regra: é MUNICIPAL (Código de Obras e Edificações — COE). Exemplos abaixo; para outro
+município, oriente consultar a prefeitura local. Não extrapole um município para outro.
+=====================================================================
+Método geral:
+  1) Calcular a população máxima de projeto (área útil de treino ÷ densidade de ocupação)
+  2) Aplicar os coeficientes do Código de Obras local
+  3) Dividir o total de peças por sexo
+  4) Dimensionar cabines e vestiários fisicamente
+Prática comum: no vestiário masculino, a maioria dos municípios admite substituir até 50%
+da cota de vasos sanitários por mictórios.
+
+SÃO PAULO (Lei Municipal 16.642/2017 — COE)
+  · 1 bacia sanitária + 1 lavatório + 1 chuveiro com água aquecida a cada 20 usuários
+    estimados da lotação total, calculada por sexo.
+  · Vestiário: área de circulação livre ≥ 1,20 m² por chuveiro instalado (descontada a
+    área interna do boxe).
+  · Distância máxima de caminhamento entre área de treino e sanitário/vestiário: 50,0 m.
+
+RIO DE JANEIRO (Lei Complementar 198/2019, alterada pela LC 274/2024 — COE Simplificado)
+  · Sem sobreposição física de peças. Chuveiro obrigatório em vestiário de estabelecimento
+    comercial de esportes e condicionamento.
+  · Pé-direito livre mínimo: 2,20 m em sanitários, vestiários e circulação de permanência
+    transitória; 3,00 m contínuo na área de prática de exercícios (sala de treino).
+  · Banheiro independente de funcionários, com vaso, lavatório e chuveiro.
+
+BELO HORIZONTE (Decreto 15.113/2013 + Código de Edificações; funcionários por NR-18/NR-24)
+  · 1 vaso sanitário e 1 mictório a cada 20 trabalhadores.
+  · 1 chuveiro com água aquecida a cada 10 trabalhadores.
+  · Boxe de chuveiro: área mínima 0,80 m² por bico; divisória de vedação de altura ≥ 1,80 m;
+    portas que evitem devassamento visual das circulações do vestiário.
+
+=====================================================================
+11. RETROFIT (IMÓVEL EXISTENTE) × CONSTRUÇÃO DO ZERO
+=====================================================================
+Fundações e solo (NBR 6122)
+  Retrofit ...... dispensa escavação pesada sem ampliação; verificar só em sobrelevação.
+  Obra nova ..... campanha completa de SPT (NBR 6484) + fundações de raiz.
+  Impacto ....... retrofit reduz custo de geotecnia; obra nova elimina risco de recalque.
+
+Cargas estruturais (NBR 6120)
+  Retrofit ...... limitação severa se a laje antiga for inferior a 5,0 kN/m² → reforço caro.
+  Obra nova ..... superestrutura calculada de origem para 5,0 kN/m² + ações de impacto.
+  Impacto ....... reforço metálico em estrutura antiga encarece a obra.
+
+Acústica (NBR 10151 / 10152)
+  Retrofit ...... exige isolamento corretivo (drywall duplo, contrapiso flutuante).
+  Obra nova ..... layout acústico nativo, afastamentos e paredes duplas.
+  Impacto ....... obra nova reduz risco de ação civil e multa por poluição sonora.
+
+Renovação de ar (NBR 16401)
+  Retrofit ...... restrição física para dutos horizontais sob vigas de baixa altura livre.
+  Obra nova ..... furos em vigas e laje técnica previstos de origem.
+  Impacto ....... teto baixo em retrofit força splits + sistema independente de renovação.
+
+Acessibilidade (NBR 9050)
+  Retrofit ...... adaptação de soleiras, calçada, poço de elevador → demolição corretiva.
+  Obra nova ..... rota acessível, sanitário integrado e rampa a 8,33% de origem.
+  Impacto ....... prédio comercial com mais de 30 anos gera custo extra expressivo.
+
+Licenciamento
+  Retrofit ...... reforma sem acréscimo de área costuma ter trâmite mais ágil.
+  Obra nova ..... licenciamento completo + outorga onerosa; trâmite mais longo.
+  Impacto ....... retrofit abre o negócio mais rápido, melhora o fluxo de caixa.
+
+Regra do agente: em retrofit, recomendar SEMPRE laudo de avaliação estrutural (seção 2)
+antes de instalar equipamento pesado.
+
+=====================================================================
+12. TABELA DE CORRELAÇÃO — TEMA × NORMA × REQUISITO-CHAVE
+=====================================================================
+  1. Carga de laje ......... NBR 6120:2019 ..... 5,0 kN/m² (≈500 kgf/m²) em ginástica/musculação
+  2. Laudo estrutural ...... NBR 16280:2020 .... laudo + ART/RRT antes de reforma que altere cargas
+  3. Sondagem de solo ...... NBR 6122:2019 ..... SPT obrigatório (NBR 6484) em fundação nova
+  4. Instalação elétrica ... NBR 5410:2004 ..... circuito exclusivo p/ esteira; DR ≤ 30 mA em vestiário
+  5. Climatização .......... NBR 16401:2024 .... 5,0 l/s por pessoa + 0,6 l/s por m²; PMOC obrigatório
+  6. Acústica .............. NBR 10152/10151 ... musculação 45–55 dB(A) de ruído de fundo
+  7. Incêndio (SP) ......... IT-11 / IT-08 / IT-12 / IT-42 (CBPMESP) ... F-3; 1 pessoa/2,0 m²;
+                             U.P. = 0,55 m; C = 100 (portas/rampas) e 75 (escadas); saída ≥ 1,20 m;
+                             TRRF 120 min em escada; PCF-60. NUMERAÇÃO VARIA POR ESTADO.
+  8. Acessibilidade ........ NBR 9050:2020 ..... corredor 1,20 m; rampa 8,33%; 5% de peças adaptadas
+  9. Etapas do projeto ..... NBR 13532:1995 .... LV → PN → EP → AP → PL → PE
+ 10. Sanitários/vestiários . COE municipal ..... proporção por lotação; varia por município
+
+=====================================================================
+RESSALVAS DE PROCEDÊNCIA (obrigatório o agente respeitar)
+=====================================================================
+- Este documento é uma COMPILAÇÃO de requisitos de conhecimento público. Não substitui a
+  norma ABNT (paga) nem a consulta ao órgão competente.
+- As fontes consultadas incluem repositórios acadêmicos, portais de prefeitura, publicações
+  de conselhos (CREA/CAU) e material técnico de mercado. Parte das referências são mirrors
+  não-oficiais (ex.: Scribd) — o agente deve citar o NÚMERO DA NORMA como fonte, nunca o mirror.
+- Valores municipais e ITs estaduais mudam. Recomendar sempre a confirmação na prefeitura /
+  Corpo de Bombeiros do estado do usuário.
+- Nenhum valor deste documento autoriza veredito estrutural, de incêndio ou de licenciamento.
+  Toda obra/laudo exige profissional habilitado com ART (engenheiro/CREA) ou RRT (arquiteto/CAU).

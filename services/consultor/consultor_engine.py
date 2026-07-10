@@ -728,7 +728,7 @@ async def _executar_ferramenta(
         elif nome == "consultar_base_conhecimento":
             # Conhecimento auxiliar (RAG) — NÃO marca pesquisas_realizadas (não é uma
             # das 7 pesquisas de viabilidade; preserva o gate pode_gerar_relatorio).
-            resultado = await _tool_base_conhecimento(args, projeto)
+            resultado = await _tool_base_conhecimento(args, projeto, modo_site)
             resumo = _resumo_base_conhecimento(resultado)
 
         elif nome == "consultar_catalogos_equipamentos":
@@ -1016,14 +1016,26 @@ async def disparar_relatorio_formal(projeto_id: str, usuario_id: str) -> dict[st
     return resultado
 
 
-async def _tool_base_conhecimento(args: dict, projeto: ProjectState) -> dict:
+async def _tool_base_conhecimento(args: dict, projeto: ProjectState, modo_site: bool = False) -> dict:
     """Base de conhecimento qualitativa (Vertex AI Search). Retorna trechos + citações;
-    o próprio Gemini do Consultor sintetiza. NÃO produz número."""
-    from tools.discovery_engine_tools import buscar_conhecimento
+    o próprio Gemini do Consultor sintetiza. NÃO produz número.
+
+    Consultor LOGADO: market-docs (fato de mercado neutro) + consultor-docs (BI/estratégia
+    interna). Degustação (modo_site): SÓ market-docs — barreira anti-vazamento, a base interna
+    nunca chega ao visitante público."""
+    from tools.discovery_engine_tools import buscar_conhecimento, buscar_conhecimento_consultor
 
     pergunta = (args.get("pergunta") or "").strip()
     resultado = await asyncio.to_thread(buscar_conhecimento, pergunta)
-    return resultado if isinstance(resultado, dict) else {"resultados": [], "n_docs": 0}
+    if not isinstance(resultado, dict):
+        resultado = {"resultados": [], "n_docs": 0}
+
+    if not modo_site:
+        interno = await asyncio.to_thread(buscar_conhecimento_consultor, pergunta)
+        if isinstance(interno, dict) and interno.get("resultados"):
+            resultado["resultados"] = (resultado.get("resultados") or []) + interno["resultados"]
+            resultado["n_docs"] = len(resultado.get("resultados") or [])
+    return resultado
 
 
 async def _tool_catalogos_equipamentos(args: dict, projeto: ProjectState) -> dict:

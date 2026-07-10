@@ -96,8 +96,38 @@ async def test_cap_turnos_estoura(monkeypatch):
     assert motivo == "turnos"
 
 
-async def test_cap_sem_redis_nao_bloqueia(monkeypatch):
-    """Redis indisponível → cap não bloqueia (fail-open, não derruba a degustação)."""
+async def test_clarificacao_nao_conta_como_pergunta(monkeypatch):
+    """MODO_DEGUSTACAO on: responder a pergunta do agente (continuação, nova_sessao=False)
+    NÃO pode bater no cap `agente`, mesmo com o contador do agente estourado. A clarificação
+    é parte da mesma pergunta — só a abertura (nova_sessao) conta. (Bug: usuário respondia o
+    estado que o agente pediu e a degustação era encerrada como 'pergunta extra'.)"""
+    import backend.routers.site_agent as sa
+    monkeypatch.setattr(sa, "_CHAT_MODO_DEGUSTACAO", True)
+    _mock_redis(monkeypatch, incr_valor=99)  # agente cap estourado E turnos alto
+    # continuação: nova_sessao=False → não passa pelo cap agente; cai só no turnos.
+    motivo = await sa._cap_chat_estourado("1.2.3.4", "proj-1", nova_sessao=False, agente="mercado")
+    assert motivo == "turnos"   # bloqueia por turnos (5), NUNCA por "agente"
+
+
+async def test_abertura_ainda_conta_no_cap_agente(monkeypatch):
+    """A 1ª mensagem (nova_sessao=True) continua consumindo a cota do especialista."""
+    import backend.routers.site_agent as sa
+    monkeypatch.setattr(sa, "_CHAT_MODO_DEGUSTACAO", True)
+    _mock_redis(monkeypatch, incr_valor=2)  # 2ª abertura do mesmo agente hoje
+    motivo = await sa._cap_chat_estourado("1.2.3.4", None, nova_sessao=True, agente="mercado")
+    assert motivo == "agente"
+
+
+async def test_cap_sem_redis_bloqueia(monkeypatch):
+    """Redis inacessível → fail-CLOSED.
+
+    Era fail-open (188be38) pra não derrubar a degustação. Mas o mesmo evento
+    derruba o enqueue: `_enqueue_ou_background` degrada pra BackgroundTasks e o
+    turno roda dentro da api (maxScale=20), não no worker. Sem cap + execução
+    inline = gasto de Gemini sem teto. Gasto ilimitado é pior que degustação
+    fora do ar por alguns minutos — e o /analise capeia via Supabase, então o
+    funil de lead sobrevive à queda do Redis.
+    """
     import backend.routers.site_agent as sa
 
     async def fake_get_redis():
@@ -105,4 +135,30 @@ async def test_cap_sem_redis_nao_bloqueia(monkeypatch):
 
     monkeypatch.setattr("tools.redis_client.get_redis", fake_get_redis)
     motivo = await sa._cap_chat_estourado("1.2.3.4", None, nova_sessao=True, agente="degustacao")
-    assert motivo is None
+    assert motivo == "indisponivel"
+
+
+async def test_cap_com_redis_falhando_no_meio_bloqueia(monkeypatch):
+    """Redis conecta mas o incr explode → também fail-closed (não só a conexão)."""
+    import backend.routers.site_agent as sa
+
+    r = MagicMock()
+    r.incr = AsyncMock(side_effect=RuntimeError("connection reset"))
+    r.expire = AsyncMock()
+
+    async def fake_get_redis():
+        return r
+
+    monkeypatch.setattr("tools.redis_client.get_redis", fake_get_redis)
+    motivo = await sa._cap_chat_estourado("1.2.3.4", None, nova_sessao=True, agente="degustacao")
+    assert motivo == "indisponivel"
+
+
+async def test_bypass_nao_passa_pelo_cap(monkeypatch):
+    """Dono/dev com bypass nunca chega no cap — queda do Redis não bloqueia o teste interno."""
+    import backend.routers.site_agent as sa
+
+    monkeypatch.setattr(sa, "_CHAT_BYPASS_TOKEN", "token-de-teste")
+    req = MagicMock()
+    req.headers = {"x-site-chat-token": "token-de-teste"}
+    assert sa._bypass_autorizado(req, None, "9.9.9.9") is True

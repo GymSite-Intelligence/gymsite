@@ -29,10 +29,31 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 
 ## Regras que mais mordem
 
+- **LER A FONTE, NUNCA ASSUMIR.** Antes de afirmar como uma biblioteca, um serviço ou o
+  banco se comporta, abrir o código/schema/API e verificar. Vale pro `.venv` (o fonte do
+  ADK está lá), pro `git show origin/main:arquivo` (o working tree pode estar sujo ou
+  atrasado), pro `list_documents` antes de apagar, pro schema real antes da migration.
+  Casos em que assumir teria quebrado produção:
+  - ADK: fixar um sub-agente no `Runner` não basta — ele mantém `parent_agent` e ganha
+    `AutoFlow` com a tool `transfer_to_agent`; o especialista "fixado" saltaria pro outro.
+    Só lendo `llm_agent.py:_llm_flow` dá pra ver que precisa de cópia com as DUAS flags
+    de `disallow_transfer_*` e sem `sub_agents`.
+  - Store `gymsite-market-docs` **não existe** com esse id — o real tem sufixo
+    (`_1782013477930`). Um `delete` "óbvio" teria batido em NotFound (ou pior, no store errado).
+  - `_cap_chat_estourado` fail-open parecia descuido; era decisão documentada em teste.
+    Reverter sem ler o commit teria desfeito uma escolha de produto na surdina.
+  Um número ou comportamento vindo de memória/intuição é hipótese, não fato. Verificar
+  custa um comando; errar custa produção.
 - Testes: backend SEMPRE `.venv/Scripts/python.exe -m pytest` (o `pytest` solto usa o
   Python global 3.13, sem as dependências do projeto, e quebra na importação); frontend
   `npx tsc --noEmit`. NUNCA `npm run dev`/`build` pra testar. Teste que valida correção
   roda ANTES do commit — fecha a etapa com o teste, não com o diff.
+- **Teste que passa não prova que testa.** Rodar o teste novo ANTES do fix e exigir que ele
+  FALHE — e por `AssertionError`, não por erro de import/plugin. `pytest.ini` precisa de
+  `asyncio_mode = auto`: sem isso o pytest-asyncio roda em modo `strict` e todo
+  `async def test_` sem marcador FALHA em vez de rodar (4 testes de cap ficaram vermelhos
+  e invisíveis por 3 dias; o commit dizia "coberto"). Teste sobre serviço não-determinístico
+  (recuperação do Vertex) roda N≥3 e olha a variância — uma passada mente.
 - Dinheiro em centavos (integer) no banco; datas `timestamptz` UTC.
 - Comentário no código só quando registra DECISÃO ou armadilha não-óbvia (o PORQUÊ —
   ex.: "peso por anel: concorrente distante pressiona menos"); nunca comentário que
@@ -48,6 +69,13 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 - Git: binário pesado (`docs/produto/brand/`) NÃO entra em commit de código — push HTTPS
   estoura ("remote end hung up"). Assets de marca em commit próprio; se precisar,
   `git config http.postBuffer 524288000`.
+- Git no Windows: `git worktree add` estoura MAX_PATH em `market_context/investigations/*`
+  ("Filename too long") e deixa índice corrompido. Pra commitar numa branch limpa com a
+  árvore suja (caso comum: frente paralela em andamento), usar plumbing sobre índice
+  temporário — `read-tree origin/main` → `hash-object -w` → `update-index --cacheinfo`
+  → `write-tree` → `commit-tree`. **`unset GIT_INDEX_FILE` ao terminar**: exportado, ele
+  envenena todo `git` seguinte (um `git status` reportou 1276 arquivos staged que não
+  existiam — quase "consertei" uma branch intacta). Conferir sempre com ambiente limpo.
 - Cloud Run: projeto `gen-lang-client-0106729343` ("Navi Vectra" — nome engana, é o do
   GymSite), região `us-central1` (NÃO southamerica-east1). `gymsite-worker` compartilha
   a imagem da api e NÃO auto-deploya — após rebuild da api:
