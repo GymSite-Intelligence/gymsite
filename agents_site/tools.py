@@ -320,12 +320,17 @@ def calcular_sanitarios_por_lotacao(
     pessoas_por_conjunto: int = 20,
     pct_acessivel: float = 0.05,
 ) -> dict:
-    """Calcula de forma DETERMINÍSTICA a quantidade de peças sanitárias por lotação, conforme
-    a regra usual de código de obras. Use SEMPRE para "quantos banheiros preciso" — não estime.
+    """ESTIMATIVA determinística e NÃO-OFICIAL de peças sanitárias por lotação, pela regra
+    genérica de código de obras. É PLANEJAMENTO — NÃO é a exigência legal.
 
-    Regra: 1 bacia + 1 lavatório a cada `pessoas_por_conjunto` pessoas (padrão 20; locais de
-    reunião podem usar 50). Divide 50/50 por gênero. No masculino, até 50% das bacias podem
-    virar mictórios. Mínimo 5% acessível (NBR 9050).
+    Regra genérica: 1 bacia + 1 lavatório a cada `pessoas_por_conjunto` (padrão 20; reunião
+    pode usar 50), dividido 50/50 por gênero; no masculino até 50% das bacias viram mictórios;
+    mínimo 5% acessível (NBR 9050). O número OFICIAL vem do Código de Obras do MUNICÍPIO (via
+    `consultar_engenharia_obra` ou fonte oficial), que costuma ser ASSIMÉTRICO por gênero e mais
+    rígido — ex.: João Pessoa exige mais bacias femininas que o 50/50 daqui. NUNCA apresentar
+    este resultado como a contagem legal: rotular como estimativa e mandar confirmar no COE do
+    município. Para "quantos banheiros preciso" num município específico, priorizar a base/COE
+    sobre esta estimativa.
 
     Args:
         lotacao: ocupação máxima simultânea da edificação (pessoas).
@@ -333,7 +338,7 @@ def calcular_sanitarios_por_lotacao(
         pct_acessivel: fração acessível (padrão 0.05 = 5%).
 
     Returns:
-        dict com bacias/lavatórios totais e por gênero, mictórios possíveis, peças acessíveis e nota.
+        dict com bacias/lavatórios ESTIMADOS, `tipo="estimativa_nao_oficial"` e `aviso`.
     """
     import math
     lot = max(0, int(lotacao))
@@ -342,6 +347,12 @@ def calcular_sanitarios_por_lotacao(
     por_genero = math.ceil(conjuntos / 2) if conjuntos else 0
     acessiveis = max(1, math.ceil(conjuntos * float(pct_acessivel))) if conjuntos else 0
     return {
+        "tipo": "estimativa_nao_oficial",
+        "aviso": (
+            "Estimativa 50/50 simétrica de PLANEJAMENTO — NÃO é a exigência legal. O Código de "
+            "Obras (COE) do município pode exigir números diferentes e ASSIMÉTRICOS por gênero "
+            "(ex.: João Pessoa). Confirme no COE municipal antes de projetar."
+        ),
         "bacias_total": conjuntos,
         "lavatorios_total": conjuntos,
         "bacias_por_genero": por_genero,
@@ -350,9 +361,8 @@ def calcular_sanitarios_por_lotacao(
         "pecas_acessiveis_min": acessiveis,
         "premissas": {"pessoas_por_conjunto": ppc, "pct_acessivel": pct_acessivel},
         "nota": (
-            "Regra usual de Código de Obras (ex.: COE-SP LM 17.202/19): ~1 bacia+1 lavatório/20 "
-            "pessoas; reunião pode usar /50. 5% acessível (NBR 9050). Confirmar no Código de Obras "
-            "do município — premissa de PLANEJAMENTO."
+            "Regra genérica (ex.: COE-SP LM 17.202/19): ~1 bacia+1 lavatório/20 pessoas; reunião "
+            "pode usar /50. 5% acessível (NBR 9050). Número oficial = COE do município."
         ),
     }
 
