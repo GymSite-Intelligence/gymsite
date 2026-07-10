@@ -123,6 +123,8 @@ Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
    Tool CNPJ → números e composição. Tool CNO → área m² só onde houver match.
 
 ## SAÍDA (JSON)
+O schema abaixo é REFERÊNCIA de estrutura. Sua resposta final deve ser SOMENTE o
+objeto JSON — sem markdown, sem fence ```, começando por { e terminando por }.
 ```json
 {
   "market_context": {

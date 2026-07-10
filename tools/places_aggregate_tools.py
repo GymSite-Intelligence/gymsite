@@ -42,6 +42,10 @@ def compute_insight_count_circle(
         return {"erro": "GOOGLE_MAPS_API_KEY ausente"}
     if not included_types:
         return {"erro": "included_types vazio"}
+    try:
+        radius_meters = int(radius_meters)  # anotação int não garante runtime; JSON/config traz "3000"
+    except (TypeError, ValueError):
+        return {"erro": "radius_meters inválido"}
     if radius_meters <= 0:
         return {"erro": "radius_meters inválido"}
 

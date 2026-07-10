@@ -235,6 +235,11 @@ STRESS_TESTS = [
     {"id": "ticket_menos_15pct",     "label": "Ticket -15%",      "delta_ticket": -0.15},
     {"id": "ocupacao_aluguel_mais_20pct", "label": "Ocupação (aluguel +20%)",
      "delta_aluguel": 0.20, "check_ocupacao": True},
+    # Task #19: disciplina de folha escorrega (PJ/MEI) → Fator R < 28% → Anexo V
+    # (+9,5pp sobre TODO o faturamento). O estresse fiscal mais comum do setor:
+    # 40-48% dos centros contratam PJ (Panorama Fitness Brasil 2025).
+    {"id": "fiscal_anexo_v", "label": "Fiscal: Fator R < 28% (Anexo V)",
+     "forca_anexo_v": True},
 ]
 
 # Ticket mensal sustentável ≈ % da renda domiciliar (ACAD / A2).
@@ -396,15 +401,15 @@ def calcular_viabilidade_3_cenarios(
     renda_percentil: float | None = None,
 ) -> dict:
     _capex_ctx = _resolve_capex_indices(uf, capex_indices)
-    # Benchmarks setoriais atualizados (Panorama Fitness Brasil mais recente).
-    # Sobrescreve constantes ACAD 2024 hardcoded quando Search Grounding
-    # consegue extrair dados. Fallback é o próprio default — pipeline nunca
-    # falha por benchmark ausente.
+    # Task #26 — DETERMINIZAÇÃO: ticket/inadimplência/churn saem do CATÁLOGO
+    # (parametros_metodologia, versionado com fonte/data), NUNCA mais do
+    # benchmark via Search Grounding/LLM. Era a última variância do score:
+    # cache de 7 dias expirava/rodava em container novo → ticket novo →
+    # payback/viabilidade/modelo recomendado mudavam com o MESMO input
+    # (provado nos runs bf7a8d5a/e88e0b32/b7199c7c: premium 299,90→500).
+    # O _bench continua APENAS pra avisos informativos (nunca número de conta).
     from tools.benchmarks_tool import obter_benchmarks_setoriais
     _bench = obter_benchmarks_setoriais()
-    _ticket_dinamico = _bench.get("ticket_por_modelo") or {}
-    _inadimp_dinamica = _bench.get("inadimplencia_por_modelo") or {}
-    _churn_dinamico = _bench.get("churn_mensal_por_modelo") or {}
     """
     Calcula viabilidade em 3 cenários (low/mid/premium) com SCHEMA v2:
 
@@ -440,7 +445,7 @@ def calcular_viabilidade_3_cenarios(
         equipamentos_por_cenario = {"low": None, "mid": None, "premium": None}
 
     for faixa_key, faixa in TICKET_FAIXAS.items():
-        raw_ticket = float(_ticket_dinamico.get(faixa_key) or faixa["ticket_medio"])
+        raw_ticket = float(faixa["ticket_medio"])  # catálogo (#26) — nunca LLM
         ticket, ticket_notes = _resolver_ticket_faixa(
             faixa_key, raw_ticket, renda_media_bairro
         )
@@ -476,8 +481,8 @@ def calcular_viabilidade_3_cenarios(
         # senão ACAD 2024 (low 6%, mid 4%, premium 2.5%). Panorama 2025
         # mostra que esses valores assumem débito recorrente — sem
         # recorrência, inadimplência real é 15-25%.
-        inadimplencia = _inadimp_dinamica.get(faixa_key) or TAXA_INADIMPLENCIA_POR_MODELO[faixa_key]
-        churn_mensal = _churn_dinamico.get(faixa_key) or TAXA_CANCELAMENTO_MENSAL_POR_MODELO[faixa_key]
+        inadimplencia = TAXA_INADIMPLENCIA_POR_MODELO[faixa_key]  # catálogo (#26)
+        churn_mensal = TAXA_CANCELAMENTO_MENSAL_POR_MODELO[faixa_key]  # catálogo (#26)
         ticket_realizado = ticket * (1.0 - inadimplencia)
         receita_mensal = matr_real * ticket_realizado
 
@@ -627,6 +632,7 @@ def calcular_viabilidade_3_cenarios(
             investimento_total=investimento_total,
             ocupacao_nao_aluguel=ocupacao_abs - custos["aluguel"],
             teto_ocupacao=teto_ocup,
+            folha_mensal=custos["folha"],
         )
 
         cenarios[faixa_key] = {
@@ -1260,9 +1266,16 @@ def _calcular_sensibilidade(
     investimento_total: float,
     ocupacao_nao_aluguel: float = 0.0,
     teto_ocupacao: float | None = None,
+    folha_mensal: float = 0.0,
 ) -> list[dict]:
     """
     Stress tests com lucro/payback/viabilidade resultantes.
+
+    Task #19 — CASCATA FISCAL DINÂMICA: o Fator R é recalculado SOB CADA stress
+    (folha ÷ receita estressada) e o Simples reenquadrado — queda de receita pode
+    até MELHORAR o anexo (folha ganha peso relativo). O lucro de cada linha é
+    LÍQUIDO do imposto do anexo resultante, coerente com o motor v1.3.
+    CAPEX de equipamentos é PISO inviolável: nenhum stress corta equipamento.
 
     Cada stress aplica um delta sobre o cenário "realista":
     - aluguel +20%: simula contrato com reajuste alto
@@ -1285,7 +1298,20 @@ def _calcular_sensibilidade(
         custos_fixos = custos_fixos_sem_aluguel + aluguel
         marketing = receita * marketing_pct
         custos_total = custos_fixos + marketing
-        lucro = receita - custos_total
+
+        # Cascata fiscal (task #19): Fator R recalculado sob a receita estressada.
+        fator_r_s = (folha_mensal / receita) if receita > 0 else 0.0
+        anexo_s = (
+            "V" if (stress.get("forca_anexo_v") or fator_r_s < param("fator_r_corte_folha"))
+            else "III"
+        )
+        aliquota_s = (
+            param("aliquota_simples_anexo_v") if anexo_s == "V"
+            else param("aliquota_simples_anexo_iii")
+        )
+        tributos_s = receita * aliquota_s
+
+        lucro = receita - custos_total - tributos_s
         margem = (lucro / receita * 100) if receita > 0 else 0
         payback = int(investimento_total / lucro) if lucro > 0 else 999
 
@@ -1307,6 +1333,10 @@ def _calcular_sensibilidade(
             "margem_percentual": round(margem, 1),
             "payback_meses": payback,
             "viabilidade": viab["status"],
+            "fator_r": round(fator_r_s, 4),
+            "anexo_simples": anexo_s,
+            "aliquota_tributos": round(aliquota_s, 4),
+            "tributos_mensal": round(tributos_s, 2),
             "ocupacao_pct": round(ocupacao_pct, 4),
             "teto_ocupacao": round(teto_ocupacao, 4) if teto_ocupacao is not None else None,
             "ocupacao_estoura": bool(ocupacao_estoura),

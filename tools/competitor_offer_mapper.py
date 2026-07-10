@@ -83,7 +83,10 @@ MODALIDADES_KEYWORDS: dict[str, list[str]] = {
     "danca":        ["zumba", "ritmos", " dança ", "danca", "ballet", "fitdance"],
     "personal":     ["personal trainer", "personal incluso", "treinamento individual",
                      "treinamento personalizado", "treino personalizado"],
-    "avaliacao":    ["avaliação física", "avaliacao fisica", "bioimpedância", "bioimpedancia"],
+    "avaliacao":    ["avaliação física", "avaliacao fisica", "bioimpedância", "bioimpedancia",
+                     # Task #25: vocabulário Wellhub/mercado pra mesma comodidade
+                     "inbody", "composição corporal", "composicao corporal",
+                     "análise corporal", "analise corporal", "dobras cutâneas", "dobras cutaneas"],
     "estetica":     ["estética", "estetica", "sauna", "spa"],
     # Nutrição e Recovery: serviços que a ERRC sempre recomenda "Criar" — precisam
     # ser detectados quando o concorrente JÁ oferece, senão viram falso-gap eterno.
@@ -532,7 +535,11 @@ async def mapear_oferta_concorrente(
         "Accept": "text/html,application/xhtml+xml",
     }
 
-    textos_pra_analise: list[str] = []
+    # Task #25: o NOME do concorrente semeia o blob — é a autodeclaração mais
+    # autoritativa que existe. Caso real (run df496c19): "Academia VS Club - cocó/
+    # Musculação, natação, hidroginástica" saiu com oferta só ["estetica"] porque
+    # o nome ficava de fora da detecção.
+    textos_pra_analise: list[str] = [nome or ""]
 
     async with httpx.AsyncClient(headers=headers) as client:
         # Site: home + subpáginas. Sequencial (não martela mesmo host).

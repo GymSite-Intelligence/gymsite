@@ -136,6 +136,8 @@ Depois sintetize `posicionamento_recomendado` (1-2 frases concretas).
 - Em que horário TODOS estão lotados? → counter-programming = pico de captura
 
 ## SAÍDA ESPERADA (JSON completo)
+O schema abaixo é REFERÊNCIA de estrutura. Sua resposta final deve ser SOMENTE o
+objeto JSON — sem markdown, sem fence ```, começando por { e terminando por }.
 {
   "escopo_busca": "academia_tradicional|crossfit_funcional|yoga_pilates_bemestar|boutique_modalidade|wellness_premium_full",
   "criterio_filtro_aplicado": "string explicando quais tipos foram excluídos do escopo",

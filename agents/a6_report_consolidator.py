@@ -2600,6 +2600,32 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         logger.warning("A6 cross-check concorrentes falhou", exc_info=True, extra={"agent": "A6"})
 
     alertas_financeiros = list(inner_fin.get("alertas", []) or [])
+
+    # ── Task #26: régua da praça — ticket do catálogo vs mediana de balcão real.
+    # O ticket é determinístico (catálogo); a praça DENUNCIA quando o catálogo
+    # está fora da banda ±40% pro local. Alerta rotulado, nunca recálculo mudo.
+    try:
+        from tools.competitor_tools import confronto_ticket_praca
+
+        _modelo_rec = inner_fin.get("modelo_recomendado")
+        _cen_rec = next(
+            (c for c in (inner_fin.get("viabilidade_3_cenarios") or {}).values()
+             if isinstance(c, dict) and c.get("modelo") == _modelo_rec), None)
+        _tk_rec = (_cen_rec or {}).get("ticket_medio")
+        _conf = confronto_ticket_praca(float(_tk_rec), concorrentes_detalhados) if _tk_rec else None
+        if _conf:
+            if isinstance(aneis_competitivos_resumo, dict):
+                aneis_competitivos_resumo["ticket_vs_praca"] = _conf
+            if _conf["fora_banda"]:
+                alertas_financeiros.append(
+                    f"Ticket do cenário recomendado (R$ {_conf['ticket_cenario']:.2f}, catálogo "
+                    f"ACAD) está fora da banda ±40% da praça: mediana de balcão "
+                    f"R$ {_conf['mediana_balcao']:.2f} (N={_conf['n_precos']} preços reais, "
+                    f"agregadores excluídos). Avaliar recalibração pro local."
+                )
+    except Exception:
+        logger.warning("A6 confronto ticket×praça falhou", exc_info=True, extra={"agent": "A6"})
+
     sem_concorrentes = (not concorrentes_detalhados) and _safe_float(total_concorrentes) == 0
     if sem_concorrentes:
         if veredito in ("APROVADO", "APROVADO COM RESSALVAS"):

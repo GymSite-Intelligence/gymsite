@@ -399,7 +399,7 @@ def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
     tn = (tipo_negocio or "academia").strip().lower()
     tipos_raw = [str(t) for t in (c.get("tipos") or [])]
     tipos = [t for t in tipos_raw if t not in ("gym", "fitness_center")]
-    tipos_blob = _norm_txt(" ".join(str(x) for x in tipos))
+    tipos_blob = _norm_txt(" ".join(tipos))
     nome_blob = _norm_txt(c.get("nome") or "")
 
     if tn == "academia":
@@ -754,11 +754,11 @@ def buscar_academias(
                 from tools.places_aggregate_tools import compute_insight_count_circle
 
                 base = compute_insight_count_circle(
-                    latitude=lat, longitude=lng, radius_meters=int(raio_metros),
+                    latitude=lat, longitude=lng, radius_meters=raio_metros,
                     included_types=["gym", "fitness_center"],
                 )
                 hi42 = compute_insight_count_circle(
-                    latitude=lat, longitude=lng, radius_meters=int(raio_metros),
+                    latitude=lat, longitude=lng, radius_meters=raio_metros,
                     included_types=["gym", "fitness_center"],
                     min_rating=param("benchmark_rating_bem_avaliada"),
                 )
@@ -766,7 +766,7 @@ def buscar_academias(
                     "status": "ok" if "erro" not in base else "erro",
                     "count_total": base.get("count") if isinstance(base, dict) else None,
                     "count_rating_ge_4_2": hi42.get("count") if isinstance(hi42, dict) else None,
-                    "radius_meters": int(raio_metros),
+                    "radius_meters": raio_metros,
                     "center": {"lat": lat, "lng": lng},
                     "included_types": ["gym", "fitness_center"],
                     "erros": [e for e in [base.get("erro"), hi42.get("erro")] if e],
@@ -776,46 +776,47 @@ def buscar_academias(
         else:
             agregados = {"status": "desabilitado_custo", "count_total": None}
 
+    def _do_nearby() -> None:
+        nonlocal data, places_ok
+        from tools.api_cost_tracker import track_api_call
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": (
+                "places.id,places.displayName,places.formattedAddress,"
+                "places.location,places.rating,places.userRatingCount,"
+                "places.businessStatus,places.types,"
+                "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
+            ),
+        }
+        body = {
+            "locationRestriction": {"circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": float(raio_metros),
+            }},
+            "includedTypes": ["gym", "fitness_center"],
+            "maxResultCount": 20,
+            "languageCode": "pt-BR",
+        }
+        try:
+            with track_api_call("buscar_academias_nearby", "places_search_new", 1):
+                with httpx.Client(timeout=15) as c:
+                    resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
+                    data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+                    places_ok = resp.status_code == 200 and bool(data.get("places"))
+        except Exception as e:
+            places_ok = False
+            data = {"error": str(e)}
+
         # searchNearby (Places New 3km) agora é LAZY: no caminho default (âncora-bairro)
         # o resultado era DESCARTADO (retorna o textSearch/SearchAPI). Só roda quando é o
         # caminho radius OU o textSearch-bairro volta vazio (fallback). Corte de Places New
         # SEM mudar dado — resultado já era jogado fora no default. Antes: untracked → agora
         # rastreado (places_search_new) quando roda.
+    if api_key:
         _conc_src_pre = os.getenv("CONCORRENTES_SOURCE", "").strip().lower()
         _ancora_bairro_pre = _conc_src_pre not in ("radius", "nearby", "raio", "municipio")
-
-        def _do_nearby() -> None:
-            nonlocal data, places_ok
-            from tools.api_cost_tracker import track_api_call
-
-            headers = {
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": api_key,
-                "X-Goog-FieldMask": (
-                    "places.id,places.displayName,places.formattedAddress,"
-                    "places.location,places.rating,places.userRatingCount,"
-                    "places.businessStatus,places.types,"
-                    "places.regularOpeningHours,places.websiteUri,places.nationalPhoneNumber"
-                ),
-            }
-            body = {
-                "locationRestriction": {"circle": {
-                    "center": {"latitude": lat, "longitude": lng},
-                    "radius": float(raio_metros),
-                }},
-                "includedTypes": ["gym", "fitness_center"],
-                "maxResultCount": 20,
-                "languageCode": "pt-BR",
-            }
-            try:
-                with track_api_call("buscar_academias_nearby", "places_search_new", 1):
-                    with httpx.Client(timeout=15) as c:
-                        resp = c.post(f"{PLACES_BASE}:searchNearby", json=body, headers=headers)
-                        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
-                        places_ok = resp.status_code == 200 and bool(data.get("places"))
-            except Exception as e:
-                places_ok = False
-                data = {"error": str(e)}
 
         # Eager SÓ no caminho radius (sem âncora-bairro). No default fica lazy (fallback).
         if not (_ancora_bairro_pre and bairro.strip()):
@@ -1397,7 +1398,7 @@ def classificar_saturacao_bairro(num_no_bairro: int) -> str:
     """Saturação pela CONTAGEM de concorrentes NO BAIRRO (cross-check gate), não pela
     densidade no raio 3km (que dilui — 20 no raio virava BAIXO). Bandas recalibráveis.
     Ex.: 7 academias num bairro = ALTO."""
-    n = int(num_no_bairro or 0)
+    n = int(num_no_bairro or 0)  # coage: anotação não garante int em runtime (JSON pode trazer "7")
     if n >= param_int("saturacao_bairro_saturado_min"):  return "SATURADO"
     if n >= param_int("saturacao_bairro_alto_min"):      return "ALTO"
     if n >= param_int("saturacao_bairro_medio_min"):     return "MEDIO"
@@ -1736,7 +1737,7 @@ def _normalizar_nome(s: str) -> str:
     """Lowercase + collapse de espaços para matching de redes."""
     if not s:
         return ""
-    return " ".join(str(s).lower().split())
+    return " ".join(s.lower().split())
 
 
 def _matches_rede(nome_concorrente: str, rede_a0: str) -> bool:
@@ -2905,4 +2906,64 @@ def analisar_concorrentes_completo(tool_context) -> dict:
         "top_independentes": envelope.get("top_independentes") or [],
         "academias_analisadas": envelope.get("academias_analisadas") or [],
         "distribuicao_geografica": distribuicao_geografica,
+    }
+
+
+# ── Task #26: régua da praça pro ticket do catálogo ────────────────────────────
+
+_AGREGADOR_KW = ("wellhub", "gympass", "gurupass", "totalpass", "agregador")
+
+
+def _parse_preco_brl(v) -> float | None:
+    """'R$ 319,99' / '319,99' / 319.99 → float. None se não parsear."""
+    if isinstance(v, (int, float)):
+        return float(v)
+    if not isinstance(v, str):
+        return None
+    import re as _re
+
+    m = _re.search(r"(\d{1,3}(?:\.\d{3})*(?:,\d{2})?|\d+(?:\.\d{2})?)", v)
+    if not m:
+        return None
+    s = m.group(1)
+    try:
+        return float(s.replace(".", "").replace(",", ".")) if "," in s else float(s)
+    except ValueError:
+        return None
+
+
+def confronto_ticket_praca(
+    ticket_cenario: float, concorrentes: list[dict], banda: float = 0.4
+) -> dict | None:
+    """Mediana dos preços de BALCÃO da praça (planos_precos, excluindo tiers de
+    agregador) confrontada com o ticket do cenário recomendado (catálogo, #26).
+    Não recalcula nada — devolve o confronto pro A6 alertar quando a razão sai
+    da banda (default ±40%). Preço de agregador fica fora: é tier corporativo,
+    não mensalidade de balcão (decisão do quadro de planos, run b7199c7c)."""
+    import statistics
+
+    valores: list[float] = []
+    for c in concorrentes or []:
+        if not isinstance(c, dict):
+            continue
+        for p in c.get("planos_precos") or []:
+            if not isinstance(p, dict):
+                continue
+            blob = f"{p.get('plano') or ''} {p.get('fonte') or ''}".lower()
+            if any(k in blob for k in _AGREGADOR_KW):
+                continue
+            v = _parse_preco_brl(p.get("preco_mensal"))
+            if v and 10 <= v <= 5000:
+                valores.append(v)
+    if not valores or not ticket_cenario:
+        return None
+    mediana = round(statistics.median(valores), 2)
+    razao = round(float(ticket_cenario) / mediana, 3) if mediana else None
+    return {
+        "mediana_balcao": mediana,
+        "n_precos": len(valores),
+        "ticket_cenario": round(float(ticket_cenario), 2),
+        "razao": razao,
+        "fora_banda": razao is not None and not (1 - banda <= razao <= 1 + banda),
+        "banda": banda,
     }
