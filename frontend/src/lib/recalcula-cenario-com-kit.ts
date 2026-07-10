@@ -12,7 +12,7 @@
  *   custos_detalhados.seguro           ← 0.2%/mês × capex_total
  *   custos_fixos_total                 ← recalculado (substitui manut + seguro)
  *   custos_totais                      ← fixos + marketing
- *   lucro_mensal_estimado              ← receita − custos_totais
+ *   lucro_mensal_estimado              ← receita − custos_totais − tributos (Simples)
  *   margem_percentual                  ← lucro / receita × 100
  *   capital_giro                       ← 3 × custos_totais
  *   investimento_total                 ← capex_total + capital_giro
@@ -120,7 +120,12 @@ export function recalcularCenarioComKit(
   const custosTotaisNovo = custosFixosTotalNovo + marketingMensal
 
   // ── 5. Resultado ─────────────────────────────────────────────
-  const lucroMensalNovo = cenario.receita_mensal - custosTotaisNovo
+  // Motor fiscal v1.3: lucro é LÍQUIDO do Simples. Tributos = receita ×
+  // alíquota (a receita não muda no recálculo do kit, então o valor do motor
+  // vale). Runs antigos sem o campo continuam pré-imposto (?? 0).
+  const tributosMensal = cenario.tributos_mensal ?? 0
+  const lucroMensalNovo =
+    cenario.receita_mensal - custosTotaisNovo - tributosMensal
   const margemPctNovo =
     cenario.receita_mensal > 0
       ? (lucroMensalNovo / cenario.receita_mensal) * 100

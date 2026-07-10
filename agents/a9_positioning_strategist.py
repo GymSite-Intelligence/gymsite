@@ -428,6 +428,48 @@ def _servicos_minerados_state(state: dict) -> set[str]:
     return svcs
 
 
+def _oferta_minerada_por_nome(state: dict) -> dict[str, set[str]]:
+    """Oferta minerada do state (offer_mapper) por NOME de concorrente → rótulos
+    do catálogo. Mesma fonte que a página exibe (competidores.oferta_mapeada)."""
+    om = state.get("oferta_concorrentes")
+    if isinstance(om, str):
+        try:
+            om = json.loads(om)
+        except Exception:
+            return {}
+    inner = om.get("oferta_concorrentes") if isinstance(om, dict) else None
+    out: dict[str, set[str]] = {}
+    for nome, v in (inner or {}).items():
+        if isinstance(v, dict):
+            out[str(nome)] = {
+                _SERVICOS_CATALOGO[k] for k in (v.get("modalidades") or [])
+                if k in _SERVICOS_CATALOGO
+            }
+    return out
+
+
+def _penetracao_oferta_unificada(state: dict, concs: list[dict]) -> tuple["Counter", int]:
+    """Penetração por serviço unindo, POR CONCORRENTE, o detalhado (_servicos_do_
+    concorrente) e a oferta minerada do state. Concorrente que só existe na oferta
+    minerada (fora do gate de análise, ex.: Parque Esportes) entra na contagem —
+    gap só existe se NINGUÉM da praça oferece (task #40)."""
+    from collections import Counter
+
+    minerada = _oferta_minerada_por_nome(state)
+    pen: Counter = Counter()
+    nomes_vistos: set[str] = set()
+    for c in concs:
+        nome = str(c.get("nome") or "")
+        nomes_vistos.add(nome)
+        for s in _servicos_do_concorrente(c) | minerada.get(nome, set()):
+            pen[s] += 1
+    extras = {nome: svcs for nome, svcs in minerada.items() if nome not in nomes_vistos}
+    for svcs in extras.values():
+        for s in svcs:
+            pen[s] += 1
+    return pen, len(concs) + len(extras)
+
+
 def _gaps_reais(state: dict) -> list[str] | None:
     """Lista determinística dos serviços que NENHUM concorrente da praça ANUNCIA
     (nome + planos_precos.inclui + modalidades + servicos_ig + oferta minerada do
@@ -691,12 +733,11 @@ def _errc_deterministica(state: dict) -> dict:
 
     # penetração dos serviços do catálogo (universo) na oferta real dos concorrentes.
     # Calculado ANTES do avaliar_posicionamento → alimenta os sinais da Zona de Percepção.
+    # Task #40: UNE detalhados + oferta minerada do state — este caminho calculava só
+    # dos detalhados e o ERRC mandou "Criar Personal" com o Parque Esportes anunciando
+    # Personal no quadro da MESMA página (run 7456705e).
     universo = sorted(set(_SERVICOS_CATALOGO.values()))
-    pen: Counter = Counter()
-    for c in concs:
-        for s in _servicos_do_concorrente(c):
-            pen[s] += 1
-    n = len(concs)
+    pen, n = _penetracao_oferta_unificada(state, concs)
     mapa_servicos = {
         s: {"oferecem": pen.get(s, 0), "de": n,
             "penetracao_pct": round(100 * pen.get(s, 0) / n) if n else 0}
