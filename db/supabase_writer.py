@@ -706,7 +706,11 @@ def write_relatorio_to_supabase(
         res = client.table("relatorios").insert(header_row).execute()
         if not res.data:
             raise RuntimeError(f"insert em relatorios retornou vazio: {res}")
-        relatorio_id = res.data[0]["id"]
+        
+        new_row = res.data[0]
+        relatorio_id = new_row.get("id")
+        if not relatorio_id:
+            raise RuntimeError(f"insert em relatorios não retornou um ID: {new_row}")
 
     # 2. Tabelas 1:1 (inputs + outputs)
     # Em modo API HTTP, a row de inputs já existe (criada pelo POST) — preservar

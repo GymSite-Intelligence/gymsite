@@ -1,5 +1,7 @@
 # ── Stage 1: build the Vite/React static bundle (Linux — avoids win32 native lock) ──
-FROM node:22-alpine AS build
+# Chainguard node:latest-dev: 0C/0H (Docker Scout); official node:* tags still ship HIGH in bundled npm.
+FROM cgr.dev/chainguard/node:latest-dev@sha256:7137fadb43a7cee4a01495749973f3c8c44a1d02319d9beb543bdb21cb6e874e AS build
+USER root
 WORKDIR /app
 
 # Install deps with the lockfile
@@ -20,7 +22,7 @@ RUN rm -f .env .env.local .env.development .env.development.local .env.productio
 # key, instead of a keyless one. Override any value with docker --build-arg.
 ARG VITE_USE_MOCKS=false
 ARG VITE_SUPABASE_URL=https://epgedaiukjippepujuzc.supabase.co
-ARG VITE_SUPABASE_ANON_KEY=sb_publishable_fj4Ioi3YX8gI-h3lrcb45w_FZa9UzhD
+ARG VITE_SUPABASE_ANON_KEY=sb_secret_9-acooTA8rSFbY7arZiVTQ_tssK7vIo
 ARG VITE_API_BASE=https://gymsite-api.vectracargo.com.br
 RUN printf 'VITE_USE_MOCKS=%s\nVITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\nVITE_API_BASE=%s\n' \
       "$VITE_USE_MOCKS" "$VITE_SUPABASE_URL" "$VITE_SUPABASE_ANON_KEY" "$VITE_API_BASE" > .env.production
@@ -30,7 +32,10 @@ RUN npm run build
 # ── Stage 2: serve static via nginx on Cloud Run's $PORT (8080) ──
 # Imagem unprivileged: roda como uid 101 (non-root), pid/temp em /tmp, escuta 8080.
 # Resolve semgrep missing-user sem quebrar Cloud Run (8080 > 1024, sem bind privilegiado).
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31.2-alpine
+USER root
+RUN apk del --no-cache curl
+USER nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 8080

@@ -6,6 +6,7 @@
 import {
   AGENT_ICONS,
   IconeTecnico,
+  IconeMercado,
   type Icon,
 } from '@/components/icons/gymsite-icons'
 
@@ -49,6 +50,13 @@ export const TOOL_TO_AGENTE: Record<string, AgenteMeta> = {
 
 export function agenteDaFerramenta(ferramenta: string): AgenteMeta | undefined {
   return TOOL_TO_AGENTE[ferramenta]
+}
+
+export const ICONE_CONSULTOR: Icon = IconeMercado
+
+export function mascoteDaMensagem(acoes?: { ferramenta: string }[]): Icon {
+  const comAgente = acoes?.find((a) => TOOL_TO_AGENTE[a.ferramenta])
+  return comAgente ? TOOL_TO_AGENTE[comAgente.ferramenta].icone : ICONE_CONSULTOR
 }
 
 /** Chave de `pesquisas_realizadas` → agente (ícone + cor), para o painel lateral

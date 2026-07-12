@@ -12,6 +12,7 @@
 import { useState, useCallback } from 'react'
 import { API_BASE, supabase } from '@/lib/supabase'
 import type { ChatMessageData } from '@/components/chat/ChatMessage'
+import type { CarimboCitacao } from '@/components/chat/CitationStamp'
 
 export interface ConsultorPesquisas {
   mercado: boolean
@@ -50,6 +51,7 @@ interface ConversarResponse {
   pode_gerar_relatorio: boolean
   dados_faltantes: string[]
   projeto: ConsultorProjeto
+  citacoes?: CarimboCitacao[]
 }
 
 export interface UseConsultorChatReturn {
@@ -142,6 +144,7 @@ export function useConsultorChat(): UseConsultorChatReturn {
           content: data.mensagem,
           timestamp: new Date(),
           acoes: data.acoes_executadas,
+          citacoes: data.citacoes,
         }
         setMessages((prev) => [...prev, assistantMsg])
       } catch (e: unknown) {

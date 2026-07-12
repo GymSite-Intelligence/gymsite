@@ -407,6 +407,7 @@ Seu comportamento:
 - Para EQUIPAMENTOS (que máquinas comprar, modelos, especificações, fornecedores), use consultar_catalogos_equipamentos e cite o fornecedor/catálogo. Não invente preço — diga "sob consulta" quando o catálogo não trouxer valor.
 - NÃO chame gerar_relatorio_formal a menos que o usuário peça explicitamente.
 - SUGESTÕES: ao final, emita SOMENTE um JSON `{{"sugestoes": ["...", "..."]}}` (1-3 itens), na VOZ DO USUÁRIO — frases curtas que o usuário clicaria para responder/seguir (ex.: "Informar o pico de alunos", "Ver concorrentes no bairro", "Estimar o investimento"). NUNCA são perguntas SUAS ao usuário. NÃO escreva "Sugestões de próximo passo" nem o JSON no corpo visível da resposta — o JSON é extraído pelo sistema e some.
+- CITAÇÕES (REGRA DE OURO): Se a sua resposta usar dados que exijam fonte (normas, dados de mercado, especificações), você DEVE fornecer uma citação estruturada em um JSON no final da sua resposta, assim como faz para sugestões. O JSON deve ser `{{"citacoes": [{{"valor": "...", "base": "...", "fonte": "...", "janela": "..."}}]}}`. Apenas inclua uma citação se possuir TODOS os 4 campos (valor, base, fonte, janela). O campo `url` é opcional. Se não tiver os 4 campos, NÃO CITE. O JSON também é extraído e não deve ser visível.
 
 Termos PROIBIDOS na resposta (nunca use): slot, pipeline, payload, output_key, session.state, token, async, worker, queue, tenant.
 
@@ -512,7 +513,7 @@ Se o usuário já deu o dado necessário, não repergunte — responda na hora. 
 Reporte o número com as premissas que a tool devolve (são de PLANEJAMENTO). NUNCA chute "30-40 esteiras" de cabeça.
 
 ## REGRA DE OURO (FONTE)
-Recomende SEMPRE com base em consultar_catalogos_equipamentos e CITE o fornecedor/catálogo (ex.: Matrix, Life Fitness, Total Health). NUNCA invente specs, modelos ou preços. Catálogo sem valor → "sob consulta". Sem dado no catálogo → diga com transparência e ofereça encaminhar ao time.
+Recomende SEMPRE com base em consultar_catalogos_equipamentos e CITE o fornecedor/catálogo (ex.: Matrix, Life Fitness, Total Health). Ao citar uma fonte, inclua-a em um JSON `{{"citacoes": [...]}}` no final da resposta, com os campos `valor`, `base`, `fonte` e `janela`. NUNCA invente specs, modelos ou preços. Catálogo sem valor → "sob consulta". Sem dado no catálogo → diga com transparência e ofereça encaminhar ao time.
 
 ## ESCOPO
 Só equipamentos/montagem (máquinas, cardio, peso livre, funcional, layout, quantidade, fornecedores). Viabilidade/concorrência/demografia/financeiro/regulatório → diga que é com os outros especialistas e ofereça redirecionar.
@@ -527,7 +528,7 @@ _PERSONA_REGULATORIO = """## PAPEL
 Você é o agente Regulatório do GymSite Intelligence. Ajuda quem quer abrir academia a entender o que precisa LEGALMENTE: registro no CREF (pessoa jurídica), responsável técnico (profissional de educação física), Lei 9.696/1998, anuidades do CREF da região e licenças/notas técnicas de funcionamento.
 
 ## REGRA DE OURO (FONTE)
-Responda SEMPRE com base em consultar_base_conhecimento (documentos oficiais CONFEF/CREF/leis) e CITE a fonte (lei, CREF, CONFEF). NUNCA invente exigência, prazo ou valor. Se a base não trouxer o dado pro caso/região, diga com transparência e oriente a confirmar no CREF/prefeitura local.
+Responda SEMPRE com base em consultar_base_conhecimento (documentos oficiais CONFEF/CREF/leis) e CITE a fonte (lei, CREF, CONFEF). Ao citar uma fonte, inclua-a em um JSON `{{"citacoes": [...]}}` no final da resposta, com os campos `valor`, `base`, `fonte` e `janela`. NUNCA invente exigência, prazo ou valor. Se a base não trouxer o dado pro caso/região, diga com transparência e oriente a confirmar no CREF/prefeitura local.
 
 ## ESCOPO
 Só regulatório de abertura (registro PJ no CREF, responsável técnico, Lei 9.696, anuidades CREF, licenças de funcionamento, zoneamento quando houver). Viabilidade/concorrência/equipamentos/financeiro → diga que é com os outros especialistas e ofereça redirecionar.
@@ -540,7 +541,7 @@ _PERSONA_ARQUITETO = """## PAPEL
 Você é o Arquiteto do GymSite Intelligence — projeta o ESPAÇO da academia: zonas (musculação, cardio, funcional, alongamento), fluxos, recepção/vestiários/sanitários, acessibilidade, pisos e as etapas do projeto arquitetônico.
 
 ## REGRA DE OURO (FONTE)
-Chame SEMPRE consultar_engenharia_obra ANTES de afirmar regra de projeto, norma, área mínima ou exigência de acessibilidade, e CITE a fonte (NBR 13532, NBR 9050, Código de Obras). Para QUANTIDADE de peças sanitárias, chame calcular_sanitarios_por_lotacao — nunca estime de cabeça. Se a base não cobrir, diga e oriente consultar arquiteto/Código de Obras local. NUNCA invente número ou norma.
+Chame SEMPRE consultar_engenharia_obra ANTES de afirmar regra de projeto, norma, área mínima ou exigência de acessibilidade, e CITE a fonte (NBR 13532, NBR 9050, Código de Obras). Para QUANTIDADE de peças sanitárias, chame calcular_sanitarios_por_lotacao — nunca estime de cabeça. Ao citar uma fonte, inclua-a em um JSON `{{"citacoes": [...]}}` no final da resposta, com os campos `valor`, `base`, `fonte` e `janela`. Se a base não cobrir, diga e oriente consultar arquiteto/Código de Obras local. NUNCA invente número ou norma.
 
 ## ESCOPO
 Projeto/arquitetura/ambientes/acessibilidade. QUE equipamento e quantos cabem → Responsável Técnico; estrutura/instalações/licenças de obra → Engenheiro de Obra; regras do CREF → Regulatório. Deixe claro que o projeto deve ser assinado por arquiteto (RRT) e aprovado pela prefeitura.
@@ -556,7 +557,7 @@ Você é o Engenheiro de Obra do GymSite Intelligence — diz se a obra VIABILIZ
 Primeiro descubra o CENÁRIO (retrofit ou obra nova) — muda tudo. Depois responda com o checklist do cenário certo.
 
 ## REGRA DE OURO (FONTE)
-Chame SEMPRE consultar_engenharia_obra ANTES de afirmar norma, carga estrutural, exigência de instalação ou licença, e CITE a fonte (NBR 6120, NBR 16280, NBR 6122, NBR 5410, NBR 16401, NBR 10152/10151, IT 08 bombeiros). Toda obra/laudo exige profissional com ART (CREA). Em retrofit, recomende SEMPRE laudo estrutural antes de equipamento pesado. Não dê veredito estrutural definitivo — oriente o laudo. NUNCA invente valor estrutural, norma ou prazo.
+Chame SEMPRE consultar_engenharia_obra ANTES de afirmar norma, carga estrutural, exigência de instalação ou licença, e CITE a fonte (NBR 6120, NBR 16280, NBR 6122, NBR 5410, NBR 16401, NBR 10152/10151, IT 08 bombeiros). Toda obra/laudo exige profissional com ART (CREA). Em retrofit, recomende SEMPRE laudo estrutural antes de equipamento pesado. Ao citar uma fonte, inclua-a em um JSON `{{"citacoes": [...]}}` no final da resposta, com os campos `valor`, `base`, `fonte` e `janela`. Não dê veredito estrutural definitivo — oriente o laudo. NUNCA invente valor estrutural, norma ou prazo.
 
 ## ESCOPO
 Obra/estrutura/instalações/licenças. Projeto do espaço → Arquiteto; QUE equipamento → Responsável Técnico; CREF → Regulatório.
@@ -1182,6 +1183,35 @@ def _extrair_sugestoes(texto: str) -> tuple[str, list[str]]:
             sugestoes = []
     return texto, sugestoes
 
+# ─── Extração de citações da resposta do LLM ─────────────────────────────────
+
+def _extrair_citacoes(texto: str) -> tuple[str, list[dict]]:
+    """
+    Extrai um bloco JSON de citações do final da resposta do LLM.
+    {"citacoes": [{"valor": "...", "base": "...", "fonte": "...", "janela": "..."}]}
+    """
+    import re
+    citacoes: list[dict] = []
+    if not texto:
+        return texto, citacoes
+
+    # Regex para encontrar um bloco JSON com a chave "citacoes" no final do texto
+    m = re.search(r'```(?:json)?\s*(\{.*"citacoes".*\})\s*```\s*$', texto, re.DOTALL)
+    if not m:
+        m = re.search(r'(\{\s*"citacoes".*\})\s*$', texto, re.DOTALL)
+    
+    if m:
+        try:
+            parsed = json.loads(m.group(1))
+            if isinstance(parsed, dict) and "citacoes" in parsed and isinstance(parsed["citacoes"], list):
+                # Validação mínima para garantir que os itens são dicionários
+                citacoes = [c for c in parsed["citacoes"] if isinstance(c, dict)]
+                texto = texto[:m.start()].rstrip()
+        except (json.JSONDecodeError, TypeError):
+            citacoes = []
+            
+    return texto, citacoes
+
 # ─── Cálculo de custo estimado ────────────────────────────────────────────────
 
 _CUSTO_BRL_POR_TOOL: dict[str, float] = {
@@ -1232,6 +1262,7 @@ async def conversar(
         pode_gerar_relatorio: bool,
         dados_faltantes     : list[str],
         projeto             : dict,         # ProjetoStatus completo para o frontend
+        citacoes            : list[dict],   # Citações estruturadas
     }
     """
 
@@ -1276,6 +1307,7 @@ async def conversar(
     tools_executadas: list[str] = []
     resposta_final = ""
     sugestoes_finais: list[str] = []
+    citacoes_finais: list[dict] = []
 
     chat = client.chats.create(model=_MODEL_ROUTER, config=config, history=history_contents)
     response = await asyncio.to_thread(chat.send_message, mensagem)
@@ -1302,7 +1334,8 @@ async def conversar(
                 p.text for p in _partes(response)
                 if hasattr(p, "text") and p.text
             )
-            resposta_final, sugestoes_finais = _extrair_sugestoes(texto_bruto)
+            texto_sem_sugestoes, sugestoes_finais = _extrair_sugestoes(texto_bruto)
+            resposta_final, citacoes_finais = _extrair_citacoes(texto_sem_sugestoes)
             break
 
         # Executa todas as tool calls do turno (podem ser paralelas)
@@ -1358,6 +1391,8 @@ async def conversar(
         role="assistant",
         content=resposta_final,
         tool_calls=acoes_executadas if acoes_executadas else None,
+        # TODO: Adicionar campo `citacoes` na tabela `project_messages`
+        # citacoes=citacoes_finais,
     )
 
     # 9. Verifica se pode gerar relatório
@@ -1389,6 +1424,7 @@ async def conversar(
         "pode_gerar_relatorio": pode_relatorio,
         "dados_faltantes": dados_faltantes,
         "projeto": _serializar_projeto(projeto, custo_total),
+        "citacoes": citacoes_finais,
     }
 
 # ─── Sugestões padrão baseadas no estado do projeto ──────────────────────────

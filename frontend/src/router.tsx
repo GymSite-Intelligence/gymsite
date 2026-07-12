@@ -38,7 +38,6 @@ import { PdfSmokePage } from '@/routes/PdfSmokePage'
 import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
 import { ProspectPage } from '@/routes/ProspectPage'
 import { LeadAccessPage } from '@/routes/LeadAccessPage'
-import { AssistentePage } from '@/routes/AssistentePage'
 import { ConsultorPage } from '@/routes/ConsultorPage'
 import AdminParceirosPage from '@/routes/AdminParceirosPage'
 import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
@@ -301,7 +300,9 @@ const pdfSmokeRoute = createRoute({
 const assistenteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/assistente',
-  component: AssistentePage,
+  beforeLoad: () => {
+    throw redirect({ to: '/consultor', replace: true })
+  },
 })
 
 const consultorRoute = createRoute({

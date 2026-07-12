@@ -19,6 +19,7 @@ import { useMembership } from '@/hooks/useMembership'
 import { notify } from '@/lib/notify'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { PipelineMonitor } from '@/components/layout/PipelineMonitor'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -41,10 +42,10 @@ export function AppShell() {
           <div className="container flex h-14 items-center gap-6">
             <Link
               to="/relatorios"
-              className="flex items-center gap-2 font-semibold tracking-tight"
+              aria-label="GymSite Intelligence — início"
+              className="flex shrink-0 items-center rounded-md py-1 pr-2 outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span aria-hidden className="text-xl">🏋️</span>
-              <span>GymSite Intelligence</span>
+              <BrandLogo />
             </Link>
 
             <nav className="flex items-center gap-1 text-sm h-full">

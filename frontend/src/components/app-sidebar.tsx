@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Link } from '@tanstack/react-router'
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
+import { BrandLogo } from '@/components/layout/BrandLogo'
 import { useMembership } from '@/hooks/useMembership'
 import { getSidebarNavItems } from '@/lib/nav-items'
 import {
@@ -25,13 +26,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
+              className="h-auto data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <Link to="/dashboard">
-                <span aria-hidden className="text-lg">
-                  🏋️
-                </span>
-                <span className="text-base font-semibold">GymSite Intelligence</span>
+              <Link to="/dashboard" aria-label="GymSite Intelligence — início">
+                <BrandLogo className="h-8 w-auto py-0.5" />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

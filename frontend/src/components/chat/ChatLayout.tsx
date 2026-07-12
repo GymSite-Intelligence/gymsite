@@ -1,9 +1,10 @@
 import { useRef, useEffect } from 'react'
-import { Bot, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { ChatMessage, type ChatMessageData } from './ChatMessage'
 import { ChatInput, type ChatAttachment } from './ChatInput'
 import { ChatSidebarDesktop, ChatSidebarMobile, type ChatSessionItem } from './ChatSidebar'
 import { Button } from '@/components/ui/button'
+import { ICONE_CONSULTOR } from '@/config/agentes'
 
 interface ChatLayoutProps {
   messages: ChatMessageData[]
@@ -59,8 +60,8 @@ export function ChatLayout({
             onNewSession={onNewSession}
           />
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-              <Bot className="h-4 w-4" />
+            <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary/10 p-0.5">
+              <ICONE_CONSULTOR className="h-full w-full object-contain" />
             </div>
             <div>
               <h1 className="text-sm font-semibold leading-tight">GymSite Agent</h1>
@@ -83,8 +84,8 @@ export function ChatLayout({
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                <Bot className="h-6 w-6" />
+              <div className="mb-4 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-primary/10 p-1">
+                <ICONE_CONSULTOR className="h-full w-full object-contain" />
               </div>
               <h2 className="mb-1 text-lg font-semibold">Como posso ajudar?</h2>
               <p className="max-w-sm text-sm text-muted-foreground">
@@ -104,9 +105,9 @@ export function ChatLayout({
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
                 <div className="flex gap-3 px-4 py-5 sm:px-6 lg:px-8">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 sm:h-8 sm:w-8">
-                    <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </div>
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 p-0.5 sm:h-8 sm:w-8">
+                  <ICONE_CONSULTOR className="h-full w-full object-contain" />
+                </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     <span className="text-xs">Analisando...</span>
@@ -119,7 +120,7 @@ export function ChatLayout({
 
         {/* Error */}
         {error && (
-          <div className="border-t bg-red-50 px-4 py-2 text-center text-xs text-red-700 sm:px-6">
+          <div className="border-t border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive sm:px-6">
             {error}
           </div>
         )}

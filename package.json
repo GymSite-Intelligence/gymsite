@@ -9,5 +9,8 @@
     "lint": "npm run lint --prefix frontend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:api": "python -m uvicorn api:app --reload --host 127.0.0.1 --port 8000"
+  },
+  "dependencies": {
+    "typescript": "^7.0.2"
   }
 }

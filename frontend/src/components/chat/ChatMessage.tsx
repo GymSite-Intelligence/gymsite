@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Bot, User, Copy, Check, RotateCcw, FileText, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { User, Copy, Check, RotateCcw, FileText, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
+import { mascoteDaMensagem } from '@/config/agentes'
+import type { CarimboCitacao } from '@/components/chat/CitationStamp'
 
 export interface ChatAcao {
   ferramenta: string
@@ -22,6 +24,7 @@ export interface ChatMessageData {
   interacaoId?: string
   /** ferramentas que rodaram no turno (acoes_executadas) — handoff vive na sidebar do consultor */
   acoes?: ChatAcao[]
+  citacoes?: CarimboCitacao[]
 }
 
 interface ChatMessageProps {
@@ -54,6 +57,7 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
 
 export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps) {
   const isUser = msg.role === 'user'
+  const Mascote = mascoteDaMensagem(msg.acoes)
   const isAdmin = useIsAdmin()
   const [copied, setCopied] = useState(false)
   const [rated, setRated] = useState<1 | -1 | null>(null)
@@ -80,15 +84,15 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
       }`}
     >
       <Avatar className="mt-0.5 h-7 w-7 shrink-0 sm:h-8 sm:w-8">
-        <AvatarFallback
-          className={
-            isUser
-              ? 'bg-primary text-primary-foreground text-xs'
-              : 'bg-emerald-100 text-emerald-700 text-xs'
-          }
-        >
-          {isUser ? <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-        </AvatarFallback>
+        {isUser ? (
+          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+            <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          </AvatarFallback>
+        ) : (
+          <AvatarFallback className="overflow-hidden bg-primary/10 p-0.5">
+            <Mascote className="h-full w-full object-contain" />
+          </AvatarFallback>
+        )}
       </Avatar>
 
       <div className="min-w-0 flex-1">
@@ -180,8 +184,8 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
                   disabled={rating || rated !== null}
                   className={`h-7 gap-1 text-xs ${
                     rated === 1
-                      ? 'text-emerald-600'
-                      : 'text-muted-foreground hover:text-emerald-600'
+                      ? 'text-veredito-aprovado'
+                      : 'text-muted-foreground hover:text-veredito-aprovado'
                   }`}
                   onClick={() => handleFeedback(1)}
                   title="Resposta boa — entra no dataset de treino"
@@ -194,8 +198,8 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
                   disabled={rating || rated !== null}
                   className={`h-7 gap-1 text-xs ${
                     rated === -1
-                      ? 'text-red-600'
-                      : 'text-muted-foreground hover:text-red-600'
+                      ? 'text-destructive'
+                      : 'text-muted-foreground hover:text-destructive'
                   }`}
                   onClick={() => handleFeedback(-1)}
                   title="Resposta ruim"

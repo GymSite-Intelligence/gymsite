@@ -7,8 +7,9 @@ Prefixo: /api/consultor/
 """
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 
+from backend.schemas.citacao import Citation
 from services.consultor.consultor_engine import conversar, disparar_relatorio_formal
 from services.consultor.project_state import (
     listar_projetos,
@@ -55,6 +56,7 @@ class ConversarOutput(BaseModel):
     pode_gerar_relatorio: bool
     dados_faltantes: list[str]
     projeto: dict
+    citacoes: Optional[List[Citation]] = None
 
 
 # ─── POST /api/consultor/conversar ────────────────────────────────────────────
