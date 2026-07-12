@@ -130,10 +130,20 @@ def _resolve_relatorio_uuid(sb, relatorio_id: str) -> str:
     return relatorio_id
 
 
-_STALE_PIPELINE_HOURS = int(os.getenv("PIPELINE_STALE_HOURS", "6"))
+def _env_int(name: str, default: int) -> int:
+    raw = (os.getenv(name) or str(default)).split("#", 1)[0].strip()
+    return int(raw or default)
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = (os.getenv(name) or str(default)).split("#", 1)[0].strip()
+    return float(raw or default)
+
+
+_STALE_PIPELINE_HOURS = _env_int("PIPELINE_STALE_HOURS", 6)
 # Layer 3: órfãos running/queued sem output — default 35 min (< PIPELINE_STALE_HOURS).
-_PIPELINE_ORPHAN_MINUTES = int(os.getenv("PIPELINE_ORPHAN_MINUTES", "35"))
-_PIPELINE_WALL_BUFFER_MIN = int(os.getenv("PIPELINE_WALL_BUFFER_MIN", "5"))
+_PIPELINE_ORPHAN_MINUTES = _env_int("PIPELINE_ORPHAN_MINUTES", 35)
+_PIPELINE_WALL_BUFFER_MIN = _env_int("PIPELINE_WALL_BUFFER_MIN", 5)
 _STALE_MSG = (
     "Pipeline interrompido (restart do servidor ou timeout). "
     "Use «Gerar novamente» para reprocessar."
@@ -141,12 +151,12 @@ _STALE_MSG = (
 
 # Teto de wall-clock por execução (fila + retries 429 + ADK). Default 30 min.
 # Não substitui resume parcial do ADK — apenas evita runs de 50+ min.
-_PIPELINE_MAX_WALL_SEC = int(os.getenv("PIPELINE_MAX_WALL_SEC", "1800"))
-_PIPELINE_HEARTBEAT_SEC = int(os.getenv("PIPELINE_HEARTBEAT_SEC", "60"))
+_PIPELINE_MAX_WALL_SEC = _env_int("PIPELINE_MAX_WALL_SEC", 1800)
+_PIPELINE_HEARTBEAT_SEC = _env_int("PIPELINE_HEARTBEAT_SEC", 60)
 # Teto de CUSTO por execução (CONSTITUTION C9.3 — hard limit de gasto LLM). Um run
 # típico custa ~R$4; default R$20 = ~5x headroom. O retry 429 re-roda o pipeline
 # (até 3x) → sem teto, um pico de quota podia multiplicar o gasto. Recalibrável via env.
-_PIPELINE_MAX_CUSTO_BRL = float(os.getenv("PIPELINE_MAX_CUSTO_BRL", "20.0"))
+_PIPELINE_MAX_CUSTO_BRL = _env_float("PIPELINE_MAX_CUSTO_BRL", 20.0)
 
 
 class PipelineWallTimeoutError(TimeoutError):
