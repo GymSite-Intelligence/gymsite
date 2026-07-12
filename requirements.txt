@@ -1,1 +1,42 @@
-email-validator
+google-adk>=1.3.0
+httpx>=0.27.0
+python-dotenv>=1.0.0
+# Google Maps Platform SDK
+googlemaps>=4.10.0
+# Backend HTTP API
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+supabase>=2.0.0
+# Scraping de portais imobiliários (OLX, ImovelWeb) — TLS-fp bloqueia httpx
+playwright>=1.40.0
+# HTML parsing (competitor_offer_mapper)
+beautifulsoup4>=4.12.0
+# Processamento do Excel FipeZap
+pandas>=2.0.0
+openpyxl>=3.1.0
+# PDF de relatório (produto)
+reportlab>=4.0.0
+matplotlib>=3.8.0
+weasyprint>=60.0
+jinja2>=3.1.0
+redis>=5.0.0
+langcache>=0.12.0
+packaging>=24.0
+# OpenTelemetry (usado por tools/telemetry.py)
+opentelemetry-api>=1.25.0
+opentelemetry-sdk>=1.25.0
+# Google GenAI (usado por agents/ e tools/)
+google-genai>=0.3.0
+# BigQuery — rota basedosdados de dados públicos nacionais (Trilha 6 / CNO)
+google-cloud-bigquery>=3.0.0
+# Vertex AI Search (Discovery Engine) — RAG do Consultor/Site Agent
+# (consultar_base_conhecimento + consultar_catalogos_equipamentos). Sem ele o
+# container não importa discoveryengine_v1 e TODO RAG falha em prod.
+google-cloud-discoveryengine>=0.13.0
+# Pydantic (explicitar versao compativel). [email] puxa email-validator,
+# exigido por EmailStr em backend/routers/leads.py (boot crashava sem ele).
+pydantic[email]>=2.0.0
+# Starlette (explicitar - usado por middlewares)
+starlette>=0.36.0
+# Tinker — inference e fine-tuning de LLMs (Thinking Machines)
+tinker
