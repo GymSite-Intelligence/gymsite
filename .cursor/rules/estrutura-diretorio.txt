@@ -1,0 +1,6 @@
+meu-projeto/
+└── .cursor/
+    └── rules/
+        ├── global-instructions.mdc   # Regras globais (comunicação, git, etc.)
+        ├── frontend-design.mdc       # Cores, Tailwind e ident. visual
+        └── frontend-logo.mdc         # Regras de aplicação da Logo

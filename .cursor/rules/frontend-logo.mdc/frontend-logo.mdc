@@ -1,0 +1,20 @@
+---
+description: Regras estritas de uso, restrições e aplicações da Logo da marca.
+globs: "**/components/Brand/**, **/components/Logo/**, **/Header/*.tsx, **/Login/*.tsx, **/footer.tsx"
+alwaysApply: false
+---
+
+# 📐 Diretrizes de Uso da Logo
+
+A logo é o ativo mais importante da identidade visual. Siga estritamente as regras abaixo para evitar distorções ou aplicações incorretas.
+
+## ✅ Aplicação Correta
+> Marca GymSite: pin de circuito + wordmark. Lime `#84cc01` é a cor da marca. Alternância por tema via `next-themes` (`isAppThemeDark`); componente `BrandLogo`.
+
+* **Proporção (Aspect Ratio):** Nunca altere a proporção original — defina só a altura e deixe `width: auto`.
+* **Variante Clara (branca):** Aplicada exclusivamente sobre fundos escuros (background `#13161b`) → `public/gymsite-logo-white.png`.
+* **Variante Escura (colorida):** Aplicada sobre fundos claros → `public/gymsite-logo.png`.
+* **Margem de Segurança (Padding):** Espaçamento mínimo de `24px` (`p-6`) ao redor para não chocar com outros elementos.
+
+## 🚫 Restrições
+* Não aplique gradientes ou filtros que alterem as cores originais definidas na logo.
