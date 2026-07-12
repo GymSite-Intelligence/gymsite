@@ -56,7 +56,8 @@ def _maybe_user_id(request: Request) -> Optional[str]:
     if not token:
         return None
     try:
-        user = _sb().auth.get_user(token).user
+        user_resp = _sb().auth.get_user(token)
+        user = user_resp.user if user_resp else None
         return user.id if user else None
     except Exception:
         return None

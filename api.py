@@ -89,7 +89,21 @@ def _supabase_client():
             status_code=500,
             detail="Supabase não configurado (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY ausentes em .env)",
         )
-    return create_client(url, key)
+    import httpx
+    
+    # Timeout aumentado pra cloud latency (default 5s pode ser insuficiente em SaaS)
+    timeout_sec = float(os.getenv("SUPABASE_CLIENT_TIMEOUT", "15.0"))
+    timeout = httpx.Timeout(timeout_sec, connect=timeout_sec + 5)
+    
+    client = create_client(url, key)
+    
+    # Aplica timeout no httpx session interno
+    if hasattr(client, 'postgrest') and hasattr(client.postgrest, 'session'):
+        client.postgrest.session.timeout = timeout
+    if hasattr(client, 'realtime') and hasattr(client.realtime, 'session'):
+        client.realtime.session.timeout = timeout
+    
+    return client
 
 
 _UUID_RE = (
@@ -1431,12 +1445,12 @@ def publico_faixas_endpoint() -> dict:
                 "nome": c.get("valor"),
                 "min": (c.get("metadata") or {}).get("min"),
                 "max": (c.get("metadata") or {}).get("max"),
-                "ordem": (c.get("metadata") or {}).get("ordem", 0),
+                "ordem": (c.get("metadata") or {}).get("ordem") or 0,
             }
             for c in catalogo("publico_faixa")
             if c.get("chave")
         ),
-        key=lambda x: x["ordem"],
+        key=lambda x: int(x.get("ordem") or 0),
     )
     return {"faixas": faixas}
 
@@ -1817,7 +1831,7 @@ def patch_entrante_validacao(relatorio_id: str, body: EntranteValidacaoInput) ->
         .execute()
     )
     block = (out_res.data or {}).get("entrantes_cnpj_90d") if out_res.data else None
-    if not isinstance(block, dict):
+    if not isinstance(block, dict) or not block:
         raise HTTPException(status_code=404, detail="entrantes_cnpj_90d não encontrado")
 
     entrantes = block.get("entrantes") or []
@@ -1878,7 +1892,7 @@ def post_entrante_enriquecer(relatorio_id: str, body: EntranteEnriquecerInput) -
         .execute()
     )
     block = (out_res.data or {}).get("entrantes_cnpj_90d") if out_res.data else None
-    if not isinstance(block, dict):
+    if not isinstance(block, dict) or not block:
         raise HTTPException(status_code=404, detail="entrantes_cnpj_90d não encontrado")
 
     entrantes = block.get("entrantes") or []
@@ -2693,7 +2707,8 @@ def list_entrantes_captados(
                 or e.get("email_socio_administrador")
                 or e.get("email_empresa")
             )
-            socio = e.get("socio_administrador") if isinstance(e.get("socio_administrador"), dict) else {}
+            socio_raw = e.get("socio_administrador")
+            socio = socio_raw if isinstance(socio_raw, dict) else {}
             idx[c] = {
                 "cnpj": c,
                 "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
@@ -2787,7 +2802,8 @@ def buscar_entrantes_cnpj(
         c = re.sub(r"\D", "", str(e.get("cnpj") or ""))
         if len(c) != 14:
             continue
-        socio = e.get("socio_administrador") if isinstance(e.get("socio_administrador"), dict) else {}
+        socio_raw = e.get("socio_administrador")
+        socio = socio_raw if isinstance(socio_raw, dict) else {}
         out.append({
             "cnpj": c,
             "nome": e.get("nome_exibicao") or e.get("nome_fantasia") or e.get("razao_social") or "—",
