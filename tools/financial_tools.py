@@ -428,6 +428,18 @@ def calcular_viabilidade_3_cenarios(
     """
     cenarios = {}
     alertas_ticket: list[str] = []
+    alertas_legal: list[str] = []
+
+    from tools.legal_fees_loader import resolver_taxas_capex
+
+    _legal_ctx = None
+    if (cidade or "").strip() and (uf or "").strip():
+        _legal_ctx = resolver_taxas_capex(cidade, uf, area_m2, policy="mid")
+        if not _legal_ctx:
+            alertas_legal.append(
+                f"Taxas municipais: {cidade}/{uf} sem curadoria legal_fees_pilot — "
+                "alvará/projeto usam benchmark Sebrae."
+            )
 
     # CAPEX e custos comuns que não dependem do modelo
     iptu_mensal = CUSTOS_DETALHADOS_BASE["iptu_mensal_base"]
@@ -500,6 +512,7 @@ def calcular_viabilidade_3_cenarios(
             destino_lng=destino_lng,
             fornecedor_principal=fornecedor_principal,
             capex_indices=_capex_ctx,
+            legal_fees_ctx=_legal_ctx,
         )["total"]
         # 1.2 Folha = max(piso R$, % do faturamento). Piso preserva realismo na
         # rampa/operação pequena; % do faturamento captura a escala (Benchmark
@@ -598,6 +611,7 @@ def calcular_viabilidade_3_cenarios(
             destino_lng=destino_lng,
             fornecedor_principal=fornecedor_principal,
             capex_indices=_capex_ctx,
+            legal_fees_ctx=_legal_ctx,
         )
         capital_giro = round(
             custos_totais * CAPEX_DETALHADO_BASE["capital_giro_meses"], 2
@@ -737,6 +751,7 @@ def calcular_viabilidade_3_cenarios(
         "schema_cenarios": "v2",
         "alertas_benchmark": alertas_benchmark,
         "alertas_ticket": alertas_ticket,
+        "alertas_legal": alertas_legal,
     }
 
 
@@ -1159,11 +1174,13 @@ def _calcular_capex_detalhado(
     destino_lng: float | None = None,
     fornecedor_principal: str = "default",
     capex_indices: dict | None = None,
+    legal_fees_ctx: dict | None = None,
 ) -> dict:
     """Breakdown CAPEX com contingência + frete ANTT.
 
     Schema v1.5: `equipamentos_override` aceita valor do kit detalhado real.
     Schema v1.6: `uf_destino` ativa cálculo de frete via ANTT (R$/km).
+    Schema v1.7: `legal_fees_ctx` (resolver_taxas_capex) sobrescreve alvará/projeto.
     Quando UF fornecida, adiciona linha `frete_equipamentos` ao subtotal.
     """
     if equipamentos_override is not None and equipamentos_override > 0:
@@ -1173,6 +1190,23 @@ def _calcular_capex_detalhado(
     obra = area_m2 * _obra_por_m2_modelo(modelo, capex_indices=capex_indices)
     projeto = CAPEX_DETALHADO_BASE["projeto_arquitetonico"]
     alvara = CAPEX_DETALHADO_BASE["alvara_e_taxas"]
+    fonte_projeto = "parametros_metodologia (Sebrae 2024)"
+    fonte_alvara = "parametros_metodologia (Sebrae 2024)"
+    legal_fees_meta = None
+    if legal_fees_ctx and legal_fees_ctx.get("disponivel"):
+        projeto = float(legal_fees_ctx.get("projeto_arquitetonico") or projeto)
+        alvara = float(legal_fees_ctx.get("alvara_e_taxas") or alvara)
+        fonte_projeto = legal_fees_ctx.get("carimbo_projeto_arquitetonico") or (
+            legal_fees_ctx.get("fonte") or "legal_fees_pilot"
+        )
+        fonte_alvara = legal_fees_ctx.get("carimbo_alvara_e_taxas") or fonte_projeto
+        legal_fees_meta = {
+            "cidade": legal_fees_ctx.get("cidade"),
+            "uf": legal_fees_ctx.get("uf"),
+            "policy": legal_fees_ctx.get("policy"),
+            "data_coleta": legal_fees_ctx.get("data_coleta"),
+            "detalhe_taxas": legal_fees_ctx.get("detalhe_taxas"),
+        }
 
     # Schema v1.6: frete via ANTT quando UF disponível
     frete = 0.0
@@ -1210,6 +1244,9 @@ def _calcular_capex_detalhado(
         "fonte_frete": (
             "ANTT 6.034/2024 + margem broker" if frete > 0 else "não calculado"
         ),
+        "fonte_projeto_arquitetonico": fonte_projeto,
+        "fonte_alvara_e_taxas": fonte_alvara,
+        "legal_fees": legal_fees_meta,
     }
 
 
@@ -1528,6 +1565,9 @@ async def analise_financeira_a4_completo(
         if av not in fin["alertas"]:
             fin["alertas"].append(av)
     for av in fin.pop("alertas_benchmark", []) or []:
+        if av not in fin["alertas"]:
+            fin["alertas"].append(av)
+    for av in fin.pop("alertas_legal", []) or []:
         if av not in fin["alertas"]:
             fin["alertas"].append(av)
 

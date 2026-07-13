@@ -1,13 +1,18 @@
 {
   "cidade": "Curitiba",
   "uf": "PR",
-  "fonte": "curadoria_gymsite_fase_c",
-  "data_coleta": "2026-06-03",
+  "fonte": "Decreto municipal Curitiba 1929/2024 + CBM-PR UPF — revalidar em prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "notas": "Bombeiros: típico calibrado ~1250 m² (faixa legal ampla por área). Projeto CAU: mercado R$/m² com clamp.",
   "taxas": {
-    "alvara_funcionamento_brl": {"min": 1200, "max": 5000},
-    "taxa_bombeiros_brl": {"min": 500, "max": 2500},
-    "projeto_arquitetonico_cau_brl": {"min": 18000, "max": 55000},
-    "vistoria_sanitaria_brl": {"min": 250, "max": 900}
+    "alvara_funcionamento_brl": {"min": 339.12, "max": 852.43, "typico": 595.78},
+    "taxa_bombeiros_brl": {"min": 215, "max": 5000, "typico": 1800},
+    "projeto_arquitetonico_cau_brl": {
+      "min": 18000,
+      "max": 200000,
+      "r_m2": {"min": 75, "max": 160, "typico": 120}
+    },
+    "vistoria_sanitaria_brl": {"min": 305.77, "max": 2394.23, "typico": 1215.63}
   },
   "prazo_meses_tipico": {"alvara": 4, "bombeiros": 2}
 }

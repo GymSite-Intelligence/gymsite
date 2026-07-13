@@ -1,6 +1,8 @@
 """Testes Fase C — franquias, legal fees, stale, alertas SMFT3."""
 from __future__ import annotations
 
+import pytest
+
 from tools.franchise_curated import bloco_para_bundle, redes_por_modelo
 from tools.legal_fees_loader import bloco_para_bundle as legal_bloco
 from tools.market_bundle import (
@@ -21,7 +23,7 @@ def test_franchise_catalog():
 def test_legal_fees_fortaleza():
     legal = legal_bloco("Fortaleza", "CE")
     assert legal["disponivel"] is True
-    assert legal["taxas"]["alvara_funcionamento_brl"]["min"] > 0
+    assert legal["taxas"]["alvara_funcionamento_brl"]["typico"] == pytest.approx(473.88)
 
 
 def test_legal_fees_missing_city():

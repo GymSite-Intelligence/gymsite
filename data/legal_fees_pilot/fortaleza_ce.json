@@ -1,14 +1,18 @@
 {
   "cidade": "Fortaleza",
   "uf": "CE",
-  "fonte": "curadoria_gymsite_fase_c",
-  "data_coleta": "2026-06-03",
-  "notas": "Faixas ilustrativas — validar na prefeitura/CAU antes de uso em proposta.",
+  "fonte": "Portal SEUMA Fortaleza — manual alvará funcionamento (PDF verificado 2026-03)",
+  "data_coleta": "2026-07-13",
+  "notas": "Alvará funcionamento: taxa única portal. Bombeiros/sanitária: faixa conservadora. Projeto CAU: mercado R$/m² com clamp min/max.",
   "taxas": {
-    "alvara_funcionamento_brl": {"min": 800, "max": 3500},
-    "taxa_bombeiros_brl": {"min": 400, "max": 2000},
-    "projeto_arquitetonico_cau_brl": {"min": 15000, "max": 45000},
-    "vistoria_sanitaria_brl": {"min": 200, "max": 800}
+    "alvara_funcionamento_brl": {"min": 473.88, "max": 473.88, "typico": 473.88},
+    "taxa_bombeiros_brl": {"min": 140, "max": 3000, "typico": 800},
+    "projeto_arquitetonico_cau_brl": {
+      "min": 15000,
+      "max": 175000,
+      "r_m2": {"min": 60, "max": 140, "typico": 100}
+    },
+    "vistoria_sanitaria_brl": {"min": 0, "max": 950, "typico": 400}
   },
   "prazo_meses_tipico": {"alvara": 3, "bombeiros": 2}
 }
