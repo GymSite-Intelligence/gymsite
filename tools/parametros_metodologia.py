@@ -169,7 +169,12 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "frequencia_semanal_low":     _p(2.5, "ACAD/Panorama 2024", "frequencia_semanal", "visitas/sem", "benchmark"),
     "frequencia_semanal_mid":     _p(2.0, "ACAD/Panorama 2024", "frequencia_semanal", "visitas/sem", "benchmark"),
     "frequencia_semanal_premium": _p(1.8, "ACAD/Panorama 2024", "frequencia_semanal", "visitas/sem", "benchmark"),
-    "pico_share": _p(0.25, "ACAD 2024 (% no pico 18h-21h)", "pico_share", "fração", "benchmark"),
+    # pico_share POR MODELO — A4 independente por tipologia; nunca um acumulado global.
+    # Low: dormência varejo escala → ~0,25. Boutique/CF (quando entrarem): 0,35–0,50 + freq≥3,5.
+    "pico_share_low":     _p(0.25, "ACAD 2024 (% no pico 18h-21h) low-cost", "pico_share", "fração", "benchmark"),
+    "pico_share_mid":     _p(0.25, "ACAD 2024 (% no pico 18h-21h) mid", "pico_share", "fração", "benchmark"),
+    "pico_share_premium": _p(0.25, "ACAD 2024 (% no pico 18h-21h) premium/bairro", "pico_share", "fração", "benchmark"),
+    "pico_share": _p(0.25, "DEPRECATED alias→mid; usar pico_share_{modelo}", "pico_share", "fração", "benchmark"),
     # Inadimplência mensal por modelo
     "inadimplencia_low":     _p(0.06,  "Smart Fit Holdings 2023-2024 (releases investidor)", "inadimplencia", "fração", "benchmark"),
     "inadimplencia_mid":     _p(0.04,  "Bodytech entry / média setor 2024", "inadimplencia", "fração", "benchmark"),

@@ -1,0 +1,17 @@
+---
+description: Documento canônico de fontes — ler antes de mudar pipeline, agents_site, site_agent ou MRLR.
+alwaysApply: true
+---
+
+# Conferência de fontes (canônico)
+
+Antes de alterar `agents/*.py`, `tools/*_tools.py`, `agents_site/tools.py`, `backend/routers/site_agent.py` ou specs A0–A9:
+
+1. Ler [`.agent/rules/conferencia-fontes-pipeline.md`](../../.agent/rules/conferencia-fontes-pipeline.md)
+2. Ler [`.agent/rules/pipeline-fontes-deterministicas.md`](../../.agent/rules/pipeline-fontes-deterministicas.md)
+
+**Invariantes:**
+- Aluguel viabilidade = **MRLR Tier 0** (`aluguel_mrlr.py` + `mrlr_modelo.py`) no **A4** — nunca SearchAPI, nunca A7, nunca `bundle.aluguel_portais`
+- Listing SearchAPI = candidato + `price_raw` display; decisão = MRLR
+- A7 = gaps qualitativos chat (pico narrativo, crowdsource, web pontual) — não aluguel
+- `site_agent` enfileira pipeline; MRLR precisa `cidade` + `bairro` resolvíveis em `renda_bairro`

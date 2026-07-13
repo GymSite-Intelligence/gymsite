@@ -122,8 +122,9 @@ GymSitePipeline (Sequential)
 - **Tool:** `google_search` (Grounding oficial)
 - **Lê:** — · **Escreve:** `market_research_result`
 - **Fonte:** Google Search Grounding (URLs reais, tempo real)
-- **Consumidor (VIVO):** o **chat da landing** ([backend/routers/chat.py:127](../../backend/routers/chat.py#L127), intenção `pesquisa_mercado`). A **função** de grounding também é reusada dentro de A3a/A4. NÃO roda no pipeline de relatório — é tool on-demand.
-- **Faz:** pesquisa pontual (horário pico, aluguel, custos, reclamações) sob demanda.
+- **Consumidor (VIVO):** chat landing + consultor on-demand. **NÃO** roda no pipeline de relatório.
+- **Faz (slot gaps):** crowdsource §14 qualitativo, pico narrativo residual, dado web pontual com carimbo.
+- **NÃO faz:** aluguel viabilidade (→ **A4 MRLR**), concorrência (→ **A3a**), demografia (→ **A2/IBGE**).
 
 ### A8 — Validador Cruzado · [`a8_validator.py`](../../agents/a8_validator.py) — *pós-A6, não-ADK*
 - **Classe:** `A8ValidadorCruzado` (classe Python standalone, `async def validar()`)

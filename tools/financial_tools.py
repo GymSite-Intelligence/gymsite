@@ -1,28 +1,28 @@
 from typing import Any, Optional
 # tools/financial_tools.py
 """
-Modelagem financeira pra viabilidade de academia (schema v2).
+Motor de modelagem financeira para viabilidade de academias (schema v2).
 
-Todos os benchmarks vêm de fontes auditáveis do setor fitness brasileiro:
+Este módulo implementa um modelo financeiro determinístico que projeta a
+viabilidade de uma academia em 3 cenários (low-cost, mid-market, premium).
+Os cálculos NÃO são baseados em benchmarks diretos, mas sim em uma metodologia
+de projeção de receita, custos e investimento, cujas premissas são parametrizadas
+e auditáveis via `tools.parametros_metodologia`.
 
 📚 FONTES PRIMÁRIAS:
   - ACAD Brasil (Associação Brasileira de Academias) — relatórios anuais 2023/2024
   - SEBRAE — "Como abrir uma academia" + "Painel do setor fitness 2024"
   - Smart Fit Holdings (BVMF: SMFT3) — releases trimestrais 2023-2024
-  - Bodytech Group — apresentação ao investidor 2024
-  - IHRSA Latin America Report 2024
 
-📊 INDICADORES-CHAVE ACAD 2024:
-  - Brasil: 32.000+ academias, +8%/ano (crescimento setor)
-  - Aluno médio: 2-3 visitas/semana
-  - Inadimplência média: 4-7% (low-cost na faixa alta)
-  - Ticket médio: low R$89-119 / mid R$149-249 / premium R$299-599
-  - Folha % faturamento: 18-28% (saudável)
-  - Margem líquida saudável: 15-25%
-  - Payback ideal: 24-36 meses
+📊 METODOLOGIA DE CÁLCULO:
+  - **Receita:** Projeção de matrículas por m² (calibração por modelo) × ticket médio (ajustado pela renda local) × (1 - inadimplência).
+  - **Custos:** Detalhamento de 12 linhas de OPEX, incluindo folha (piso + % da receita), marketing e custos variáveis como água (por visita) e sistema (por aluno).
+  - **Impostos:** Cálculo dinâmico do Simples Nacional (Anexo III vs V) baseado no Fator R (folha/faturamento).
+  - **Investimento (CAPEX):** Custo de equipamentos (via kits), obra (índices SINAPI), frete (ANTT), projeto e capital de giro.
+  - **Viabilidade:** Payback, VPL, TIR e score de viabilidade (0-10) baseado em payback e ocupação no break-even.
+  - **Risco:** Análise de sensibilidade (stress tests) e guardrails de ocupação imobiliária.
 
-⚠️ ESTES VALORES SÃO BENCHMARKS — não substituem due diligence local.
-   Recalibráveis via tabela Supabase `parametros_metodologia` (param()).
+⚠️ As premissas (ex: matrículas/m², % de custos) são benchmarks do setor, mas o CÁLCULO é uma modelagem completa. Todas as premissas são recalibráveis via `parametros_metodologia`.
 """
 
 from tools.parametros_metodologia import param, param_int, param_por_modelo
@@ -170,9 +170,9 @@ CAPACIDADE_SIMULTANEA_POR_M2 = param_por_modelo("capacidade_simultanea")
 # Premium: alunos mais ocupados, frequência menor mas churn menor.
 FREQUENCIA_SEMANAL = param_por_modelo("frequencia_semanal")
 
-# Pico share: % dos que vieram num dia que estão simultaneamente no pico (18h-21h).
-# Padrão ACAD: 25%.
-PICO_SHARE = param("pico_share")
+# Pico share POR MODELO (% no pico 18h-21h). A4 é independente por tipologia —
+# nunca um pico_share global/acumulado entre low/mid/premium/(boutique|crossfit).
+PICO_SHARE_POR_MODELO = param_por_modelo("pico_share")
 
 # Taxas operacionais — calibradas por modelo (ACAD/Sebrae 2024).
 # Low-cost tem maior inadimplência (cliente mais sensível a preço) e maior churn.
@@ -186,7 +186,7 @@ TAXA_CANCELAMENTO_MENSAL_POR_MODELO = param_por_modelo("churn_mensal")
 TAXA_CANCELAMENTO_MENSAL = param("churn_mensal_mid")   # backward-compat
 
 # Custos detalhados — 12 linhas. Valores são "base" e são modulados por:
-# - aluguel: vem do Tier 1 Search Grounding (mediana) ou benchmark
+# - aluguel: MRLR Tier 0 (A4); fallback FipeZap/ACAD se indisponível (P-000)
 # - área: muitos custos escalam com m²
 # - modelo: premium tem folha maior, low-cost tem manutenção menor
 CUSTOS_DETALHADOS_BASE = {
@@ -469,9 +469,10 @@ def calcular_viabilidade_3_cenarios(
             area_m2 * CAPACIDADE_SIMULTANEA_POR_M2[faixa_key]
         )
         freq_semanal = FREQUENCIA_SEMANAL[faixa_key]
-        # Alunos esperados simultaneamente no pico:
-        # matr × (freq/7 dias) × pico_share
-        alunos_pico_calc = int(matr_real * (freq_semanal / 7.0) * PICO_SHARE)
+        pico_share = PICO_SHARE_POR_MODELO[faixa_key]
+        # Alunos esperados simultaneamente no pico (params do próprio modelo):
+        # matr × (freq/7 dias) × pico_share_{modelo}
+        alunos_pico_calc = int(matr_real * (freq_semanal / 7.0) * pico_share)
         folga_pct = round(
             (1.0 - alunos_pico_calc / capacidade_simultanea_pico) * 100, 1
         ) if capacidade_simultanea_pico > 0 else 0.0
@@ -647,7 +648,7 @@ def calcular_viabilidade_3_cenarios(
             "matriculas_recomendada": "realista",
             "capacidade_simultanea_pico": capacidade_simultanea_pico,
             "frequencia_semanal_aluno": freq_semanal,
-            "pico_share": PICO_SHARE,
+            "pico_share": pico_share,
             "alunos_pico_calculado": alunos_pico_calc,
             "folga_capacidade_pct": folga_pct,
 
@@ -852,7 +853,7 @@ def _viab_no_teto_captacao(c: dict[str, Any], fator: float) -> dict[str, Any] | 
     nova_margem = (novo_lucro / nova_receita * 100) if nova_receita > 0 else 0
     inv = c.get("investimento_total") or 0
     novo_payback = int(inv / novo_lucro) if novo_lucro > 0 else 999
-    # GATE FÍSICO: o pico escala linear c/ matrículas (mesmo pico_share/freq).
+    # GATE FÍSICO: o pico escala linear c/ matrículas (pico_share/freq do próprio cenário).
     pico_base = c.get("alunos_pico_calculado") or 0
     cap = c.get("capacidade_simultanea_pico") or 0
     pico_alvo = pico_base * (alvo / base) if base else 0
@@ -1055,22 +1056,36 @@ _MARGEM_OTIMISTA_PP = 8.0  # tolerância (pontos percentuais) antes de alertar
 
 
 def _alertas_margem_otimista(cenarios: dict[str, Any]) -> list[str]:
-    """1.6 — alerta bidirecional: margem ACIMA do benchmark do modelo + 8pp.
+    """1.6 — Alertas de plausibilidade: margem otimista e TIR/VPL fora da curva.
 
     Complementa o alerta de margem BAIXA (_alertas_vs_sector_listed). Margem muito
     acima do benchmark sugere premissas frouxas (folha/tributos/ocupação subestimados).
+    TIR > 100% ou VPL negativo também recebem ressalva (por modelo, independente).
     """
     alertas: list[str] = []
     for faixa_key, c in cenarios.items():
-        bench = MARGEM_LIQUIDA_BENCHMARK.get(faixa_key)
-        if bench is None:
-            continue
+        modelo = c.get("modelo", faixa_key)
         margem = float(c.get("margem_percentual") or 0)
-        if margem > bench + _MARGEM_OTIMISTA_PP:
+        tir = float(c.get("tir_anual_pct") or 0)
+        vpl = float(c.get("vpl_5_anos") or 0)
+
+        bench = MARGEM_LIQUIDA_BENCHMARK.get(faixa_key)
+        if bench is not None and margem > bench + _MARGEM_OTIMISTA_PP:
             alertas.append(
-                f"⚠️ Margem {margem:.1f}% ({c.get('modelo', faixa_key)}) otimista vs "
+                f"⚠️ Margem {margem:.1f}% ({modelo}) otimista vs "
                 f"benchmark {bench:.0f}% (+{_MARGEM_OTIMISTA_PP:.0f}pp) — revisar "
                 f"premissas (folha/tributos/ocupação)."
+            )
+        if tir > 100.0:
+            alertas.append(
+                f"ℹ️ TIR de {tir:.0f}% ({modelo}) indica payback ultrarrápido. "
+                "O resultado é sensível a pequenas variações de custo/receita; valide as premissas."
+            )
+        if vpl < 0:
+            alertas.append(
+                f"⚠️ VPL negativo (R$ {vpl:,.0f}) em {modelo} — o investimento "
+                "não se paga no horizonte de 5 anos à taxa de desconto usada; "
+                "revise ticket, matrículas ou CAPEX."
             )
     return alertas
 
@@ -1423,54 +1438,63 @@ async def analise_financeira_a4_completo(
     destino_lng: float | None = None,
     fornecedor_principal: str = "default",
 ) -> dict:
-    """
-    Macro-tool A4 FinancialEstimator — consolida 2 tools em 1 call.
+    """Macro-tool A4 — viabilidade 3 cenários + aluguel (MRLR Tier 0 primeiro, P-000)."""
+    import os
 
-    Por que existe (Run 20 deu MALFORMED_FUNCTION_CALL no A4):
-    A4 com 2 tools (pesquisar_aluguel_mediana + analise_financeira_completa,
-    a segunda com 7 parâmetros) confundiu o Pro na primeira function_call,
-    resultando em ERROR:MALFORMED_FUNCTION_CALL e A4 OUT=0.
+    from tools.aluguel_municipio_portais import MIN_SAMPLES_ALTA
+    from tools.enrichment_cache import cached_bcb_imobiliario
 
-    Esta macro encapsula tudo em código Python:
-      1. await pesquisar_aluguel_mediana — 3 queries paralelas Search Grounding
-      2. analise_financeira_completa — viabilidade 3 cenários com mediana real
+    mediana = 0.0
+    min_r = 0.0
+    max_r = 0.0
+    queries_ok = 0
+    tier_usado = 3
+    motivo_tier1: str | None = None
+    municipio: dict = {}
+    ref_municipio: dict = {}
+    n_validos_t1 = 0
+    tier1_suficiente = False
+    tier1_vazio = True
+    aluguel: dict = {}
+    _tier0_mrlr = None
 
-    A4 vira redator com 1 tool, 1 call. Mesmo pattern que eliminou
-    MALFORMED em A1 (anchoring) e A3b (competitor_tools).
+    # ── Tier 0: MRLR (primário) ───────────────────────────────────────────
+    try:
+        from tools.aluguel_mrlr import aluguel_deterministico
 
-    Returns:
-        Dict mesclando viabilidade financeira + detalhes da pesquisa de aluguel,
-        pronto pra A4 emitir como JSON via output_key="analise_financeira".
-    """
-    from tools.aluguel_municipio_portais import (
-        MIN_SAMPLES_ALTA,
-        pesquisar_aluguel_municipio,
-    )
-    from tools.enrichment_cache import cached_aluguel_portais, cached_bcb_imobiliario
-    from tools.gemini_search_grounding import pesquisar_aluguel_mediana
+        _m = aluguel_deterministico(area_m2=float(area_m2), cidade=cidade, bairro=bairro)
+        if _m.get("status") == "ok" and _m.get("valor_unitario_m2"):
+            _tier0_mrlr = _m
+            mediana = float(_m["valor_unitario_m2"])
+            min_r = round(mediana * 0.85, 2)
+            max_r = round(mediana * 1.15, 2)
+            tier_usado = 0
+    except Exception:
+        pass
 
-    municipio_cached = cached_aluguel_portais()
-    if municipio_cached is not None:
-        municipio = municipio_cached
-    else:
+    # ── Fallback portais legado (opt-in; P-000 proíbe grounding em OPEX) ───
+    if tier_usado != 0 and os.getenv("ALUGUEL_PORTAIS_TIER1", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        from tools.aluguel_municipio_portais import pesquisar_aluguel_municipio
+
         municipio = await pesquisar_aluguel_municipio(
             cidade, uf, area_m2_min, area_m2_max, bairro=bairro
         )
-    ref_municipio = municipio.get("aluguel_municipio_referencia") or {}
-    n_validos_t1 = int(municipio.get("n_validos") or 0)
-    tier1_vazio = n_validos_t1 == 0
-    tier1_suficiente = bool(municipio.get("tier1_suficiente"))
-    motivo_tier1: str | None = None
-    tier_usado = 1
-
-    if tier1_suficiente:
-        mediana = municipio.get("mediana_r_m2", 0.0)
-        min_r = municipio.get("min_r_m2", 0.0)
-        max_r = municipio.get("max_r_m2", 0.0)
-        queries_ok = n_validos_t1
-        aluguel = municipio
-    else:
-        if tier1_vazio:
+        ref_municipio = municipio.get("aluguel_municipio_referencia") or {}
+        n_validos_t1 = int(municipio.get("n_validos") or 0)
+        tier1_vazio = n_validos_t1 == 0
+        tier1_suficiente = bool(municipio.get("tier1_suficiente"))
+        if tier1_suficiente:
+            mediana = float(municipio.get("mediana_r_m2", 0.0) or 0)
+            min_r = float(municipio.get("min_r_m2", 0.0) or 0)
+            max_r = float(municipio.get("max_r_m2", 0.0) or 0)
+            queries_ok = n_validos_t1
+            aluguel = municipio
+            tier_usado = 1
+        elif tier1_vazio:
             motivo_tier1 = (
                 f"Portais municipais (ZAP/Viva/OLX): nenhum anúncio válido em "
                 f"{cidade}{f'/{uf}' if uf else ''} na faixa {area_m2_min}–{area_m2_max} m²."
@@ -1480,36 +1504,9 @@ async def analise_financeira_a4_completo(
                 f"Portais municipais: amostra insuficiente (N={n_validos_t1}, "
                 f"mínimo recomendado {MIN_SAMPLES_ALTA})."
             )
-        aluguel = await pesquisar_aluguel_mediana(
-            bairro, cidade, uf, area_m2_min, area_m2_max
-        )
-        mediana = aluguel.get("mediana_r_m2", 0.0)
-        min_r = aluguel.get("min_r_m2", 0.0)
-        max_r = aluguel.get("max_r_m2", 0.0)
-        queries_ok = aluguel.get("queries_com_dados", 0)
-        tier_usado = 2 if mediana and mediana > 0 else 3
+    elif tier_usado != 0:
+        motivo_tier1 = "MRLR indisponível; portais Tier 1 desligados (P-000)."
 
-    # ── Tier 0: MRLR DETERMINÍSTICO (primário) ──────────────────────────────
-    # Aluguel/m² CALCULADO da equação IBAPE-GO sobre inputs ESTÁVEIS (espelhos
-    # municipio_pib + renda_bairro) — mesma praça SEMPRE o mesmo valor. Mata o swing
-    # 17k→88k do scraping (audit divergência Cocó). Portal/grounding viram fallback.
-    _tier0_mrlr = None
-    try:
-        from tools.aluguel_mrlr import aluguel_deterministico
-
-        _m = aluguel_deterministico(area_m2=float(area_m2), cidade=cidade, bairro=bairro)
-        if _m.get("status") == "ok" and _m.get("valor_unitario_m2"):
-            _tier0_mrlr = _m
-            mediana = float(_m["valor_unitario_m2"])
-            min_r = round(mediana * 0.85, 2)   # banda estreita — determinístico
-            max_r = round(mediana * 1.15, 2)
-            tier_usado = 0
-    except Exception:
-        pass
-
-    # 2. Calcula viabilidade 3 cenários (síncrono — só matemática)
-    # Schema v1.5: propaga tipo_negocio + tamanho_preset pra cascata
-    # de equipamentos detalhada (kit por modelo financeiro).
     fin = analise_financeira_completa(
         area_m2=area_m2,
         bairro=bairro,
@@ -1535,49 +1532,24 @@ async def analise_financeira_a4_completo(
             fin["alertas"].append(av)
 
     if tier_usado == 0 and _tier0_mrlr:
-        fin["fonte_aluguel"] = _tier0_mrlr.get("fonte") or "MRLR IBAPE-GO (determinístico)"
-        fin["aluguel_mrlr_inputs"] = _tier0_mrlr.get("inputs")
-        fin["aviso_metodologia_aluguel"] = (
-            "Aluguel determinístico (equação MRLR sobre espelhos: porte/PIB do município "
-            "+ padrão da renda do bairro + zona). Mesma praça = mesmo valor, recalibrável."
-        )
+        fin["fonte_aluguel"] = _tier0_mrlr.get("fonte") or "MRLR IBAPE-GO (determinístico)" # noqa: E501
+        fin["aluguel_mrlr_inputs"] = _tier0_mrlr.get("inputs") # noqa: E501
+        fin["aviso_metodologia_aluguel"] = "Aluguel determinístico (equação MRLR sobre espelhos: porte/PIB do município + padrão da renda do bairro + zona). Mesma praça = mesmo valor, recalibrável." # noqa: E501
     elif tier_usado == 1:
         fin["fonte_aluguel"] = (
             f"Portais municipais (ZAP/Viva/OLX) | N={queries_ok}"
         )
         fin["aviso_metodologia_aluguel"] = municipio.get("norte") or municipio.get("aviso", "")
-    elif tier_usado == 2 and mediana and mediana > 0:
-        fin["fonte_aluguel"] = (
-            f"Search Grounding (mediana de {queries_ok} queries)"
-            if queries_ok
-            else "Search Grounding (Tier 2 — portais sem amostra)"
-        )
-        fin["aviso_metodologia_aluguel"] = (
-            f"⚠️ {motivo_tier1} "
-            f"Fonte ativa: Search Grounding — mediana R$ {float(mediana):.0f}/m² "
-            f"({queries_ok} consulta(s) com dados). "
-            "Panorama web municipal; não substitui cotação de locador."
-        )
-        alerta_t2 = (
-            "Aluguel no modelo: portais municipais "
-            + ("sem amostra (N=0)" if tier1_vazio else f"com amostra baixa (N={n_validos_t1})")
-            + "; Search Grounding é a referência ativa — validar com imobiliária local."
-        )
-        if alerta_t2 not in fin["alertas"]:
-            fin["alertas"].append(alerta_t2)
     elif tier_usado >= 3:
         fin["fonte_aluguel"] = fin.get("fonte_aluguel") or "Benchmark ACAD / FipeZap"
-        fin["aviso_metodologia_aluguel"] = (
-            f"⚠️ {motivo_tier1} Search Grounding sem valores parseáveis. "
-            "Aluguel no modelo usa benchmark setorial — validar cotação local."
-        )
+        fin["aviso_metodologia_aluguel"] = f"⚠️ MRLR indisponível. {motivo_tier1 or ''} Aluguel no modelo usa benchmark setorial — validar cotação local." # noqa: E501
         alerta_t3 = (
-            "Aluguel: portais e Search Grounding sem mediana utilizável; "
+            "Aluguel: MRLR indisponível e portais sem amostra; "
             "modelo financeiro em benchmark ACAD/FipeZap."
         )
         if alerta_t3 not in fin["alertas"]:
             fin["alertas"].append(alerta_t3)
-        if n_validos_t1 < MIN_SAMPLES_ALTA:
+        if n_validos_t1 < MIN_SAMPLES_ALTA and tier_usado >= 3:
             legado = (
                 "Aluguel: amostra municipal nos portais insuficiente; "
                 "usando benchmark ACAD/Sebrae — validar cotação local."
@@ -1605,7 +1577,7 @@ async def analise_financeira_a4_completo(
                 fin["alertas"].append(ressalva)
 
     referencia_macro_bcb = None
-    if tier1_vazio:
+    if not _tier0_mrlr: # Tenta BCB se MRLR falhou
         bcb_cached = cached_bcb_imobiliario()
         if bcb_cached is not None:
             referencia_macro_bcb = bcb_cached
@@ -1630,7 +1602,7 @@ async def analise_financeira_a4_completo(
     fin["referencia_macro_bcb"] = referencia_macro_bcb
     fin["aluguel_pesquisa_detalhes"] = {
         "tier": tier_usado,
-        "tier1_vazio": tier1_vazio,
+        "tier1_vazio": n_validos_t1 == 0,
         "tier1_suficiente": tier1_suficiente,
         "n_validos_tier1": n_validos_t1,
         "motivo_tier1": motivo_tier1,
@@ -1643,8 +1615,7 @@ async def analise_financeira_a4_completo(
             ref_municipio.get("faixa_rs_m2")
             or municipio.get("faixa_rs_m2")
             or (
-                {"p25": min_r, "mediana": mediana, "p75": max_r}
-                if tier_usado == 2 and mediana
+                {"p25": min_r, "mediana": mediana, "p75": max_r} if mediana
                 else None
             )
         ),
@@ -1661,11 +1632,6 @@ async def analise_financeira_a4_completo(
             },
         },
         "fontes_resumo": [
-            {"query": (f.get("query") or "")[:60], "n_valores": f.get("n_valores", 0)}
-            for f in (aluguel.get("fontes") or [])
-        ]
-        if tier_usado == 2
-        else [
             {"portal": p, "n_urls": len(u)}
             for p, u in (municipio.get("urls_consultadas") or {}).items()
         ],
@@ -1709,18 +1675,8 @@ def analise_financeira_completa(
 ) -> dict:
     """
     Macro-tool: resolve aluguel + viabilidade em 3 cenários em UMA chamada.
-
-    Tiers de aluguel:
-    1. Se `aluguel_m2_mediana > 0` (mediana de N queries Search Grounding —
-       Task #47), usa esse valor: aluguel_mensal = aluguel_m2_mediana × area_m2.
-       Marca `fonte_aluguel = "Search Grounding (mediana de N queries)"`.
-       Usa `aluguel_min_m2_real`/`max_m2_real` se vieram do mesmo batch.
-    2. Caso contrário (Tier 1 indisponível ou todas queries falharam),
-       fallback pro benchmark `estimar_aluguel(cidade, area_m2)` (ACAD/Sebrae).
-       Marca `fonte_aluguel = "Benchmark ACAD"` + alertas de incerteza.
-
-    Em ambos calcula `calcular_viabilidade_3_cenarios` e devolve dict
-    consolidado, eliminando uma rodada LLM no FinancialEstimator.
+    Se `aluguel_m2_mediana` > 0 (MRLR ou portais), usa-o.
+    Caso contrário, fallback FipeZap ou benchmark `estimar_aluguel` (ACAD/Sebrae).
     """
     if aluguel_m2_mediana and aluguel_m2_mediana > 0:
         aluguel_mensal = round(float(aluguel_m2_mediana) * float(area_m2), 2)
@@ -1734,8 +1690,7 @@ def analise_financeira_completa(
             else round(float(aluguel_m2_mediana) * 1.4, 2)
         )
         fonte_aluguel = (
-            f"Search Grounding (mediana de {queries_com_dados} queries)"
-            if queries_com_dados else "Search Grounding"
+            f"Fonte externa (mediana de {queries_com_dados} pontos)" if queries_com_dados else "Fonte externa"
         )
     else:
         # Tier 1.5: FipeZap (dados mensais oficiais do mercado)

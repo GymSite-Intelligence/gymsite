@@ -2,15 +2,15 @@
 id: spec-a4-001
 agente: A4 FinancialEstimator
 modelo_llm: gemini-2.5-flash
-versão: 1.0
-data: 2026-06-18
+versão: 1.1
+data: 2026-07-13
 ---
 
 # SPEC — A4 FinancialEstimator
 
 ## 1. Responsabilidade única
 
-O A4 é responsável exclusivamente por **calcular e estruturar a viabilidade financeira do negócio em 3 cenários (low/mid/premium)**, incluindo pesquisa de aluguel real de mercado com fallback em 3 tiers, CAPEX, margem, payback, análise de sensibilidade e score de viabilidade. O LLM atua apenas como redator do campo `justificativa` (perfil demográfico + efeito de gênero) — todos os números são determinísticos, produzidos pela macro-tool `analise_financeira_a4_completo`.
+O A4 é responsável exclusivamente por **calcular e estruturar a viabilidade financeira do negócio em 3 cenários (low/mid/premium)**, incluindo aluguel via **MRLR determinístico (Tier 0)** com fallbacks legados em tiers inferiores, CAPEX, margem, payback, análise de sensibilidade e score de viabilidade. Todos os números são determinísticos, produzidos pela macro-tool `analise_financeira_a4_completo` (`BaseAgent` sem LLM desde jun/2026).
 
 ---
 
@@ -65,11 +65,12 @@ O A4 é responsável exclusivamente por **calcular e estruturar a viabilidade fi
 O LLM chama `analise_financeira_a4_completo(bairro, cidade, uf, area_m2, destino_lat, destino_lng)` em uma única chamada. As funções `pesquisar_aluguel_mediana` e `analise_financeira_completa` não devem ser chamadas separadamente — foram consolidadas na macro após `MALFORMED_FUNCTION_CALL` no Run 20 (2 tools com 7 parâmetros confundiam o Pro na primeira function_call).
 
 **RN-A4-02 — Cascata de tiers para aluguel (determinística)**
-A macro aplica 3 tiers em sequência dentro de `analise_financeira_a4_completo`:
-- **Tier 1** — Portais municipais (ZAP/Viva/OLX via `pesquisar_aluguel_municipio`). Usado se `tier1_suficiente=True` (N amostras ≥ `MIN_SAMPLES_ALTA`). `fonte_aluguel`: `"Portais municipais (ZAP/Viva/OLX) | N=..."`.
-- **Tier 2** — Search Grounding (3 queries paralelas via `pesquisar_aluguel_mediana`). Usado se Tier 1 falhar. `fonte_aluguel`: `"Search Grounding (mediana de N queries)"`.
-- **Tier 3** — Benchmark ACAD/FipeZap (fallback hardcoded em `analise_financeira_completa`). Usado se Tier 2 não retornar mediana válida. `fonte_aluguel`: `"Benchmark ACAD / FipeZap"`.
-O tier usado é registrado em `aluguel_pesquisa_detalhes.tier`. LLM copia o `fonte_aluguel` literal — não inventa.
+A macro em `analise_financeira_a4_completo` aplica tiers e **Tier 0 MRLR sobrescreve** quando `aluguel_deterministico` retorna `status=ok`:
+- **Tier 0 (primário)** — MRLR IBAPE-GO (`tools/aluguel_mrlr.py` + `mrlr_modelo.py`) sobre espelhos `renda_bairro` + `municipio_pib`. Mesma praça = mesmo R$/m². `fonte_aluguel`: `"MRLR IBAPE-GO (determinístico)"`. `tier_usado == 0`.
+- **Tier 1** — Portais municipais (ZAP/Viva/OLX via `pesquisar_aluguel_municipio`). Só se Tier 0 indisponível e `tier1_suficiente=True`.
+- **Tier 2** — Search Grounding (`pesquisar_aluguel_mediana`). Só se Tier 0 indisponível e Tier 1 insuficiente.
+- **Tier 3** — Benchmark ACAD/FipeZap. Último fallback.
+**Proibido:** usar preço de listing SearchAPI ou snippet `rent_sqm` como Tier 0. Ver `.agent/rules/conferencia-fontes-pipeline.md` §2.
 
 **RN-A4-03 — Snapshot determinístico `analise_financeira_pronto` (after_tool_callback)**
 `_persistir_a4_no_state` (registrado como `after_tool_callback`) grava o `tool_response` bruto de `analise_financeira_a4_completo` em `state["analise_financeira_pronto"]` antes de o LLM processar a resposta. Razão: o A4-Flash às vezes dropa/renomeia campos ao ecoar o JSON (`aviso_metodologia`, `aluguel_pesquisa_detalhes`, `capex.frete_equipamentos`, `custos_detalhados.aluguel`). O A6 lê `analise_financeira_pronto` para os números auditáveis e usa `analise_financeira` (output_key) apenas para a `justificativa`.

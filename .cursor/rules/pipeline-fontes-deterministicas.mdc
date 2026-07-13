@@ -7,8 +7,10 @@ alwaysApply: true
 
 Antes de alterar `agents/*.py`, macros em `tools/*_tools.py` ou contratos de relatório:
 
-1. Ler [`.agent/rules/pipeline-fontes-deterministicas.md`](../../.agent/rules/pipeline-fontes-deterministicas.md)
-2. Ler [`docs/arquitetura/PIPELINE_AGENTES.md`](../../docs/arquitetura/PIPELINE_AGENTES.md) §7–§9
+Antes de alterar `agents/*.py`, `tools/*_tools.py` ou contratos de relatório:
+
+1. Ler [`.agent/rules/conferencia-fontes-pipeline.md`](../../.agent/rules/conferencia-fontes-pipeline.md)
+2. Ler [`.agent/rules/pipeline-fontes-deterministicas.md`](../../.agent/rules/pipeline-fontes-deterministicas.md)
 
 **Regras curtas:**
 - SearchAPI = primário Maps/reviews/listings/IG; Places fallback; Playwright legado off prod; reviews: fetch+card det., Gemini só refina `categoria_dor`

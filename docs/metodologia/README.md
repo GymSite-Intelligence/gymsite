@@ -1,37 +1,35 @@
 # docs/metodologia — índice e estado
 
-> Auditoria da pasta em 2026-07-06. Três naturezas de artefato: **VIVO** (consultar e
-> manter), **HISTÓRICO** (já executado — contexto), **ESTUDO** (material-fonte de decisão).
+> Auditoria da pasta. Três naturezas: **VIVO** (consultar e manter), **HISTÓRICO**
+> (contexto), **ESTUDO** (material-fonte de decisão). Governança geral: `.agent/rules/P-000_REGRA_MESTRA_MUDANCA.md`.
 
 ## VIVO — manter atualizado
 
 | Doc | Assunto | Estado |
 |---|---|---|
-| `data_lineage.md` | Mapa fonte→tabela→consumidor (regra do carimbo) | ⚠️ atualizar: falta Wellhub (camada 3), lancamento_fetcher, catálogos MRLR |
-| `gymsite_schema.md` | Schema no projeto compartilhado | ⚠️ atualizar ANTES da migração #23 (é o mapa do pg_dump) |
-| `posicionamento_headroom_premium.md` | Spec do headroom de renda | ✅ implementado no A9 (status corrigido) |
-| `fontes_renda_bairro_capitais.md` | Curadoria de fontes de renda por capital | ok — adicionar "verificado em" ao usar |
-| `roadmap_dados_bq_sinergia.md` | 3 apontamentos ADOTAR (BQ) | ok — manter status por apontamento |
-| `prompts/curador_rag_mercado.md` | Persona-portão do RAG público (LGPD) | ✅ versionada 2026-07-06 |
+| `data_lineage.md` | Mapa fonte→tabela→consumidor (carimbo P-000 §5) | ✅ jul/2026 — MRLR, agregadores, lancamento_fetcher; grounding A4 removido |
+| `gymsite_schema.md` | Schema GymSite no Supabase compartilhado | ⚠️ nota schemas `gymsite`/`shared` — atualizar antes de pg_dump grande |
+| `posicionamento_headroom_premium.md` | Spec headroom de renda | ✅ A9 |
+| `fontes_renda_bairro_capitais.md` | Curadoria renda por capital | ok — adicionar "verificado em" ao usar |
+| `roadmap_dados_bq_sinergia.md` | 3 apontamentos ADOTAR (BQ) | ok — PNGs em `analise_melhorias_bq/` podem estar ausentes (só `.md` no repo) |
+| `prompts/guia_prompts_pipeline.md` | Craft de prompt + Regra ZERO | ✅ canônico — espelhado P-000 §6 |
+| `prompts/curador_rag_mercado.md` | Persona-portão RAG público (LGPD) | ✅ 2026-07-06 |
+| `prompts/AUDITORIA_PROMPTS_ONDA1.md` | Fila correção prompts (A6 snake_case, scores) | ⚠️ aberto — task #24/#28 |
 
 ## HISTÓRICO / a decidir
 
-- `agent_py_patch.md` — patch do A9 (já aplicado; movido para docs/handoffs/ quando conveniente).
-- `VEC-378_MIGRACAO_OSM.md` — plano Maps→OSM. **Decidir**: possivelmente superado pelo
-  SearchAPI (~4× mais barato); confrontar custo atual e promover a spec ou arquivar.
-- ~~`a9_positioning_strategist.py`~~ — cópia de código REMOVIDA (2026-07-06): código não
-  mora em docs; a fonte é `agents/a9_positioning_strategist.py` (histórico no git).
+- Patch A9 aplicado → `docs/handoffs/agent_py_patch_A9_APLICADO.md` (não `agent_py_patch.md` aqui).
+- `VEC-378_MIGRACAO_OSM.md` — Maps→OSM **concorrentes** possivelmente superado por SearchAPI; OSMnx **fluxo pedestre** ainda ativo — decidir arquivar ou nota "parcial".
+- ~~`a9_positioning_strategist.py`~~ — cópia em docs removida; fonte `agents/a9_positioning_strategist.py`.
 
 ## ESTUDO
 
-- `analise_melhorias_bq/` — tese das 4 disciplinas de dados + arquitetura BQ (fonte do roadmap).
-- `fig1–3_*.png` — visuais de posicionamento/oceano azul/ERRC (maio/2026, material de pitch).
-- `Guia de Engenharia de Prompt Eficaz.pdf` — guia base; **destilado ✅** em
-  `prompts/guia_prompts_pipeline.md` (princípios aplicados aos nossos prompts, com
-  exemplos reais do A3b/A6 e checklist de revisão pra PRs que mexem em prompt).
+- `analise_melhorias_bq/diferencas_disciplinas_dados.md` — tese 4 disciplinas + BQ (fonte do roadmap).
+- `Guia de Engenharia de Prompt Eficaz.pdf` — destilado em `prompts/guia_prompts_pipeline.md`.
+- ~~`fig1–3_*.png`~~ — removidos desta pasta (dup em `docs/arquitetura/` ou pitch antigo).
 
 ## Relacionados fora da pasta
 
-- `docs/produto/AUDITORIA_RELATORIO_COCO.md` — memória de cálculo dos scores + fila de correções.
-- `agents/specs/` — SPEC_OFERTA_AGREGADORES · SPEC_REFINO_LANCAMENTO_DETERMINISTICO ·
-  SPEC_TENDENCIA_CNPJ_BAIRROS.
+- `docs/produto/AUDITORIA_RELATORIO_COCO.md` — memória scores + fila correções.
+- `agents/specs/` — SPEC_OFERTA_AGREGADORES · SPEC_REFINO_LANCAMENTO_DETERMINISTICO · SPEC_TENDENCIA_CNPJ_BAIRROS.
+- `.agent/rules/P-000_REGRA_MESTRA_MUDANCA.md` — deploy (Wrangler + Cloud Run), domínios §8.

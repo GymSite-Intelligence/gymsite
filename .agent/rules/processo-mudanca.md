@@ -110,5 +110,9 @@ Princípios (P-001..P-007) e padrões (P0–P3) aplicam-se integralmente. Mecân
 
 Mudanças no pipeline, fontes de dados ou macros determinísticas: ler **antes** de codar:
 
+- [`.agent/rules/conferencia-fontes-pipeline.md`](conferencia-fontes-pipeline.md) — **canônico** (MRLR, site_agent, agents_site, A7 slot, checklist)
 - [`.agent/rules/pipeline-fontes-deterministicas.md`](pipeline-fontes-deterministicas.md) — SearchAPI primário, determinismo, checklist
 - [`docs/arquitetura/PIPELINE_AGENTES.md`](../docs/arquitetura/PIPELINE_AGENTES.md) — mapa vivo agente↔relatório (§7–§9 = fontes, fluxo pedestre, gaps MD vs código)
+- [`.agent/rules/P-000_REGRA_MESTRA_MUDANCA.md`](P-000_REGRA_MESTRA_MUDANCA.md) — §6 LLM≠número · §7 deploy Wrangler/Cloud Run · §8 domínios
+- [`docs/metodologia/prompts/guia_prompts_pipeline.md`](../docs/metodologia/prompts/guia_prompts_pipeline.md) — checklist PR que mexe em prompt
+- [`docs/metodologia/data_lineage.md`](../docs/metodologia/data_lineage.md) — atualizar no PR se nova fonte/tabela

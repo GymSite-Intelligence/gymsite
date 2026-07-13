@@ -1,6 +1,6 @@
 # GymSite Intelligence
 
-Plataforma de inteligência de mercado para academias: relatórios de viabilidade cruzando CNPJ, CNO, Google Maps e análise financeira (pipeline de agentes Google ADK A0–A9). Backend Python/FastAPI + Supabase; frontend React/Vite; deploy Cloud Run.
+Plataforma de inteligência de mercado para academias: relatórios de viabilidade cruzando CNPJ, CNO, Google Maps e análise financeira (pipeline de agentes Google ADK A0–A9). Backend Python/FastAPI + Supabase; frontend React/Vite; **front** Cloudflare Pages (`wrangler`); **API** Cloud Run.
 
 ## Como falar com o Marcelo
 
@@ -22,7 +22,7 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 
 ## Fontes de dados do pipeline
 
-- **SearchAPI** (`SEARCHAPI_KEY`) — Google Maps/Search via API paga. Backend PRIMÁRIO de concorrentes (A3a, `engine=google_maps`, ~4× mais barato que Places) E de imóveis/pontos comerciais (cascata `listing_cascata.py`, bairro-scoped). Preferir sempre sobre scraping. **Regra + mapa:** `.agent/rules/pipeline-fontes-deterministicas.md` e `docs/arquitetura/PIPELINE_AGENTES.md` §7–§9 — revisitar antes de mudar pipeline.
+- **SearchAPI** (`SEARCHAPI_KEY`) — Google Maps/Search via API paga. Backend PRIMÁRIO de concorrentes (A3a, `engine=google_maps`, ~4× mais barato que Places) E de imóveis/pontos comerciais (cascata `listing_cascata.py`, bairro-scoped). Preferir sempre sobre scraping. **Aluguel viabilidade = MRLR** (`tools/aluguel_mrlr.py`), não SearchAPI. **Regra canônica:** `.agent/rules/conferencia-fontes-pipeline.md` + `.agent/rules/pipeline-fontes-deterministicas.md` + `docs/arquitetura/PIPELINE_AGENTES.md` §7–§9 — revisitar antes de mudar pipeline.
 - **MRLR determinístico** (`aluguel_mrlr.py`) — fonte do ALUGUEL na viabilidade (A4 Tier 0), sobre espelhos BQ. O aluguel NÃO vem de listing raspado.
 - **Playwright** (`imobiliaria_scraper.py`, OLX/ImovelWeb) — legado, FORA do caminho crítico (flag `LISTINGS_PLAYWRIGHT`, default off): era o gargalo que estourava o pipeline (timeouts 45s + Cloudflare). A cascata SearchAPI o substitui.
 - **Vertex AI Search** — RAG qualitativo (base de conhecimento, catálogos de equipamento/regulatório).
@@ -82,7 +82,7 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
   `IMG=$(gcloud run services describe gymsite-api --region=us-central1 --project=gen-lang-client-0106729343 --format="value(spec.template.spec.containers[0].image)")`
   e `gcloud run services update gymsite-worker --region=us-central1 --project=gen-lang-client-0106729343 --image $IMG`.
   Existe um `gymsite-api` ÓRFÃO no projeto gen-lang-client-0662901510 ("GymSite") — não é a produção.
-- Front sobe via trigger Cloud Build `gymsite-frontend-main` (publishable via build-arg em `cloudbuild.frontend.yaml`); Actions `pages.yml` falha por billing — ignorar.
+- Front monorepo (`frontend/`): **Wrangler/Pages** projeto CF `gymsite` → `getgymsite.com.br` (`npx wrangler pages deploy ./dist` após build). Landing `gym-insight-hub` → `gymsite.com.br`. Ver P-000 §7–§8. `cloudbuild.frontend.yaml` e Actions `pages.yml` = legado/ignorar.
 
 ## Documentos vivos (ler quando o assunto aparecer)
 
