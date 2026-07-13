@@ -17,9 +17,18 @@ $AccountId = "361e9e1383bfa8e95e1db54e6c2a3bba"
 $ProjectName = "gymsite"
 $DashboardUrl = "https://dash.cloudflare.com/$AccountId/pages/view/$ProjectName"
 
-$WantBuildCommand = "npm run build"
 $WantRootDir = "frontend"
 $WantDestinationDir = "dist"
+# Vite precisa de VITE_* no build. CF Pages nao injeta deployment_configs.env_vars no
+# subprocess quando root_dir=frontend — gravamos .env.production antes do build.
+# Valores publicos (publishable key); mesmo contrato de cloudbuild.frontend.yaml.
+$WantBuildCommand = @'
+printf '%s\n' 'VITE_USE_MOCKS=false' 'VITE_SUPABASE_URL=https://epgedaiukjippepujuzc.supabase.co' 'VITE_SUPABASE_ANON_KEY=sb_publishable_fj4Ioi3YX8gI-h3lrcb45w_FZa9UzhD' 'VITE_API_BASE=https://gymsite-api.vectracargo.com.br' > .env.production && npm run build
+'@
+
+$PublishableKey = "sb_publishable_fj4Ioi3YX8gI-h3lrcb45w_FZa9UzhD"
+$SupabaseUrl = "https://epgedaiukjippepujuzc.supabase.co"
+$ApiBase = "https://gymsite-api.vectracargo.com.br"
 
 function Get-CfToken {
     if ($env:CLOUDFLARE_API_TOKEN) {
@@ -68,7 +77,7 @@ $drifted = ($bc.build_command -ne $WantBuildCommand) -or
            ($bc.destination_dir -ne $WantDestinationDir)
 
 if (-not $drifted) {
-    Write-Host "    OK - config ja correta."
+    Write-Host "    OK - build_config ja correta."
 } else {
     $body = @{
         build_config = @{
@@ -85,6 +94,26 @@ if (-not $drifted) {
     $nbc = $patched.result.build_config
     Write-Host ('    Fix: build_command={0} root_dir={1} destination_dir={2}' -f $nbc.build_command, $nbc.root_dir, $nbc.destination_dir)
 }
+
+Write-Host "==> Env vars (preview + production)"
+$wantEnv = @{
+    VITE_API_BASE = @{ type = "plain_text"; value = $ApiBase }
+    VITE_SUPABASE_ANON_KEY = @{ type = "plain_text"; value = $PublishableKey }
+    VITE_SUPABASE_URL = @{ type = "plain_text"; value = $SupabaseUrl }
+    VITE_USE_MOCKS = @{ type = "plain_text"; value = "false" }
+}
+$envBody = @{
+    deployment_configs = @{
+        preview = @{ env_vars = $wantEnv }
+        production = @{ env_vars = $wantEnv }
+    }
+} | ConvertTo-Json -Depth 6
+$envPatched = Invoke-RestMethod -Method PATCH -Uri $baseUri -Headers $headers -Body $envBody
+if (-not $envPatched.success) {
+    throw ($envPatched.errors | ConvertTo-Json -Compress)
+}
+$previewKey = $envPatched.result.deployment_configs.preview.env_vars.VITE_SUPABASE_ANON_KEY.value
+Write-Host ('    preview key={0} legacy={1}' -f $previewKey.Substring(0, 24), $previewKey.StartsWith('eyJ'))
 
 if ($Redeploy) {
     Write-Host "==> Redeploy branch main..."
