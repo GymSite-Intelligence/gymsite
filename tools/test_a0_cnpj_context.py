@@ -67,7 +67,7 @@ def _extract_market_context(session_state: dict) -> dict:
     return {}
 
 
-async def run_a0() -> dict:
+async def run_a0() -> tuple[dict, list[str]]:
     session_service = InMemorySessionService()
     session_id = "test_a0_analise"
     user_id = "test_user"
@@ -111,6 +111,7 @@ async def run_a0() -> dict:
         user_id=user_id,
         session_id=session_id,
     )
+    assert session is not None
     mc = _extract_market_context(session.state or {})
     return mc, tools_called
 

@@ -21,7 +21,7 @@ logger = logging.getLogger("gymsite.aluguel_mrlr")
 
 
 def _sb():
-    from tools.postgrest_sb import load_create_client
+    from tools.supabase_client import load_create_client
 
     url = os.environ.get("SUPABASE_URL")
     key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
