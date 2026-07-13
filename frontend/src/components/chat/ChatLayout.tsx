@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { ChatMessage, type ChatMessageData } from './ChatMessage'
 import { ChatInput, type ChatAttachment } from './ChatInput'
 import { ChatSidebarDesktop, ChatSidebarMobile, type ChatSessionItem } from './ChatSidebar'
+import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { Button } from '@/components/ui/button'
 import { ICONE_CONSULTOR } from '@/config/agentes'
 
@@ -60,9 +61,7 @@ export function ChatLayout({
             onNewSession={onNewSession}
           />
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary/10 p-0.5">
-              <ICONE_CONSULTOR className="h-full w-full object-contain" />
-            </div>
+          <AgentAvatar Icone={ICONE_CONSULTOR} size="sm" />
             <div>
               <h1 className="text-sm font-semibold leading-tight">GymSite Agent</h1>
               <p className="text-[10px] text-muted-foreground">Especialista em franquias de fitness</p>
@@ -84,9 +83,7 @@ export function ChatLayout({
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-primary/10 p-1">
-                <ICONE_CONSULTOR className="h-full w-full object-contain" />
-              </div>
+              <AgentAvatar Icone={ICONE_CONSULTOR} size="lg" className="mb-4" />
               <h2 className="mb-1 text-lg font-semibold">Como posso ajudar?</h2>
               <p className="max-w-sm text-sm text-muted-foreground">
                 Sou seu especialista em expansão de franquias de academia. Me diga a cidade e
@@ -105,9 +102,7 @@ export function ChatLayout({
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
                 <div className="flex gap-3 px-4 py-5 sm:px-6 lg:px-8">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 p-0.5 sm:h-8 sm:w-8">
-                  <ICONE_CONSULTOR className="h-full w-full object-contain" />
-                </div>
+                <AgentAvatar Icone={ICONE_CONSULTOR} size="md" />
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     <span className="text-xs">Analisando...</span>

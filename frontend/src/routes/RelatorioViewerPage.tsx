@@ -259,8 +259,11 @@ function RelatorioViewerContent({
     premium: medianaKit(getKitParaModeloFinanceiro(tipoNegocio, tamanhoPreset, 'premium')),
   }
 
+  const areaM2Kit =
+    data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min ?? null
   const cenariosRecalc = recalcularCenariosComKit(
     out.viabilidade_3_cenarios,
+    areaM2Kit,
     equipamentosPorModelo,
   )
 

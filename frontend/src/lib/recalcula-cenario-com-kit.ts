@@ -18,9 +18,6 @@
  *   investimento_total                 ← capex_total + capital_giro
  *   payback_meses                      ← ceil(investimento / lucro_mensal)
  *
- * TIR e VPL ficam como aproximação simplificada — recálculo exato exigiria
- * fluxo de caixa de 60 meses; mantemos a fórmula linear `lucro × 12 / capex`.
- *
  * NÃO MUTA o cenário original — sempre retorna objeto novo. Flag
  * `_ajustado_com_kit` sinaliza pra UI exibir badge.
  */
@@ -30,6 +27,70 @@ import type { CenarioJSON } from '@/hooks/useRelatorioDetail'
 const MANUTENCAO_PCT_CAPEX_MES = 0.005 // 0.5% /mês do CAPEX
 const SEGURO_PCT_CAPEX_MES = 0.002 // 0.2% /mês
 const CAPITAL_GIRO_MESES = 3
+
+// Parâmetros do motor fiscal (replicam financial_tools.py e Supabase)
+const FATOR_R_CORTE_FOLHA = 0.28
+const ALIQUOTA_SIMPLES_ANEXO_III = 0.06
+const ALIQUOTA_SIMPLES_ANEXO_V = 0.155
+
+/**
+ * Calcula a TIR anual usando o método da bisseção.
+ * Réplica da função `_calcular_tir_anual` do backend.
+ */
+function calcularTirAnual(
+  investimento: number,
+  lucroMensal: number,
+  anos = 5,
+): number | null {
+  if (lucroMensal <= 0 || investimento <= 0) return null
+  const fluxoAnual = lucroMensal * 12
+
+  let low = 0.0
+  let high = 2.0 // TIR > 200% é improvável
+  let mid = 0.0
+
+  for (let i = 0; i < 50; i++) {
+    mid = (low + high) / 2
+    let vpl = -investimento
+    for (let ano = 1; ano <= anos; ano++) {
+      vpl += fluxoAnual / Math.pow(1 + mid, ano)
+    }
+    if (Math.abs(vpl) < 1.0) return mid
+    if (vpl > 0) low = mid
+    else high = mid
+  }
+  return mid
+}
+
+/**
+ * Estima o custo da água, que escala com o número de visitas.
+ * Réplica da função `custo_agua_mensal` do backend.
+ */
+function calcularCustoAgua(
+  area_m2: number,
+  agua_por_m2_base: number,
+  matriculas: number,
+  frequencia_semanal: number,
+): number {
+  const piso = area_m2 * agua_por_m2_base
+  const visitasMes = matriculas * frequencia_semanal * 4.345
+  const consumo_m3 = visitasMes * 0.013 // 13 L/visita
+  const variavel = consumo_m3 * 15.0 // R$ 15/m³
+  return Math.max(piso, variavel)
+}
+
+/**
+ * Estima o custo do sistema de gestão, que escala com o número de alunos.
+ * Réplica da função `custo_sistema_gestao` do backend.
+ */
+function calcularCustoSistema(
+  base_mensal: number,
+  matriculas: number,
+): number {
+  // Contratos de ERP sobem de preço acima de 1500 alunos
+  return base_mensal * (matriculas > 1500 ? 1.5 : 1.0)
+}
+
 const CUSTO_CAPITAL_ANUAL = 0.12
 
 export interface CenarioAjustado extends CenarioJSON {
@@ -45,10 +106,12 @@ export interface CenarioAjustado extends CenarioJSON {
  * Aplica o override de equipamentos e cascateia downstream.
  *
  * @param cenario cenário emitido pelo A4 (pode ser low/mid/premium)
+ * @param area_m2 A área do imóvel, que não faz parte do objeto de cenário individual.
  * @param equipamentosTotalReal valor médio da faixa real do kit (com desconto)
  */
 export function recalcularCenarioComKit(
   cenario: CenarioJSON | undefined,
+  area_m2: number | null | undefined,
   equipamentosTotalReal: number | null | undefined,
 ): CenarioAjustado | undefined {
   if (!cenario) return undefined
@@ -99,19 +162,31 @@ export function recalcularCenarioComKit(
   const manutencaoNova = capexTotalNovo * MANUTENCAO_PCT_CAPEX_MES
   const seguroNovo = capexTotalNovo * SEGURO_PCT_CAPEX_MES
 
+  const matriculasRealista = cenario.matriculas?.realista?.valor ?? 0
+  const aguaNova = calcularCustoAgua(
+    area_m2 ?? 0,
+    custosDetOriginal.agua / (area_m2 || 1), // Extrai a base R$/m²
+    matriculasRealista,
+    cenario.frequencia_semanal_aluno ?? 2.0,
+  )
+  const sistemaGestaoNovo = calcularCustoSistema(
+    800, // Valor base do parâmetro
+    matriculasRealista,
+  )
+
   // ── 3. Custos fixos total recalculado ────────────────────────
   // Mantém todos outros custos, substitui só manutencao + seguro
   const custosFixosTotalNovo =
     custosDetOriginal.aluguel +
     custosDetOriginal.condominio +
     custosDetOriginal.iptu +
-    custosDetOriginal.energia +
-    custosDetOriginal.agua +
+    custosDetOriginal.energia + // Energia não muda significativamente com o kit
+    aguaNova +
     custosDetOriginal.internet +
     custosDetOriginal.folha +
     manutencaoNova +
     custosDetOriginal.contabilidade +
-    custosDetOriginal.sistema_gestao +
+    sistemaGestaoNovo +
     seguroNovo +
     custosDetOriginal.outros
 
@@ -119,13 +194,23 @@ export function recalcularCenarioComKit(
   const marketingMensal = cenario.marketing_mensal ?? 0
   const custosTotaisNovo = custosFixosTotalNovo + marketingMensal
 
-  // ── 5. Resultado ─────────────────────────────────────────────
-  // Motor fiscal v1.3: lucro é LÍQUIDO do Simples. Tributos = receita ×
-  // alíquota (a receita não muda no recálculo do kit, então o valor do motor
-  // vale). Runs antigos sem o campo continuam pré-imposto (?? 0).
-  const tributosMensal = cenario.tributos_mensal ?? 0
+  // ── 5. Resultado (com motor fiscal) ──────────────────────────
+  // Recalcula o Fator R e os tributos, pois a folha pode ter mudado
+  // implicitamente via custos de manutenção/seguro.
+  const receitaMensal = cenario.receita_mensal ?? 0
+  const folha = custosDetOriginal.folha ?? 0
+  const fatorR = receitaMensal > 0 ? folha / receitaMensal : 0
+  const anexoSimples = fatorR >= FATOR_R_CORTE_FOLHA ? 'III' : 'V'
+  const aliquotaTributos =
+    anexoSimples === 'III'
+      ? ALIQUOTA_SIMPLES_ANEXO_III
+      : ALIQUOTA_SIMPLES_ANEXO_V
+
+  const tributosMensal = receitaMensal * aliquotaTributos
+
+  // Lucro é LÍQUIDO de impostos
   const lucroMensalNovo =
-    cenario.receita_mensal - custosTotaisNovo - tributosMensal
+    receitaMensal - custosTotaisNovo - tributosMensal
   const margemPctNovo =
     cenario.receita_mensal > 0
       ? (lucroMensalNovo / cenario.receita_mensal) * 100
@@ -139,16 +224,12 @@ export function recalcularCenarioComKit(
       ? Math.ceil(investimentoTotalNovo / lucroMensalNovo)
       : 999
 
-  // ── 7. TIR aproximada (fluxo linear simplificado) ────────────
-  // Pra TIR exata precisaria do fluxo mensal de 60 meses; aqui
-  // aproximamos por (lucro_anual / investimento) − custo_capital
+  // ── 7. TIR e VPL (réplica do backend) ────────────────────────
   const lucroAnual = lucroMensalNovo * 12
-  const tirAnualPctNovo =
-    investimentoTotalNovo > 0
-      ? ((lucroAnual / investimentoTotalNovo) * 100) - CUSTO_CAPITAL_ANUAL * 100
-      : null
+  const tirAnual = calcularTirAnual(investimentoTotalNovo, lucroMensalNovo)
+  const tirAnualPctNovo = tirAnual !== null ? tirAnual * 100 : null
 
-  // ── 8. VPL aproximado (5 anos a 12% a.a.) ────────────────────
+  // VPL para 5 anos, replicando _calcular_vpl
   // VPL = Σ (lucro_anual / (1+r)^t) - investimento, t=1..5
   let vplNovo = -investimentoTotalNovo
   for (let t = 1; t <= 5; t++) {
@@ -168,9 +249,16 @@ export function recalcularCenarioComKit(
       ...custosDetOriginal,
       manutencao: manutencaoNova,
       seguro: seguroNovo,
+      agua: aguaNova,
+      sistema_gestao: sistemaGestaoNovo,
     },
     custos_fixos_total: custosFixosTotalNovo,
     custos_totais: custosTotaisNovo,
+    // Campos fiscais recalculados
+    fator_r: fatorR,
+    anexo_simples: anexoSimples,
+    aliquota_tributos: aliquotaTributos,
+    tributos_mensal: tributosMensal,
     lucro_mensal_estimado: lucroMensalNovo,
     margem_percentual: margemPctNovo,
     capital_giro: capitalGiroNovo,
@@ -196,16 +284,18 @@ export function recalcularCenarioComKit(
  */
 export function recalcularCenariosComKit(
   cenarios: Record<string, CenarioJSON> | undefined,
+  area_m2: number | null | undefined,
   /** Map { 'low': X, 'mid': Y, 'premium': Z } com totais por modelo. */
   equipamentosPorModelo: Record<string, number | null | undefined> | null | undefined,
 ): Record<string, CenarioAjustado> | undefined {
   if (!cenarios) return undefined
   if (!equipamentosPorModelo) return undefined
+  if (!area_m2) return cenarios
 
   const out: Record<string, CenarioAjustado> = {}
   for (const [key, cenario] of Object.entries(cenarios)) {
     const valor = equipamentosPorModelo[key]
-    const recalc = recalcularCenarioComKit(cenario, valor)
+    const recalc = recalcularCenarioComKit(cenario, area_m2, valor)
     if (recalc) out[key] = recalc
   }
   return out
