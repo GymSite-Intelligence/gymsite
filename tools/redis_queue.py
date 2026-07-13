@@ -105,29 +105,25 @@ async def gymsite_worker(job: dict) -> None:
         logger.info(f"Pipeline {relatorio_id} concluído via RedisQueue")
 
     elif job_type == "site_conversar":
-        # Turno do chat de degustação (N3). Dois motores atrás da flag SITE_AGENT_ENGINE
-        # (Fase 3a da migração ADK): "adk" → agents_site.root_agent; "legacy" (default) →
-        # conversar(modo_site). Ambos persistem user+assistant em project_messages → o
-        # polling do front funciona igual. Rollback = trocar a env var, sem deploy.
-        engine = os.getenv("SITE_AGENT_ENGINE", "legacy").strip().lower()
-        if engine == "adk":
-            from agents_site.runner import run_site_agent_adk
-            await run_site_agent_adk(
-                projeto_id=job["projeto_id"],
-                mensagem=job["mensagem"],
-                agente=job.get("agente", "degustacao"),
-            )
-        else:
-            from services.consultor.consultor_engine import conversar
-            await conversar(
-                mensagem=job["mensagem"],
-                usuario_id=job["usuario_id"],
-                projeto_id=job["projeto_id"],
-                modo_site=True,
-                agente=job.get("agente", "degustacao"),
-            )
+        from agents_site.runner import run_site_agent_adk
+        await run_site_agent_adk(
+            projeto_id=job["projeto_id"],
+            mensagem=job["mensagem"],
+            agente=job.get("agente", "degustacao"),
+        )
+        logger.info("site_conversar %s concluído via RedisQueue (adk)", job.get("projeto_id"))
+
+    elif job_type == "consultor_conversar":
+        from agents_site.runner import run_consultor_adk
+        await run_consultor_adk(
+            projeto_id=job["projeto_id"],
+            mensagem=job["mensagem"],
+            usuario_id=job["usuario_id"],
+            agente=job.get("agente", "degustacao"),
+        )
         logger.info(
-            f"site_conversar {job.get('projeto_id')} concluído via RedisQueue (engine={engine})"
+            "consultor_conversar %s concluído via RedisQueue (adk)",
+            job.get("projeto_id"),
         )
 
     elif job_type == "prospeccao":

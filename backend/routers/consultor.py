@@ -5,15 +5,16 @@ Cole estas rotas no api.py existente, abaixo dos endpoints /api/assistente/*.
 
 Prefixo: /api/consultor/
 """
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
-from backend.schemas.citacao import Citation
-from services.consultor.consultor_engine import conversar, disparar_relatorio_formal
+from agents_site.catalog import AGENTES_VALIDOS, id_publico
+from services.consultor.consultor_engine import disparar_relatorio_formal
 from services.consultor.project_state import (
     listar_projetos,
     carregar_projeto,
+    criar_projeto,
     arquivar_projeto,
     atualizar_status,
     _row_to_state,
@@ -43,49 +44,104 @@ def _auth_user_id(request: Request) -> str:
 class ConversarInput(BaseModel):
     mensagem: str = Field(..., min_length=1, max_length=4000)
     projeto_id: Optional[str] = None
+    agente: Optional[str] = None
+
+
+class ConversarEnqueueOutput(BaseModel):
+    projeto_id: str
+    status: str = "analisando"
+
+
 
 class RelatorioInput(BaseModel):
     incluir_secoes: list[str] = Field(default_factory=list)
 
-class ConversarOutput(BaseModel):
-    projeto_id: str
-    mensagem: str
-    status: str
-    acoes_executadas: list[dict]
-    sugestoes: list[str]
-    pode_gerar_relatorio: bool
-    dados_faltantes: list[str]
-    projeto: dict
-    citacoes: Optional[List[Citation]] = None
-
 
 # ─── POST /api/consultor/conversar ────────────────────────────────────────────
 
-@router_consultor.post("/conversar", response_model=ConversarOutput)
+@router_consultor.post("/conversar", response_model=ConversarEnqueueOutput)
 async def consultor_conversar(
     body: ConversarInput,
     request: Request,
+    background: BackgroundTasks,
 ):
-    """
-    Ponto de entrada principal do Consultor V2.
-    Recebe mensagem + projeto_id opcional.
-    Retorna resposta conversacional + estado atualizado do projeto.
-    """
+    """Enfileira turno ADK. Resposta vem por GET /projetos/{id}/mensagens."""
+    from api import _enqueue_ou_background
+
+    user_id = _auth_user_id(request)
+    agente = body.agente or "degustacao"
+    if agente not in AGENTES_VALIDOS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Agente inválido.")
+
+    try:
+        if body.projeto_id:
+            await carregar_projeto(body.projeto_id, user_id)
+            projeto_id = body.projeto_id
+        else:
+            projeto = await criar_projeto(user_id)
+            projeto_id = projeto.id
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+
+    await _enqueue_ou_background(
+        {
+            "type": "consultor_conversar",
+            "projeto_id": projeto_id,
+            "mensagem": body.mensagem,
+            "usuario_id": user_id,
+            "agente": agente,
+        },
+        background,
+    )
+    return ConversarEnqueueOutput(projeto_id=projeto_id, status="analisando")
+
+
+# ─── GET /api/consultor/projetos/{projeto_id}/mensagens ───────────────────────
+
+@router_consultor.get("/projetos/{projeto_id}/mensagens")
+async def consultor_mensagens(
+    projeto_id: str,
+    request: Request,
+    desde: Optional[str] = None,
+):
+    """Polling do chat logado — mensagens após `desde` (ISO) + estado do projeto."""
     user_id = _auth_user_id(request)
     try:
-        resultado = await conversar(
-            mensagem=body.mensagem,
-            usuario_id=user_id,
-            projeto_id=body.projeto_id,
-        )
-        return resultado
+        projeto = await carregar_projeto(projeto_id, user_id)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro no consultor: {type(e).__name__}: {e}",
-        )
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    db = _client()
+    from tools.db_schema import tbl
+
+    q = (
+        tbl(db, "project_messages")
+        .select("role, content, created_at, agente, tool_calls")
+        .eq("projeto_id", projeto_id)
+    )
+    if desde:
+        q = q.gt("created_at", desde)
+    msgs = q.order("created_at").execute().data or []
+    for m in msgs:
+        m["agente"] = id_publico(m.get("agente"))
+
+    pesq = projeto.pesquisas_realizadas or {}
+    pode_relatorio = bool(
+        (projeto.localizacao or {}).get("cidade")
+        and (projeto.localizacao or {}).get("bairro")
+        and (pesq.get("concorrentes") or pesq.get("investimento"))
+    )
+
+    return {
+        "mensagens": msgs,
+        "status": projeto.status,
+        "pode_gerar_relatorio": pode_relatorio,
+        "localizacao": projeto.localizacao or {},
+        "modelo_negocio": projeto.modelo_negocio or {},
+        "pesquisas_realizadas": pesq,
+        "custo_brl_ate_agora": projeto.custo_brl_ate_agora,
+        "relatorio_id": projeto.relatorio_id,
+    }
 
 
 # ─── GET /api/consultor/projetos ──────────────────────────────────────────────
@@ -150,6 +206,7 @@ async def detalhe_projeto(
                 "role": m["role"],
                 "content": m["content"],
                 "tool_calls": m.get("tool_calls"),
+                "agente": id_publico(m.get("agente")),
                 "created_at": m["created_at"],
             }
             for m in mensagens

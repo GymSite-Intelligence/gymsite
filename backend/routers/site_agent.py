@@ -350,12 +350,8 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
 
 @router_site_agent.post("/conversar")
 async def conversar_site(data: ConversarSiteInput, request: Request, background: BackgroundTasks):
-    """Chat de degustação ASSÍNCRONO. O engine (modo_site) leva ~30-90s (Vertex +
-    SearchAPI + rounds) — rodar inline estourava o timeout do proxy (524) / fetch.
-    Então o POST só: Turnstile (1ª msg) + cria o projeto anon (rápido) + ENFILEIRA
-    o turno, e responde NA HORA com {projeto_id, status:"analisando"}. O worker roda
-    `conversar(modo_site=True)` (que persiste user+assistant em project_messages). O
-    front faz polling em GET /conversar/{projeto_id}/mensagens.
+    """Chat de degustação ASSÍNCRONO via ADK (`agents_site`). POST enfileira o turno;
+    resposta vem por GET /conversar/{projeto_id}/mensagens.
 
     NOTA: cap de novas sessões por IP/dia ainda não enforced (Turnstile + K=2 +
     entitlement 1/email no /analise limitam o custo). Follow-up.
@@ -542,7 +538,9 @@ def _extras_teaser(out: dict, bairro_analisado: str | None) -> dict:
         entrantes_total = (
             entrantes.get("total")
             or entrantes.get("count")
-            or (len(entrantes.get("empresas")) if isinstance(entrantes.get("empresas"), list) else None)
+            or (
+                len(empresas) if (empresas := entrantes.get("empresas")) and isinstance(empresas, list) else None
+            )
         )
     elif isinstance(entrantes, list):
         entrantes_total = len(entrantes)

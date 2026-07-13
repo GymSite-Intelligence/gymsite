@@ -1,6 +1,8 @@
 import { User } from 'lucide-react'
 import { renderRich } from '@/components/chat/render-rich'
 import { CitationStamp } from '@/components/chat/CitationStamp'
+import { CabecalhoHandoff } from '@/components/chat/CabecalhoHandoff'
+import { ConsultorAgentAvatar } from '@/components/chat/ConsultorAgentAvatar'
 import { especialistaDaMensagem, type Especialista } from '@/config/consultor-agentes'
 import type { ChatMessageData } from '@/components/chat/ChatMessage'
 
@@ -30,28 +32,17 @@ export function ConsultorMessage({ msg, especialistaAnterior }: ConsultorMessage
     )
   }
 
-  const especialista = especialistaDaMensagem(msg.acoes)
-  const Icone = especialista.Icone
+  const especialista = especialistaDaMensagem(msg.acoes, msg.agenteId)
   const handoff = especialistaAnterior && especialistaAnterior.id !== especialista.id
 
   return (
     <div className="flex justify-start">
       <div className="max-w-[85%]">
         {handoff && (
-          <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="text-primary" aria-hidden>
-              ↝
-            </span>
-            <span>
-              <span className="font-medium text-foreground">{especialistaAnterior!.nome}</span> passou o bastão pro{' '}
-              <span className="font-medium text-foreground">{especialista.nome}</span>
-            </span>
-          </div>
+          <CabecalhoHandoff anterior={especialistaAnterior!} atual={especialista} />
         )}
         <div className="mb-1 flex items-center gap-1.5 text-xs">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 p-0.5">
-            <Icone className="h-full w-full object-contain" />
-          </span>
+          <ConsultorAgentAvatar Icone={especialista.Icone} isActive size="inline" />
           <span className="font-medium text-foreground">{especialista.nome}</span>
           <span className="text-muted-foreground">· {especialista.especialidade}</span>
         </div>

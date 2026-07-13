@@ -59,7 +59,21 @@ def test_extrair_resposta_ignora_eco_do_user():
     assert _extrair_resposta(_ev(role="user", textos=("minha pergunta",))) == ""
 
 
+def test_coletar_acoes_extrai_function_call():
+    from agents_site.runner import _coletar_acoes
+
+    ev = SimpleNamespace(
+        content=SimpleNamespace(
+            parts=[SimpleNamespace(function_call=SimpleNamespace(name="buscar_concorrentes"))]
+        )
+    )
+    acoes = _coletar_acoes(ev)
+    assert len(acoes) == 1
+    assert acoes[0]["ferramenta"] == "buscar_concorrentes"
+
+
 def test_extrair_resposta_evento_sem_content():
     from agents_site.runner import _extrair_resposta
 
     assert _extrair_resposta(SimpleNamespace(partial=False, content=None)) == ""
+

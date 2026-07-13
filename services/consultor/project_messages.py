@@ -64,7 +64,7 @@ async def carregar_historico(
     db = _client()
     result = await asyncio.to_thread(
         lambda: tbl(db, "project_messages")
-            .select("id,role,content,tool_calls,tool_results,created_at")
+            .select("id,role,content,tool_calls,tool_results,created_at,agente")
             .eq("projeto_id", projeto_id)
             .order("created_at", desc=True)
             .limit(limite)

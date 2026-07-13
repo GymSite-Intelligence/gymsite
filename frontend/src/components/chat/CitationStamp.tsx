@@ -1,4 +1,7 @@
-import { Stamp, Info, ExternalLink } from 'lucide-react'
+import { AlertCircle, ExternalLink, FileText, Stamp } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 export interface CarimboCitacao {
   valor?: string | null
@@ -27,59 +30,73 @@ function normalizar(c: CarimboCitacao): CarimboCompleto | null {
   return { valor, base, fonte, janela, url: linkavel }
 }
 
-function Parte({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5" role="group" aria-label={label}>
-      <dt className="text-[10px] font-semibold uppercase tracking-wide text-primary/80">{label}</dt>
-      <dd className="text-xs leading-snug text-foreground">{children}</dd>
-    </div>
-  )
-}
-
 export function CitationStamp({ citacao }: { citacao: CarimboCitacao }) {
   const dados = normalizar(citacao)
 
   if (!dados) {
     return (
-      <div
+      <Card
         role="note"
-        className="mt-2 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+        size="sm"
+        className="mt-2 border-l-4 border-l-muted-foreground/40 bg-muted/30 py-0 ring-border/60"
       >
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span>Sem a fonte completa — confirme com um especialista/órgão local antes de usar este número.</span>
-      </div>
+        <CardContent className="flex items-start gap-2 py-3 text-xs text-muted-foreground">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>
+            Sem a fonte completa — confirme com um especialista ou órgão local antes de usar este
+            número.
+          </span>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <figure
+    <Card
       aria-label="Fonte da exigência citada"
-      className="mt-2 overflow-hidden rounded-lg border border-primary/30 bg-primary/5"
+      size="sm"
+      className={cn(
+        'mt-2 border-l-4 border-l-primary bg-primary/5 py-0 shadow-sm ring-primary/20',
+      )}
     >
-      <figcaption className="flex items-center gap-1.5 border-b border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary">
-        <Stamp className="h-3.5 w-3.5" aria-hidden />
-        Carimbo da fonte
-      </figcaption>
-      <dl className="grid grid-cols-2 gap-3 px-3 py-2.5">
-        <Parte label="Valor">{dados.valor}</Parte>
-        <Parte label="Base">{dados.base}</Parte>
-        <Parte label="Fonte">
+      <CardContent className="space-y-3 py-3">
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+          <Stamp className="h-3.5 w-3.5" aria-hidden />
+          Carimbo da fonte
+        </div>
+
+        <div>
+          <p className="text-lg font-bold tracking-tight text-foreground">{dados.valor}</p>
+          <p className="text-sm text-muted-foreground">{dados.base}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
           {dados.url ? (
             <a
               href={dados.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-sm font-medium text-primary underline underline-offset-2 outline-none hover:text-primary/80 focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-4xl"
             >
-              {dados.fonte}
-              <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
+              <Badge variant="default" className="gap-1">
+                <ExternalLink className="h-3 w-3" aria-hidden />
+                {dados.fonte}
+              </Badge>
             </a>
           ) : (
-            dados.fonte
+            <Badge variant="secondary" className="gap-1">
+              <FileText className="h-3 w-3" aria-hidden />
+              {dados.fonte}
+            </Badge>
           )}
-        </Parte>
-        <Parte label="Janela">{dados.janela}</Parte>
-      </dl>
-    </figure>
+          <Badge variant="outline">{dados.janela}</Badge>
+        </div>
+
+        <div className="flex items-start gap-2 border-t border-border/60 pt-2 text-[11px] italic text-muted-foreground">
+          <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+          <p>Confirme com um especialista local antes de iniciar o projeto.</p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

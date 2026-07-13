@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { User, Copy, Check, RotateCcw, FileText, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { AgentAvatar } from '@/components/chat/AgentAvatar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
@@ -24,6 +25,8 @@ export interface ChatMessageData {
   interacaoId?: string
   /** ferramentas que rodaram no turno (acoes_executadas) — handoff vive na sidebar do consultor */
   acoes?: ChatAcao[]
+  /** id público do agente ADK (poll) — prioridade sobre inferência por tool */
+  agenteId?: string | null
   citacoes?: CarimboCitacao[]
 }
 
@@ -83,17 +86,15 @@ export function ChatMessage({ msg, onRegenerate, onFeedback }: ChatMessageProps)
         isUser ? 'bg-background' : 'bg-muted/30'
       }`}
     >
-      <Avatar className="mt-0.5 h-7 w-7 shrink-0 sm:h-8 sm:w-8">
-        {isUser ? (
+      {isUser ? (
+        <Avatar className="mt-0.5 h-7 w-7 shrink-0 sm:h-8 sm:w-8">
           <AvatarFallback className="bg-primary text-primary-foreground text-xs">
             <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </AvatarFallback>
-        ) : (
-          <AvatarFallback className="overflow-hidden bg-primary/10 p-0.5">
-            <Mascote className="h-full w-full object-contain" />
-          </AvatarFallback>
-        )}
-      </Avatar>
+        </Avatar>
+      ) : (
+        <AgentAvatar Icone={Mascote} size="md" className="mt-0.5" />
+      )}
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
