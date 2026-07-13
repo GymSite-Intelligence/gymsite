@@ -10,6 +10,12 @@ Fluxo:
                    org ANON, access_token) → enfileira o MESMO pipeline ADK.
   GET  /analise/{id}?token=  → polling; quando status='done' devolve o SUBSET free.
 
+Aluguel no mini-relatório (`aluguel_m2` em `_extras_teaser`) vem do A4 Tier 0 MRLR
+(`tools/aluguel_mrlr.py`), não de SearchAPI. Inputs mínimos MRLR no stub:
+  cidade + bairro (lookup `renda_bairro` → `municipio_pib`); área via default
+  area_m2_min/max 300–1500 preset "m" (visitante não informa área hoje).
+Ver `.agent/rules/conferencia-fontes-pipeline.md` §3.
+
 Segurança: endpoint público (sem JWT). Escrita/leitura via backend service_role
 (RLS bloqueia anon). A leitura do resultado exige o access_token não-adivinhável.
 Reusa, via import LAZY (evita circular com api.py): create_relatorio_stub,

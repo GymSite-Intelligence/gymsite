@@ -58,7 +58,7 @@ def compress_from_cache(data: dict) -> str:
     if al.get("n_validos") is not None:
         faixa = al.get("faixa_rs_m2") or {}
         lines.append(
-            "Aluguel comercial (portais): n={} conf={} p25/med/p75={}/{}/{} R$/m2".format(
+            "Aluguel comercial (portais LEGADO cache): n={} conf={} p25/med/p75={}/{}/{} R$/m2".format(
                 al.get("n_validos"),
                 al.get("confianca"),
                 faixa.get("p25"),
@@ -66,6 +66,8 @@ def compress_from_cache(data: dict) -> str:
                 faixa.get("p75"),
             )
         )
+    else:
+        lines.append("Aluguel viabilidade: A4 MRLR no relatório (bundle sem portais).")
     if bcb and bcb.get("status") != "erro":
         snippet = json.dumps(bcb, ensure_ascii=False)
         lines.append("BCB: " + snippet[:400])

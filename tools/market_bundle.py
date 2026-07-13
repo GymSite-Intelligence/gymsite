@@ -15,11 +15,9 @@ ROOT = Path(__file__).resolve().parent.parent
 BUNDLE_DIR = ROOT / "data" / "market_bundles"
 BUNDLE_MAX_AGE_DAYS = 7
 
-# Campos da "trilha viva" (trilha 3 da arquitetura): competição e aluguel são
-# resolvidos NO RELATÓRIO (A3 competitor intel + enrichment OSM/portais), não no
-# batch semanal. Ausência no bundle batch é ESPERADA — não degrada a trilha feliz
-# nem justifica Deep Research (doc: nunca usar DR para competição/aluguel).
-LIVE_TRAIL_FIELDS = frozenset({"competicao_osm", "aluguel_medio_m2"})
+# Campos da "trilha viva": competição no relatório (A3). Aluguel viabilidade = A4 MRLR
+# (nunca mais `aluguel_portais` no bundle batch — ver tools/9_obsolete/).
+LIVE_TRAIL_FIELDS = frozenset({"competicao_osm"})
 
 
 def _slug(cidade: str, bairro: str, uf: str) -> str:
@@ -140,16 +138,12 @@ def compute_bundle_stale(bundle: dict[str, Any]) -> tuple[bool, list[str]]:
 def live_trail_pending(bundle: dict[str, Any]) -> list[str]:
     """
     Campos de trilha viva ainda não preenchidos no bundle batch — informativo.
-    O relatório os resolve via A3 (competição) e enrichment (aluguel/portais);
-    NÃO disparam stale nem Deep Research.
+    Competição resolve no relatório (A3). Aluguel viabilidade = A4 MRLR (fora do bundle).
     """
     pend: list[str] = []
     comp = bundle.get("competicao_local") or {}
     if comp.get("status") != "ok":
         pend.append("competicao_osm")
-    aluguel = bundle.get("aluguel_portais") or {}
-    if not aluguel.get("n_validos"):
-        pend.append("aluguel_medio_m2")
     return pend
 
 
@@ -172,7 +166,6 @@ def bundle_to_briefing_md(bundle: dict[str, Any]) -> str:
     demo_b = (bundle.get("demografia") or {}).get("bairro") or {}
     sector = bundle.get("sector_benchmarks") or {}
     comp = bundle.get("competicao_local") or {}
-    aluguel = bundle.get("aluguel_portais") or {}
     bcb = bundle.get("bcb_imobiliario") or {}
     missing = bundle.get("missing_fields") or []
 
@@ -201,15 +194,11 @@ def bundle_to_briefing_md(bundle: dict[str, Any]) -> str:
     else:
         lines.append("- dados_nao_disponiveis (OSM)")
 
-    lines.extend(["", "## Aluguel (portais)"])
-    if aluguel.get("n_validos"):
-        med = aluguel.get("mediana_r_m2") or aluguel.get("p50_r_m2")
-        lines.append(
-            f"- Mediana R$/m²: {med}; n={aluguel.get('n_validos')}; "
-            f"confiança: {aluguel.get('confianca', 'n/d')}"
-        )
-    else:
-        lines.append("- dados_nao_disponiveis")
+    lines.extend([
+        "",
+        "## Aluguel viabilidade",
+        "- Resolvido no relatório via A4 MRLR (determinístico) — bundle batch não carrega portais.",
+    ])
 
     lines.extend(["", "## Macro (BCB)"])
     if bcb.get("ok"):

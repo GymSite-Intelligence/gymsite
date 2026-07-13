@@ -145,10 +145,6 @@ def build_bundle(
     if demografia.get("bairro", {}).get("renda_media") is None and (bairro or "").strip():
         missing.append("renda_media_bairro")
 
-    aluguel = enrichment.get("aluguel_portais") or {}
-    if not aluguel.get("n_validos"):
-        missing.append("aluguel_medio_m2")
-
     comp = enrichment.get("competicao_local") or {}
     if comp.get("status") != "ok":
         missing.append("competicao_osm")
@@ -173,7 +169,6 @@ def build_bundle(
         "demografia": demografia,
         "sector_benchmarks": obter_sector_listed(),
         "competicao_local": enrichment.get("competicao_local"),
-        "aluguel_portais": enrichment.get("aluguel_portais"),
         "bcb_imobiliario": enrichment.get("bcb_imobiliario"),
         "capex_indices": _capex_indices_block(uf),
         "franquias_referencia": bloco_para_bundle(),

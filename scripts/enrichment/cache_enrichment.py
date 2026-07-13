@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import hashlib
 import json
 import sys
@@ -37,17 +36,6 @@ def _cache_key(cidade: str, bairro: str, uf: str, area_min: int, area_max: int) 
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
-async def _aluguel(cidade: str, uf: str, area_min: int, area_max: int) -> dict:
-    from tools.aluguel_municipio_portais import pesquisar_aluguel_municipio
-
-    try:
-        return await pesquisar_aluguel_municipio(
-            cidade, uf, area_min, area_max, use_playwright=None
-        )
-    except Exception as exc:
-        return {"status": "erro", "motivo": str(exc)}
-
-
 def _bcb_resumo(cidade: str, uf: str) -> dict:
     try:
         from tools.bcb_imobiliario_olinda import extrair_resumo_imobiliario
@@ -67,7 +55,6 @@ def build_cache(
 
     key = _cache_key(cidade, bairro, uf, area_min, area_max)
     competicao = fatos_competicao_local(cidade=cidade, bairro=bairro, uf=uf)
-    aluguel = asyncio.run(_aluguel(cidade, uf, area_min, area_max))
     bcb = _bcb_resumo(cidade, uf)
 
     out: dict = {
@@ -76,7 +63,6 @@ def build_cache(
         "local": {"cidade": cidade, "bairro": bairro or None, "uf": uf},
         "parametros": {"area_min_m2": area_min, "area_max_m2": area_max},
         "competicao_local": competicao,
-        "aluguel_portais": aluguel,
         "bcb_imobiliario": bcb,
     }
     if competicao.get("status") == "ok":
@@ -103,8 +89,6 @@ def main() -> int:
     comp = data.get("competicao_local") or {}
     if comp.get("status") == "ok":
         print("competicao_unidades:", comp.get("total_unidades_osm", 0))
-    al = data.get("aluguel_portais") or {}
-    print("aluguel_n_validos:", al.get("n_validos"), "confianca:", al.get("confianca"))
     return 0
 
 

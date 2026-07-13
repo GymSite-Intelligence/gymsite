@@ -15,7 +15,6 @@ _pipeline_ctx: ContextVar[dict[str, Any] | None] = ContextVar("pipeline_enrichme
 
 SKIP_TOOL_NAMES = (
     "local_market_facts",
-    "aluguel_municipio_portais",
     "bcb_imobiliario_olinda",
 )
 
@@ -120,16 +119,6 @@ def cached_competicao_local() -> dict[str, Any] | None:
     comp = cache.get("competicao_local")
     if isinstance(comp, dict) and comp.get("status") == "ok":
         return dict(comp)
-    return None
-
-
-def cached_aluguel_portais() -> dict[str, Any] | None:
-    if not should_skip_tool("aluguel_municipio_portais"):
-        return None
-    cache = (get_pipeline_enrichment_context() or {}).get("enrichment_cache") or {}
-    al = cache.get("aluguel_portais")
-    if isinstance(al, dict) and al.get("n_validos") is not None:
-        return dict(al)
     return None
 
 

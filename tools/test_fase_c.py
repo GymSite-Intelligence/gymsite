@@ -65,7 +65,7 @@ def test_compute_bundle_stale_degraded():
 
 
 def test_competicao_ausente_nao_marca_stale():
-    """Trilha viva: competição/aluguel faltando NÃO degrada bundle batch."""
+    """Trilha viva: competição faltando NÃO degrada bundle batch (aluguel = A4 MRLR)."""
     bundle = {
         "gerado_em": "2099-01-01T00:00:00+00:00",
         "sector_benchmarks": {
@@ -78,7 +78,7 @@ def test_competicao_ausente_nao_marca_stale():
     stale, reasons = compute_bundle_stale(bundle)
     assert stale is False
     assert reasons == []
-    assert set(live_trail_pending(bundle)) == {"competicao_osm", "aluguel_medio_m2"}
+    assert set(live_trail_pending(bundle)) == {"competicao_osm"}
 
 
 def test_inject_trilha_feliz_pula_dr_com_competicao_pendente(tmp_path, monkeypatch):

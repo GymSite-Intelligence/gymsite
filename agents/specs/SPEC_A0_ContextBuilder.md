@@ -43,7 +43,7 @@ O valor é um JSON com chave de envelope `"market_context"` contendo os seguinte
 | `bairro` | `str` | Bairro analisado |
 | `uf` | `str` | UF (2 letras) |
 | `ticket_medio_mercado` | `str` | Ticket médio de academia na cidade/bairro |
-| `aluguel_medio_m2` | `str` | Aluguel médio por m² no bairro |
+| `aluguel_medio_m2` | `str` | Referência batch (`bundle.aluguel_portais`) se existir — **não** substitui A4 MRLR |
 | `renda_media_bairro` | `str` \| `"dados_nao_disponiveis"` | Renda do bairro (frequentemente indisponível) |
 | `faixa_etaria_predominante` | `str` | Faixa demográfica predominante |
 | `genero_alvo` | `str` | Default `"misto"` |
@@ -83,7 +83,7 @@ O term "estoque" é proibido em toda saída. Usar "parque ativo" para unidades n
 `carregar_market_bundle(cidade, bairro, uf)` é chamado **primeiro**. Se retornar briefing com marcador `<!-- market_bundle` (sem `status=missing`), o bundle é usado como `briefing_completo_md` e `rodar_deep_research` **não** é chamado.
 
 **RN-A0-04 — Condição de acionamento do Deep Research**
-Deep Research (`rodar_deep_research` ou `rodar_kimi_research`) só é chamado se o bundle tiver `status=missing` (inexistente) ou `missing_fields` contiver lacuna substantiva: `aluguel_medio_m2`, `ticket_medio` ou `tendencia`. **Exceção**: quando os únicos campos ausentes são `renda_media_bairro` e/ou `competicao_osm`, Deep Research **não** é chamado — ele comprovadamente não entrega renda por bairro e a concorrência real vem do A3a (Places).
+Deep Research (`rodar_deep_research` ou `rodar_kimi_research`) só é chamado se o bundle tiver `status=missing` (inexistente) ou `missing_fields` contiver lacuna substantiva: `ticket_medio` ou `tendencia`. **`aluguel_medio_m2` em `LIVE_TRAIL_FIELDS` não dispara DR** — aluguel viabilidade resolve no A4 MRLR. **Exceção**: quando os únicos campos ausentes são `renda_media_bairro`, `competicao_osm` e/ou `aluguel_medio_m2`, Deep Research **não** é chamado — concorrência real vem do A3a; aluguel do A4 MRLR.
 
 **RN-A0-05 — Fonte de concorrentes**
 `principais_redes_concorrentes` é preenchido **somente** com `redes_detectadas_osm` retornado pela tool `fatos_competicao_local`. Se a tool falhar ou retornar lista vazia, o campo recebe `[]`. É proibido copiar redes do Deep Research para este campo.

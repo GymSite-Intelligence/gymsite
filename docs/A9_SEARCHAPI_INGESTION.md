@@ -8,8 +8,8 @@
 |---|---|---|
 | `instagram_profile` | presença digital, seguidores, frequência de post, engajamento, locais marcados | A3 (competitor intel) |
 | `google_maps_reviews` | reputação: rating, volume, recência, temas de insatisfação | A3 |
-| `google_light` (planos/mensalidade) | faixa de preço praticada no mercado | A4 / A7 |
-| `google_light` (site:olx/vivareal — galpão/loja/salão alugar) | custo de ocupação (R$/m² de aluguel) | A4 |
+| `google_light` (planos/mensalidade) | faixa de preço praticada no mercado | A3b / A7 (qualitativo) |
+| `google_light` (site:olx/vivareal — galpão/loja/salão alugar) | referência ORANGE de ocupação (snippet) | **não** A4 Tier 0 — viabilidade = MRLR |
 
 ## 2. Fluxo de ingestão (3 camadas)
 
@@ -58,9 +58,10 @@ Cada engine tem um adapter (estende o padrão de `pdf/adapters.py`) que extrai u
 | rating_count | — | len(reviews) | — |
 | review_recency | — | max(iso_date) | — |
 | price_band | — | — | regex de mensalidade no snippet |
-| rent_sqm | — | — | regex de aluguel/m² no snippet |
+| rent_sqm | — | — | regex de aluguel/m² no snippet (ORANGE; **não** substitui MRLR Tier 0) |
 
 Preços extraídos de snippet entram como **estimativa** (selo ORANGE), nunca como dado medido.
+**Aluguel de viabilidade (OPEX)** no relatório = `aluguel_deterministico` / MRLR no A4 — ver `.agent/rules/conferencia-fontes-pipeline.md` §2.
 
 ## 5. Camada CANONICAL (já existe: tabela `competidores`)
 

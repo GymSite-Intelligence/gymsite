@@ -191,9 +191,13 @@ def consultar_catalogo_equipamentos(pergunta: str) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def pesquisar_contexto_mercado(cidade: str, bairro: str, uf: str, tipo_negocio: str = "academia") -> dict:
-    """Contexto qualitativo do mercado fitness no bairro: renda, tendências, aluguel médio,
-    parque de academias (CNPJ/RFB), fatos de competição local. Use para "como está o mercado
-    lá", "qual a renda do bairro", "o mercado fitness está crescendo".
+    """Contexto qualitativo do mercado fitness no bairro: renda, tendências, parque CNPJ/RFB,
+    fatos de competição local. Use para "como está o mercado lá", "qual a renda do bairro",
+    "o mercado fitness está crescendo".
+
+    NÃO use para aluguel de viabilidade/OPEX: o bundle pode trazer `aluguel_portais` (referência
+    batch, não decisão). Para "quanto custa o aluguel" / payback / investimento → chame
+    `estimar_investimento` (A4 → MRLR IBAPE-GO determinístico).
 
     Args:
         cidade, bairro, uf: localização (uf = sigla de 2 letras).
@@ -222,7 +226,10 @@ async def pesquisar_contexto_mercado(cidade: str, bairro: str, uf: str, tipo_neg
 async def buscar_pontos_comerciais(cidade: str, bairro: str, uf: str,
                                    area_min_m2: int = 500, area_max_m2: int = 2000) -> dict:
     """Imóveis comerciais e zonas âncora (shoppings, avenidas) adequados a academia no bairro.
-    Retorna candidatos com endereço, área e aluguel estimados, score de localização.
+    Retorna candidatos com endereço, área, score de localização e aluguel DETERMINÍSTICO (MRLR).
+
+    `aluguel_estimado` / `aluguel_unitario_m2` = mesma equação MRLR do A4 (`aluguel_mrlr.py`).
+    `price_raw` do anúncio SearchAPI/portal é só referência do listing — nunca entra na fórmula.
 
     Args:
         cidade, bairro, uf: localização.
@@ -266,8 +273,11 @@ async def estimar_investimento(cidade: str, bairro: str, uf: str, area_m2: float
                                tipo_negocio: str = "academia", tamanho_preset: str = "",
                                genero_alvo: str = "misto") -> dict:
     """Investimento inicial (CAPEX + OPEX) em 3 cenários (low/mid/premium), payback, margem
-    e aluguel de mercado. Use para "quanto custa abrir", "qual o investimento", "payback",
-    "viabilidade financeira".
+    e aluguel via MRLR IBAPE-GO (determinístico — Tier 0 do A4). Use para "quanto custa abrir",
+    "qual o investimento", "payback", "viabilidade financeira", "quanto é o aluguel".
+
+    Aluguel OPEX = `aluguel_deterministico` sobre espelhos `renda_bairro` + `municipio_pib`.
+    Portal/SearchAPI NÃO alimentam a fórmula de viabilidade.
 
     Args:
         cidade, bairro, uf, area_m2: localização e área pretendida.

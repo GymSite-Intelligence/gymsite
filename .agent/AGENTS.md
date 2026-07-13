@@ -198,6 +198,16 @@ from google.adk.runners import Runner  # NUNCA faça isso em tools/
 5. NUNCA mude comportamento + estrutura ao mesmo tempo
 ```
 
+### 6.4 Pipeline e fontes de dados (A0–A9, site, MRLR)
+
+Antes de mudar agentes, macros `tools/*_tools.py`, `agents_site/tools.py` ou `backend/routers/site_agent.py`:
+
+1. **Ler** [`.agent/rules/conferencia-fontes-pipeline.md`](rules/conferencia-fontes-pipeline.md) — documento canônico
+2. **Ler** [`.agent/rules/pipeline-fontes-deterministicas.md`](rules/pipeline-fontes-deterministicas.md)
+3. **Consultar** [`docs/arquitetura/PIPELINE_AGENTES.md`](../docs/arquitetura/PIPELINE_AGENTES.md) §7–§9
+
+**Invariante aluguel:** viabilidade = MRLR Tier 0 no A4 (`aluguel_mrlr.py`). SearchAPI, A7 e `bundle.aluguel_portais` nunca substituem.
+
 ---
 
 ## 7. Convenções de Código
