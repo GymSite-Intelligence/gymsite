@@ -36,7 +36,7 @@ $cloudRunStrip = @(
     "VITE_SUPABASE_ANON_KEY",
     "VITE_USE_MOCKS",
     "VITE_DEV_AS_ADMIN",
-    "CNO_DATA_DIR_HOST",
+    "CNO_DATA_DIR_HOST"
 )
 foreach ($key in $cloudRunStrip) {
     $envDict.Remove($key) | Out-Null
