@@ -1,0 +1,117 @@
+{
+  "version": "golden-1.0",
+  "fonte": "IBGE SIDRA SINAPI tabela 2296",
+  "periodo_ref": "maio 2026",
+  "fator_obra_adaptacao": 0.19,
+  "por_uf": {
+    "RO": {
+      "sinapi_custo_m2": 2123.43,
+      "periodo_ref": "maio 2026"
+    },
+    "AC": {
+      "sinapi_custo_m2": 2281.15,
+      "periodo_ref": "maio 2026"
+    },
+    "AM": {
+      "sinapi_custo_m2": 1929.6,
+      "periodo_ref": "maio 2026"
+    },
+    "RR": {
+      "sinapi_custo_m2": 2114.88,
+      "periodo_ref": "maio 2026"
+    },
+    "PA": {
+      "sinapi_custo_m2": 1963.54,
+      "periodo_ref": "maio 2026"
+    },
+    "AP": {
+      "sinapi_custo_m2": 1992.21,
+      "periodo_ref": "maio 2026"
+    },
+    "TO": {
+      "sinapi_custo_m2": 2013.21,
+      "periodo_ref": "maio 2026"
+    },
+    "MA": {
+      "sinapi_custo_m2": 1936.03,
+      "periodo_ref": "maio 2026"
+    },
+    "PI": {
+      "sinapi_custo_m2": 1853.37,
+      "periodo_ref": "maio 2026"
+    },
+    "CE": {
+      "sinapi_custo_m2": 1832.26,
+      "periodo_ref": "maio 2026"
+    },
+    "RN": {
+      "sinapi_custo_m2": 1818.85,
+      "periodo_ref": "maio 2026"
+    },
+    "PB": {
+      "sinapi_custo_m2": 1907.82,
+      "periodo_ref": "maio 2026"
+    },
+    "PE": {
+      "sinapi_custo_m2": 1726.51,
+      "periodo_ref": "maio 2026"
+    },
+    "AL": {
+      "sinapi_custo_m2": 1792.18,
+      "periodo_ref": "maio 2026"
+    },
+    "SE": {
+      "sinapi_custo_m2": 1728.05,
+      "periodo_ref": "maio 2026"
+    },
+    "BA": {
+      "sinapi_custo_m2": 1853.68,
+      "periodo_ref": "maio 2026"
+    },
+    "MG": {
+      "sinapi_custo_m2": 1849.04,
+      "periodo_ref": "maio 2026"
+    },
+    "ES": {
+      "sinapi_custo_m2": 1761.44,
+      "periodo_ref": "maio 2026"
+    },
+    "RJ": {
+      "sinapi_custo_m2": 2161.7,
+      "periodo_ref": "maio 2026"
+    },
+    "SP": {
+      "sinapi_custo_m2": 2037.2,
+      "periodo_ref": "maio 2026"
+    },
+    "PR": {
+      "sinapi_custo_m2": 2098.17,
+      "periodo_ref": "maio 2026"
+    },
+    "SC": {
+      "sinapi_custo_m2": 2199.78,
+      "periodo_ref": "maio 2026"
+    },
+    "RS": {
+      "sinapi_custo_m2": 1911.34,
+      "periodo_ref": "maio 2026"
+    },
+    "MS": {
+      "sinapi_custo_m2": 1865.3,
+      "periodo_ref": "maio 2026"
+    },
+    "MT": {
+      "sinapi_custo_m2": 2047.96,
+      "periodo_ref": "maio 2026"
+    },
+    "GO": {
+      "sinapi_custo_m2": 1928.17,
+      "periodo_ref": "maio 2026"
+    },
+    "DF": {
+      "sinapi_custo_m2": 1982.79,
+      "periodo_ref": "maio 2026"
+    }
+  },
+  "nota": "Snapshot maio/2026 para golden CUB×SINAPI — gerado de metrics/cache/capex_indices.json"
+}

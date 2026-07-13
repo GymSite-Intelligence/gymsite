@@ -1,0 +1,137 @@
+{
+  "version": "golden-1.0",
+  "descricao": "Expectativas CUB×SINAPI para 10 UFs âncora + agregados nacionais. Tolerâncias calibradas no snapshot maio/2026.",
+  "periodo_sinapi_ref": "maio 2026",
+  "periodo_cub_ref": "junho 2026",
+  "ufs_ancora": ["CE", "SP", "PR", "RJ", "MG", "DF", "SC", "PE", "BA", "RO"],
+  "ufs_piloto_produto": ["CE", "PR"],
+  "por_uf": {
+    "CE": {
+      "cub_m2": 1969.47,
+      "sinapi_m2": 1832.26,
+      "ratio_cub_sinapi": 1.0749,
+      "delta_pct": 7.49,
+      "obra_adaptacao_mid": 348.13,
+      "obra_pct_cub": 17.7,
+      "fator_implicito_cub": 0.1768
+    },
+    "SP": {
+      "cub_m2": 2205.10,
+      "sinapi_m2": 2037.20,
+      "ratio_cub_sinapi": 1.0824,
+      "delta_pct": 8.24,
+      "obra_adaptacao_mid": 387.07,
+      "obra_pct_cub": 17.6,
+      "fator_implicito_cub": 0.1755
+    },
+    "PR": {
+      "cub_m2": 2224.42,
+      "sinapi_m2": 2098.17,
+      "ratio_cub_sinapi": 1.0602,
+      "delta_pct": 6.02,
+      "obra_adaptacao_mid": 398.65,
+      "obra_pct_cub": 17.9,
+      "fator_implicito_cub": 0.1792
+    },
+    "RJ": {
+      "cub_m2": 2290.75,
+      "sinapi_m2": 2161.70,
+      "ratio_cub_sinapi": 1.0597,
+      "delta_pct": 5.97,
+      "obra_adaptacao_mid": 410.72,
+      "obra_pct_cub": 17.9,
+      "fator_implicito_cub": 0.1793
+    },
+    "MG": {
+      "cub_m2": 1955.90,
+      "sinapi_m2": 1849.04,
+      "ratio_cub_sinapi": 1.0578,
+      "delta_pct": 5.78,
+      "obra_adaptacao_mid": 351.32,
+      "obra_pct_cub": 18.0,
+      "fator_implicito_cub": 0.1796
+    },
+    "DF": {
+      "cub_m2": 2097.04,
+      "sinapi_m2": 1982.79,
+      "ratio_cub_sinapi": 1.0576,
+      "delta_pct": 5.76,
+      "obra_adaptacao_mid": 376.73,
+      "obra_pct_cub": 18.0,
+      "fator_implicito_cub": 0.1796
+    },
+    "SC": {
+      "cub_m2": 2374.61,
+      "sinapi_m2": 2199.78,
+      "ratio_cub_sinapi": 1.0795,
+      "delta_pct": 7.95,
+      "obra_adaptacao_mid": 417.96,
+      "obra_pct_cub": 17.6,
+      "fator_implicito_cub": 0.1760
+    },
+    "PE": {
+      "cub_m2": 1869.49,
+      "sinapi_m2": 1726.51,
+      "ratio_cub_sinapi": 1.0828,
+      "delta_pct": 8.28,
+      "obra_adaptacao_mid": 328.04,
+      "obra_pct_cub": 17.5,
+      "fator_implicito_cub": 0.1755
+    },
+    "BA": {
+      "cub_m2": 1960.63,
+      "sinapi_m2": 1853.68,
+      "ratio_cub_sinapi": 1.0577,
+      "delta_pct": 5.77,
+      "obra_adaptacao_mid": 352.20,
+      "obra_pct_cub": 18.0,
+      "fator_implicito_cub": 0.1796
+    },
+    "RO": {
+      "cub_m2": 2288.14,
+      "sinapi_m2": 2123.43,
+      "ratio_cub_sinapi": 1.0776,
+      "delta_pct": 7.76,
+      "obra_adaptacao_mid": 403.45,
+      "obra_pct_cub": 17.6,
+      "fator_implicito_cub": 0.1763
+    }
+  },
+  "agregados_nacionais_27uf": {
+    "ratio_cub_sinapi_mean": 1.0621,
+    "ratio_cub_sinapi_stdev": 0.0095,
+    "ratio_cub_sinapi_min": 1.0478,
+    "ratio_cub_sinapi_max": 1.0828,
+    "delta_pct_mean": 6.35,
+    "obra_pct_cub_mean": 17.9,
+    "fator_implicito_cub_mean": 0.1780
+  },
+  "tolerancias": {
+    "ratio_cub_sinapi_abs": 0.015,
+    "delta_pct_abs": 1.5,
+    "obra_pct_cub_abs": 0.6,
+    "fator_implicito_cub_abs": 0.006,
+    "ratio_mean_abs": 0.02,
+    "ratio_stdev_abs": 0.005,
+    "rank_top5_overlap_min": 4,
+    "mom_delta_pct_max": 1.0,
+    "mom_delta_pct_max_por_uf": {
+      "CE": 1.0,
+      "SP": 3.5
+    }
+  },
+  "rank_top5_cub": ["SC", "RJ", "RO", "PR", "AC"],
+  "rank_top5_sinapi": ["AC", "RO", "SC", "RJ", "PR"],
+  "oscilacao_mensal": {
+    "CE": {
+      "sinapi_abril_2026": 1830.51,
+      "sinapi_maio_2026": 1832.26,
+      "mom_delta_pct": 0.096
+    },
+    "SP": {
+      "sinapi_abril_2026": 2100.00,
+      "sinapi_maio_2026": 2037.20,
+      "mom_delta_pct": -2.99
+    }
+  }
+}
