@@ -4,6 +4,7 @@
 > **Status:** Ativo
 > **Escopo:** Todo o código-fonte, schema de banco e configuração de infraestrutura.
 > **Público:** Todos os agentes de IA e engenheiros humanos.
+> **Numeração:** As tags `(P-001)`…`(P-004)` **dentro deste arquivo** são âncoras internas do P-000 (fontes, carimbo, ler-fonte). **Não** confundir com P-001…P-010 de `.agent/rules/processo-mudanca.md` (UX/schema de produto). Em conflito de IDs, cite **P-000 §N** ou o arquivo completo.
 
 ---
 
@@ -101,17 +102,35 @@ Craft de prompt (formato JSON, Gemini contexto-último, checklist de PR): ver
 ## 7. Deploy — Canônico (sem GitHub Actions)
 
 **Não usar** `.github/workflows/pages.yml` para publicar front (billing quebrado — ignorar).
+**GitHub Actions de Pages não está operante** — push em `main` **não** garante deploy. Após merge, **disparar deploy Cloudflare manualmente** (API `POST …/deployments` ou Wrangler).
 
 | Camada | Onde sobe | Como |
 |---|---|---|
-| **Frontend produto** (`frontend/` deste monorepo) | **Cloudflare Pages** (projeto CF `gymsite`) | `cd frontend` → build Vite → `npx wrangler pages deploy ./dist --project-name gymsite` · config: `frontend/wrangler.jsonc` |
-| **Landing + degustação** | **Cloudflare Pages** (projeto CF `gym-insight-hub`, repo separado) | merge `main` do repo `gym-insight-hub` ou `wrangler pages deploy` no repo de landing |
+| **Frontend produto** (`frontend/` deste monorepo) | **Cloudflare Pages** (projeto CF `gymsite`) | Git build Pages (`root_dir=frontend`) **ou** `cd frontend` → build → `npx wrangler pages deploy ./dist --project-name gymsite` · config: `frontend/wrangler.jsonc` |
+| **Landing + degustação** | **Cloudflare Pages** (projeto CF `gym-insight-hub`, repo separado) | push/`merge` `main` no repo hub **+** redeploy CF (Actions morto) · rota canônica `/degustacao` |
 | **Backend API** (`api.py`, agents, tools) | **Google Cloud Run** `us-central1` | trigger Cloud Build `gymsite-api` em `main` **ou** `gcloud run deploy gymsite-api` |
 | **Worker pipeline** | **Cloud Run** `gymsite-worker` | **mesma imagem** da API após rebuild — não auto-deploya; ver `CLAUDE.md` |
 
 Projeto GCP produção: `gen-lang-client-0106729343` (nome "Navi Vectra"). **Não** confundir com `gen-lang-client-0662901510` (`gymsite-api` órfão).
 
 `cloudbuild.frontend.yaml` (Cloud Run para front) é **legado** — não é o caminho canônico; front do monorepo = Wrangler/Pages.
+
+### Gotchas Cloudflare Pages (Vite)
+
+1. **`VITE_*` precisa existir no build.** Com `root_dir=frontend`, env do painel CF **pode não** chegar ao subprocesso do Vite. Canônico: `build_command` grava `.env.production` (publishable key) **antes** de `npm run build`. Script: `scripts/fix-cf-pages-gymsite-build.ps1` (`-Redeploy` opcional).
+2. **Publishable ≠ JWT legado.** Supabase desabilitou anon JWT (`UNAUTHORIZED_DISABLED_LEGACY_KEY`). Usar `sb_publishable_*` em preview **e** production (`VITE_SUPABASE_ANON_KEY`).
+3. **Hub:** push `main` sozinho não basta. Redeploy:
+
+```powershell
+# Token: CLOUDFLARE_API_TOKEN ou oauth wrangler (~/.wrangler/config/default.toml)
+# Account 361e9e1383bfa8e95e1db54e6c2a3bba — projeto gym-insight-hub
+Invoke-RestMethod -Method POST `
+  -Uri "https://api.cloudflare.com/client/v4/accounts/361e9e1383bfa8e95e1db54e6c2a3bba/pages/projects/gym-insight-hub/deployments" `
+  -Headers @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" } `
+  -Body (@{ branch = "main" } | ConvertTo-Json)
+```
+
+Mesmo padrão para projeto `gymsite` (app logado).
 
 ## 8. Domínios — Não Confundir
 
@@ -131,9 +150,11 @@ Backend API: Cloud Run → custom domain `api.getgymsite.com.br` (ou URL `gymsit
 | Papel | GitHub | Clone local típico | CF / deploy |
 |---|---|---|---|
 | **App logado** (API, pipeline A0–A9, `frontend/` dashboard) | https://github.com/Marcelo-Rosas/gymsite | `gymsite_intelligence/` | CF `gymsite` → `getgymsite.com.br` · API Cloud Run |
-| **Site** (landing + degustação, chat 5 agentes) | https://github.com/Marcelo-Rosas/gym-insight-hub | `gym-insight-hub/` | CF `gym-insight-hub` → `gymsite.com.br` / `www` |
+| **Site** (landing + degustação `/degustacao`, chat 5 agentes) | https://github.com/Marcelo-Rosas/gym-insight-hub | `gym-insight-hub/` | CF `gym-insight-hub` → `gymsite.com.br` / `www` |
 
 **Trunk:** `main` nos dois repos. PR → `main`. Sem long-lived `develop`.
+
+**Degustação (hub, jul/2026):** rota canônica `/degustacao`. Legado `/?abrir=diagnostico-interno|chat|analise|formulario` redireciona via `beforeLoad`. Cards `/agentes` → `/degustacao?agente=`. Helper: `src/lib/degustacaoUrls.ts`.
 
 ### Convenção de nomes
 
@@ -170,28 +191,26 @@ Branches com `ahead>0` e PR fechado sem merge → revisar em 1 semana; cherry-pi
 
 **Squash merge:** branch pode aparecer “unmerged” no git mesmo merged — confiar no PR `MERGED` + `ahead=0`, não só `--no-merged`.
 
-### Estado das branches (auditoria 2026-07-13)
+### Estado das branches (auditoria 2026-07-13; refresh pós-`/degustacao`)
 
-**gymsite** — 30 branches remotas; **25** só histórico (`ahead=0`) → candidatas a delete em lote.
+Snapshot envelhece — re-rodar comando da seção “Comandos úteis” antes de delete em lote.
 
-| Branch | ahead | behind | Ação |
-|---|---|---|---|
-| `cursor/cloud-agent-1783728653697-amcbr` | 9 | 63 | **PR #92 OPEN** — rebase em `main` ou fechar; marketing/RAG dry-run + theme chat |
-| `fix/errc-fonte-unica-e-lucro-liquido` | 6 | 17 | PR #91 merged — lixo de merge; **delete** |
-| `fix/quadro-receita-custos-b7199c7c` | 5 | 19 | PR #90 merged — **delete** |
-| `feat/cracha-agente-no-get` | 1 | 25 | PR #84 merged — **delete** |
-| `fix/cap-chat-fail-closed` | 1 | 28 | PR #81 merged — **delete** |
-| demais `feat/*` `fix/*` `docs/*` | 0 | >0 | **delete** (já em `main`) |
+**gymsite** — muitas remotas só histórico (`ahead=0`) → candidatas a delete.
 
-**gym-insight-hub** — 4 branches; site bem mais limpo.
+| Branch | Nota | Ação |
+|---|---|---|
+| `cursor/cloud-agent-*` | preview órfão / PR aberto | rebase, fechar ou `preview/app-*` |
+| `feat/*` `fix/*` já merged (`ahead=0` ou lixo squash) | já em `main` | **delete** remota+local |
 
-| Branch | ahead | behind | Ação |
-|---|---|---|---|
-| `feat/canonical-redirect` | 0 | 64 | PR #9 merged — **delete** |
-| `feat/lgpd-privacidade` | 1 | 4 | PR #27 merged — **delete** |
-| `fix/title-gymsite` | 1 | 3 | PR #29 merged — **delete** |
+**gym-insight-hub** — `/degustacao` em `main` (`536d73c`+); CF deploy **manual** pós-push.
 
-⚠️ **Redirect legado:** PR #9 do hub fez `301 getgymsite.com.br → gymsite.com.br`. P-000 §8 define o **inverso** do papel (`getgymsite` = app). Revisar DNS/redirect CF antes de preview `preview/app-*`.
+| Branch | Nota | Ação |
+|---|---|---|
+| `feat/canonical-redirect` | PR #9 merged | **delete** |
+| `feat/lgpd-privacidade` | PR #27 merged | **delete** |
+| `fix/title-gymsite` | PR #29 merged | **delete** |
+
+⚠️ **Redirect legado (aberto):** PR #9 hub apontou `301 getgymsite.com.br → gymsite.com.br`. §8 define papéis **separados** (`getgymsite` = app logado; `gymsite.com.br` = landing). **Não** unificar DNS sem decisão explícita — revisar redirect CF antes de `preview/app-*`.
 
 ### Comandos úteis
 
