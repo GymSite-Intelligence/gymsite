@@ -569,7 +569,8 @@ _cors_origins = [
      # Projeto Pages atual (gym-insight-hub) + domínios getgymsite (parceiro/legado
      # que redireciona 301 p/ gymsite.com.br, mas o XHR pode partir dele no intervalo).
      "https://getgymsite.com.br", "https://www.getgymsite.com.br",
-     "https://gym-insight-hub.pages.dev"]
+     "https://gym-insight-hub.pages.dev",
+     "https://gymsite-3p0-2jr.pages.dev"]
 
 if _env_cors:
     logger.info("CORS origins from env: %s", _cors_origins)
@@ -578,11 +579,11 @@ else:
         "CORS_ORIGINS nao definida em .env — usando defaults e regex de localhost"
     )
 
-# Regex extras: localhost dev + Cloudflare Pages (preview hash.gymsite-3p0.pages.dev)
+# Regex extras: localhost dev + Cloudflare Pages (gymsite-3p0 + gymsite-3p0-2jr previews)
 _cors_origin_regex = (
     r"http://localhost:\d+"
     r"|http://127\.0\.0\.1:\d+"
-    r"|https://([a-z0-9-]+\.)*gymsite-3p0\.pages\.dev"
+    r"|https://([a-z0-9-]+\.)*gymsite-3p0(-[a-z0-9]+)?\.pages\.dev"
     r"|https://([a-z0-9-]+\.)*gym-insight-hub\.pages\.dev"
 )
 
