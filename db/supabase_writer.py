@@ -227,6 +227,11 @@ def _row_outputs(rel: dict, relatorio_id: str) -> dict:
         "demanda_futura": out.get("demanda_futura") or {},
         "aneis_competitivos": out.get("aneis_competitivos") or {},
         "demografia_bairro": out.get("demografia_bairro") or {},
+        "fluxo_pedestre": (
+            out.get("fluxo_pedestre")
+            if isinstance(out.get("fluxo_pedestre"), dict) and out.get("fluxo_pedestre")
+            else None
+        ),
         "alertas": out.get("alertas_financeiros") or [],
         # embedding fica NULL — gerado depois por job de RAG
     }
@@ -274,6 +279,15 @@ def _rows_candidatos(rel: dict, relatorio_id: str) -> list[dict]:
             "tipo_imovel_label": c.get("tipo_imovel_label"),
             "modalidade": c.get("modalidade"),
             "cartorio": c.get("cartorio") if isinstance(c.get("cartorio"), dict) else None,
+            "fluxo_score": c.get("fluxo_score"),
+            "fluxo_norm": c.get("fluxo_norm"),
+            "fluxo_confianca": c.get("fluxo_confianca"),
+            "fluxo_segmento": c.get("fluxo_segmento"),
+            "fluxo_carimbo": (
+                c.get("fluxo_carimbo")
+                if isinstance(c.get("fluxo_carimbo"), dict) and c.get("fluxo_carimbo")
+                else None
+            ),
         })
     return rows
 

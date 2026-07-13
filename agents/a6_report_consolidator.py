@@ -2246,6 +2246,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # se a zona permite academia (CNAE 9313 × LUOS). Pega o furo: candidato bom em zona
     # restrita (ZEIS/ZEPH/ZEA) é inviável legal. Best-effort; só Fortaleza por ora.
     zoneamento_block = None
+    _zlat = _zlon = None
     try:
         from tools.zoneamento_tools import analisar_zoneamento_candidato
 
@@ -2295,6 +2296,31 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 zoneamento_block = _z
     except Exception:
         logger.warning("A6 zoneamento falhou", exc_info=True, extra={"agent": "A6"})
+    fluxo_pedestre_block: dict | None = None
+    try:
+        from tools.fluxo_pedestre_tools import build_fluxo_pedestre_block
+
+        _fp_cand = next(
+            (c for c in top_3 if isinstance(c, dict) and c.get("lat") is not None and c.get("lng") is not None),
+            None,
+        )
+        _fp_lat = _fp_lng = None
+        _fp_name = _bairro_alvo_da_busca(state) or "o bairro analisado"
+        if _fp_cand:
+            _fp_lat, _fp_lng = float(_fp_cand["lat"]), float(_fp_cand["lng"])
+            _fp_name = _fp_cand.get("endereco") or _fp_name
+        elif _zlat is not None and _zlon is not None:
+            _fp_lat, _fp_lng = float(_zlat), float(_zlon)
+        if _fp_lat is not None and _fp_lng is not None:
+            fluxo_pedestre_block = build_fluxo_pedestre_block(
+                _fp_lat,
+                _fp_lng,
+                competidores=comp.get("academias_analisadas") or comp.get("concorrentes") or [],
+                radius_m=2000,
+                location_name=_fp_name,
+            )
+    except Exception:
+        logger.warning("A6 fluxo pedestre falhou", exc_info=True, extra={"agent": "A6"})
     investigacoes_resumo = (
         geo_raw.get("investigacoes_imoveis")
         if isinstance(geo_raw.get("investigacoes_imoveis"), dict)
@@ -2768,6 +2794,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "top_3_candidatos": top_3,
             # VEC-378 — viabilidade regulatória (zoneamento LUOS) do top candidato.
             "zoneamento": zoneamento_block,
+            "fluxo_pedestre": fluxo_pedestre_block,
             "investigacoes_imoveis": investigacoes_resumo,
             # Diagnóstico GeoScout (A1) — UI usa pra banner sem hardcode REQUEST_DENIED
             "coleta_geografica": {

@@ -37,11 +37,19 @@ def is_vertex_mode() -> bool:
     return os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
 
 
+def _sanitize_application_credentials() -> None:
+    """Cloud Run usa metadata SA; path local de dev quebra ADC se o arquivo não existe."""
+    creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if creds and not os.path.isfile(creds):
+        os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+
+
 def build_genai_client():
     """Retorna `genai.Client` apropriado pro modo ativo."""
     from google import genai
 
     if is_vertex_mode():
+        _sanitize_application_credentials()
         return genai.Client()
 
     api_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")).strip()

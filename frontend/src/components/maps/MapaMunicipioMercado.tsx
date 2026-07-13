@@ -7,6 +7,7 @@ import { Loader } from '@googlemaps/js-api-loader'
 import { GoogleMapsOverlay } from '@deck.gl/google-maps'
 import { HeatmapLayer } from '@deck.gl/aggregation-layers'
 import { useMapsJsConfig } from '@/hooks/useMapsJsConfig'
+import { flowScoreColor, useFluxoPedestre } from '@/hooks/useFluxoPedestre'
 import {
   useMapaMercado,
   type MapaMercadoBounds,
@@ -85,21 +86,48 @@ function ratingPinColor(rating: number | null | undefined): string {
   return '#dc2626'
 }
 
-function MapLegend() {
+function MapLegend({
+  showFluxo,
+  onToggleFluxo,
+  fluxoScore,
+}: {
+  showFluxo: boolean
+  onToggleFluxo: () => void
+  fluxoScore?: number | null
+}) {
   return (
-    <div className="absolute bottom-2 left-2 z-10 flex flex-wrap gap-3 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-sm">
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#ea580c]" />
-        Concorrentes
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block h-2.5 w-2.5 rotate-45 bg-sky-500" />
-        Entrantes (90d)
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-violet-600 bg-violet-200" />
-        Site (bairro)
-      </span>
+    <div className="absolute bottom-2 left-2 z-10 flex flex-col gap-2">
+      <div className="flex flex-wrap gap-3 rounded-md border bg-background/90 px-3 py-2 text-xs shadow-sm">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#ea580c]" />
+          Concorrentes
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rotate-45 bg-sky-500" />
+          Entrantes (90d)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-violet-600 bg-violet-200" />
+          Site (bairro)
+        </span>
+        <button
+          type="button"
+          onClick={onToggleFluxo}
+          className="flex items-center gap-1.5 rounded px-1 hover:bg-muted"
+        >
+          <span
+            className="inline-block h-1 w-4 rounded"
+            style={{ backgroundColor: showFluxo ? '#84cc01' : '#64748b' }}
+          />
+          Fluxo pedestre {showFluxo ? 'on' : 'off'}
+        </button>
+      </div>
+      {typeof fluxoScore === 'number' && (
+        <div className="rounded-md border bg-background/90 px-3 py-1.5 text-xs shadow-sm">
+          Fluxo estrutural: <strong>{fluxoScore}</strong>/100
+        </div>
+      )}
+      <p className="text-[10px] text-muted-foreground">© OpenStreetMap contributors</p>
     </div>
   )
 }
@@ -123,13 +151,16 @@ export function MapaMunicipioMercado({
   const { data: mapa, isLoading: mapaLoading, error: mapaError } = useMapaMercado(
     relatorioId,
   )
+  const { data: fluxo } = useFluxoPedestre(relatorioId, Boolean(relatorioId))
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const deckRef = useRef<GoogleMapsOverlay | null>(null)
+  const fluxoLayerRef = useRef<google.maps.Data | null>(null)
   const markersRef = useRef<google.maps.Marker[]>([])
   const [mapReady, setMapReady] = useState(false)
   const [mapZoom, setMapZoom] = useState(MAP_ZOOM_CIDADE)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [showFluxoLayer, setShowFluxoLayer] = useState(true)
 
   const boundsMunicipio = useMemo((): MapaMercadoBounds | null => {
     return mapa?.bounds_municipio ?? mapa?.municipio?.bounds ?? null
@@ -360,6 +391,32 @@ export function MapaMunicipioMercado({
     }
   }, [mapReady, mapa, concorrenteClusters])
 
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    if (fluxoLayerRef.current) {
+      fluxoLayerRef.current.setMap(null)
+      fluxoLayerRef.current = null
+    }
+    if (!showFluxoLayer || !fluxo?.success || !fluxo.geojson?.features?.length) return
+    const layer = new google.maps.Data({ map })
+    layer.addGeoJson(fluxo.geojson)
+    layer.setStyle((feature) => {
+      const score = Number(feature.getProperty('flow_score') ?? 0)
+      return {
+        strokeColor: flowScoreColor(score),
+        strokeWeight: Math.max(2, score * 5),
+        strokeOpacity: 0.85,
+        clickable: false,
+      }
+    })
+    fluxoLayerRef.current = layer
+    return () => {
+      layer.setMap(null)
+      fluxoLayerRef.current = null
+    }
+  }, [mapReady, fluxo, showFluxoLayer])
+
   const ufLabel = (uf || mapa?.uf || '').trim()
   const title = `Mapa do município — ${cidade}${ufLabel ? `/${ufLabel}` : ''}`
 
@@ -414,7 +471,11 @@ export function MapaMunicipioMercado({
       )}
       <div className="relative h-[360px] w-full overflow-hidden rounded-lg border">
         <div ref={containerRef} className="h-full w-full" aria-label={title} />
-        <MapLegend />
+        <MapLegend
+          showFluxo={showFluxoLayer}
+          onToggleFluxo={() => setShowFluxoLayer((v) => !v)}
+          fluxoScore={fluxo?.fluxo_score_candidato}
+        />
         {loadError && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted/80 p-4 text-center text-sm text-destructive">
             {loadError}

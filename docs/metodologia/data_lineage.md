@@ -19,6 +19,7 @@ Toda métrica de cálculo vem de **dado com fonte** (tabela sourced) ou **benchm
 | **CNO obras (RFB)** | tabelas `cno_obras_grande_porte` + `cno_obras_fitness` (Supabase) · loader VIVO `tools/rfb_cno_loader.py` (RFB bulk **mensal**); `tools/cno_bigquery_loader.py` = backfill histórico ≤2021 **dormente** (insert-only) | mensal (RFB) | `demanda_futura_tools` (obras futuras), `leads_condominial_tools` — leem do **Supabase**, não BQ em runtime |
 | **CNPJ RFB fitness** (CNAE 9313-1/00, snapshot mensal) | tabela `cnpj_fitness_estabelecimentos` (Supabase) · loader `tools/rfb_cnpj_fitness_loader.py` · tool `tools/cnpj_fitness_tools.py` | mensal | A0 (`dados_parque_cnpj_para_a0` — parque ativo + entrantes), A6 (`fatos_parque_cnpj`) |
 | **FipeZap** (séries de aluguel/m², mensal) | tabela `fipezap_indices` (Supabase) · loader `tools/fipezap_loader.py` · tool `tools/fipezap_tools.py` | mensal | A4 aluguel (Tier 1.5, entre Search Grounding e benchmark ACAD) via `financial_tools` |
+| **OpenStreetMap** (malha viária + POIs Overpass) | runtime (OSMnx/Overpass) · cache `spatial_flow_cache` (Supabase, TTL 90d) | malha lenta | `tools/space_syntax.py` → fluxo pedestre (Choice angular + Integration) · A1 `fluxo_score` · A6 `fluxo_pedestre` · `GET /api/relatorios/{id}/fluxo-pedestre` |
 | Google Places (New) | runtime (API) | — | `competitor_tools` (A3, âncora-bairro), `anchoring_tools` (A1) |
 | Google Maps geocode/Distance | runtime (API) | — | A1, `demanda_futura`, `posicionamento_renda` |
 | Google Maps Popular Times (lotação) | scraping runtime (Playwright + SearchAPI) · cache disco TTL 7d · `tools/popular_times_tool.py` | runtime (cache 7d) | `competitor_tools` → A3 (horários de pico) |
@@ -41,6 +42,12 @@ veredito (cutoffs param 8/6/4)
 posicionamento (A9) → headroom_renda (posicionamento_renda + renda_bairro, determinístico)
 ```
 Cada folha rastreável via `tools/metodologia_explain.py` (param_meta {categoria, fonte}).
+
+## Calibração α/β/γ (2026-07-12)
+
+Coeficientes iniciais iguais (0.33 / 0.33 / 0.34). Benchmark OndeAbrir Cocó: Fluxo **80/100**.
+Meta GymSite: artérias estruturais ≥ 70; ruas locais < 40 no mesmo raio 2 km.
+Ajuste futuro via `AnalysisConfig.alpha_pop`, `beta_emp`, `gamma_transp` em `tools/space_syntax.py`.
 
 ## Pendências de lineage
 - ✅ FEITO: `bairro_renda_loader` (A2) usa `renda_bairro` IBGE 2022 > CKAN 2010 (commit 93bdd60).

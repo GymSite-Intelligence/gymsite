@@ -132,6 +132,21 @@ export interface OutputConsolidado {
   aneis_competitivos?: AneisCompetitivosJSON
   /** Demografia do bairro: renda (CKAN) + população/ocupação (Censo 2022). Fontes reais. */
   demografia_bairro?: DemografiaBairroJSON
+  /** Sintaxe espacial angular — fluxo pedestre previsto (A6 + OSM). */
+  fluxo_pedestre?: FluxoPedestreJSON | null
+}
+
+export interface FluxoPedestreJSON {
+  confianca?: string
+  fluxo_score?: number | null
+  fluxo_norm?: number | null
+  fluxo_segmento?: string | null
+  carimbo?: FluxoCarimboJSON | null
+  statistics?: Record<string, number>
+  top_segments?: Array<Record<string, unknown>>
+  leitura?: string
+  motivo?: string
+  attribution?: string
 }
 
 export interface DemografiaBairroJSON {
@@ -467,6 +482,16 @@ export interface MarketContextJSON {
   cached?: boolean
 }
 
+export interface FluxoCarimboJSON {
+  valor?: number
+  base?: string
+  fonte?: string
+  janela?: string
+  metodo?: string
+  confianca?: string
+  segmento?: string
+}
+
 export interface CandidatoJSON {
   nome: string
   endereco: string
@@ -475,6 +500,11 @@ export interface CandidatoJSON {
   lng?: number
   score_geoscout: number
   score_ancoragem: number
+  fluxo_score?: number | null
+  fluxo_norm?: number | null
+  fluxo_confianca?: string | null
+  fluxo_segmento?: string | null
+  fluxo_carimbo?: FluxoCarimboJSON | null
   motivo: string
   polos_geradores: string[]
   street_view_url?: string
@@ -858,7 +888,43 @@ function mapCandidatoRow(row: Record<string, unknown>): CandidatoJSON {
     tipo_imovel_label: typeof row.tipo_imovel_label === 'string' ? row.tipo_imovel_label : undefined,
     modalidade: typeof row.modalidade === 'string' ? row.modalidade : undefined,
     cartorio: row.cartorio != null ? (row.cartorio as Record<string, any>) : undefined,
+    fluxo_score: row.fluxo_score != null ? Number(row.fluxo_score) : undefined,
+    fluxo_norm: row.fluxo_norm != null ? Number(row.fluxo_norm) : undefined,
+    fluxo_confianca:
+      typeof row.fluxo_confianca === 'string' ? row.fluxo_confianca : undefined,
+    fluxo_segmento:
+      typeof row.fluxo_segmento === 'string' ? row.fluxo_segmento : undefined,
+    fluxo_carimbo:
+      row.fluxo_carimbo != null && typeof row.fluxo_carimbo === 'object'
+        ? (row.fluxo_carimbo as FluxoCarimboJSON)
+        : undefined,
   }
+}
+
+function mergeFluxoFromOutput(
+  candidatos: CandidatoJSON[],
+  outTop: unknown,
+): CandidatoJSON[] {
+  if (!Array.isArray(outTop) || outTop.length === 0) return candidatos
+  return candidatos.map((c, i) => {
+    const src = outTop[i]
+    if (!src || typeof src !== 'object') return c
+    const o = src as Record<string, unknown>
+    if (c.fluxo_score != null) return c
+    return {
+      ...c,
+      fluxo_score: o.fluxo_score != null ? Number(o.fluxo_score) : c.fluxo_score,
+      fluxo_norm: o.fluxo_norm != null ? Number(o.fluxo_norm) : c.fluxo_norm,
+      fluxo_confianca:
+        typeof o.fluxo_confianca === 'string' ? o.fluxo_confianca : c.fluxo_confianca,
+      fluxo_segmento:
+        typeof o.fluxo_segmento === 'string' ? o.fluxo_segmento : c.fluxo_segmento,
+      fluxo_carimbo:
+        o.fluxo_carimbo != null && typeof o.fluxo_carimbo === 'object'
+          ? (o.fluxo_carimbo as FluxoCarimboJSON)
+          : c.fluxo_carimbo,
+    }
+  })
 }
 
 function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
@@ -993,8 +1059,14 @@ function adaptBackendToDetail(p: BackendPayload): RelatorioDetail {
       aluguel_min_m2_observado: out.aluguel_min_m2 ?? null,
       aluguel_max_m2_observado: out.aluguel_max_m2 ?? null,
       alertas_financeiros: out.alertas ?? [],
-      top_3_candidatos: (p.candidatos ?? [])
-        .map((c) => mapCandidatoRow(c as Record<string, unknown>)),
+      fluxo_pedestre:
+        out.fluxo_pedestre != null && typeof out.fluxo_pedestre === 'object'
+          ? (out.fluxo_pedestre as FluxoPedestreJSON)
+          : undefined,
+      top_3_candidatos: mergeFluxoFromOutput(
+        (p.candidatos ?? []).map((c) => mapCandidatoRow(c as Record<string, unknown>)),
+        out.top_3_candidatos,
+      ),
       competitors_set: (p.competidores ?? []).map((c) =>
         mapCompetidorRow(c as Record<string, unknown>),
       ),

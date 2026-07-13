@@ -415,12 +415,26 @@ def analisar_pontos_comerciais_completo(
         c["avenida_principal"] = detectar_avenida_principal(
             c.get("endereco", "")
         )["avenida_principal"]
+        c["qualidade_sinal"] = "indireto-heuristico"
+        c["motivo"] = _gerar_motivo(c)
+
+    for c in top_10[:3]:
+        c_lat = c.get("lat", lat)
+        c_lng = c.get("lng", lng)
+        try:
+            from tools.fluxo_pedestre_tools import enrich_candidato_fluxo
+            enrich_candidato_fluxo(c, radius_m=2000)
+        except Exception:
+            c["fluxo_confianca"] = "indisponivel"
+            c["fluxo_score"] = None
+
+    for c in top_10:
+        c_lat = c.get("lat", lat)
+        c_lng = c.get("lng", lng)
         try:
             c["street_view_url"] = obter_street_view_url(c_lat, c_lng)
         except Exception:
             c["street_view_url"] = ""
-        c["qualidade_sinal"] = "indireto-heuristico"
-        c["motivo"] = _gerar_motivo(c)
 
     # 9. Enrichment Place Details (Contact Data) — APENAS para Top 3.
     # Custo extra: ~$0.01 por análise (3 requests Place Details SKU Contact).

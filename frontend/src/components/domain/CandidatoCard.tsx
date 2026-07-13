@@ -13,6 +13,12 @@ import { MapPin, Eye, AlertCircle, Phone, Globe, Clock, MessageCircle, ExternalL
 import { ScoreGauge } from './ScoreGauge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { API_BASE } from '@/lib/supabase'
 import { SHOW_WHATSAPP_UI } from '@/lib/feature-flags'
@@ -247,6 +253,58 @@ export function CandidatoCard({
         <div className="space-y-2 py-2 border-y border-border">
           <ScoreGauge value={candidato.score_geoscout} label="GeoScout" />
           <ScoreGauge value={candidato.score_ancoragem} label="Ancoragem" />
+          {candidato.fluxo_score != null && candidato.fluxo_confianca !== 'indisponivel' ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center justify-between gap-2 text-xs cursor-help">
+                    <span className="text-muted-foreground font-mono uppercase tracking-wider text-[10px]">
+                      Fluxo estrutural
+                    </span>
+                    <Badge
+                      variant={
+                        candidato.fluxo_score >= 70
+                          ? 'success'
+                          : candidato.fluxo_score >= 40
+                            ? 'warning'
+                            : 'secondary'
+                      }
+                      mono
+                    >
+                      {candidato.fluxo_score}/100
+                    </Badge>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs space-y-1 text-left">
+                  {candidato.fluxo_segmento && (
+                    <p>
+                      <strong>Segmento:</strong> {candidato.fluxo_segmento}
+                    </p>
+                  )}
+                  {candidato.fluxo_carimbo?.fonte && (
+                    <p>
+                      <strong>Fonte:</strong> {candidato.fluxo_carimbo.fonte}
+                    </p>
+                  )}
+                  {candidato.fluxo_carimbo?.base && (
+                    <p>
+                      <strong>Base:</strong> {candidato.fluxo_carimbo.base}
+                    </p>
+                  )}
+                  {candidato.fluxo_carimbo?.metodo && (
+                    <p>
+                      <strong>Método:</strong> {candidato.fluxo_carimbo.metodo}
+                    </p>
+                  )}
+                  <p className="text-[10px] opacity-80">© OpenStreetMap contributors</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : candidato.fluxo_confianca === 'indisponivel' ? (
+            <p className="text-[10px] text-muted-foreground font-mono">
+              Fluxo estrutural: indisponível (malha OSM)
+            </p>
+          ) : null}
           {scoreGeral != null && (
             <ScoreGauge value={scoreGeral} label="Score Geral (4 dim)" />
           )}

@@ -26,9 +26,34 @@ foreach ($line in $envContent) {
 }
 
 # Definindo origens CORS para o frontend em produção e preview
-$envDict["CORS_ORIGINS"] = "https://gymsite.vectracargo.com.br,https://gymsite-3p0.pages.dev"
+$envDict["CORS_ORIGINS"] = "https://gymsite.vectracargo.com.br,https://gymsite-3p0.pages.dev,https://getgymsite.com.br,https://www.getgymsite.com.br,https://gymsite.com.br,https://www.gymsite.com.br"
 
-# Lista de todas as variáveis que são gerenciadas como Secrets no Google Cloud Run.
+# Variáveis locais/dev que não existem no container Cloud Run (ADC via metadata SA).
+$cloudRunStrip = @(
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    "VITE_API_BASE",
+    "VITE_SUPABASE_URL",
+    "VITE_SUPABASE_ANON_KEY",
+    "VITE_USE_MOCKS",
+    "VITE_DEV_AS_ADMIN",
+    "CNO_DATA_DIR_HOST",
+)
+foreach ($key in $cloudRunStrip) {
+    $envDict.Remove($key) | Out-Null
+}
+
+# SUPABASE_URL precisa estar no serviço (não é secret bindado hoje).
+if (-not $envDict.ContainsKey("SUPABASE_URL")) {
+    $supabaseUrl = ($envContent | Where-Object { $_ -match "^SUPABASE_URL=" } | Select-Object -First 1)
+    if ($supabaseUrl) {
+        $idx = $supabaseUrl.IndexOf("=")
+        if ($idx -gt 0) {
+            $envDict["SUPABASE_URL"] = $supabaseUrl.Substring($idx + 1).Trim()
+        }
+    }
+}
+
+# Lista de variáveis que são gerenciadas como Secrets no Google Cloud Run.
 $secretVariables = @(
     "TURNSTILE_SECRET",
     "SUPABASE_SERVICE_ROLE_KEY",
@@ -39,7 +64,6 @@ $secretVariables = @(
     "OPENCLAW_TOKEN",
     "LANGCACHE_API_KEY",
     "CLAW_WEBHOOK_SECRET",
-    "SUPABASE_URL",
     "REDIS_URL",
     "LANGCACHE_SERVER_URL",
     "CLAW_WEBHOOK_URL"

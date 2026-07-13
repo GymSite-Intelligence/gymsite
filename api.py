@@ -39,7 +39,7 @@ from tools.supabase_client import load_create_client
 create_client = load_create_client()  # type: ignore[assignment]
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from backend_improvements import (
     setup_json_logging,
@@ -83,7 +83,12 @@ _DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001"
 
 def _supabase_client():
     url = os.getenv("SUPABASE_URL", "").strip()
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    key = (
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_SERVICE_KEY")
+        or os.getenv("SUPABASE_KEY")
+        or ""
+    ).strip()
     if not url or not key:
         raise HTTPException(
             status_code=500,
@@ -1814,6 +1819,56 @@ def get_mapa_mercado(relatorio_id: str, request: Request) -> dict:
         entrantes_block=out.get("entrantes_cnpj_90d"),
         site_lat=site_lat,
         site_lng=site_lng,
+    )
+
+
+@app.get("/api/relatorios/{relatorio_id}/fluxo-pedestre")
+def get_fluxo_pedestre(
+    relatorio_id: str,
+    request: Request,
+    raio_m: int = Query(default=2000, ge=500, le=5000),
+) -> dict:
+    """GeoJSON de fluxo estrutural (Sintaxe Espacial angular) + score do candidato."""
+    from tools.fluxo_pedestre_tools import build_fluxo_payload_for_relatorio
+
+    sb = _supabase_client()
+    rid = _resolve_relatorio_uuid(sb, relatorio_id)
+    _assert_relatorio_access(request, sb, rid)
+    payload = _fetch_relatorio_payload(sb, rid)
+    inp = payload.get("input_canonico") or {}
+    out = payload.get("output_consolidado") or {}
+
+    center_lat = center_lng = None
+    candidato_lat = candidato_lng = None
+    top = (payload.get("candidatos") or out.get("top_3_candidatos") or [])[:1]
+    if top and isinstance(top[0], dict):
+        try:
+            candidato_lat = float(top[0]["lat"]) if top[0].get("lat") is not None else None
+            candidato_lng = float(top[0]["lng"]) if top[0].get("lng") is not None else None
+            center_lat, center_lng = candidato_lat, candidato_lng
+        except (TypeError, ValueError):
+            pass
+    if center_lat is None:
+        bairro = (inp.get("bairro") or "").strip()
+        cidade = (inp.get("cidade") or out.get("cidade_efetiva") or "").strip()
+        uf = (inp.get("uf") or "").strip()
+        if bairro and cidade:
+            try:
+                from tools.maps_tools import geocode_endereco
+                geo = geocode_endereco(f"{bairro}, {cidade}, {uf}, Brasil")
+                if isinstance(geo, dict) and geo.get("lat") is not None:
+                    center_lat = float(geo["lat"])
+                    center_lng = float(geo["lng"])
+            except Exception:
+                pass
+
+    return build_fluxo_payload_for_relatorio(
+        lat=center_lat,
+        lng=center_lng,
+        competidores=payload.get("competidores") or [],
+        radius_m=raio_m,
+        candidato_lat=candidato_lat,
+        candidato_lng=candidato_lng,
     )
 
 

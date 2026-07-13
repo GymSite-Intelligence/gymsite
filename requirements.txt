@@ -36,6 +36,12 @@ google-cloud-discoveryengine>=0.13.0
 # Pydantic (explicitar versao compativel). [email] puxa email-validator,
 # exigido por EmailStr em backend/routers/leads.py (boot crashava sem ele).
 pydantic[email]>=2.0.0
+# Space Syntax / fluxo pedestre (OSMnx + grafo angular)
+osmnx>=1.9.0
+networkx>=3.2.1
+geopandas>=0.14.0
+shapely>=2.0.2
+scipy>=1.11.0
 # Starlette (explicitar - usado por middlewares)
 starlette>=0.36.0
 # Tinker — inference e fine-tuning de LLMs (Thinking Machines)

@@ -59,6 +59,7 @@ import { PicoLotacaoViz } from '@/components/domain/PicoLotacaoViz'
 import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
 import { NovasUnidadesCard } from '@/components/domain/NovasUnidadesCard'
 import { DemografiaBairroCard } from '@/components/domain/DemografiaBairroCard'
+import { FluxoPedestreCard } from '@/components/domain/FluxoPedestreCard'
 import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
 import { DemandaFuturaCard } from '@/components/domain/DemandaFuturaCard'
@@ -460,6 +461,12 @@ function RelatorioViewerContent({
         (out.demografia_bairro.renda_media != null || out.demografia_bairro.populacao != null) && (
         <Section title="Demografia do bairro">
           <DemografiaBairroCard block={out.demografia_bairro} />
+        </Section>
+      )}
+
+      {out.fluxo_pedestre && (
+        <Section title="Fluxo pedestre — sintaxe espacial">
+          <FluxoPedestreCard block={out.fluxo_pedestre} />
         </Section>
       )}
 
