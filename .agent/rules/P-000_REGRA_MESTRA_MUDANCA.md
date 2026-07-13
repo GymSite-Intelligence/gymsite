@@ -50,6 +50,8 @@ Quando Panorama/ACAD **não** publica % fechado (mix agregador, margem, take rat
 
 **Proxy de rede listada:** número de Smart Fit/Bluefit é proxy de **low-cost em escala**, não de mid/premium boutique. Rotular no carimbo (`fonte: CVM/IR Smart Fit …`) e não extrapolar sem nota. Search Grounding **não** substitui PDF/CVM para default financeiro.
 
+Números auditados desta janela (evidência, não regra): `docs/metodologia/cvm-smartfit-bluefit-2025.md`.
+
 **A4 independente por modelo de negócio:** cada faixa (`low` / `mid` / `premium` / futuro `boutique` / `crossfit`) carrega o **próprio** conjunto de params (`ticket_*`, `churn_*`, `frequencia_semanal_*`, `pico_share_*`, `matr_m2_*`, …). Proibido `pico_share` (ou freq) **global/acumulado** compartilhado entre tipologias. Pico boutique/CF (quando entrarem) = `pico_share` alto **daquele** modelo (≈0,35–0,50) + `frequencia_semanal` ≥ 3,5 — não misturar com low-cost nem somar bases.
 
 **Fora do motor financeiro (A4):** ranking/score de imóvel (`score_geoscout`, heurísticas de listing), gate de lotação NBR 9077 / IT bombeiros / cálculo reverso \(B_{\max}=L_{\text{reg}}/f\), e veredito de ponto. Metodologia de score de imóvel **não alimenta** OPEX, TIR, VPL nem veredito de viabilidade. Obra/legal = consultor / RAG municipal (`agents_site`) — **nunca** seed de `parametros_metodologia` nem input de `calcular_viabilidade_3_cenarios`.

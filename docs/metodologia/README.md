@@ -8,6 +8,7 @@
 | Doc | Assunto | Estado |
 |---|---|---|
 | `data_lineage.md` | Mapa fonte→tabela→consumidor (carimbo P-000 §5) | ✅ jul/2026 — MRLR, agregadores, lancamento_fetcher; grounding A4 removido |
+| `cvm-smartfit-bluefit-2025.md` | Evidência CVM/IR Smart Fit FY25 + Bluefit 9M25 (seed congelado) | ✅ 2026-07-13 — link P-000 §3 |
 | `gymsite_schema.md` | Schema GymSite no Supabase compartilhado | ⚠️ nota schemas `gymsite`/`shared` — atualizar antes de pg_dump grande |
 | `posicionamento_headroom_premium.md` | Spec headroom de renda | ✅ A9 |
 | `fontes_renda_bairro_capitais.md` | Curadoria renda por capital | ok — adicionar "verificado em" ao usar |
