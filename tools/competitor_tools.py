@@ -64,6 +64,207 @@ DORES_TAXONOMIA = [
     "outra",                    # ruído indevido, pinga em outra categoria
 ]
 
+DORES_COMUNS_TO_CATEGORIA: dict[str, str] = {
+    "muito cheio": "lotacao",
+    "lotado": "lotacao",
+    "lotação": "lotacao",
+    "fila nas máquinas": "lotacao",
+    "fila": "lotacao",
+    "equipamentos quebrados": "equipamento_problema",
+    "quebrado": "equipamento_problema",
+    "quebrada": "equipamento_problema",
+    "manutenção": "equipamento_problema",
+    "sem ar condicionado": "climatizacao",
+    "calor": "climatizacao",
+    "abafado": "climatizacao",
+    "instrutores ruins": "atendimento_ruim",
+    "atendimento ruim": "atendimento_ruim",
+    "grosseiro": "atendimento_ruim",
+    "sem estacionamento": "estacionamento",
+    "sem vaga": "estacionamento",
+    "mensalidade cara": "preco_alto",
+    "caro": "preco_alto",
+    "preço alto": "preco_alto",
+    "banheiros sujos": "limpeza_higiene",
+    "limpeza": "limpeza_higiene",
+    "sujo": "limpeza_higiene",
+    "sem professor": "ausencia_servico",
+    "sozinho": "ausencia_servico",
+    "abandonado": "ausencia_servico",
+    "música alta": "ruido_alto",
+    "barulho": "ruido_alto",
+    "cancela plano difícil": "contrato_abusivo",
+    "cancelamento": "contrato_abusivo",
+    "fidelidade": "contrato_abusivo",
+    "multa": "contrato_abusivo",
+    "cobrança indevida": "contrato_abusivo",
+    "abusivo": "contrato_abusivo",
+    "sem aulas coletivas": "ausencia_servico",
+    "estrutura velha": "estrutura_envelhecida",
+    "antigo": "estrutura_envelhecida",
+}
+
+TOPIC_KEYWORD_TO_CATEGORIA: list[tuple[str, str]] = [
+    ("lotat", "lotacao"), ("crowd", "lotacao"), ("cheio", "lotacao"), ("busy", "lotacao"),
+    ("wait", "lotacao"), ("fila", "lotacao"), ("queue", "lotacao"),
+    ("equip", "equipamento_problema"), ("machine", "equipamento_problema"),
+    ("manuten", "equipamento_problema"), ("broken", "equipamento_problema"),
+    ("air cond", "climatizacao"), ("climat", "climatizacao"), ("hot", "climatizacao"),
+    ("calor", "climatizacao"), ("abafado", "climatizacao"),
+    ("clean", "limpeza_higiene"), ("higen", "limpeza_higiene"), ("banheiro", "limpeza_higiene"),
+    ("sujo", "limpeza_higiene"), ("hygien", "limpeza_higiene"),
+    ("staff", "atendimento_ruim"), ("atend", "atendimento_ruim"), ("recep", "atendimento_ruim"),
+    ("instrutor", "atendimento_ruim"), ("service", "atendimento_ruim"), ("professor", "atendimento_ruim"),
+    ("price", "preco_alto"), ("preço", "preco_alto"), ("preco", "preco_alto"),
+    ("caro", "preco_alto"), ("mensal", "preco_alto"), ("expensive", "preco_alto"),
+    ("cancel", "contrato_abusivo"), ("contrat", "contrato_abusivo"), ("cobran", "contrato_abusivo"),
+    ("multa", "contrato_abusivo"), ("billing", "contrato_abusivo"),
+    ("parking", "estacionamento"), ("estacion", "estacionamento"), ("vaga", "estacionamento"),
+    ("old", "estrutura_envelhecida"), ("antig", "estrutura_envelhecida"),
+    ("noise", "ruido_alto"), ("music", "ruido_alto"), ("barulho", "ruido_alto"), ("ruido", "ruido_alto"),
+    ("hour", "horarios_limitados"), ("horário", "horarios_limitados"), ("horario", "horarios_limitados"),
+    ("class", "ausencia_servico"), ("aula", "ausencia_servico"), ("personal", "ausencia_servico"),
+    ("security", "seguranca"), ("segur", "seguranca"), ("furto", "seguranca"),
+]
+
+TAXONOMIA_SOLUCAO: dict[str, str] = {
+    "lotacao": "Controle de lotação via app + reserva de horário",
+    "equipamento_problema": "Contrato de manutenção preventiva com SLA 24h",
+    "climatizacao": "Climatização premium como diferencial de conforto",
+    "limpeza_higiene": "Limpeza programada com checklist visível a cada 2h",
+    "atendimento_ruim": "Treinamento intensivo + NPS público mensal",
+    "preco_alto": "Modelo transparente sem fidelidade nem multa",
+    "contrato_abusivo": "Cancelamento digital em 1 clique",
+    "estacionamento": "Estacionamento próprio ou parceria com vaga grátis",
+    "estrutura_envelhecida": "Renovação anual de equipamentos programada",
+    "ruido_alto": "Áreas com DJ + áreas silenciosas separadas",
+    "horarios_limitados": "Horário estendido ou 24h em turnos de baixa",
+    "ausencia_servico": "Pacote de aulas coletivas + personal de entrada",
+    "seguranca": "CFTV + controle de acesso + iluminação perimetral",
+}
+
+
+def _map_topic_keyword_to_categoria(keyword: str) -> str:
+    kw = (keyword or "").strip().lower()
+    if not kw:
+        return "outra"
+    for hint, cat in TOPIC_KEYWORD_TO_CATEGORIA:
+        if hint in kw:
+            return cat
+    return "outra"
+
+
+def _normalize_searchapi_topics(topics: list | None) -> list[dict]:
+    out: list[dict] = []
+    for raw in topics or []:
+        if not isinstance(raw, dict):
+            continue
+        keyword = (raw.get("keyword") or raw.get("name") or "").strip()
+        if not keyword:
+            continue
+        try:
+            mencoes = int(raw.get("reviews") or raw.get("mentions") or raw.get("count") or 0)
+        except (TypeError, ValueError):
+            mencoes = 0
+        cat = _map_topic_keyword_to_categoria(keyword)
+        out.append({
+            "keyword": keyword,
+            "mencoes": mencoes,
+            "categoria_dor": cat,
+            "topic_id": raw.get("id") or raw.get("topic_id"),
+            "fonte": "searchapi_topics",
+        })
+    out.sort(key=lambda x: x.get("mencoes", 0), reverse=True)
+    return out
+
+
+def _build_temas_insatisfacao(topics: list | None, reviews: list | None = None) -> list[dict]:
+    temas = [t for t in _normalize_searchapi_topics(topics) if t.get("categoria_dor") != "outra"]
+    if temas:
+        return temas[:10]
+    if not reviews:
+        return []
+    agg: dict[str, int] = {}
+    for rev in reviews:
+        if not isinstance(rev, dict):
+            continue
+        if int(rev.get("rating") or 3) > 3:
+            continue
+        cat = (rev.get("categoria_dor") or "").strip()
+        if cat and cat != "outra":
+            agg[cat] = agg.get(cat, 0) + 1
+    return [
+        {"keyword": cat, "mencoes": n, "categoria_dor": cat, "fonte": "reviews_baixa_nota"}
+        for cat, n in sorted(agg.items(), key=lambda x: -x[1])
+    ][:10]
+
+
+def _sinal_from_rating(rating: int | float | None) -> str:
+    try:
+        r = int(rating or 3)
+    except (TypeError, ValueError):
+        r = 3
+    if r >= 4:
+        return "positivo"
+    if r <= 2:
+        return "negativo"
+    return "neutro"
+
+
+def _infer_categoria_dor_review(review: dict) -> dict[str, str]:
+    rating = review.get("rating", 3)
+    texto_low = (review.get("quote_curta") or "").lower()
+    for dor in review.get("dores_detectadas") or []:
+        if not isinstance(dor, str):
+            continue
+        cat = DORES_COMUNS_TO_CATEGORIA.get(dor)
+        if cat:
+            return {
+                "categoria_dor": cat,
+                "sinal": _sinal_from_rating(rating),
+                "confianca_classificacao": "alta",
+            }
+    for hint, cat in TOPIC_KEYWORD_TO_CATEGORIA:
+        if hint in texto_low:
+            return {
+                "categoria_dor": cat,
+                "sinal": _sinal_from_rating(rating),
+                "confianca_classificacao": "media",
+            }
+    try:
+        r = int(float(rating or 3))
+    except (TypeError, ValueError):
+        r = 3
+    if r <= 2:
+        return {"categoria_dor": "outra", "sinal": "negativo", "confianca_classificacao": "baixa"}
+    if r >= 4:
+        return {"categoria_dor": "outra", "sinal": "positivo", "confianca_classificacao": "baixa"}
+    return {"categoria_dor": "outra", "sinal": "neutro", "confianca_classificacao": "baixa"}
+
+
+def classificar_dores_reviews_deterministico(concorrentes_com_reviews: list[dict]) -> list[dict]:
+    for c in concorrentes_com_reviews:
+        if not isinstance(c, dict):
+            continue
+        place_id = c.get("place_id") or ""
+        bundle = _fetch_reviews_bundle(place_id) if place_id else None
+        topics = (bundle or {}).get("topics") or c.get("searchapi_topics") or []
+        if topics and not c.get("searchapi_topics"):
+            c["searchapi_topics"] = _normalize_searchapi_topics(topics)
+        if not c.get("temas_insatisfacao"):
+            c["temas_insatisfacao"] = _build_temas_insatisfacao(topics, c.get("reviews"))
+        for review in c.get("reviews") or []:
+            if not isinstance(review, dict):
+                continue
+            if review.get("categoria_dor"):
+                continue
+            review.update(_infer_categoria_dor_review(review))
+    return concorrentes_com_reviews
+
+
+def _classificacao_dores_usa_gemini() -> bool:
+    return os.getenv("CLASSIFICAR_DORES_GEMINI", "").strip().lower() in ("1", "true", "yes", "on")
+
 
 def _classificar_dor_substring(texto_low: str) -> list[str]:
     """
@@ -996,34 +1197,45 @@ def _processar_review_card(texto: str, rating: int, autor: str, data_rel: str) -
     }
 
 
-# Memo in-process por place_id — mata o 2× DENTRO do run (duas funções, mesmo place_id).
-_REVIEWS_RAW_MEMO: dict[str, "list | None"] = {}
+# Memo in-process por place_id — bundle {reviews, topics} compartilhado no run.
+_REVIEWS_BUNDLE_MEMO: dict[str, dict | None] = {}
 
 
-def _fetch_reviews_raw(place_id: str) -> "list | None":
-    """SearchAPI google_maps_reviews (sort lowest_rating) → reviews[] cru. Cacheado:
-    memo in-process (mata o 2× no run) + DB cache_reviews (determinístico cross-run,
-    TTL 7d). None = sem key/erro (caller cai pro Places); list (mesmo vazia) = OK.
-    Antes: 2 funções batiam o MESMO place_id, valor podia divergir entre as chamadas."""
+def _unwrap_reviews_cache_payload(payload: dict | None) -> dict:
+    if not isinstance(payload, dict):
+        return {"reviews": [], "topics": []}
+    raw = payload.get("reviews")
+    if isinstance(raw, dict) and "reviews" in raw:
+        return {
+            "reviews": raw.get("reviews") or [],
+            "topics": raw.get("topics") or [],
+        }
+    if isinstance(raw, list):
+        return {"reviews": raw, "topics": payload.get("topics") or []}
+    return {"reviews": [], "topics": payload.get("topics") or []}
+
+
+def _fetch_reviews_bundle(place_id: str) -> dict | None:
+    """SearchAPI google_maps_reviews → {reviews[], topics[]}. None = sem key/erro."""
     import os as _os
 
     if not place_id:
         return None
-    if place_id in _REVIEWS_RAW_MEMO:
-        return _REVIEWS_RAW_MEMO[place_id]
+    if place_id in _REVIEWS_BUNDLE_MEMO:
+        return _REVIEWS_BUNDLE_MEMO[place_id]
     try:
         from tools.cache_store import get_reviews
 
         hit = get_reviews(place_id)
         if hit.hit and isinstance(hit.payload, dict):
-            revs = hit.payload.get("reviews") or []
-            _REVIEWS_RAW_MEMO[place_id] = revs
-            return revs
+            bundle = _unwrap_reviews_cache_payload(hit.payload)
+            _REVIEWS_BUNDLE_MEMO[place_id] = bundle
+            return bundle
     except Exception:
         pass
     key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
     if not key:
-        _REVIEWS_RAW_MEMO[place_id] = None
+        _REVIEWS_BUNDLE_MEMO[place_id] = None
         return None
     try:
         from tools.api_cost_tracker import track_api_call
@@ -1037,18 +1249,28 @@ def _fetch_reviews_raw(place_id: str) -> "list | None":
                     headers={"Authorization": f"Bearer {key}"},
                 ).json()
         revs = data.get("reviews") or []
+        topics = data.get("topics") or []
+        bundle = {"reviews": revs, "topics": topics}
     except Exception:
-        _REVIEWS_RAW_MEMO[place_id] = None
+        _REVIEWS_BUNDLE_MEMO[place_id] = None
         return None
-    _REVIEWS_RAW_MEMO[place_id] = revs
+    _REVIEWS_BUNDLE_MEMO[place_id] = bundle
     try:
         from tools.cache_store import set_reviews
 
-        if revs:
-            set_reviews(place_id, revs)
+        if revs or topics:
+            set_reviews(place_id, revs, topics=topics)
     except Exception:
         pass
-    return revs
+    return bundle
+
+
+def _fetch_reviews_raw(place_id: str) -> "list | None":
+    """Compat: retorna só reviews[] do bundle compartilhado."""
+    bundle = _fetch_reviews_bundle(place_id)
+    if bundle is None:
+        return None
+    return bundle.get("reviews") or []
 
 
 def _reviews_searchapi_card(place_id: str, max_reviews: int = 5) -> list[dict] | None:
@@ -1271,7 +1493,21 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
         ratings_por_academia[nome] = float(rating_raw) if rating_raw is not None else 0.0
         reviews_list = c.get("reviews", [])
         if not isinstance(reviews_list, list):
-            continue
+            reviews_list = []
+        for tema in c.get("temas_insatisfacao") or []:
+            if not isinstance(tema, dict):
+                continue
+            cat = (tema.get("categoria_dor") or "").strip()
+            if not cat or cat.lower() in ("outra", "outras"):
+                continue
+            try:
+                mencoes = int(tema.get("mencoes") or 1)
+            except (TypeError, ValueError):
+                mencoes = 1
+            categorias_dor[cat] = categorias_dor.get(cat, 0) + mencoes
+            if cat not in categorias_por_academia:
+                categorias_por_academia[cat] = {}
+            categorias_por_academia[cat][nome] = categorias_por_academia[cat].get(nome, 0) + mencoes
         for review in reviews_list:
             if not isinstance(review, dict):
                 continue
@@ -1338,7 +1574,7 @@ def analisar_gap_competitivo(concorrentes_com_reviews: list[dict], bairro: str =
             "dor_identificada": dor,
             "frequencia_mencoes": contagem,
             "mencionado_por": mencionado_por,
-            "oportunidade": mapa_solucao.get(dor, f"Resolver: {dor}"),
+            "oportunidade": mapa_solucao.get(dor) or TAXONOMIA_SOLUCAO.get(dor) or f"Resolver: {dor}",
             "prioridade": "ALTA" if contagem >= 3 else "MEDIA" if contagem >= 2 else "BAIXA",
         })
 
@@ -2379,6 +2615,8 @@ def _slim_concorrente(c: dict) -> dict:
         "telefone": (c.get("telefone") or "").strip() or None,
         "website": website_raw[:200] if website_raw else None,
         "reviews": reviews_slim,
+        "temas_insatisfacao": (c.get("temas_insatisfacao") or [])[:10],
+        "searchapi_topics": (c.get("searchapi_topics") or [])[:10],
         "horarios_pico": c.get("horarios_pico"),
         "planos_precos": c.get("planos_precos"),
         "instagram_profile": c.get("instagram_profile"),
@@ -2414,9 +2652,8 @@ async def analisar_concorrentes_a3a_completo(
       3. Para cada concorrente:
           - buscar_reviews_academia (síncrono)
           - await enriquecer_concorrente_via_google (async, Playwright)
-      4. classificar_dores_reviews_batch_gemini — 1 Gemini Flash call
-         classifica TODAS reviews em batch (Task #46)
-      5. aplicar_classificacao_dores — muta in-place
+      4. classificar_dores_reviews_deterministico — SearchAPI topics + card
+      5. classificar_dores_reviews_batch_gemini — só se CLASSIFICAR_DORES_GEMINI=1
 
     Retorna `concorrentes_brutos` pronto pro A3b consumir via state.
     """
@@ -2600,6 +2837,10 @@ async def analisar_concorrentes_a3a_completo(
             logger.warning(f"[A3a instagram] {nome}: {type(e).__name__}: {e}")
 
         maps_uri = (c.get("google_maps_uri") or "").strip() or None
+        bundle = _fetch_reviews_bundle(place_id) if place_id else None
+        topics_raw = (bundle or {}).get("topics") or []
+        searchapi_topics = _normalize_searchapi_topics(topics_raw)
+        temas_insatisfacao = _build_temas_insatisfacao(topics_raw, reviews)
         return {
             "place_id": place_id,
             "nome": nome,
@@ -2616,6 +2857,9 @@ async def analisar_concorrentes_a3a_completo(
             "website": c.get("website", ""),
             "origem_busca": c.get("origem_busca", "nearby"),
             "reviews": reviews,
+            "searchapi_topics": searchapi_topics,
+            "temas_insatisfacao": temas_insatisfacao,
+            "fonte_reviews": reviews_data.get("fonte_reviews"),
             "horarios_pico": horarios_pico_dict,
             "pico_semanal": pico_semanal_str,
             "planos_precos": planos_precos,
@@ -2632,12 +2876,13 @@ async def analisar_concorrentes_a3a_completo(
     for c in incluidos:
         concorrentes_brutos.append(await _processar_um(c))
 
-    # Classificação semântica de dores em BATCH único (Task #46).
-    # Roda em thread pra não bloquear event loop (Gemini client é sync).
-    classificacoes = await asyncio.to_thread(
-        classificar_dores_reviews_batch_gemini, concorrentes_brutos
-    )
-    aplicar_classificacao_dores(concorrentes_brutos, classificacoes)
+    classificar_dores_reviews_deterministico(concorrentes_brutos)
+    classificacoes: dict = {}
+    if _classificacao_dores_usa_gemini():
+        classificacoes = await asyncio.to_thread(
+            classificar_dores_reviews_batch_gemini, concorrentes_brutos
+        )
+        aplicar_classificacao_dores(concorrentes_brutos, classificacoes)
 
     redes_a0 = busca.get("redes_a0_solicitadas") or []
     for c in concorrentes_brutos:
@@ -2668,11 +2913,17 @@ async def analisar_concorrentes_a3a_completo(
         "metodologia": (
             "Top 5 balanceado (1 unidade por rede A0 + complemento por nº "
             "avaliações), filtro semântico academia_tradicional, reviews via "
-            "Places Details, enrichment Google (best-effort), classificação "
-            "semântica de dores via Gemini Flash em batch único."
+            "SearchAPI google_maps_reviews (sort lowest_rating) + topics[] + card "
+            "determinístico (categoria_dor), enrichment Google (best-effort)"
+            + (
+                ", refino Gemini se CLASSIFICAR_DORES_GEMINI=1"
+                if _classificacao_dores_usa_gemini()
+                else ""
+            )
+            + "."
         ),
         "classificacao_dores_status": (
-            "ok" if classificacoes else "fallback_substring (Gemini falhou)"
+            "gemini_refinamento" if classificacoes else "deterministico_searchapi"
         ),
     }
 

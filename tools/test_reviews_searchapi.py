@@ -1,5 +1,5 @@
 """Reviews do concorrente via SearchAPI google_maps_reviews: shape do card + sort
-lowest_rating (dores primeiro) + fallback Places quando vazio/sem key."""
+lowest_rating (dores primeiro) + topics[] + fallback Places quando vazio/sem key."""
 from unittest.mock import MagicMock, patch
 
 import tools.competitor_tools as ct
@@ -12,6 +12,40 @@ def test_processar_review_card():
     assert len(c["quote_curta"]) <= 180
 
 
+def test_map_topic_keyword_to_categoria():
+    assert ct._map_topic_keyword_to_categoria("staff") == "atendimento_ruim"
+    assert ct._map_topic_keyword_to_categoria("Preço mensalidade") == "preco_alto"
+    assert ct._map_topic_keyword_to_categoria("knicks") == "outra"
+
+
+def test_build_temas_insatisfacao_from_topics():
+    topics = [{"keyword": "staff", "reviews": 12}, {"keyword": "equipment", "reviews": 8}]
+    temas = ct._build_temas_insatisfacao(topics)
+    assert len(temas) == 2
+    assert temas[0]["categoria_dor"] == "atendimento_ruim"
+    assert temas[0]["fonte"] == "searchapi_topics"
+
+
+def test_classificar_dores_deterministico_review():
+    conc = [{
+        "place_id": "ChIJx",
+        "nome": "Gym",
+        "reviews": [{
+            "rating": 1,
+            "quote_curta": "muito cheio e equipamentos quebrados",
+            "dores_detectadas": ["muito cheio", "equipamentos quebrados"],
+        }],
+    }]
+    with patch.object(ct, "_fetch_reviews_bundle", return_value={"reviews": [], "topics": []}):
+        ct.classificar_dores_reviews_deterministico(conc)
+    assert conc[0]["reviews"][0]["categoria_dor"] == "lotacao"
+
+
+def test_gemini_off_by_default(monkeypatch):
+    monkeypatch.delenv("CLASSIFICAR_DORES_GEMINI", raising=False)
+    assert ct._classificacao_dores_usa_gemini() is False
+
+
 def _mock_httpx(payload):
     resp = MagicMock(); resp.json.return_value = payload
     client = MagicMock(); client.get.return_value = resp
@@ -19,10 +53,23 @@ def _mock_httpx(payload):
     return cm
 
 
-_FAKE_REVIEWS = {"reviews": [
-    {"text": "Só tem propaganda, cheira mal <br> péssimo", "rating": 1, "user": {"name": "Ana"}, "date": "há 1 semana"},
-    {"text": "Estrutura boa porém caro", "rating": 3, "user": {"name": "Bruno"}, "date": "há 1 mês"},
-]}
+_FAKE_REVIEWS = {
+    "reviews": [
+        {"text": "Só tem propaganda, cheira mal <br> péssimo", "rating": 1, "user": {"name": "Ana"}, "date": "há 1 semana"},
+        {"text": "Estrutura boa porém caro", "rating": 3, "user": {"name": "Bruno"}, "date": "há 1 mês"},
+    ],
+    "topics": [{"keyword": "staff", "reviews": 5}],
+}
+
+
+def test_fetch_reviews_bundle_extracts_topics(monkeypatch):
+    monkeypatch.setenv("SEARCHAPI_KEY", "k")
+    ct._REVIEWS_BUNDLE_MEMO.clear()
+    with patch.object(ct.httpx, "Client", return_value=_mock_httpx(_FAKE_REVIEWS)):
+        bundle = ct._fetch_reviews_bundle("ChIJabc")
+    assert bundle is not None
+    assert len(bundle["reviews"]) == 2
+    assert bundle["topics"][0]["keyword"] == "staff"
 
 
 def test_reviews_searchapi_card_limpa_html(monkeypatch):

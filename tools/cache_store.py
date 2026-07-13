@@ -261,16 +261,18 @@ def get_reviews(place_id: str) -> CacheHit:
     return CacheHit(hit=True, payload=row)
 
 
-def set_reviews(place_id: str, reviews: list, *, source: str = "searchapi", ttl_days: int = 7) -> None:
+def set_reviews(place_id: str, reviews: list, *, topics: list | None = None, source: str = "searchapi", ttl_days: int = 7) -> None:
     sb = _get_client()
     if not sb or not place_id:
         return
     now = _utcnow()
-    tbl(sb, "cache_reviews").upsert({
-        "place_id": place_id, "reviews": reviews, "source": source,
+    payload: dict | list = {"reviews": reviews, "topics": topics or []} if topics is not None else reviews
+    row: dict = {
+        "place_id": place_id, "reviews": payload, "source": source,
         "cached_at": _dt_to_iso(now),
         "expires_at": _dt_to_iso(now + timedelta(days=ttl_days)), "hit_count": 0,
-    }, on_conflict="place_id").execute()
+    }
+    tbl(sb, "cache_reviews").upsert(row, on_conflict="place_id").execute()
 
 
 # -----------------------------------------------------------------------------

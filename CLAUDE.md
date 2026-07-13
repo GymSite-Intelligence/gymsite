@@ -22,7 +22,7 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 
 ## Fontes de dados do pipeline
 
-- **SearchAPI** (`SEARCHAPI_KEY`) — Google Maps/Search via API paga. Backend PRIMÁRIO de concorrentes (A3a, `engine=google_maps`, ~4× mais barato que Places) E de imóveis/pontos comerciais (cascata `listing_cascata.py`, bairro-scoped). Preferir sempre sobre scraping.
+- **SearchAPI** (`SEARCHAPI_KEY`) — Google Maps/Search via API paga. Backend PRIMÁRIO de concorrentes (A3a, `engine=google_maps`, ~4× mais barato que Places) E de imóveis/pontos comerciais (cascata `listing_cascata.py`, bairro-scoped). Preferir sempre sobre scraping. **Regra + mapa:** `.agent/rules/pipeline-fontes-deterministicas.md` e `docs/arquitetura/PIPELINE_AGENTES.md` §7–§9 — revisitar antes de mudar pipeline.
 - **MRLR determinístico** (`aluguel_mrlr.py`) — fonte do ALUGUEL na viabilidade (A4 Tier 0), sobre espelhos BQ. O aluguel NÃO vem de listing raspado.
 - **Playwright** (`imobiliaria_scraper.py`, OLX/ImovelWeb) — legado, FORA do caminho crítico (flag `LISTINGS_PLAYWRIGHT`, default off): era o gargalo que estourava o pipeline (timeouts 45s + Cloudflare). A cascata SearchAPI o substitui.
 - **Vertex AI Search** — RAG qualitativo (base de conhecimento, catálogos de equipamento/regulatório).

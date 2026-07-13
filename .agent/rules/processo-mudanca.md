@@ -105,3 +105,10 @@ Ao encontrar decisão pendente durante implementação, PERGUNTAR ao usuário an
 | dayjs / react-hot-toast / tabler icons | Seguir o que já existe no frontend; não introduzir lib duplicada |
 
 Princípios (P-001..P-007) e padrões (P0–P3) aplicam-se integralmente. Mecânica de implementação segue a stack real acima.
+
+## Pipeline de agentes (A0–A9)
+
+Mudanças no pipeline, fontes de dados ou macros determinísticas: ler **antes** de codar:
+
+- [`.agent/rules/pipeline-fontes-deterministicas.md`](pipeline-fontes-deterministicas.md) — SearchAPI primário, determinismo, checklist
+- [`docs/arquitetura/PIPELINE_AGENTES.md`](../docs/arquitetura/PIPELINE_AGENTES.md) — mapa vivo agente↔relatório (§7–§9 = fontes, fluxo pedestre, gaps MD vs código)

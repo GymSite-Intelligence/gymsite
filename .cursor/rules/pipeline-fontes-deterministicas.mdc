@@ -1,0 +1,18 @@
+---
+description: SearchAPI primário, pipeline determinístico, hierarquia de fontes — ler antes de mudar agents/tools do pipeline A0-A9.
+alwaysApply: true
+---
+
+# Pipeline — SearchAPI primário e determinismo
+
+Antes de alterar `agents/*.py`, macros em `tools/*_tools.py` ou contratos de relatório:
+
+1. Ler [`.agent/rules/pipeline-fontes-deterministicas.md`](../../.agent/rules/pipeline-fontes-deterministicas.md)
+2. Ler [`docs/arquitetura/PIPELINE_AGENTES.md`](../../docs/arquitetura/PIPELINE_AGENTES.md) §7–§9
+
+**Regras curtas:**
+- SearchAPI = primário Maps/reviews/listings/IG; Places fallback; Playwright legado off prod; reviews: fetch+card det., Gemini só refina `categoria_dor`
+- Número no relatório = tool/banco, não LLM (A6/A9 narram; A0 override CNPJ)
+- Não bloquear A1 com passo osmnx cold — fluxo pedestre preferir 1× no A6
+- Todo número exibido carrega carimbo (valor · base · fonte · janela)
+- Atualizar PIPELINE_AGENTES.md se mudar fonte, agente ou state key
