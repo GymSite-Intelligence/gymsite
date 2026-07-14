@@ -3,6 +3,10 @@
 Lista viva dos PRDs avaliados para melhorias práticas de conversação (degustação / consultor).  
 Só entra o que tem caminho claro no código atual e retorno de uso.
 
+> **Documento canônico da decisão (MD + PDF + layouts Mermaid):**  
+> [DECISAO_CURADORIA_PRDS_CONVERSACIONAIS.md](./DECISAO_CURADORIA_PRDS_CONVERSACIONAIS.md) ·  
+> [PDF](./DECISAO_CURADORIA_PRDS_CONVERSACIONAIS.pdf)
+
 ## Entrada comum (comparação justa)
 
 Os três modelos receberam **o mesmo pacote** (textos de contexto + código do `agents_site`).  
