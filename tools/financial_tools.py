@@ -399,8 +399,19 @@ def calcular_viabilidade_3_cenarios(
     capex_indices: dict | None = None,
     renda_media_bairro: float | None = None,
     renda_percentil: float | None = None,
+    tipo_obra: str = "adaptacao",
+    necessita_reforco_estrutural: bool = False,
 ) -> dict:
     _capex_ctx = _resolve_capex_indices(uf, capex_indices)
+    from tools.obra_capex import normalize_tipo_obra
+
+    _tipo_obra = normalize_tipo_obra(tipo_obra)
+    alertas_obra: list[str] = []
+    if necessita_reforco_estrutural:
+        alertas_obra.append(
+            "Obra: reforço estrutural indicado — CAPEX civil pode subir além do modelo "
+            f"({_tipo_obra}); validar laudo técnico."
+        )
     # Task #26 — DETERMINIZAÇÃO: ticket/inadimplência/churn saem do CATÁLOGO
     # (parametros_metodologia, versionado com fonte/data), NUNCA mais do
     # benchmark via Search Grounding/LLM. Era a última variância do score:
@@ -513,6 +524,7 @@ def calcular_viabilidade_3_cenarios(
             fornecedor_principal=fornecedor_principal,
             capex_indices=_capex_ctx,
             legal_fees_ctx=_legal_ctx,
+            tipo_obra=_tipo_obra,
         )["total"]
         # 1.2 Folha = max(piso R$, % do faturamento). Piso preserva realismo na
         # rampa/operação pequena; % do faturamento captura a escala (Benchmark
@@ -612,6 +624,7 @@ def calcular_viabilidade_3_cenarios(
             fornecedor_principal=fornecedor_principal,
             capex_indices=_capex_ctx,
             legal_fees_ctx=_legal_ctx,
+            tipo_obra=_tipo_obra,
         )
         capital_giro = round(
             custos_totais * CAPEX_DETALHADO_BASE["capital_giro_meses"], 2
@@ -752,6 +765,8 @@ def calcular_viabilidade_3_cenarios(
         "alertas_benchmark": alertas_benchmark,
         "alertas_ticket": alertas_ticket,
         "alertas_legal": alertas_legal,
+        "alertas_obra": alertas_obra,
+        "tipo_obra": _tipo_obra,
     }
 
 
@@ -1141,21 +1156,16 @@ def _obra_por_m2_modelo(
     modelo: str,
     *,
     capex_indices: dict | None = None,
+    tipo_obra: str = "adaptacao",
 ) -> float:
-    """R$/m² obra adaptação: bundle SINAPI > fallback CAPEX_DETALHADO_BASE."""
-    modelo = (modelo or "mid").lower()
-    if capex_indices:
-        por_mod = capex_indices.get("obra_adaptacao_por_m2_por_modelo")
-        if isinstance(por_mod, dict) and por_mod.get(modelo) is not None:
-            return float(por_mod[modelo])
-        mid = capex_indices.get("obra_adaptacao_por_m2")
-        if mid is not None and modelo == "mid":
-            return float(mid)
-        if mid is not None:
-            ratios = {"low": _RATIO_LOW_MID, "premium": _RATIO_PREMIUM_MID}
-            if modelo in ratios:
-                return round(float(mid) * ratios[modelo], 2)
-    return float(CAPEX_DETALHADO_BASE["obra_adaptacao_por_m2"][modelo])
+    """R$/m² obra civil: bundle CUB/SINAPI > fallback CAPEX_DETALHADO_BASE."""
+    from tools.obra_capex import normalize_tipo_obra, obra_m2_por_modelo
+
+    return obra_m2_por_modelo(
+        modelo,
+        tipo_obra=normalize_tipo_obra(tipo_obra),
+        capex_indices=capex_indices,
+    )
 
 
 def _calcular_capex_detalhado(
@@ -1168,19 +1178,26 @@ def _calcular_capex_detalhado(
     fornecedor_principal: str = "default",
     capex_indices: dict | None = None,
     legal_fees_ctx: dict | None = None,
+    tipo_obra: str = "adaptacao",
 ) -> dict:
     """Breakdown CAPEX com contingência + frete ANTT.
 
     Schema v1.5: `equipamentos_override` aceita valor do kit detalhado real.
     Schema v1.6: `uf_destino` ativa cálculo de frete via ANTT (R$/km).
     Schema v1.7: `legal_fees_ctx` (resolver_taxas_capex) sobrescreve alvará/projeto.
+    Schema v1.8: `tipo_obra` adaptacao|bruta altera R$/m² obra (chave legada obra_adaptacao).
     Quando UF fornecida, adiciona linha `frete_equipamentos` ao subtotal.
     """
+    from tools.obra_capex import carimbo_obra_civil, linha_obra, normalize_tipo_obra
+
+    _tipo_obra = normalize_tipo_obra(tipo_obra)
     if equipamentos_override is not None and equipamentos_override > 0:
         equip = equipamentos_override
     else:
         equip = area_m2 * CAPEX_DETALHADO_BASE["equipamentos_por_m2"][modelo]
-    obra_m2 = _obra_por_m2_modelo(modelo, capex_indices=capex_indices)
+    obra_m2 = _obra_por_m2_modelo(
+        modelo, capex_indices=capex_indices, tipo_obra=_tipo_obra
+    )
     obra = area_m2 * obra_m2
     projeto = CAPEX_DETALHADO_BASE["projeto_arquitetonico"]
     alvara = CAPEX_DETALHADO_BASE["alvara_e_taxas"]
@@ -1220,9 +1237,10 @@ def _calcular_capex_detalhado(
         except Exception:
             pass
 
-    from tools.obra_regua import carimbo_obra_adaptacao
-
-    fonte_obra_adaptacao = carimbo_obra_adaptacao(capex_indices, obra_m2, modelo)
+    fonte_obra_adaptacao = carimbo_obra_civil(
+        capex_indices, obra_m2, tipo_obra=_tipo_obra, modelo=modelo
+    )
+    _linha_obra = linha_obra(_tipo_obra)
 
     subtotal = equip + obra + projeto + alvara + frete
     contingencia = subtotal * CAPEX_DETALHADO_BASE["contingencia_pct"]
@@ -1246,6 +1264,9 @@ def _calcular_capex_detalhado(
         "fonte_alvara_e_taxas": fonte_alvara,
         "fonte_obra_adaptacao": fonte_obra_adaptacao,
         "obra_adaptacao_por_m2": round(obra_m2, 2),
+        "obra_civil": round(obra, 2),
+        "tipo_obra": _tipo_obra,
+        "linha_obra": _linha_obra,
         "legal_fees": legal_fees_meta,
     }
 
@@ -1474,6 +1495,8 @@ async def analise_financeira_a4_completo(
     destino_lat: float | None = None,
     destino_lng: float | None = None,
     fornecedor_principal: str = "default",
+    tipo_obra: str = "adaptacao",
+    necessita_reforco_estrutural: bool = False,
 ) -> dict:
     """Macro-tool A4 — viabilidade 3 cenários + aluguel (MRLR Tier 0 primeiro, P-000)."""
     import os
@@ -1558,6 +1581,8 @@ async def analise_financeira_a4_completo(
         destino_lat=destino_lat,
         destino_lng=destino_lng,
         fornecedor_principal=fornecedor_principal,
+        tipo_obra=tipo_obra,
+        necessita_reforco_estrutural=necessita_reforco_estrutural,
     )
 
     fin.setdefault("alertas", [])
@@ -1568,6 +1593,9 @@ async def analise_financeira_a4_completo(
         if av not in fin["alertas"]:
             fin["alertas"].append(av)
     for av in fin.pop("alertas_legal", []) or []:
+        if av not in fin["alertas"]:
+            fin["alertas"].append(av)
+    for av in fin.pop("alertas_obra", []) or []:
         if av not in fin["alertas"]:
             fin["alertas"].append(av)
 
@@ -1712,6 +1740,8 @@ def analise_financeira_completa(
     destino_lat: float | None = None,
     destino_lng: float | None = None,
     fornecedor_principal: str = "default",
+    tipo_obra: str = "adaptacao",
+    necessita_reforco_estrutural: bool = False,
 ) -> dict:
     """
     Macro-tool: resolve aluguel + viabilidade em 3 cenários em UMA chamada.
@@ -1769,6 +1799,8 @@ def analise_financeira_completa(
         fornecedor_principal=fornecedor_principal,
         renda_media_bairro=_rmb,
         renda_percentil=_renda_percentil_bairro(cidade, bairro, uf),
+        tipo_obra=tipo_obra,
+        necessita_reforco_estrutural=necessita_reforco_estrutural,
     )
 
     viabilidade["renda_fonte"] = _renda_fonte  # (c) transparência: qual fonte de renda foi usada

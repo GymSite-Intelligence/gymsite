@@ -114,6 +114,10 @@ class FinancialEstimatorAgent(BaseAgent):
         genero = (ip.get("genero_alvo") or mci.get("genero_alvo") or "misto")
         area_m2 = _derivar_area(ip, tipo)
         lat, lng = _top1_latlng(state)
+        tipo_obra = ip.get("tipo_obra") or ip.get("tipoObra") or mci.get("tipo_obra")
+        reforco = ip.get("necessita_reforco_estrutural") or ip.get("reforcoEstrutural")
+        if reforco is None:
+            reforco = mci.get("necessita_reforco_estrutural")
 
         try:
             # macro é async (faz aluguel + viabilidade); MRLR é Tier 0 primário lá dentro
@@ -123,6 +127,8 @@ class FinancialEstimatorAgent(BaseAgent):
                 area_m2_max=int(ip.get("area_m2_max") or 1500),
                 tipo_negocio=tipo, tamanho_preset=tamanho,
                 destino_lat=lat, destino_lng=lng,
+                tipo_obra=str(tipo_obra or "adaptacao"),
+                necessita_reforco_estrutural=bool(reforco),
             )
             if not isinstance(r, dict):
                 r = {"erro": "macro retornou não-dict", "score_viabilidade": None}

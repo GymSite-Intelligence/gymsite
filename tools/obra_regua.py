@@ -63,23 +63,9 @@ def carimbo_obra_adaptacao(
     obra_m2: float,
     modelo: str = "mid",
 ) -> str:
-    """Carimbo: valor · base · fonte · janela."""
-    if not capex_indices or _is_benchmark(capex_indices):
-        return f"{obra_m2:.2f} BRL/m² · adaptação · parametros_metodologia (Sebrae 2024)"
-    regua = capex_indices.get("regua") or "sinapi"
-    uf = capex_indices.get("uf") or "?"
-    periodo = capex_indices.get("periodo_ref") or capex_indices.get("data_coleta") or "n/d"
-    fator = capex_indices.get("fator_obra_adaptacao")
-    fonte = capex_indices.get("fonte_obra") or regua
-    base = "CUB m²" if regua == "cub" else "SINAPI m²"
-    if regua == "cub" and capex_indices.get("cub_m2") is not None:
-        base = f"CUB {float(capex_indices['cub_m2']):.2f} m²"
-    elif capex_indices.get("sinapi_custo_m2") is not None:
-        base = f"SINAPI {float(capex_indices['sinapi_custo_m2']):.2f} m²"
-    fator_txt = f" · fator {fator}" if fator is not None else ""
-    fb = capex_indices.get("regua_fallback")
-    fb_txt = f" · fallback {fb}" if fb else ""
-    return (
-        f"{obra_m2:.2f} BRL/m² · obra {modelo} · {base} × adaptação · "
-        f"{fonte} · {uf} · {periodo}{fator_txt}{fb_txt}"
+    """Compat — delega para carimbo_obra_civil (adaptação)."""
+    from tools.obra_capex import carimbo_obra_civil
+
+    return carimbo_obra_civil(
+        capex_indices, obra_m2, tipo_obra="adaptacao", modelo=modelo
     )
