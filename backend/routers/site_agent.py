@@ -152,6 +152,8 @@ class ConversarSiteInput(BaseModel):
     projeto_id: Optional[str] = None          # None = nova sessão (exige Turnstile)
     turnstile_token: Optional[str] = None      # obrigatório só na 1ª mensagem
     agente: Optional[str] = None               # None/degustacao = roteador; senão, id de agents_site/catalog.py
+    # Hint opcional do front (gym-insight-hub): evita reperguntar bairro/cidade.
+    localizacao: Optional[dict] = None         # {bairro, cidade, uf} — validado no runner
     dev_token: Optional[str] = Field(default=None, max_length=120)
 
     @field_validator("agente")
@@ -164,6 +166,28 @@ class ConversarSiteInput(BaseModel):
         if v is not None and v not in AGENTES_VALIDOS:
             raise ValueError(f"agente desconhecido: {v!r}")
         return v
+
+    @field_validator("localizacao")
+    @classmethod
+    def _localizacao_shape(cls, v: Optional[dict]) -> Optional[dict]:
+        if v is None:
+            return None
+        if not isinstance(v, dict):
+            raise ValueError("localizacao deve ser objeto")
+        out: dict = {}
+        for k in ("bairro", "cidade", "uf", "bairro_ascii", "tipo_negocio"):
+            raw = v.get(k)
+            if raw is None:
+                continue
+            s = str(raw).strip()
+            if not s:
+                continue
+            if k == "uf":
+                s = s.upper()[:2]
+            elif len(s) > 120:
+                s = s[:120]
+            out[k] = s
+        return out or None
 
 
 class ConversarSiteResposta(BaseModel):
@@ -417,6 +441,7 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
         "mensagem": data.mensagem,
         "usuario_id": _ANON_SITE_USER_ID,
         "agente": data.agente or "degustacao",
+        "localizacao": data.localizacao,
     }, background)
 
     logger.info("site_conversar enfileirado projeto=%s ip=%s", projeto_id, ip)
