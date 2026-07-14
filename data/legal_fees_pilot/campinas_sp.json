@@ -1,0 +1,38 @@
+{
+  "cidade": "Campinas",
+  "uf": "SP",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 387.26,
+      "max": 804.3,
+      "typico": 595.78
+    },
+    "taxa_bombeiros_brl": {
+      "min": 810.0,
+      "max": 2790.0,
+      "typico": 1800.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 15000,
+      "max": 175000,
+      "r_m2": {
+        "min": 68.0,
+        "max": 152.0,
+        "typico": 105
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 607.82,
+      "max": 1823.45,
+      "typico": 1215.63
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

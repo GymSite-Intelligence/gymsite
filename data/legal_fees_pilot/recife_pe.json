@@ -1,0 +1,38 @@
+{
+  "cidade": "Recife",
+  "uf": "PE",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 309.81,
+      "max": 643.44,
+      "typico": 476.62
+    },
+    "taxa_bombeiros_brl": {
+      "min": 688.5,
+      "max": 2371.5,
+      "typico": 1530.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 14000,
+      "max": 165000,
+      "r_m2": {
+        "min": 62.0,
+        "max": 138.0,
+        "typico": 95
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 547.03,
+      "max": 1641.1,
+      "typico": 1094.07
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

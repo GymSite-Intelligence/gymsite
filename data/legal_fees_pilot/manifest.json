@@ -1,0 +1,82 @@
+{
+  "version": "1.0",
+  "data_coleta": "2026-07-13",
+  "notas": "15 praças piloto legal_fees. Fortaleza/Curitiba curadas; demais revisao_pendente.",
+  "cidades": [
+    {
+      "cidade": "Fortaleza",
+      "uf": "CE",
+      "slug": "fortaleza_ce"
+    },
+    {
+      "cidade": "Curitiba",
+      "uf": "PR",
+      "slug": "curitiba_pr"
+    },
+    {
+      "cidade": "São Paulo",
+      "uf": "SP",
+      "slug": "sao_paulo_sp"
+    },
+    {
+      "cidade": "Rio de Janeiro",
+      "uf": "RJ",
+      "slug": "rio_de_janeiro_rj"
+    },
+    {
+      "cidade": "Belo Horizonte",
+      "uf": "MG",
+      "slug": "belo_horizonte_mg"
+    },
+    {
+      "cidade": "Brasília",
+      "uf": "DF",
+      "slug": "brasilia_df"
+    },
+    {
+      "cidade": "Salvador",
+      "uf": "BA",
+      "slug": "salvador_ba"
+    },
+    {
+      "cidade": "Recife",
+      "uf": "PE",
+      "slug": "recife_pe"
+    },
+    {
+      "cidade": "Porto Alegre",
+      "uf": "RS",
+      "slug": "porto_alegre_rs"
+    },
+    {
+      "cidade": "Goiânia",
+      "uf": "GO",
+      "slug": "goiania_go"
+    },
+    {
+      "cidade": "Florianópolis",
+      "uf": "SC",
+      "slug": "florianopolis_sc"
+    },
+    {
+      "cidade": "Campinas",
+      "uf": "SP",
+      "slug": "campinas_sp"
+    },
+    {
+      "cidade": "Niterói",
+      "uf": "RJ",
+      "slug": "niteroi_rj"
+    },
+    {
+      "cidade": "Manaus",
+      "uf": "AM",
+      "slug": "manaus_am"
+    },
+    {
+      "cidade": "Belém",
+      "uf": "PA",
+      "slug": "belem_pa"
+    }
+  ]
+}

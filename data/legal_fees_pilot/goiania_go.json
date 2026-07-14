@@ -1,0 +1,38 @@
+{
+  "cidade": "Goiânia",
+  "uf": "GO",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 290.44,
+      "max": 603.23,
+      "typico": 446.83
+    },
+    "taxa_bombeiros_brl": {
+      "min": 648.0,
+      "max": 2232.0,
+      "typico": 1440.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 13000,
+      "max": 160000,
+      "r_m2": {
+        "min": 58.0,
+        "max": 130.0,
+        "typico": 90
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 516.64,
+      "max": 1549.93,
+      "typico": 1033.29
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

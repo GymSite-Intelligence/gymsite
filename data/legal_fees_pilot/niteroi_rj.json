@@ -1,0 +1,38 @@
+{
+  "cidade": "Niterói",
+  "uf": "RJ",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 464.71,
+      "max": 965.16,
+      "typico": 714.94
+    },
+    "taxa_bombeiros_brl": {
+      "min": 1053.0,
+      "max": 3627.0,
+      "typico": 2340.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 17000,
+      "max": 200000,
+      "r_m2": {
+        "min": 78.0,
+        "max": 174.0,
+        "typico": 120
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 668.6,
+      "max": 2005.79,
+      "typico": 1337.19
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

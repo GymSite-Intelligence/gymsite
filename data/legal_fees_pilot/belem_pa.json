@@ -1,0 +1,38 @@
+{
+  "cidade": "Belém",
+  "uf": "PA",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 251.72,
+      "max": 522.8,
+      "typico": 387.26
+    },
+    "taxa_bombeiros_brl": {
+      "min": 567.0,
+      "max": 1953.0,
+      "typico": 1260.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 12000,
+      "max": 145000,
+      "r_m2": {
+        "min": 52.0,
+        "max": 116.0,
+        "typico": 80
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 455.86,
+      "max": 1367.58,
+      "typico": 911.72
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

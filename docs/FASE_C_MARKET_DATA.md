@@ -7,7 +7,7 @@ Complementa Fase A/B: curadoria, degradação explícita, eval sem Deep Research
 | Item | Caminho | Função |
 |------|---------|--------|
 | Franquias curadas | `data/franchise_curated/fitness_br.json` | Referência ticket/investimento (não substitui OSM) |
-| Legal fees piloto | `data/legal_fees_pilot/{cidade}_{uf}.json` | Faixas alvará/CAU (Fortaleza, Curitiba) |
+| Legal fees piloto | `data/legal_fees_pilot/{cidade}_{uf}.json` | 15 capitais (manifest.json); Fortaleza/Curitiba curadas, demais `revisao_pendente` |
 | `stale` no bundle | `tools/market_bundle.compute_bundle_stale` | CVM/SINAPI/OSM/aluguel degradados |
 | Alertas A4 vs SMFT3 | `tools/financial_tools._alertas_vs_sector_listed` | Payback/margem vs CVM |
 | Golden A0 sem DR | `scripts/batch/golden_bundle_a0_gate.py` | `A0_CONTEXT_SOURCE=ckan_bundle` |

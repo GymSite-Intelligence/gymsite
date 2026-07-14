@@ -1,0 +1,38 @@
+{
+  "cidade": "Salvador",
+  "uf": "BA",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 329.17,
+      "max": 683.66,
+      "typico": 506.41
+    },
+    "taxa_bombeiros_brl": {
+      "min": 729.0,
+      "max": 2511.0,
+      "typico": 1620.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 14000,
+      "max": 170000,
+      "r_m2": {
+        "min": 62.0,
+        "max": 138.0,
+        "typico": 95
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 577.42,
+      "max": 1732.27,
+      "typico": 1154.85
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "cidade": "Manaus",
+  "uf": "AM",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 271.08,
+      "max": 563.01,
+      "typico": 417.05
+    },
+    "taxa_bombeiros_brl": {
+      "min": 607.5,
+      "max": 2092.5,
+      "typico": 1350.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 12000,
+      "max": 150000,
+      "r_m2": {
+        "min": 55.0,
+        "max": 123.0,
+        "typico": 85
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 486.25,
+      "max": 1458.76,
+      "typico": 972.5
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

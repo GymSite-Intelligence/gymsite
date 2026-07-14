@@ -56,7 +56,7 @@ def test_viabilidade_cidade_sem_piloto_emite_alerta():
         area_m2=1250.0,
         aluguel_mensal=20000.0,
         bairro="Centro",
-        cidade="São Paulo",
-        uf="SP",
+        cidade="Cidade Inexistente",
+        uf="XX",
     )
     assert any("legal_fees_pilot" in a for a in out.get("alertas_legal") or [])

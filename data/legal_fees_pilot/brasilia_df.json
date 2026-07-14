@@ -1,0 +1,38 @@
+{
+  "cidade": "Brasília",
+  "uf": "DF",
+  "fonte": "curadoria_gymsite_v1 — faixa conservadora por capital; revalidar prefeitura/CBM",
+  "data_coleta": "2026-07-13",
+  "revisao_pendente": true,
+  "notas": "Estimativa piloto v1 para A4 — typico calibrado vs Curitiba; não substitui tabela municipal.",
+  "taxas": {
+    "alvara_funcionamento_brl": {
+      "min": 425.98,
+      "max": 884.73,
+      "typico": 655.36
+    },
+    "taxa_bombeiros_brl": {
+      "min": 972.0,
+      "max": 3348.0,
+      "typico": 2160.0
+    },
+    "projeto_arquitetonico_cau_brl": {
+      "min": 17000,
+      "max": 190000,
+      "r_m2": {
+        "min": 75.0,
+        "max": 167.0,
+        "typico": 115
+      }
+    },
+    "vistoria_sanitaria_brl": {
+      "min": 607.82,
+      "max": 1823.45,
+      "typico": 1215.63
+    }
+  },
+  "prazo_meses_tipico": {
+    "alvara": 4,
+    "bombeiros": 2
+  }
+}

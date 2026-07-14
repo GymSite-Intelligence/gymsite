@@ -3,18 +3,71 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any, Literal
 
 ROOT = Path(__file__).resolve().parent.parent
 PILOT_DIR = ROOT / "data" / "legal_fees_pilot"
+MANIFEST_PATH = PILOT_DIR / "manifest.json"
+
+PILOT_CITIES: tuple[tuple[str, str], ...] = (
+    ("Fortaleza", "CE"),
+    ("Curitiba", "PR"),
+    ("São Paulo", "SP"),
+    ("Rio de Janeiro", "RJ"),
+    ("Belo Horizonte", "MG"),
+    ("Brasília", "DF"),
+    ("Salvador", "BA"),
+    ("Recife", "PE"),
+    ("Porto Alegre", "RS"),
+    ("Goiânia", "GO"),
+    ("Florianópolis", "SC"),
+    ("Campinas", "SP"),
+    ("Niterói", "RJ"),
+    ("Manaus", "AM"),
+    ("Belém", "PA"),
+)
 
 FaixaPolicy = Literal["min", "mid", "max", "typico"]
 
 
 def _slug(cidade: str, uf: str) -> str:
-    c = re.sub(r"[^a-z0-9]+", "_", (cidade or "").lower()).strip("_")
+    raw = (cidade or "").lower()
+    norm = unicodedata.normalize("NFKD", raw)
+    ascii_c = "".join(ch for ch in norm if not unicodedata.combining(ch))
+    c = re.sub(r"[^a-z0-9]+", "_", ascii_c).strip("_")
     return f"{c}_{(uf or '').lower()}"
+
+
+def load_manifest() -> dict[str, Any]:
+    if not MANIFEST_PATH.is_file():
+        return {"cidades": [{"cidade": c, "uf": u} for c, u in PILOT_CITIES]}
+    try:
+        data = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def list_pilot_cities() -> list[dict[str, str]]:
+    manifest = load_manifest()
+    rows = manifest.get("cidades")
+    if isinstance(rows, list) and rows:
+        out: list[dict[str, str]] = []
+        for row in rows:
+            if isinstance(row, dict) and row.get("cidade") and row.get("uf"):
+                out.append(
+                    {
+                        "cidade": str(row["cidade"]),
+                        "uf": str(row["uf"]).upper(),
+                        "slug": row.get("slug") or _slug(row["cidade"], row["uf"]),
+                    }
+                )
+        return out
+    return [
+        {"cidade": c, "uf": u, "slug": _slug(c, u)} for c, u in PILOT_CITIES
+    ]
 
 
 def load_legal_fees(cidade: str, uf: str) -> dict[str, Any] | None:
