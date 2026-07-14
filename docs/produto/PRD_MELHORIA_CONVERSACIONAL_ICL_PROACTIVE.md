@@ -1,6 +1,7 @@
 # PRD — Melhoria Conversacional (ICL, Proactive Dialogue, State)
 
 > **Curadoria GymSite · 2026-07-14** (#3 da série)  
+> **Modelo autor do PRD:** Kimi K2.6.  
 > Alvos: site agent + consultor legado.  
 > Relacionados: [#1 slot](./PRD_SLOT_TRACKING_CONTEXTO_CONVERSACIONAL.md) · [#2 elipse](./PRD_RESILIENCIA_CONTEXTO_ELIPSE.md)
 

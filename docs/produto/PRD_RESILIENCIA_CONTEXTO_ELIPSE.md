@@ -1,6 +1,7 @@
 # PRD — Resiliência de Contexto e Resolução de Elipse (Multi-turn)
 
 > **Curadoria GymSite · 2026-07-14** (#2 da série)  
+> **Modelo autor do PRD:** Gemini 3.1 Pro.  
 > Alvos: **site agent** (degustação) e, por espelho, **consultor legado**.  
 > Relacionado: [PRD slot tracking](./PRD_SLOT_TRACKING_CONTEXTO_CONVERSACIONAL.md) (#1).
 

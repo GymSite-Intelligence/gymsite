@@ -1,7 +1,7 @@
 # PRD — Resolução de Contexto Conversacional (Slot Tracking)
 
 > **Curadoria GymSite · 2026-07-14**  
-> Fonte: PRD enviado pelo produto (degustação / multiagente).  
+> **Modelo autor do PRD:** Claude Sonnet 4.5 (médio).  
 > Alvos: **site agent** (`agents_site/`) e **consultor legado** (`services/consultor/`).
 
 ---
