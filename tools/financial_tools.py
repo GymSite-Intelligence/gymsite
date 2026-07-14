@@ -1129,17 +1129,10 @@ def _resolve_capex_indices(
     uf: str,
     capex_indices: dict | None = None,
 ) -> dict | None:
-    if capex_indices:
-        return capex_indices
-    if not (uf or "").strip():
-        return None
     try:
-        from tools.sinapi_indices import capex_indices_for_uf
+        from tools.obra_regua import resolve_capex_indices_for_uf
 
-        block = capex_indices_for_uf(uf)
-        if (block.get("fonte_obra") or "").startswith("benchmark_fixo"):
-            return None
-        return block
+        return resolve_capex_indices_for_uf(uf, capex_indices=capex_indices)
     except Exception:
         return None
 
@@ -1187,7 +1180,8 @@ def _calcular_capex_detalhado(
         equip = equipamentos_override
     else:
         equip = area_m2 * CAPEX_DETALHADO_BASE["equipamentos_por_m2"][modelo]
-    obra = area_m2 * _obra_por_m2_modelo(modelo, capex_indices=capex_indices)
+    obra_m2 = _obra_por_m2_modelo(modelo, capex_indices=capex_indices)
+    obra = area_m2 * obra_m2
     projeto = CAPEX_DETALHADO_BASE["projeto_arquitetonico"]
     alvara = CAPEX_DETALHADO_BASE["alvara_e_taxas"]
     fonte_projeto = "parametros_metodologia (Sebrae 2024)"
@@ -1226,6 +1220,10 @@ def _calcular_capex_detalhado(
         except Exception:
             pass
 
+    from tools.obra_regua import carimbo_obra_adaptacao
+
+    fonte_obra_adaptacao = carimbo_obra_adaptacao(capex_indices, obra_m2, modelo)
+
     subtotal = equip + obra + projeto + alvara + frete
     contingencia = subtotal * CAPEX_DETALHADO_BASE["contingencia_pct"]
     return {
@@ -1246,6 +1244,8 @@ def _calcular_capex_detalhado(
         ),
         "fonte_projeto_arquitetonico": fonte_projeto,
         "fonte_alvara_e_taxas": fonte_alvara,
+        "fonte_obra_adaptacao": fonte_obra_adaptacao,
+        "obra_adaptacao_por_m2": round(obra_m2, 2),
         "legal_fees": legal_fees_meta,
     }
 

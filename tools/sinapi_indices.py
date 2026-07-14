@@ -149,6 +149,7 @@ def capex_indices_for_uf(uf: str) -> dict[str, Any]:
     obra = block.get("obra_adaptacao_por_m2") or {}
     return {
         "uf": uf,
+        "regua": "sinapi",
         "fonte_obra": snap.get("fonte", "SINAPI"),
         "periodo_ref": block.get("periodo_ref") or snap.get("periodo_ref"),
         "sinapi_custo_m2": block.get("sinapi_custo_m2"),

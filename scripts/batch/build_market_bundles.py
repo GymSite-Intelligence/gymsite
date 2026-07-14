@@ -96,11 +96,14 @@ def _load_or_build_enrichment(
 
 def _capex_indices_block(uf: str) -> dict:
     try:
-        from tools.sinapi_indices import capex_indices_for_uf
+        from tools.obra_regua import resolve_capex_indices_for_uf
 
-        return capex_indices_for_uf(uf)
+        block = resolve_capex_indices_for_uf(uf) or {}
+        if block:
+            return block
     except Exception:
-        return {"uf": uf.upper(), "fonte_obra": "benchmark_fixo_fase_a"}
+        pass
+    return {"uf": uf.upper(), "fonte_obra": "benchmark_fixo_fase_a"}
 
 
 def _ckan_catalog(cidade: str, uf: str, *, skip_network: bool) -> dict:

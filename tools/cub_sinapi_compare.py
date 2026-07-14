@@ -1,8 +1,7 @@
 """
 Comparativo CUB estadual × SINAPI (SIDRA 2296) — golden states.
 
-Uso: avaliar oscilação entre índices antes de trocar a régua do A4.
-Não altera CAPEX em produção — só mede divergência e estabilidade.
+Uso: avaliar oscilação entre índices; produção usa CUB via `tools/obra_regua.py` (OBRA_REGUA=cub).
 """
 from __future__ import annotations
 
