@@ -3,19 +3,30 @@
 Lista viva dos PRDs avaliados para melhorias práticas de conversação (degustação / consultor).  
 Só entra o que tem caminho claro no código atual e retorno de uso.
 
-## Proveniência (modelo autor)
+## Entrada comum (comparação justa)
 
-| # | Modelo autor | PRD | Nota da curadoria sobre o autor |
-|---|--------------|-----|----------------------------------|
-| 1 | **Claude Sonnet 4.5 médio** | Slot tracking / DST | Melhor formato de PRD (RF claros, não-objetivos, riscos). Proposta próxima do que o repo já faz — pouco “inventa arquitetura”. |
-| 2 | **Gemini 3.1 Pro** | Elipse / resiliência multi-turn | Bom em user stories e KPIs; errou o alvo técnico no F3 (`gate_degustacao` ≠ fill de kwargs). |
-| 3 | **Kimi K2.6** | ICL + proactive + state | Melhor **diagnóstico de produto** (conversa real). Pior **entrega de eng.**: §4 “código pronto” incompatível com o runner (sessão ADK efêmera) + FSM inchada. |
+Os três modelos receberam **o mesmo pacote** (textos de contexto + código do `agents_site`).  
+Não houve “um viu a conversa do usuário e os outros não”. A diferença é só **ângulo e proposta** de cada modelo.
 
-| # | PRD | Veredito | Próximo passo prático | Doc |
-|---|-----|----------|----------------------|-----|
-| 1 | Slot tracking *(Sonnet)* | Útil; RF1–2/5 feitos (#94). Gaps RF3+RF4 | Lista indexável + “seguindo com” | [PRD_SLOT…](./PRD_SLOT_TRACKING_CONTEXTO_CONVERSACIONAL.md) |
-| 2 | Elipse / resiliência *(Gemini)* | Bom; F3 no gate **recusado**. Gaps sticky + MC | Pinagem + desambiguação | [PRD_RESILIENCIA…](./PRD_RESILIENCIA_CONTEXTO_ELIPSE.md) |
-| 3 | ICL + proactive *(K2.6)* | Melhor diagnóstico; §4 código **não colar**. Pegar só proactive + sticky | Prompt CTA + pin Mercado; estado mínimo em JSONB | [PRD_ICL…](./PRD_MELHORIA_CONVERSACIONAL_ICL_PROACTIVE.md) |
+## Definição — o que é o 1, o 2 e o 3
+
+| # | Modelo | Nome curto | Em uma linha: o que esse PRD **é** |
+|---|--------|------------|-------------------------------------|
+| **1** | Claude Sonnet 4.5 médio | Slot tracking | Guardar e reusar bairro/cidade/últimos resultados no estado, de forma auditável (não só no “jeito” do LLM). |
+| **2** | Gemini 3.1 Pro | Elipse / resiliência | Mensagens curtas ou vagas (“Parangaba”, “centro”) + root que não se perde no follow-up. |
+| **3** | Kimi K2.6 | ICL + proactive | Depois dos dados, empurrar o próximo passo e manter o especialista certo (não virar Técnico na mensalidade). |
+
+| # | Ângulo que escolheu | Acertou | Errou / excesso |
+|---|---------------------|---------|-----------------|
+| **1** Sonnet | Estado explícito + não reperguntar | Formato RF/não-objetivo; encaixa no que o repo já fez (#94); RF4 lista indexável ainda vale | Quase não fala de sticky do root nem de CTA proativo |
+| **2** Gemini | User stories + tipagem de tools + KPIs | Sticky (US03) e desambiguação fechada (US02); métricas claras | Fill de kwargs no `gate_degustacao` (F3) — papel errado |
+| **3** K2.6 | Fluxo fim-a-fim + “código pronto” | Sticky no Mercado + CTA pós-concorrentes (mesmo input, fatiou de outro jeito) | `ConversationState` em sessão ADK some a cada turno no nosso runner; FSM/patterns pesados demais p/ degustação |
+
+| # | Veredito curto | Próximo passo prático | Doc |
+|---|----------------|----------------------|-----|
+| 1 | Útil; RF1–2/5 feitos (#94). Gaps RF3+RF4 | Lista indexável + “seguindo com” | [PRD_SLOT…](./PRD_SLOT_TRACKING_CONTEXTO_CONVERSACIONAL.md) |
+| 2 | Bom; F3 no gate **recusado**. Gaps sticky + MC | Pinagem + desambiguação | [PRD_RESILIENCIA…](./PRD_RESILIENCIA_CONTEXTO_ELIPSE.md) |
+| 3 | Ângulo de fluxo bom; §4 **não colar**. Pegar sticky + CTA | Prompt CTA + pin Mercado; estado mínimo em JSONB | [PRD_ICL…](./PRD_MELHORIA_CONVERSACIONAL_ICL_PROACTIVE.md) |
 
 ---
 
@@ -36,17 +47,15 @@ Só entra o que tem caminho claro no código atual e retorno de uso.
 | — | FSM + `conversation_state` em ADK session | #3 §4 | Baixo | Alto | **Recusar** |
 | — | Fill kwargs dentro de `gate_degustacao` | #2 F3 / #3 | — | — | **Recusar** |
 | — | Pattern recognition “sempre pede vizinho” | #3 | Baixo | Alto | Adiar |
-| ✅ | Não reperguntar bairro/cidade | #1/#2/#3 ICL | Alto | — | Feito #94 |
+| ✅ | Não reperguntar bairro/cidade | #1/#2/#3 | Alto | — | Feito #94 |
 | ✅ | Troca de bairro sobrescreve | #1 RF5 | Alto | — | Feito #94 |
 
-**Por que sticky ficou no topo:** o exemplo do K2.6 (“mensalidade da Smart Fit?”) é o bug de produto mais claro (roteador errado). Proactive (também K2.6) é o 2º. O Sonnet deu o melhor encaixe com o código já existente (#94). O Gemini trouxe US/KPIs úteis, mas F3 no gate foi o maior falso-amigo técnico.
+### Ranking dos autores (mesmo input → qualidade do PRD p/ o repo)
 
-### Ranking dos autores (qualidade do PRD para o nosso repo)
+| Rank | Modelo | Critério |
+|------|--------|----------|
+| 1 | Sonnet 4.5 médio | Proposta mais cirúrgica e implementável sem reinventar o runner |
+| 2 | Gemini 3.1 Pro | Stories/KPIs úteis; um erro de arquitetura serio (F3) |
+| 3 | Kimi K2.6 | Boa fatia de fluxo (sticky + CTA); pior como pacote de eng. (§4) |
 
-| Rank | Modelo | Por quê |
-|------|--------|---------|
-| 1 | Sonnet 4.5 médio | RF cirúrgicos, não-objetivos, sem “código pronto” que quebra o runner |
-| 2 | Gemini 3.1 Pro | Stories e métricas boas; 1 erro de arquitetura sério (F3) |
-| 3 | Kimi K2.6 | Insight de conversa real excelente; implementação §4 descartável |
-
-**Como enviar o próximo:** cole o PRD no chat (e diga o modelo, se souber); a curadoria cruza com `agents_site/` + `services/consultor/` e atualiza esta tabela.
+**Como enviar o próximo:** cole o PRD (e o modelo, se souber); a curadoria cruza com `agents_site/` + `services/consultor/` e atualiza esta tabela.
