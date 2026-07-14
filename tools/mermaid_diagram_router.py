@@ -7,6 +7,7 @@ against Mermaid Chart MCP (`validate_and_render_mermaid_diagram`).
 """
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
@@ -46,8 +47,8 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "gantt",
         "intent": "cronograma",
         "keywords": (
-            "gantt", "cronograma", "roadmap", "prazo", "timeline de projeto",
-            "fase 1", "marco", "deadline", "semana", "sprint",
+            "gantt", "cronograma", "roadmap", "timeline de projeto",
+            "fase 1", "marco", "deadline",
         ),
         "signals": ("time_ranges",),
         "priority": 90,
@@ -57,8 +58,8 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "erDiagram",
         "intent": "entidades",
         "keywords": (
-            "er diagram", "entidade", "relacionamento", "tabela", "fk",
-            "1:n", "n:n", "schema", "supabase", "modelo de dados",
+            "er diagram", "entidade-relacionamento", "diagrama er",
+            "1:n", "n:n", "modelo de dados", "schema supabase",
         ),
         "signals": ("entities_relations",),
         "priority": 85,
@@ -68,8 +69,7 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "classDiagram",
         "intent": "classes",
         "keywords": (
-            "class diagram", "classe", "heranca", "interface", "metodo",
-            "atributo", "uml",
+            "class diagram", "diagrama de classes", "heranca", "uml",
         ),
         "signals": ("oop_types",),
         "priority": 80,
@@ -79,8 +79,8 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "gitGraph",
         "intent": "git",
         "keywords": (
-            "git graph", "branch", "merge", "commit", "checkout", "main develop",
-            "release branch",
+            "git graph", "gitgraph", "release branch", "main develop",
+            "historico de branches", "merge commit graph",
         ),
         "signals": ("git_refs",),
         "priority": 75,
@@ -90,8 +90,8 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "journey",
         "intent": "jornada",
         "keywords": (
-            "jornada", "user journey", "experiencia", "degustacao", "onboarding",
-            "cliente percorre", "etor por secao",
+            "jornada", "user journey", "experiencia do usuario", "onboarding",
+            "cliente percorre", "setor por secao",
         ),
         "signals": ("journey_steps",),
         "priority": 70,
@@ -102,7 +102,7 @@ _RULES: tuple[dict[str, Any], ...] = (
         "intent": "priorizacao",
         "keywords": (
             "quadrant", "matriz 2x2", "eixo x", "eixo y", "priorizacao",
-            "alcance", "engajamento", "impacto vs esforco",
+            "impacto vs esforco", "impacto versus esforco",
         ),
         "signals": ("xy_points",),
         "priority": 65,
@@ -112,8 +112,8 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "xychart-beta",
         "intent": "serie_temporal",
         "keywords": (
-            "xychart", "serie temporal", "receita", "volume", "credito",
-            "grafico de barras", "linha do tempo numerica", "kpi mensal",
+            "xychart", "serie temporal", "grafico de barras",
+            "linha do tempo numerica", "kpi mensal",
         ),
         "signals": ("numeric_series",),
         "priority": 60,
@@ -123,8 +123,8 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "pie",
         "intent": "proporcao",
         "keywords": (
-            "pie", "pizza", "proporcao", "participacao", "share", "% do total",
-            "distribuicao percentual",
+            "pie chart", "grafico de pizza", "proporcao", "% do total",
+            "distribuicao percentual", "parts of whole",
         ),
         "signals": ("parts_of_whole",),
         "priority": 55,
@@ -134,8 +134,8 @@ _RULES: tuple[dict[str, Any], ...] = (
         "tipo": "stateDiagram-v2",
         "intent": "estados",
         "keywords": (
-            "state diagram", "maquina de estados", "status", "transicao",
-            "queued", "running", "done",
+            "state diagram", "maquina de estados", "diagrama de estados",
+            "transicao de estado",
         ),
         "signals": ("state_machine",),
         "priority": 50,
@@ -161,6 +161,9 @@ _RULES: tuple[dict[str, Any], ...] = (
         "quando": "Fluxo/processo/arquitetura (default seguro).",
     },
 )
+
+# Tokens curtos demais para substring livre (evita "status", "commit", "tabela").
+_MIN_TOKEN_LEN = 4
 
 
 @dataclass(frozen=True)
@@ -214,9 +217,18 @@ def detectar_sinais(dados: Optional[dict[str, Any]] = None) -> set[str]:
 
 
 def _kw_hit(texto_fold: str, keywords: tuple[str, ...]) -> str | None:
+    """Match keywords; single-token hits use word boundaries (no bare substrings)."""
     for kw in keywords:
         fk = fold_texto(kw)
-        if fk and fk in texto_fold:
+        if not fk:
+            continue
+        if " " in fk or "-" in fk or ":" in fk:
+            if fk in texto_fold:
+                return kw
+            continue
+        if len(fk) < _MIN_TOKEN_LEN:
+            continue
+        if re.search(rf"(?<![a-z0-9_]){re.escape(fk)}(?![a-z0-9_])", texto_fold):
             return kw
     return None
 
