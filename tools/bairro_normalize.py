@@ -1,7 +1,7 @@
 """
 Normalização de nomes de bairro para comparação entre fontes (Places, CNO, endereços).
 
-Chave (`normalizar_bairro`): minúsculas, sem acento, espaços colapsados.
+Chave (`normalizar_bairro` / `fold_texto`): casefold, sem acento (NFD + Mn), espaços colapsados.
 Exibição (`formatar_bairro_exibicao`): title case legível (ex.: ALDEOTA → Aldeota).
 """
 from __future__ import annotations
@@ -10,16 +10,22 @@ import re
 import unicodedata
 
 
-def normalizar_bairro(s: str) -> str:
-    """Chave canônica para match entre CNO, Places, formulário e endereços."""
-    s = (s or "").strip()
+def fold_texto(s: str) -> str:
+    """Accent-insensitive fold: casefold + NFD + strip Mn + colapsa espaços.
+
+    Parangaba ≡ Parangabá; Sao Paulo ≡ São Paulo; Coco ≡ Cocó.
+    """
+    s = (s or "").strip().casefold()
     if not s:
         return ""
-    s = s.lower()
-    nfkd = unicodedata.normalize("NFKD", s)
-    s = "".join(c for c in nfkd if not unicodedata.combining(c))
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+    nfd = unicodedata.normalize("NFD", s)
+    s = "".join(c for c in nfd if unicodedata.category(c) != "Mn")
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def normalizar_bairro(s: str) -> str:
+    """Chave canônica para match entre CNO, Places, formulário e endereços."""
+    return fold_texto(s)
 
 
 def formatar_bairro_exibicao(s: str) -> str:

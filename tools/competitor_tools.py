@@ -631,10 +631,8 @@ def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
 
 def _norm_txt(s: str) -> str:
     """lower + sem acento, p/ casar bairro dentro de endereço/nome."""
-    import re as _re
-    import unicodedata
-    s = unicodedata.normalize("NFKD", (s or "").lower()).encode("ascii", "ignore").decode()
-    return _re.sub(r"\s+", " ", s).strip()
+    from tools.bairro_normalize import fold_texto
+    return fold_texto(s)
 
 
 # Keywords PT do engine SearchAPI google_maps (type "Academia"/"Crossfit"/...) →

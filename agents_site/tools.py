@@ -436,6 +436,9 @@ def buscar_concorrentes(
     Use para responder saturação/concorrência do entorno com NÚMERO REAL — nunca estime
     a quantidade de cabeça.
 
+    NÃO devolve texto de reviews. Para reclamações/dores/avaliações textuais, use
+    `analisar_reviews_e_dores`.
+
     Args:
         cidade: cidade (ex.: "Fortaleza").
         bairro: bairro de referência (ex.: "Cocó").
@@ -445,7 +448,7 @@ def buscar_concorrentes(
 
     Returns:
         dict com `total_concorrentes` (int), `nivel_saturacao` (baixo|medio|alto) e
-        `concorrentes` (top 8 por distância: nome, endereco, distancia_m, rating, avaliacoes).
+        `concorrentes` (top 8: nome, endereco, distancia_m, rating, avaliacoes, place_id).
     """
     from tools.competitor_tools import buscar_academias
     try:
@@ -454,19 +457,27 @@ def buscar_concorrentes(
     except Exception as e:  # noqa: BLE001
         logger.exception("buscar_concorrentes falhou")
         return {"total_concorrentes": 0, "nivel_saturacao": "desconhecido",
-                "concorrentes": [], "erro": f"{type(e).__name__}: {e}"}
+                "concorrentes": [], "erro": f"{type(e).__name__}: {e}",
+                "ferramenta": "buscar_concorrentes"}
 
     brutos = res.get("concorrentes") or []
     itens = []
     for c in brutos:
         if not isinstance(c, dict):
             continue
+        dist = c.get("distancia_m") or c.get("distance_m") or c.get("distancia")
+        if dist is None and c.get("distancia_km") is not None:
+            try:
+                dist = int(float(c["distancia_km"]) * 1000)
+            except (TypeError, ValueError):
+                dist = None
         itens.append({
             "nome": c.get("nome") or c.get("name") or c.get("displayName") or "?",
             "endereco": c.get("endereco") or c.get("address") or c.get("formattedAddress"),
-            "distancia_m": c.get("distancia_m") or c.get("distance_m") or c.get("distancia"),
-            "rating": c.get("rating") or c.get("nota"),
+            "distancia_m": dist,
+            "rating": c.get("rating") or c.get("nota") or c.get("rating_oficial") or c.get("rating_geral"),
             "avaliacoes": c.get("num_avaliacoes") or c.get("avaliacoes") or c.get("user_ratings_total"),
+            "place_id": c.get("place_id") or c.get("id") or "",
         })
     total = len(itens)
     itens.sort(key=lambda x: x["distancia_m"] if x["distancia_m"] is not None else 99_999)
@@ -474,4 +485,170 @@ def buscar_concorrentes(
         "total_concorrentes": total,
         "nivel_saturacao": _nivel_saturacao(total),
         "concorrentes": itens[:8],
+        "ferramenta": "buscar_concorrentes",
+    }
+
+
+def analisar_reviews_e_dores(
+    cidade: str,
+    bairro: str,
+    uf: str = "",
+    tipo_negocio: str = "academia",
+    top_n: int = 5,
+) -> dict:
+    """Analisa TEXTO e sentimento das reviews do Google Maps dos concorrentes do bairro.
+    Use OBRIGATORIAMENTE para "reviews", "avaliações", "reclamações", "dores",
+    "o que os alunos falam". NÃO use `buscar_concorrentes` no lugar — ela só traz
+    rating e quantidade de avaliações, sem conteúdo.
+
+    Args:
+        cidade: cidade (ex.: "Fortaleza").
+        bairro: bairro (ex.: "Parangaba").
+        uf: sigla do estado, opcional (ex.: "CE").
+        tipo_negocio: "academia" | "crossfit" | "studio_pilates" | "studio_funcional".
+        top_n: quantos concorrentes analisar (1–8; padrão 5).
+
+    Returns:
+        dict com rating médio, volume, temas de dor/elogio, quotes anonimizadas e
+        `ferramenta` (= "analisar_reviews_e_dores"). Em falha, `erro` nomeia esta tool.
+    """
+    from tools.competitor_tools import (
+        buscar_academias,
+        buscar_reviews_academia,
+        classificar_dores_reviews_deterministico,
+    )
+
+    ferramenta = "analisar_reviews_e_dores"
+    n = max(1, min(8, int(top_n or 5)))
+    try:
+        res = buscar_academias(bairro, cidade, 1500, uf or "", tipo_negocio)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("%s: buscar_academias falhou", ferramenta)
+        return {
+            "ferramenta": ferramenta,
+            "erro": f"{ferramenta} falhou em buscar_academias: {type(e).__name__}: {e}",
+            "temas": [],
+            "quotes": [],
+            "concorrentes": [],
+        }
+
+    if res.get("erro") and not (res.get("concorrentes") or []):
+        return {
+            "ferramenta": ferramenta,
+            "erro": f"{ferramenta} falhou: {res.get('erro')}",
+            "temas": [],
+            "quotes": [],
+            "concorrentes": [],
+        }
+
+    brutos = [c for c in (res.get("concorrentes") or []) if isinstance(c, dict)]
+    brutos.sort(
+        key=lambda c: c.get("distancia_m")
+        if c.get("distancia_m") is not None
+        else (float(c.get("distancia_km") or 99) * 1000),
+    )
+    selecionados = brutos[:n]
+
+    enriquecidos: list[dict] = []
+    ratings: list[float] = []
+    volume = 0
+    for c in selecionados:
+        pid = c.get("place_id") or c.get("id") or ""
+        nome = c.get("nome") or c.get("name") or "?"
+        rating = c.get("rating") or c.get("rating_oficial") or c.get("rating_geral")
+        try:
+            if rating is not None:
+                ratings.append(float(rating))
+        except (TypeError, ValueError):
+            pass
+        try:
+            volume += int(c.get("num_avaliacoes") or c.get("avaliacoes") or c.get("user_ratings_total") or 0)
+        except (TypeError, ValueError):
+            pass
+
+        reviews: list[dict] = []
+        if pid:
+            try:
+                pacote = buscar_reviews_academia(pid, nome)
+                reviews = [r for r in (pacote.get("reviews") or []) if isinstance(r, dict)]
+            except Exception as e:  # noqa: BLE001
+                logger.warning("%s: reviews de %s falhou: %s", ferramenta, nome, e)
+                reviews = []
+        enriquecidos.append({
+            "nome": nome,
+            "place_id": pid,
+            "rating": rating,
+            "avaliacoes": c.get("num_avaliacoes") or c.get("avaliacoes") or c.get("user_ratings_total"),
+            "reviews": reviews,
+        })
+
+    try:
+        classificar_dores_reviews_deterministico(enriquecidos)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("%s: classificação determinística falhou: %s", ferramenta, e)
+
+    contagem_temas: dict[str, int] = {}
+    quotes: list[dict] = []
+    for c in enriquecidos:
+        for tema in c.get("temas_insatisfacao") or []:
+            if not isinstance(tema, dict):
+                continue
+            cat = (tema.get("categoria_dor") or tema.get("keyword") or "").strip()
+            if not cat or cat == "outra":
+                continue
+            contagem_temas[cat] = contagem_temas.get(cat, 0) + int(tema.get("mencoes") or 1)
+        for r in c.get("reviews") or []:
+            quote = (r.get("quote_curta") or "").strip()
+            if not quote:
+                continue
+            quotes.append({
+                "texto": quote[:180],
+                "rating": r.get("rating"),
+                "categoria_dor": r.get("categoria_dor") or "",
+                "sinal": r.get("sinal") or r.get("sentimento") or "",
+                "academia": c.get("nome"),
+            })
+
+    temas = sorted(
+        [{"tema": k, "mencoes": v} for k, v in contagem_temas.items()],
+        key=lambda t: -t["mencoes"],
+    )[:5]
+
+    if not temas:
+        # Fallback: categorias vindas das reviews individuais
+        fallback: dict[str, int] = {}
+        for q in quotes:
+            cat = (q.get("categoria_dor") or "").strip()
+            if cat and cat != "outra":
+                fallback[cat] = fallback.get(cat, 0) + 1
+        temas = sorted(
+            [{"tema": k, "mencoes": v} for k, v in fallback.items()],
+            key=lambda t: -t["mencoes"],
+        )[:5]
+
+    # Quotes curtas (preferir negativas/dores); sem autor — só texto + tema + academia
+    quotes_neg = [q for q in quotes if (q.get("rating") or 5) <= 3 or q.get("sinal") == "negativo"]
+    quotes_out = (quotes_neg or quotes)[:3]
+
+    rating_medio = round(sum(ratings) / len(ratings), 2) if ratings else None
+    return {
+        "ferramenta": ferramenta,
+        "cidade": cidade,
+        "bairro": bairro,
+        "uf": uf,
+        "total_concorrentes_amostra": len(enriquecidos),
+        "rating_medio": rating_medio,
+        "volume_avaliacoes": volume,
+        "temas": temas,
+        "quotes": quotes_out,
+        "concorrentes": [
+            {
+                "nome": c["nome"],
+                "rating": c.get("rating"),
+                "avaliacoes": c.get("avaliacoes"),
+                "n_reviews_lidos": len(c.get("reviews") or []),
+            }
+            for c in enriquecidos
+        ],
+        "fonte": "SearchAPI google_maps_reviews + classificação determinística",
     }

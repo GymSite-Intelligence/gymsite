@@ -41,7 +41,8 @@ _PINADOS = {
 }
 
 _AMOSTRA_TOOLS = frozenset(
-    {"buscar_concorrentes", "analisar_demografia", "pesquisar_contexto_mercado"}
+    {"buscar_concorrentes", "analisar_demografia", "pesquisar_contexto_mercado",
+     "analisar_reviews_e_dores"}
 )
 
 _TOOL_TO_PESQUISA: dict[str, str] = {
@@ -225,17 +226,59 @@ async def _sync_consultor_pos_turno(
 
 
 async def run_site_agent_adk(
-    projeto_id: str, mensagem: str, agente: str = "degustacao"
+    projeto_id: str,
+    mensagem: str,
+    agente: str = "degustacao",
+    localizacao_hint: dict | None = None,
 ) -> str:
+    from agents_site.localizacao import injetar_contexto_localizacao, resolver_localizacao
+    from services.consultor.consultor_engine import _ANON_SITE_USER_ID
+    from services.consultor.project_state import atualizar_campo_projeto, carregar_projeto
+
+    previa: dict = {}
+    modelo_atual: dict = {}
+    try:
+        proj = await carregar_projeto(projeto_id, _ANON_SITE_USER_ID)
+        previa = dict(proj.localizacao or {})
+        modelo_atual = dict(proj.modelo_negocio or {})
+        if modelo_atual.get("tipo") and "tipo_negocio" not in previa:
+            previa = {**previa, "tipo_negocio": modelo_atual.get("tipo")}
+    except Exception:  # noqa: BLE001
+        logger.debug("site_adk: sem prévia de localização projeto=%s", projeto_id)
+
+    loc = resolver_localizacao(mensagem, hint=localizacao_hint, previa=previa)
+    mensagem_efetiva = injetar_contexto_localizacao(mensagem, loc)
+
+    if loc.completa or (loc.bairro or loc.cidade):
+        try:
+            payload_loc = {
+                k: v for k, v in {
+                    "bairro": loc.bairro,
+                    "cidade": loc.cidade,
+                    "uf": loc.uf,
+                }.items() if v
+            }
+            if payload_loc:
+                await atualizar_campo_projeto(
+                    projeto_id, "localizacao", {**previa, **payload_loc}, _ANON_SITE_USER_ID
+                )
+            if loc.tipo_negocio:
+                mn = {**modelo_atual, "tipo": loc.tipo_negocio}
+                await atualizar_campo_projeto(
+                    projeto_id, "modelo_negocio", mn, _ANON_SITE_USER_ID
+                )
+        except Exception:  # noqa: BLE001
+            logger.exception("site_adk: falha ao persistir localizacao projeto=%s", projeto_id)
+
     historico = await carregar_historico(projeto_id, limite=20)
     await salvar_mensagem(projeto_id, role="user", content=mensagem)
 
     escolhido = _resolver_agente(agente)
     resposta, autor, alvo, acoes = await _rodar_turno(
-        escolhido, historico, mensagem, projeto_id, tier="degustacao", app_name=_APP_SITE
+        escolhido, historico, mensagem_efetiva, projeto_id, tier="degustacao", app_name=_APP_SITE
     )
     resposta, autor_retry, acoes_retry = await _retry_pos_transfer(
-        resposta, alvo, historico, mensagem, projeto_id, tier="degustacao", app_name=_APP_SITE
+        resposta, alvo, historico, mensagem_efetiva, projeto_id, tier="degustacao", app_name=_APP_SITE
     )
     if autor_retry:
         autor = autor_retry
@@ -253,11 +296,12 @@ async def run_site_agent_adk(
         agente=autor,
     )
     logger.info(
-        "site_agent_adk turno OK projeto=%s pedido=%s respondeu=%s len_resp=%d",
+        "site_agent_adk turno OK projeto=%s pedido=%s respondeu=%s len_resp=%d loc=%s",
         projeto_id,
         agente,
         autor,
         len(resposta),
+        loc.origem or "-",
         extra={"agent": "SITE_ADK"},
     )
     return resposta

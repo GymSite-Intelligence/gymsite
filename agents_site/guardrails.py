@@ -24,6 +24,7 @@ _AMOSTRA_TOOLS = frozenset({
     "analisar_demografia",
     "buscar_concorrentes",
     "pesquisar_contexto_mercado",
+    "analisar_reviews_e_dores",
 })
 
 _MAX_AMOSTRAS = 2
