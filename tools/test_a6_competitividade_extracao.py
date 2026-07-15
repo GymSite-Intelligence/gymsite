@@ -84,3 +84,72 @@ def test_alinhar_markdown_veredito():
     assert "APROVADO COM RESSALVAS" in fixed
     assert "INVESTIGAR MAIS" not in fixed.split("Decisão")[1][:80]
     assert "6.5" in fixed
+
+
+def test_alinhar_markdown_scores_em_dash_c908():
+    """Split-brain c908: LLM emitiu — ; estruturado tem números — md deve sincronizar."""
+    md = """## 📈 Scores Regionais
+
+| Dimensão | Score (0-10) | Classificação |
+|---|---|---|
+| Demográfico | — | — |
+| Competitivo | — | — |
+| Viabilidade financeira | — | — |
+
+**Transparência (OBRIGATÓRIO):**
+- `Concorrentes no bairro (analisados): — — saturação —`
+- `Densidade regional (raio 3km, contexto): — academias — inclui bairros adjacentes, NÃO é a saturação do bairro`
+
+**Score Bairro:** — — indicador macro
+**Score Top 1 Candidato:** — — — base do veredito
+
+---
+
+## 🏆 Top 3 Candidatos
+Não há candidatos a imóveis para análise.
+
+---
+
+## 🏗️ Checklist de Diligência do Imóvel
+x
+"""
+    out = {
+        "score_bairro": 5.64,
+        "score_top1_candidato": 5.98,
+        "score_concorrencia": 1.91,
+        "scores_regionais": {"demografico": 10.0, "competitivo": 1.91, "viabilidade": 5.0},
+        "nivel_saturacao": "MEDIO",
+        "total_concorrentes_analisados": 4,
+        "total_encontrados_raio": 12,
+        "top_3_candidatos": [
+            {
+                "nome": "Empório de Fátima Delicatessen",
+                "endereco": "Av. Oswaldo Studart, 250 - Fátima",
+                "tipo": "bakery",
+                "area_estimada_m2": 1200,
+                "score_geoscout": 7.0,
+                "score_ancoragem": 10.0,
+                "motivo": "Supermercado em avenida principal",
+                "estimativa_visibilidade": "alta",
+                "qualidade_sinal": "indireto-heuristico",
+                "polos_geradores": [],
+            }
+        ],
+    }
+    fixed = _alinhar_markdown_ao_estruturado(md, out)
+    assert "| Demográfico | 10 | forte |" in fixed
+    assert "| Competitivo | 1.91 | MEDIO |" in fixed
+    assert "| Viabilidade financeira | 5 | moderado |" in fixed
+    assert "**Score Bairro:** 5.64" in fixed
+    assert "**Score Top 1 Candidato:** 5.98" in fixed
+    assert "Concorrentes no bairro (analisados): 4" in fixed
+    assert "saturação MEDIO" in fixed
+    assert "Não há candidatos" not in fixed
+    assert "Empório de Fátima" in fixed
+    assert "Score GeoScout:** 7" in fixed
+
+
+def test_render_top3_vazio():
+    from agents.a6_report_consolidator import _renderizar_md_top3_candidatos
+
+    assert "Não há candidatos" in _renderizar_md_top3_candidatos([])

@@ -1839,14 +1839,160 @@ def _resolver_competitividade_extracao(
     }
 
 
+_SCORE_CELL = r"(?:[\d\.,]+|—+|–+|-+|N/?A|\?)"
+
+
+def _fmt_score_md(val) -> str:
+    if val is None:
+        return "—"
+    try:
+        return f"{round(float(val), 2):g}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _rotulo_score_bucket(val) -> str:
+    if val is None:
+        return "—"
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return "—"
+    if v >= 7.5:
+        return "forte"
+    if v >= 5.0:
+        return "moderado"
+    if v >= 3.0:
+        return "fraco"
+    return "crítico"
+
+
+def _renderizar_md_top3_candidatos(top_3: list) -> str:
+    """Seção Top 3 determinística (âncoras GeoScout ou listings)."""
+    cand = [c for c in (top_3 or []) if isinstance(c, dict)]
+    if not cand:
+        return (
+            "## 🏆 Top 3 Candidatos\n\n"
+            "Não há candidatos a imóveis para análise "
+            "(nenhum listing na especificação nem âncora GeoScout).\n"
+        )
+    linhas = ["## 🏆 Top 3 Candidatos", ""]
+    for i, c in enumerate(cand[:3], 1):
+        nome = _escape_md_pipe(c.get("nome") or "—")
+        sg = _fmt_score_md(c.get("score_geral") or c.get("score_geoscout"))
+        score_g = _fmt_score_md(c.get("score_geoscout"))
+        score_a = _fmt_score_md(c.get("score_ancoragem"))
+        area = c.get("area_estimada_m2") or c.get("area_m2") or "—"
+        tipo = _escape_md_pipe(c.get("tipo_imovel_label") or c.get("tipo") or "—")
+        motivo = _escape_md_pipe(c.get("motivo") or "—")
+        vis = _escape_md_pipe(c.get("estimativa_visibilidade") or "—")
+        endereco = _escape_md_pipe(c.get("endereco") or "—")
+        qual = _escape_md_pipe(c.get("qualidade_sinal") or "indireto-heurístico")
+        linhas.append(f"### #{i} — {nome} — Score {sg}")
+        linhas.append(f"- **Endereço:** {endereco}")
+        linhas.append(f"- **Tipo:** {tipo}")
+        linhas.append(f"- **Área estimada:** ~{area} m²")
+        linhas.append(f"- **Score GeoScout:** {score_g} ({qual}) | **Motivo:** {motivo}")
+        linhas.append(f"- **Score Ancoragem:** {score_a} — visibilidade: {vis}")
+        polos = c.get("polos_geradores") or []
+        if isinstance(polos, list) and polos:
+            linhas.append("- **Polos geradores próximos:**")
+            for p in polos[:3]:
+                linhas.append(f"  - {_escape_md_pipe(p)}")
+        else:
+            linhas.append("- **Polos geradores próximos:** — sem polos geradores no raio de 2km")
+        next_step = c.get("proximo_passo")
+        if next_step:
+            linhas.append(f"- **Próximo passo:** {_escape_md_pipe(next_step)}")
+        linhas.append("")
+    return "\n".join(linhas).rstrip() + "\n"
+
+
+def _sincronizar_bloco_scores_md(md: str, out: dict) -> str:
+    """Reescreve tabela Scores Regionais + Score Bairro/Top1 a partir do estruturado.
+
+    O LLM A6 flash às vezes emite `—` no lugar do número; o alinhador antigo só
+    substituía dígitos → dígitos e falhava (split-brain markdown vs outputs).
+    """
+    sr = out.get("scores_regionais") if isinstance(out.get("scores_regionais"), dict) else {}
+    demo = sr.get("demografico") if sr else None
+    comp = sr.get("competitivo") if sr else out.get("score_concorrencia")
+    viab = sr.get("viabilidade") if sr else None
+    if demo is None and out.get("score_demografico") is not None:
+        demo = out.get("score_demografico")
+    if viab is None and out.get("score_viabilidade") is not None:
+        viab = out.get("score_viabilidade")
+
+    sb = out.get("score_bairro")
+    st = out.get("score_top1_candidato")
+    nivel = (out.get("nivel_saturacao") or "—").upper()
+    total_c = out.get("total_concorrentes_analisados")
+    total_raio = out.get("total_encontrados_raio")
+
+    if any(v is not None for v in (demo, comp, viab)):
+        demo_s, comp_s, viab_s = _fmt_score_md(demo), _fmt_score_md(comp), _fmt_score_md(viab)
+        cls_demo, cls_viab = _rotulo_score_bucket(demo), _rotulo_score_bucket(viab)
+        cls_comp = nivel if nivel and nivel != "—" else _rotulo_score_bucket(comp)
+        table = (
+            "| Dimensão | Score (0-10) | Classificação |\n"
+            "|---|---|---|\n"
+            f"| Demográfico | {demo_s} | {cls_demo} |\n"
+            f"| Competitivo | {comp_s} | {cls_comp} |\n"
+            f"| Viabilidade financeira | {viab_s} | {cls_viab} |"
+        )
+        md = re.sub(
+            r"\| Dimensão \| Score \(0-10\) \| Classificação \|\s*\n"
+            r"\|[-| :]+\|\s*\n"
+            r"\| Demogr[aá]fico \|[^\n]+\|\s*\n"
+            r"\| Competitivo \|[^\n]+\|\s*\n"
+            r"\| Viabilidade financeira \|[^\n]+\|",
+            table,
+            md,
+            count=1,
+            flags=re.I,
+        )
+
+    # Transparência: concorrentes no bairro / raio (quando LLM deixou —)
+    if total_c is not None:
+        md = re.sub(
+            r"(Concorrentes no bairro \(analisados\):\s*)(?:—|" + _SCORE_CELL + r")"
+            r"([^\n]*?satura[cç][aã]o\s+)(?:—|[A-Za-zÀ-ÿ_]+)",
+            rf"\g<1>{total_c}\g<2>{nivel}",
+            md,
+            count=1,
+            flags=re.I,
+        )
+    if total_raio is not None:
+        md = re.sub(
+            r"(Densidade regional \(raio 3km, contexto\):\s*)(?:—|" + _SCORE_CELL + r")",
+            rf"\g<1>{total_raio}",
+            md,
+            count=1,
+            flags=re.I,
+        )
+
+    if sb is not None:
+        md = re.sub(
+            rf"(\*\*Score Bairro:\*\*)\s*{_SCORE_CELL}",
+            rf"\1 {_fmt_score_md(sb)}",
+            md,
+            count=1,
+        )
+    if st is not None:
+        md = re.sub(
+            rf"(\*\*Score Top 1 Candidato:\*\*)\s*{_SCORE_CELL}",
+            rf"\1 {_fmt_score_md(st)}",
+            md,
+            count=1,
+        )
+    return md
+
+
 def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
-    """Ajusta veredito/scores no markdown para bater com output_consolidado (pós-guards)."""
+    """Ajusta veredito/scores/Top3 no markdown para bater com output_consolidado (pós-guards)."""
     if not md or not isinstance(out, dict):
         return md
     veredito = out.get("veredito")
-    sb = out.get("score_bairro")
-    st = out.get("score_top1_candidato")
-    sc = out.get("score_concorrencia")
 
     if veredito:
         md = re.sub(
@@ -1861,27 +2007,22 @@ def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
             md,
             count=1,
         )
-    if sb is not None:
-        md = re.sub(
-            r"(\*\*Score Bairro:\*\*)\s*[\d\.,]+",
-            rf"\1 {sb}",
+
+    md = _sincronizar_bloco_scores_md(md, out)
+
+    # Top 3: LLM às vezes diz "Não há candidatos" mesmo com top_3_candidatos no estruturado
+    top_3 = out.get("top_3_candidatos")
+    if isinstance(top_3, list):
+        secao_top = _renderizar_md_top3_candidatos(top_3)
+        md2, n_sub = re.subn(
+            r"##[^\n]*Top 3 Candidatos[^\n]*\n.*?(?=\n##\s|\Z)",
+            secao_top.rstrip() + "\n\n",
             md,
             count=1,
+            flags=re.S | re.I,
         )
-    if st is not None:
-        md = re.sub(
-            r"(\*\*Score Top 1 Candidato:\*\*)\s*[\d\.,]+",
-            rf"\1 {st}",
-            md,
-            count=1,
-        )
-    if sc:  # pula 0.0/None (score ausente nao sobrescreve o markdown com "0.0" fake)
-        md = re.sub(
-            r"(\| Competitivo \| )\s*[\d\.,]+",
-            rf"\1 {sc} ",
-            md,
-            count=1,
-        )
+        if n_sub:
+            md = md2
 
     # Post-check de SATURAÇÃO (safety net p/ A6 flash): o LLM às vezes narra "extrema
     # saturação"/"mercado SATURADO" puxando o nº do raio 3km, contradizendo o

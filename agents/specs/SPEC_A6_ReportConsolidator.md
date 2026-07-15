@@ -180,7 +180,7 @@ Após persistência Supabase, `run_a8_validation` é chamado. Falha não bloquei
 
 ### Gotchas e invariantes
 
-- **`_alinhar_markdown_ao_estruturado` força md = estruturado**: esta função (linhas 1803-1886) é o "alinhador pós-LLM". Ela aplica regex para corrigir veredito, score_bairro, score_top1, score_concorrencia, saturação exagerada e substitui o bloco `## Resumo Executivo` pelo determinístico. Se o markdown do LLM usar um título diferente (ex: `## 🎯 Resumo Executivo`), o regex de saturação funciona mas a substituição do resumo pode falhar — manter o template exato.
+- **`_alinhar_markdown_ao_estruturado` força md = estruturado**: alinhador pós-LLM corrige veredito, **tabela Scores Regionais** (inclui células `—`), Score Bairro/Top1, transparência concorrentes/raio, **substitui seção Top 3** por render de `top_3_candidatos`, saturação exagerada e `## Resumo Executivo`. Célula `—` antes só atualizava dígitos → split-brain (ex.: c908a99d).
 
 - **Injeção via `append_instructions` não é idempotente sem o guard de string**: o `_a6_before_model_callback` verifica se a seção já está no `system_instruction` antes de injetar (ex: `if "SEÇÃO PRÉ-COMPUTADA — BAIRROS ALTERNATIVOS" not in existing_si`). Sem esse guard, em retries a seção seria duplicada.
 
