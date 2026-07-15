@@ -48,6 +48,25 @@ def test_keyword_pipeline_flowchart():
     assert c.intent == "fluxo"
 
 
+def test_nao_pega_status_como_state_diagram():
+    c = escolher_diagrama("status do relatorio ainda queued running done")
+    assert c.tipo == "flowchart"
+    assert c.fonte == "default"
+
+
+def test_nao_pega_commit_como_git_graph():
+    c = escolher_diagrama("preciso fazer commit do fix no branch e merge")
+    assert c.tipo != "gitGraph"
+    assert c.fonte in {"default", "keyword"}
+    if c.fonte == "keyword":
+        assert c.tipo == "flowchart"
+
+
+def test_nao_pega_tabela_como_er():
+    c = escolher_diagrama("tabela de concorrentes no supabase com fk")
+    assert c.tipo != "erDiagram"
+
+
 def test_default_flowchart_sem_pista():
     c = escolher_diagrama("olá")
     assert c.tipo == "flowchart"
