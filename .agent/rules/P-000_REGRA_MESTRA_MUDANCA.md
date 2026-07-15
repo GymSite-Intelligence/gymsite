@@ -4,6 +4,7 @@
 > **Status:** Ativo
 > **Escopo:** Todo o código-fonte, schema de banco e configuração de infraestrutura.
 > **Público:** Todos os agentes de IA e engenheiros humanos.
+> **Resumo operacional:** [REGRAS_USO_GLOBAL.md](REGRAS_USO_GLOBAL.md) (checklist diário; P-000 prevalece em conflito).
 > **Numeração:** As tags `(P-001)`…`(P-004)` **dentro deste arquivo** são âncoras internas do P-000 (fontes, carimbo, ler-fonte). **Não** confundir com P-001…P-010 de `.agent/rules/processo-mudanca.md` (UX/schema de produto). Em conflito de IDs, cite **P-000 §N** ou o arquivo completo.
 
 ---
@@ -84,6 +85,27 @@ Nenhum número pode aparecer para o usuário final sem seu carimbo de origem. Is
 - **Proxy:** Se um número é um proxy (ex: renda per capita derivada), a metodologia deve ser explícita na nota de rodapé ou na seção de metodologia do relatório.
 - **Mapa operacional:** `docs/metodologia/data_lineage.md` (fonte → tabela → agente).
 
+## 5.1 UI/Chat: Carimbos + Consistência Visual (P-002 aplicado no frontend)
+
+Quando uma informação sai para o usuário (principalmente em chat e cards), o frontend vira parte da auditabilidade.
+
+- **Carimbo não é opcional:** qualquer número, ranking, contagem, selo ou afirmação “determinística” precisa de carimbo exibível (ou no mínimo acessível via UI, ex.: popover).
+  - **Exemplos que precisam carimbo:** “15 concorrentes”, “R$ 27.876 de aluguel”, “payback 32 meses”, “saturação ALTO”, “maioria feminina 35–59”.
+  - **Exemplos de carimbo mínimo:** `valor · base · fonte · janela` + `município/UF` quando aplicável.
+- **Uma fonte → uma renderização:** o mesmo dado (ex.: total de concorrentes) não pode aparecer com estruturas diferentes em páginas diferentes; isso destrói autoridade.
+  - Se existir `outputs.total_concorrentes_analisados`, todos os lugares usam o mesmo campo + mesma regra de exibição.
+- **Chat não pode “inventar defaults”:** se um campo vem do input (ex.: `genero_alvo`), o chat/UI deve refletir o input; inferência demográfica é outro campo (ex.: `demografia_bairro.sexo_idade`), com carimbo.
+
+## 5.2 Mudança de design em frontend exige evidência visual (anti-“AI slop”)
+
+Mudança de layout/estilo sem registro visual vira decisão perdida. Regras mínimas:
+
+- **Ler a fonte do design do frontend antes de mexer em UI.**
+  - Ex.: no repo `gym-insight-hub`, fonte de verdade é `docs/frontend/CLAUDE.md` (paleta, tipografia, logo, estrutura).
+- **Toda mudança de design deve gerar evidência visual versionada.**
+  - Preferência: artifact HTML auto-contido em `docs/frontend/artifacts/<YYYY-MM-DD>-<slug>/index.html` (ou screenshot) + link no changelog do repo.
+  - Regra vale para **landing** (`gym-insight-hub`) e para o **app logado** (`frontend/` deste monorepo).
+
 ## 6. LLM Narra, Tools Calculam
 
 Número, score e veredito **nunca** vêm do LLM. Cálculo = `parametros_metodologia` + tools/banco.
@@ -111,9 +133,28 @@ Craft de prompt (formato JSON, Gemini contexto-último, checklist de PR): ver
 | **Backend API** (`api.py`, agents, tools) | **Google Cloud Run** `us-central1` | trigger Cloud Build `gymsite-api` em `main` **ou** `gcloud run deploy gymsite-api` |
 | **Worker pipeline** | **Cloud Run** `gymsite-worker` | **mesma imagem** da API após rebuild — não auto-deploya; ver `CLAUDE.md` |
 
+**Mudou `agents/` / `tools/` / `api.py` / motor financeiro / `parametros_metodologia`?** → **Cloud Run obrigatório** (código vive na imagem). Seed/`ALTER` só no Supabase **não** entrega lazy-`param`, `clear_param_cache` nem defaults novos no processo. Após rebuild `gymsite-api`, **atualizar `gymsite-worker` com a mesma imagem** (worker não auto-deploya).
+
 Projeto GCP produção: `gen-lang-client-0106729343` (nome "Navi Vectra"). **Não** confundir com `gen-lang-client-0662901510` (`gymsite-api` órfão).
 
 `cloudbuild.frontend.yaml` (Cloud Run para front) é **legado** — não é o caminho canônico; front do monorepo = Wrangler/Pages.
+
+### Gotcha banco — schema `gymsite` ≠ `public` (views)
+
+Projeto Supabase prod: `epgedaiukjippepujuzc` (`https://epgedaiukjippepujuzc.supabase.co`).
+
+Com `GYMSITE_SCHEMA_SEP=1` (prod):
+
+| Onde | O quê |
+|---|---|
+| `gymsite.<tabela>` | **Tabela real** — `CREATE` / `ALTER` / `ADD COLUMN` / upsert via `tools.db_schema.tbl()` |
+| `public.<tabela>` | **View de compat** (PostgREST) — `ALTER TABLE … ADD COLUMN` **falha** (não é tabela) |
+
+**Antes de migration:** confirmar no catálogo (`pg_class.relkind`: `r`=tabela, `v`=view). Padrão de view desatualizada: recrear `CREATE OR REPLACE VIEW public…` como em `db/migrations/20260713_user_projects_consultor_v2_columns.sql`.
+
+**Erro real (2026-07-15):** `ALTER TABLE public.parametros_metodologia ADD COLUMN categoria` → view. Fix: `ALTER TABLE gymsite.parametros_metodologia …`.
+
+App/writers: **sempre** `tbl(sb, "…")` — nunca assumir `public` quando a flag SEP está ON.
 
 ### Gotchas Cloudflare Pages (Vite)
 
