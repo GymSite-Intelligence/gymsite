@@ -123,6 +123,8 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "veredito_limiar_aprovado":   _p(8.0, "calibração metodológica GymSite v2", "limiar_veredito", "pontos", "calibracao"),
     "veredito_limiar_ressalvas":  _p(6.0, "calibração metodológica GymSite v2", "limiar_veredito", "pontos", "calibracao"),
     "veredito_limiar_investigar": _p(4.0, "calibração metodológica GymSite v2", "limiar_veredito", "pontos", "calibracao"),
+    # Teto de payback pra RECOMENDAR modelo (A4 gate) — alerta produto ≈48m; recálculo sem KeyError.
+    "payback_limiar_recomendavel": _p(48, "calibração GymSite v2 (acima = risco elevado; não recomendar tier)", "limiar_recomendacao", "meses", "calibracao"),
 
     # ══ VIABILIDADE FINANCEIRA (financial_tools) ═════════════════════════════
     # Score de viabilidade — cortes de payback (meses)
@@ -296,14 +298,42 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
 }
 
 _OVERRIDE_CACHE: dict[str, dict[str, Any]] | None = None
+_OVERRIDE_CACHE_AT: float | None = None  # monotonic time of last load
+
+
+def clear_param_cache() -> None:
+    """Invalida override Supabase — próximo param() recarrega. Use após seed/recalibração."""
+    global _OVERRIDE_CACHE, _OVERRIDE_CACHE_AT
+    _OVERRIDE_CACHE = None
+    _OVERRIDE_CACHE_AT = None
+
+
+def _cache_ttl_seg() -> float:
+    raw = (os.environ.get("PARAMETROS_CACHE_TTL_SEG") or "").strip()
+    if not raw:
+        return 0.0  # 0 = sem TTL (só clear_param_cache / processo novo)
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return 0.0
 
 
 def _carregar_overrides() -> dict[str, dict[str, Any]]:
     """Override recalibrável da tabela Supabase parametros_metodologia (best-effort)."""
-    global _OVERRIDE_CACHE
+    global _OVERRIDE_CACHE, _OVERRIDE_CACHE_AT
+    import time as _time
+
+    ttl = _cache_ttl_seg()
     if _OVERRIDE_CACHE is not None:
-        return _OVERRIDE_CACHE
+        if ttl <= 0 or _OVERRIDE_CACHE_AT is None:
+            return _OVERRIDE_CACHE
+        if (_time.monotonic() - _OVERRIDE_CACHE_AT) < ttl:
+            return _OVERRIDE_CACHE
+        _OVERRIDE_CACHE = None
+        _OVERRIDE_CACHE_AT = None
+
     _OVERRIDE_CACHE = {}
+    _OVERRIDE_CACHE_AT = _time.monotonic()
     key = (
         os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
         or os.environ.get("SUPABASE_SERVICE_KEY")

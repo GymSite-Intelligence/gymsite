@@ -41,31 +41,128 @@ BENCHMARKS_ALUGUEL = {
     "default": {"min": 20, "med": 40, "max": 70},
 }
 
-# Constantes sourceadas via param() (Supabase override > _DEFAULTS rotulado).
-TICKET_MEDIO = param("ticket_medio_nacional")
-ALUNOS_POR_M2 = param("alunos_por_m2_legado")
+# Constantes sourceadas via param() — LAZY (PEP 562 __getattr__).
+# Não congelar no import: override Supabase + clear_param_cache() passam a valer
+# no próximo acesso. Ver docs/metodologia/data_lineage.md.
 
-# ── 3 cenários de ticket (ACAD/Sebrae benchmarks via param) ─────────
-TICKET_FAIXAS = {
-    "low": {
-        "label": "Low Cost",
-        "ticket_medio": param("ticket_low"),
-        "descricao": "Modelo econômico 24h, sem personal, autoatendimento",
-        "exemplos": "Smart Fit, Bluefit, Selfit",
-    },
-    "mid": {
-        "label": "Mid Market",
-        "ticket_medio": param("ticket_mid"),
-        "descricao": "Modelo intermediário com aulas em grupo e suporte",
-        "exemplos": "Bodytech entry, academias regionais premium",
-    },
-    "premium": {
-        "label": "Premium",
-        "ticket_medio": param("ticket_premium"),
-        "descricao": "Modelo completo com personal, nutrição e experiência",
-        "exemplos": "Bodytech, Bio Ritmo, academias boutique",
-    },
-}
+
+def _ticket_faixas() -> dict:
+    return {
+        "low": {
+            "label": "Low Cost",
+            "ticket_medio": param("ticket_low"),
+            "descricao": "Modelo econômico 24h, sem personal, autoatendimento",
+            "exemplos": "Smart Fit, Bluefit, Selfit",
+        },
+        "mid": {
+            "label": "Mid Market",
+            "ticket_medio": param("ticket_mid"),
+            "descricao": "Modelo intermediário com aulas em grupo e suporte",
+            "exemplos": "Bodytech entry, academias regionais premium",
+        },
+        "premium": {
+            "label": "Premium",
+            "ticket_medio": param("ticket_premium"),
+            "descricao": "Modelo completo com personal, nutrição e experiência",
+            "exemplos": "Bodytech, Bio Ritmo, academias boutique",
+        },
+    }
+
+
+def _matriculados_por_m2() -> dict:
+    return {
+        m: {cal: param(f"matr_m2_{m}_{cal}")
+            for cal in ("conservador", "realista", "agressivo")}
+        for m in ("low", "mid", "premium")
+    }
+
+
+def _custos_detalhados_base() -> dict:
+    return {
+        "condominio_pct_aluguel": param("custo_condominio_pct_aluguel"),
+        "iptu_mensal_base": param("custo_iptu_mensal_base"),
+        "energia_por_m2": param("custo_energia_por_m2"),
+        "agua_por_m2": param("custo_agua_por_m2"),
+        "internet_mensal": param("custo_internet_mensal"),
+        "folha_por_modelo": {
+            "low": param("folha_min_low"),
+            "mid": param("folha_min_mid"),
+            "premium": param("folha_min_premium"),
+        },
+        "manutencao_pct_capex": param("custo_manutencao_pct_capex"),
+        "contabilidade_mensal": param("custo_contabilidade_mensal"),
+        "sistema_gestao_mensal": param("custo_sistema_gestao_mensal"),
+        "seguro_pct_capex": param("custo_seguro_pct_capex"),
+        "outros_pct_receita": param("custo_outros_pct_receita"),
+    }
+
+
+def _capex_detalhado_base() -> dict:
+    return {
+        "equipamentos_por_m2": param_por_modelo("capex_equip_m2"),
+        "obra_adaptacao_por_m2": param_por_modelo("capex_obra_m2"),
+        "projeto_arquitetonico": param("capex_projeto_arquitetonico"),
+        "alvara_e_taxas": param("capex_alvara_taxas"),
+        "contingencia_pct": param("capex_contingencia_pct"),
+        "capital_giro_meses": param_int("capex_capital_giro_meses"),
+    }
+
+
+_LAZY_PARAM_ATTRS = frozenset({
+    "TICKET_MEDIO", "ALUNOS_POR_M2", "TICKET_FAIXAS", "MATRICULADOS_POR_M2",
+    "CAPACIDADE_SIMULTANEA_POR_M2", "FREQUENCIA_SEMANAL", "PICO_SHARE_POR_MODELO",
+    "TAXA_INADIMPLENCIA_POR_MODELO", "TAXA_INADIMPLENCIA",
+    "TAXA_CANCELAMENTO_MENSAL_POR_MODELO", "TAXA_CANCELAMENTO_MENSAL",
+    "CUSTOS_DETALHADOS_BASE", "CUSTOS_MARKETING_PCT", "FOLHA_PCT_FATURAMENTO",
+    "OCUPACAO_TETO", "CAPEX_DETALHADO_BASE", "TICKET_RENDA_PCT", "CUSTO_CAPITAL_ANUAL",
+})
+
+
+def __getattr__(name: str):
+    """Resolve constantes param()-backed sob demanda (não no import)."""
+    if name == "TICKET_MEDIO":
+        return param("ticket_medio_nacional")
+    if name == "ALUNOS_POR_M2":
+        return param("alunos_por_m2_legado")
+    if name == "TICKET_FAIXAS":
+        return _ticket_faixas()
+    if name == "MATRICULADOS_POR_M2":
+        return _matriculados_por_m2()
+    if name == "CAPACIDADE_SIMULTANEA_POR_M2":
+        return param_por_modelo("capacidade_simultanea")
+    if name == "FREQUENCIA_SEMANAL":
+        return param_por_modelo("frequencia_semanal")
+    if name == "PICO_SHARE_POR_MODELO":
+        return param_por_modelo("pico_share")
+    if name == "TAXA_INADIMPLENCIA_POR_MODELO":
+        return param_por_modelo("inadimplencia")
+    if name == "TAXA_INADIMPLENCIA":
+        return param("inadimplencia_mid")
+    if name == "TAXA_CANCELAMENTO_MENSAL_POR_MODELO":
+        return param_por_modelo("churn_mensal")
+    if name == "TAXA_CANCELAMENTO_MENSAL":
+        return param("churn_mensal_mid")
+    if name == "CUSTOS_DETALHADOS_BASE":
+        return _custos_detalhados_base()
+    if name == "CUSTOS_MARKETING_PCT":
+        return param_por_modelo("marketing_pct")
+    if name == "FOLHA_PCT_FATURAMENTO":
+        return param_por_modelo("folha_pct_fat")
+    if name == "OCUPACAO_TETO":
+        return param_por_modelo("ocupacao_teto")
+    if name == "CAPEX_DETALHADO_BASE":
+        return _capex_detalhado_base()
+    if name == "TICKET_RENDA_PCT":
+        return param_por_modelo("ticket_renda_pct")
+    if name == "CUSTO_CAPITAL_ANUAL":
+        return param("custo_capital_anual")
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def _lp(name: str):
+    """Lazy const neste módulo — bare name NÃO passa por __getattr__."""
+    return __getattr__(name)
+
 
 CUSTOS_FIXOS_BASE = {
     "aluguel_por_m2": 35.0,
@@ -90,18 +187,6 @@ CAPEX_BASE = {
 # SCHEMA v2 — Constantes do novo modelo financeiro
 # ─────────────────────────────────────────────────────────────────────────
 
-# Matrículas por m² (PAGANTES, não simultâneos no pico).
-# Calibrações cons/real/agres pra cada modelo, baseadas em:
-# - Smart Fit Brasil: ~2.500 alunos / 800m² = ~3.0 matr/m² (top performers)
-# - Bluefit/Selfit: ~1.800-2.000 alunos / 750m² = ~2.4-2.7 matr/m²
-# - Bodytech entry: ~1.000 alunos / 1.500m² = ~0.7 matr/m²
-# - Bio Ritmo (premium): ~600 alunos / 2.000m² = ~0.3 matr/m²
-MATRICULADOS_POR_M2 = {
-    m: {cal: param(f"matr_m2_{m}_{cal}")
-        for cal in ("conservador", "realista", "agressivo")}
-    for m in ("low", "mid", "premium")
-}
-
 # CNO / prospecção: códigos de situação da obra (RFB — campo Situação no CSV)
 CNO_SITUACAO_EM_CURSO = frozenset({"01", "02", "03", "04"})
 CNO_SITUACAO_ENCERRADA = frozenset({"15"})
@@ -124,13 +209,14 @@ def projecao_demanda_receita_obra(
     if area_m2 <= 0:
         return {"status": "erro", "motivo": "area_m2 inválida"}
 
-    faixa_key = faixa if faixa in MATRICULADOS_POR_M2 else "mid"
-    faixa_info = TICKET_FAIXAS[faixa_key]
+    matr_m2 = _lp("MATRICULADOS_POR_M2")
+    faixa_key = faixa if faixa in matr_m2 else "mid"
+    faixa_info = _lp("TICKET_FAIXAS")[faixa_key]
     ticket = ticket_override if ticket_override is not None else faixa_info["ticket_medio"]
-    inad = TAXA_INADIMPLENCIA_POR_MODELO[faixa_key]
+    inad = _lp("TAXA_INADIMPLENCIA_POR_MODELO")[faixa_key]
     ticket_realizado = round(ticket * (1.0 - inad), 2)
 
-    calibracoes = MATRICULADOS_POR_M2[faixa_key]
+    calibracoes = matr_m2[faixa_key]
     matriculas: dict[str, dict] = {}
     receita_mensal_estimada: dict[str, float] = {}
     for cal_id, mpm in calibracoes.items():
@@ -161,70 +247,9 @@ def projecao_demanda_receita_obra(
         ),
     }
 
-# Capacidade FÍSICA simultânea (no pico horário) — check de conforto/segurança.
-# Diferente de matrículas: quantas pessoas cabem ao mesmo tempo na academia.
-CAPACIDADE_SIMULTANEA_POR_M2 = param_por_modelo("capacidade_simultanea")
-
-# Frequência semanal média do aluno por modelo (ACAD/Sebrae 2024).
-# Low-cost: alunos mais regulares (preço baixo → uso intenso pra valer).
-# Premium: alunos mais ocupados, frequência menor mas churn menor.
-FREQUENCIA_SEMANAL = param_por_modelo("frequencia_semanal")
-
-# Pico share POR MODELO (% no pico 18h-21h). A4 é independente por tipologia —
-# nunca um pico_share global/acumulado entre low/mid/premium/(boutique|crossfit).
-PICO_SHARE_POR_MODELO = param_por_modelo("pico_share")
-
-# Taxas operacionais — calibradas por modelo (ACAD/Sebrae 2024).
-# Low-cost tem maior inadimplência (cliente mais sensível a preço) e maior churn.
-# Premium tem menor inadimplência (alunos mais comprometidos) e menor churn.
-TAXA_INADIMPLENCIA_POR_MODELO = param_por_modelo("inadimplencia")
-
-# Backward-compat — código v1 que ainda lê o campo único
-TAXA_INADIMPLENCIA = param("inadimplencia_mid")
-
-TAXA_CANCELAMENTO_MENSAL_POR_MODELO = param_por_modelo("churn_mensal")
-TAXA_CANCELAMENTO_MENSAL = param("churn_mensal_mid")   # backward-compat
-
-# Custos detalhados — 12 linhas. Valores são "base" e são modulados por:
-# - aluguel: MRLR Tier 0 (A4); fallback FipeZap/ACAD se indisponível (P-000)
-# - área: muitos custos escalam com m²
-# - modelo: premium tem folha maior, low-cost tem manutenção menor
-CUSTOS_DETALHADOS_BASE = {
-    "condominio_pct_aluguel": param("custo_condominio_pct_aluguel"),
-    "iptu_mensal_base": param("custo_iptu_mensal_base"),
-    "energia_por_m2": param("custo_energia_por_m2"),
-    "agua_por_m2": param("custo_agua_por_m2"),
-    "internet_mensal": param("custo_internet_mensal"),
-    "folha_por_modelo": {
-        "low": param("folha_min_low"),
-        "mid": param("folha_min_mid"),
-        "premium": param("folha_min_premium"),
-    },
-    "manutencao_pct_capex": param("custo_manutencao_pct_capex"),
-    "contabilidade_mensal": param("custo_contabilidade_mensal"),
-    "sistema_gestao_mensal": param("custo_sistema_gestao_mensal"),
-    "seguro_pct_capex": param("custo_seguro_pct_capex"),
-    "outros_pct_receita": param("custo_outros_pct_receita"),
-}
-
-CUSTOS_MARKETING_PCT = param_por_modelo("marketing_pct")
-
-# Folha como % do faturamento (Benchmark Financeiro Academias 2024) — lê
-# folha_pct_fat_{low,mid,premium}. Aplicada como max(piso R$, % da receita).
-FOLHA_PCT_FATURAMENTO = param_por_modelo("folha_pct_fat")
-# Teto de ocupação imobiliária por modelo (Benchmark Financeiro Academias 2024) —
-# lê ocupacao_teto_{low,mid,premium}: (aluguel+condomínio+IPTU)/faturamento.
-OCUPACAO_TETO = param_por_modelo("ocupacao_teto")
-
-# CAPEX detalhado
-CAPEX_DETALHADO_BASE = {
-    "equipamentos_por_m2": param_por_modelo("capex_equip_m2"),
-    "obra_adaptacao_por_m2": param_por_modelo("capex_obra_m2"),
-    "projeto_arquitetonico": param("capex_projeto_arquitetonico"),
-    "alvara_e_taxas": param("capex_alvara_taxas"),
-    "contingencia_pct": param("capex_contingencia_pct"),
-    "capital_giro_meses": param_int("capex_capital_giro_meses"),
-}
+# Capacidade simultânea / freq / pico / inad / churn / custos / CAPEX / ticket_renda /
+# CUSTO_CAPITAL — via __getattr__ (externo) ou builders/param() (interno neste arquivo).
+# Não reatribuir no import: senão freeze + clear_param_cache() não pega.
 
 # Sensibilidade — stress tests aplicados em cima do cenário "realista".
 # 1.7: o stress de ocupação (aluguel +20%) reprova quando a razão de ocupação
@@ -241,12 +266,6 @@ STRESS_TESTS = [
     {"id": "fiscal_anexo_v", "label": "Fiscal: Fator R < 28% (Anexo V)",
      "forca_anexo_v": True},
 ]
-
-# Ticket mensal sustentável ≈ % da renda domiciliar (ACAD / A2).
-TICKET_RENDA_PCT: dict[str, float] = param_por_modelo("ticket_renda_pct")
-
-# Custo de capital pra cálculo de VPL/TIR (12% a.a. ≈ Selic + premium fitness)
-CUSTO_CAPITAL_ANUAL = param("custo_capital_anual")
 
 
 def estimar_aluguel(cidade: str, area_m2: float) -> dict:
@@ -272,7 +291,9 @@ def calcular_investimento(area_m2: float) -> dict:
 
 
 def calcular_viabilidade(aluguel_mensal: float, investimento_total: float,
-                          area_m2: float, ticket: float = TICKET_MEDIO) -> dict:
+                          area_m2: float, ticket: float | None = None) -> dict:
+    if ticket is None:
+        ticket = float(_lp("TICKET_MEDIO"))
     custos_fixos = (
         aluguel_mensal
         + max(8000, area_m2 * 8)   # folha
@@ -286,7 +307,7 @@ def calcular_viabilidade(aluguel_mensal: float, investimento_total: float,
 
     margem = ticket - ticket * param("margem_operacional_ticket_pct")
     break_even = int(custos_fixos / margem) + 1
-    capacidade = int(area_m2 * ALUNOS_POR_M2)
+    capacidade = int(area_m2 * _lp("ALUNOS_POR_M2"))
 
     # Projeção 6 meses
     alunos_proj = int(break_even * param("fator_projecao_6m"))
@@ -452,11 +473,26 @@ def calcular_viabilidade_3_cenarios(
                 "alvará/projeto usam benchmark Sebrae."
             )
 
-    # CAPEX e custos comuns que não dependem do modelo
-    iptu_mensal = CUSTOS_DETALHADOS_BASE["iptu_mensal_base"]
-    internet = CUSTOS_DETALHADOS_BASE["internet_mensal"]
-    contabilidade = CUSTOS_DETALHADOS_BASE["contabilidade_mensal"]
-    sistema = CUSTOS_DETALHADOS_BASE["sistema_gestao_mensal"]
+    # CAPEX e custos comuns que não dependem do modelo (lazy — fresh param each call)
+    _custos_base = _lp("CUSTOS_DETALHADOS_BASE")
+    _capex_base = _lp("CAPEX_DETALHADO_BASE")
+    _ticket_faixas_map = _lp("TICKET_FAIXAS")
+    _matr_m2 = _lp("MATRICULADOS_POR_M2")
+    _cap_sim = _lp("CAPACIDADE_SIMULTANEA_POR_M2")
+    _freq = _lp("FREQUENCIA_SEMANAL")
+    _pico = _lp("PICO_SHARE_POR_MODELO")
+    _inad_mod = _lp("TAXA_INADIMPLENCIA_POR_MODELO")
+    _churn_mod = _lp("TAXA_CANCELAMENTO_MENSAL_POR_MODELO")
+    _folha_pct = _lp("FOLHA_PCT_FATURAMENTO")
+    _mkt_pct = _lp("CUSTOS_MARKETING_PCT")
+    _ocup_teto = _lp("OCUPACAO_TETO")
+    _inad_legacy = _lp("TAXA_INADIMPLENCIA")
+    _custo_cap = _lp("CUSTO_CAPITAL_ANUAL")
+
+    iptu_mensal = _custos_base["iptu_mensal_base"]
+    internet = _custos_base["internet_mensal"]
+    contabilidade = _custos_base["contabilidade_mensal"]
+    sistema = _custos_base["sistema_gestao_mensal"]
 
     # Schema v1.5: equipamentos por modelo financeiro vêm do kit detalhado.
     # Low usa kit 1 tamanho abaixo (econômico), Mid usa tamanho selecionado,
@@ -467,7 +503,7 @@ def calcular_viabilidade_3_cenarios(
     except Exception:
         equipamentos_por_cenario = {"low": None, "mid": None, "premium": None}
 
-    for faixa_key, faixa in TICKET_FAIXAS.items():
+    for faixa_key, faixa in _ticket_faixas_map.items():
         raw_ticket = float(faixa["ticket_medio"])  # catálogo (#26) — nunca LLM
         ticket, ticket_notes = _resolver_ticket_faixa(
             faixa_key, raw_ticket, renda_media_bairro
@@ -475,7 +511,7 @@ def calcular_viabilidade_3_cenarios(
         alertas_ticket.extend(ticket_notes)
 
         # ── DEMANDA: 3 calibrações de matrículas + pico simultâneo ──
-        calibracoes = MATRICULADOS_POR_M2[faixa_key]
+        calibracoes = _matr_m2[faixa_key]
         matriculas_dict = {}
         for cal_id, mpm in calibracoes.items():
             matriculas_dict[cal_id] = {
@@ -489,10 +525,10 @@ def calcular_viabilidade_3_cenarios(
 
         # Capacidade física simultânea (no pico)
         capacidade_simultanea_pico = int(
-            area_m2 * CAPACIDADE_SIMULTANEA_POR_M2[faixa_key]
+            area_m2 * _cap_sim[faixa_key]
         )
-        freq_semanal = FREQUENCIA_SEMANAL[faixa_key]
-        pico_share = PICO_SHARE_POR_MODELO[faixa_key]
+        freq_semanal = _freq[faixa_key]
+        pico_share = _pico[faixa_key]
         # Alunos esperados simultaneamente no pico (params do próprio modelo):
         # matr × (freq/7 dias) × pico_share_{modelo}
         alunos_pico_calc = int(matr_real * (freq_semanal / 7.0) * pico_share)
@@ -505,8 +541,8 @@ def calcular_viabilidade_3_cenarios(
         # senão ACAD 2024 (low 6%, mid 4%, premium 2.5%). Panorama 2025
         # mostra que esses valores assumem débito recorrente — sem
         # recorrência, inadimplência real é 15-25%.
-        inadimplencia = TAXA_INADIMPLENCIA_POR_MODELO[faixa_key]  # catálogo (#26)
-        churn_mensal = TAXA_CANCELAMENTO_MENSAL_POR_MODELO[faixa_key]  # catálogo (#26)
+        inadimplencia = _inad_mod[faixa_key]  # catálogo (#26)
+        churn_mensal = _churn_mod[faixa_key]  # catálogo (#26)
         ticket_realizado = ticket * (1.0 - inadimplencia)
         receita_mensal = matr_real * ticket_realizado
 
@@ -530,41 +566,41 @@ def calcular_viabilidade_3_cenarios(
         # rampa/operação pequena; % do faturamento captura a escala (Benchmark
         # Financeiro Academias 2024: low 18% / mid 35% / premium 33%). Também é o
         # insumo do Fator R (folha/faturamento define Anexo III vs V).
-        folha_min = CUSTOS_DETALHADOS_BASE["folha_por_modelo"][faixa_key]
-        folha = max(folha_min, receita_mensal * FOLHA_PCT_FATURAMENTO[faixa_key])
+        folha_min = _custos_base["folha_por_modelo"][faixa_key]
+        folha = max(folha_min, receita_mensal * _folha_pct[faixa_key])
         custos = {
             "aluguel": round(aluguel_mensal, 2),
             "condominio": round(
-                aluguel_mensal * CUSTOS_DETALHADOS_BASE["condominio_pct_aluguel"], 2
+                aluguel_mensal * _custos_base["condominio_pct_aluguel"], 2
             ),
             "iptu": round(iptu_mensal, 2),
             "energia": round(
-                area_m2 * CUSTOS_DETALHADOS_BASE["energia_por_m2"]
+                area_m2 * _custos_base["energia_por_m2"]
                 * (1.5 if faixa_key == "premium" else 1.0),  # premium gasta 50% mais
                 2,
             ),
             "agua": custo_agua_mensal(
-                area_m2, CUSTOS_DETALHADOS_BASE["agua_por_m2"],
+                area_m2, _custos_base["agua_por_m2"],
                 visitas_mes=matr_real * freq_semanal * 4.345,  # semanas/mês
             ),
             "internet": round(internet, 2),
             "folha": round(folha, 2),
             "manutencao": round(
-                capex_total * CUSTOS_DETALHADOS_BASE["manutencao_pct_capex"], 2
+                capex_total * _custos_base["manutencao_pct_capex"], 2
             ),
             "contabilidade": round(contabilidade, 2),
             "sistema_gestao": custo_sistema_gestao(sistema, matr_real),
             "seguro": round(
-                capex_total * CUSTOS_DETALHADOS_BASE["seguro_pct_capex"], 2
+                capex_total * _custos_base["seguro_pct_capex"], 2
             ),
             "outros": round(
-                receita_mensal * CUSTOS_DETALHADOS_BASE["outros_pct_receita"], 2
+                receita_mensal * _custos_base["outros_pct_receita"], 2
             ),
         }
         custos_fixos_total = sum(custos.values())
 
         # Marketing (pct da receita)
-        mkt_pct = CUSTOS_MARKETING_PCT[faixa_key]
+        mkt_pct = _mkt_pct[faixa_key]
         marketing_mensal = round(receita_mensal * mkt_pct, 2)
 
         custos_totais = custos_fixos_total + marketing_mensal
@@ -588,7 +624,7 @@ def calcular_viabilidade_3_cenarios(
         # 34,3% do caso Cocó).
         ocupacao_abs = custos["aluguel"] + custos["condominio"] + custos["iptu"]
         ocupacao_pct = (ocupacao_abs / receita_mensal) if receita_mensal > 0 else 1.0
-        teto_ocup = OCUPACAO_TETO[faixa_key]
+        teto_ocup = _ocup_teto[faixa_key]
         # Ticket mínimo p/ a ocupação caber no teto, à mesma matrícula realista.
         ticket_piso_ocupacao = (
             ocupacao_abs / (teto_ocup * matr_real * (1.0 - inadimplencia))
@@ -607,7 +643,7 @@ def calcular_viabilidade_3_cenarios(
             custos_fixos_puros=custos_fixos_total - custos["outros"],
             ticket_realizado=ticket_realizado,
             mkt_pct=mkt_pct,
-            outros_pct=CUSTOS_DETALHADOS_BASE["outros_pct_receita"],
+            outros_pct=_custos_base["outros_pct_receita"],
             aliquota_tributos=aliquota_tributos,
         )
 
@@ -627,7 +663,7 @@ def calcular_viabilidade_3_cenarios(
             tipo_obra=_tipo_obra,
         )
         capital_giro = round(
-            custos_totais * CAPEX_DETALHADO_BASE["capital_giro_meses"], 2
+            custos_totais * _capex_base["capital_giro_meses"], 2
         )
         investimento_total = capex_detalhado["total"] + capital_giro
         payback_meses = (
@@ -636,7 +672,7 @@ def calcular_viabilidade_3_cenarios(
         tir_anual = _calcular_tir_anual(investimento_total, lucro_mensal, anos=5)
         vpl_5_anos = _calcular_vpl(
             investimento_total, lucro_mensal, anos=5,
-            taxa_anual=CUSTO_CAPITAL_ANUAL,
+            taxa_anual=_custo_cap,
         )
 
         # ── VEREDITO ──
@@ -656,7 +692,7 @@ def calcular_viabilidade_3_cenarios(
             base_ticket=ticket,
             custos_fixos_sem_aluguel=custos_fixos_total - custos["aluguel"],
             marketing_pct=mkt_pct,
-            inadimplencia=TAXA_INADIMPLENCIA,
+            inadimplencia=_inad_legacy,
             investimento_total=investimento_total,
             ocupacao_nao_aluguel=ocupacao_abs - custos["aluguel"],
             teto_ocupacao=teto_ocup,
@@ -717,7 +753,7 @@ def calcular_viabilidade_3_cenarios(
             # Investimento
             "capex_detalhado": capex_detalhado,
             "capex_total": capex_detalhado["total"],
-            "capital_giro_meses": CAPEX_DETALHADO_BASE["capital_giro_meses"],
+            "capital_giro_meses": _capex_base["capital_giro_meses"],
             "capital_giro": capital_giro,
             "investimento_total": round(investimento_total, 2),
             "payback_meses": payback_meses,
@@ -786,7 +822,7 @@ def _resolver_ticket_faixa(
     ticket = limpos.get(faixa_key, raw_ticket)
 
     if renda_media_bairro and renda_media_bairro > 0:
-        pct = TICKET_RENDA_PCT.get(faixa_key, param("ticket_renda_pct_mid"))
+        pct = _lp("TICKET_RENDA_PCT").get(faixa_key, param("ticket_renda_pct_mid"))
         cap = round(renda_media_bairro * pct, 2)
         if ticket > cap:
             avisos.append(
@@ -1191,16 +1227,17 @@ def _calcular_capex_detalhado(
     from tools.obra_capex import carimbo_obra_civil, linha_obra, normalize_tipo_obra
 
     _tipo_obra = normalize_tipo_obra(tipo_obra)
+    _capex_base = _lp("CAPEX_DETALHADO_BASE")
     if equipamentos_override is not None and equipamentos_override > 0:
         equip = equipamentos_override
     else:
-        equip = area_m2 * CAPEX_DETALHADO_BASE["equipamentos_por_m2"][modelo]
+        equip = area_m2 * _capex_base["equipamentos_por_m2"][modelo]
     obra_m2 = _obra_por_m2_modelo(
         modelo, capex_indices=capex_indices, tipo_obra=_tipo_obra
     )
     obra = area_m2 * obra_m2
-    projeto = CAPEX_DETALHADO_BASE["projeto_arquitetonico"]
-    alvara = CAPEX_DETALHADO_BASE["alvara_e_taxas"]
+    projeto = _capex_base["projeto_arquitetonico"]
+    alvara = _capex_base["alvara_e_taxas"]
     fonte_projeto = "parametros_metodologia (Sebrae 2024)"
     fonte_alvara = "parametros_metodologia (Sebrae 2024)"
     legal_fees_meta = None
@@ -1243,7 +1280,7 @@ def _calcular_capex_detalhado(
     _linha_obra = linha_obra(_tipo_obra)
 
     subtotal = equip + obra + projeto + alvara + frete
-    contingencia = subtotal * CAPEX_DETALHADO_BASE["contingencia_pct"]
+    contingencia = subtotal * _capex_base["contingencia_pct"]
     return {
         "equipamentos": round(equip, 2),
         "obra_adaptacao": round(obra, 2),
@@ -1251,7 +1288,7 @@ def _calcular_capex_detalhado(
         "alvara_e_taxas": round(alvara, 2),
         "frete_equipamentos": round(frete, 2),
         "frete_detalhes": frete_detalhes,
-        "contingencia_pct": CAPEX_DETALHADO_BASE["contingencia_pct"],
+        "contingencia_pct": _capex_base["contingencia_pct"],
         "contingencia_valor": round(contingencia, 2),
         "total": round(subtotal + contingencia, 2),
         "fonte_equipamentos": (

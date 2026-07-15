@@ -15,8 +15,8 @@ Toda métrica de cálculo vem de **dado com fonte** (tabela sourced) ou **benchm
 | **IBGE Censo 2022 — pop/ocupação por setor** (basedosdados BQ) | tabela `censo_setor` (espelho nacional ~456k setores) · `tools/censo_setor_loader.py` | one-time | `tools/demanda_futura_tools.py` (ocupação), `tools/demografia_bairro_tools.py` |
 | CKAN Fortaleza — IDH-Renda por bairro (base **Censo 2010**) | in-code `tools/bairro_renda_loader.py` | — | A2 demografia (fallback **tier 2**; SUPERSEDED — `renda_bairro` IBGE 2022 é primário desde commit 93bdd60) |
 | IBGE renda per capita municipal (Censo 2022) | dict em `tools/ibge_tools.py` | — | A2 `analise_demografica_completa` (renda municipal, fallback do bairro) |
-| **Benchmarks setoriais** | tabela `parametros_metodologia` · `tools/parametros_metodologia.py` · seed `tools/parametros_seed.py` | recalibrável (Supabase, sem deploy) | **TODOS** via `param()` (score demográfico/viabilidade/saturação/headroom/veredito) |
-| └ hierarquia calibração | (1) **CVM / IR redes capital aberto** — Smart Fit (SMFT3), Bluefit e pares com DFs/releases públicos; (2) ACAD/Sebrae/Panorama; (3) calibração GymSite rotulada. Panorama sem % fechado → **não inventar**; manter ACAD ou puxar CVM. Proxy low-cost ≠ mid/premium. Evidência jul/2025: [`cvm-smartfit-bluefit-2025.md`](cvm-smartfit-bluefit-2025.md) (seed **congelado**). | ver P-000 §3 | A4 / `DEFAULTS_FALLBACK` / seeds |
+| **Benchmarks setoriais** | tabela `gymsite.parametros_metodologia` (view compat `public.*`) · API `tools/parametros_metodologia.py` (`param`/`param_meta`/`param_int`/`clear_param_cache`) · seed `python -m tools.parametros_seed` · DDL `db/migrations/20260614_parametros_metodologia.sql` (legado `public`) + `20260715_parametros_metodologia_categoria.sql` (`gymsite`) | override Supabase quando tabela+service role OK; senão `_DEFAULTS` (~200 keys). Cache process-local: `clear_param_cache()` ou TTL `PARAMETROS_CACHE_TTL_SEG`. `financial_tools` consts lazy via PEP 562 `__getattr__` | **TODOS** via `param()` (A2/A3/A4/A6/A8/A9, score demo/viab/saturação/headroom/veredito, anéis, CNO, popular times, IG ttl) |
+| └ hierarquia calibração | (1) **CVM / IR redes capital aberto** — Smart Fit (SMFT3), Bluefit e pares com DFs/releases públicos; (2) ACAD/Sebrae/Panorama; (3) calibração GymSite rotulada. Panorama sem % fechado → **não inventar**; manter ACAD ou puxar CVM. Proxy low-cost ≠ mid/premium. Evidência jul/2025: [`cvm-smartfit-bluefit-2025.md`](cvm-smartfit-bluefit-2025.md) (seed **congelado**). | ver P-000 §3 | A4 / `_DEFAULTS` / seeds |
 | **CNO obras (RFB)** | tabelas `cno_obras_grande_porte` + `cno_obras_fitness` (Supabase) · loader VIVO `tools/rfb_cno_loader.py` (RFB bulk **mensal**); `tools/cno_bigquery_loader.py` = backfill histórico ≤2021 **dormente** (insert-only) | mensal (RFB) | `demanda_futura_tools` (obras futuras), `leads_condominial_tools` — leem do **Supabase**, não BQ em runtime |
 | **CNPJ RFB fitness** (CNAE 9313-1/00, snapshot mensal) | tabela `cnpj_fitness_estabelecimentos` (Supabase) · loader `tools/rfb_cnpj_fitness_loader.py` · tool `tools/cnpj_fitness_tools.py` | mensal | A0 (`dados_parque_cnpj_para_a0` — parque ativo + entrantes), A6 (`fatos_parque_cnpj`) |
 | **MRLR aluguel comercial** (IBAPE-GO, determinístico) | coeficientes `catalogos_metodologia` (`mrlr_coef`, `mrlr_escala`) · `tools/mrlr_modelo.py` · `tools/aluguel_mrlr.py` · espelhos `municipio_pib` + `renda_bairro` | recalibrável (catálogo) | A4 Tier 0 (`analise_financeira_a4_completo`), A1 (`anchoring_tools._anexar_aluguel_mrlr`) — **única fonte de aluguel de viabilidade** |
@@ -55,9 +55,40 @@ Coeficientes iniciais iguais (0.33 / 0.33 / 0.34). Benchmark OndeAbrir Cocó: Fl
 Meta GymSite: artérias estruturais ≥ 70; ruas locais < 40 no mesmo raio 2 km.
 Ajuste futuro via `AnalysisConfig.alpha_pop`, `beta_emp`, `gamma_transp` em `tools/space_syntax.py`.
 
+## Fluxo `param()` (contrato real)
+
+```mermaid
+flowchart LR
+  subgraph api [parametros_metodologia.py]
+    D[DEFAULTS cerca de 200 keys]
+    C[OVERRIDE_CACHE]
+    P[param param_int param_meta]
+  end
+  subgraph db [Supabase]
+    T[tabela parametros_metodologia]
+  end
+  subgraph consumers [Consumidores]
+    F[financial_tools]
+    A6[a6 veredito]
+    A8[a8 validator]
+    O[ibge competitor anchoring cno listing]
+  end
+  T -->|select all uma vez| C
+  D --> P
+  C -->|merge| P
+  P --> F
+  P --> A6
+  P --> A8
+  P --> O
+```
+
+Override só vence default se: (1) Supabase reachable no 1º `param()` (ou pós-`clear_param_cache` / TTL), (2) row `nome` existe. Schema: coluna `categoria` em **`gymsite.parametros_metodologia`** (`20260715_…_categoria.sql` — **não** `ALTER` na view `public`). Sync full = `python -m tools.parametros_seed`.
+
 ## Pendências de lineage
 - ✅ FEITO: `bairro_renda_loader` (A2) usa `renda_bairro` IBGE 2022 > CKAN 2010 (commit 93bdd60).
 - ✅ FEITO (2026-06-16): lineage reconciliado com a auditoria — +FipeZap, +CNPJ RFB, +Popular Times; CNO "onde mora" corrigido (Supabase, não BQ); SearchAPI×Gemini Grounding separados; `validacoes` (era `validacao_a8`).
+- ✅ FEITO (2026-07-15): caveat `parametros_metodologia` documentado (seed lag · cache · import freeze).
+- ✅ FEITO (2026-07-15 Act-on): (a) `payback_limiar_recomendavel` em `_DEFAULTS`; (b) lazy `param()` em `financial_tools` (PEP 562); (c) `clear_param_cache()` + TTL `PARAMETROS_CACHE_TTL_SEG`; (d) migration `categoria` + seed via `python -m tools.parametros_seed`.
 - Data.Rio JSON não tabelado (redundante com `renda_bairro`; manter só como cross-check ou descartar).
 - SP capital usa **distrito** (não bairro) no IBGE → `renda_bairro` não cobre; carregar `Agregados_por_Distrito` quando for prospectar SP.
 - `ipece_renda_bairro`: tabela legada sem reconciliação ativa — decidir entre implementar cross-check ou marcar deprecada (docstring de `posicionamento_renda.py` ainda a cita).
