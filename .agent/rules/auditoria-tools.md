@@ -81,9 +81,10 @@ Auditoria **não** substitui checklist pré-merge do pipeline — **precede** qu
 
 | Campo | Valor |
 |---|---|
-| Estado | **Approved** (Act-on merged no código — aguarda deploy Cloud Run) |
+| Estado | **Closed** (Corrective shipped + Retest `/api/version`) |
 | Sintoma | Cocó `c908…` · dual SKU SearchAPI+Places · ~R$2,53 em `buscar_imoveis_texto` |
 | 5 Whys | [`tools/maps_tools_5whys_imoveis.mmd`](../../tools/maps_tools_5whys_imoveis.mmd) |
 | Causa raiz | Tool misturou polo/POI + listing; Maps Local vazio ≠ outage; fallback Places em `[]` |
 | Act-on feito | (1) Places só se SearchAPI `None` (2) A1 removeu queries listing — cascata já em `_fetch_listings_como_candidatos` (3) teste `empty_nao_fallback_places` |
-| Done prod | dual SKU some no próximo relatório pós-Cloud Run |
+| Done prod | commit `8095337` · API `00477` · worker `00074` · `GIT_SHA=8095337` · `stale:false` |
+| Retest pendente | próximo relatório: ledger sem dual SKU em `buscar_imoveis_texto` (prova operacional) |
