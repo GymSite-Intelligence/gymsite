@@ -346,7 +346,10 @@ def analisar_pontos_comerciais_completo(
     if lat is None or lng is None:
         return {"erro": "lat/lng ausentes", "candidatos": []}
 
-    # 2. Nearby + 3. Text searches âncoras
+    # 2. Nearby + 3. Text searches âncoras POI (Maps Local).
+    # Listing/aluguel NÃO entra aqui — `_fetch_listings_como_candidatos` usa
+    # listing_cascata (SearchAPI google_light). Query "galpão alugar" no Maps
+    # Local vinha vazia → fallback Places inútil (auditoria 5 Whys jul/2026).
     candidatos_brutos = []
     try:
         candidatos_brutos.extend(buscar_pontos_comerciais(lat, lng, raio) or [])
@@ -356,8 +359,6 @@ def analisar_pontos_comerciais_completo(
     for query in [
         f"supermercado {alvo}",
         f"concessionária {alvo}",
-        f"imóvel comercial aluguel {alvo} {cidade}",
-        f"galpão comercial {alvo} {cidade}",
     ]:
         try:
             candidatos_brutos.extend(buscar_imoveis_texto(query, lat, lng, raio) or [])

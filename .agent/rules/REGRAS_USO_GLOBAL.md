@@ -51,6 +51,7 @@ Use como gate mental. Se algum item falhar, pare e leia a fonte.
 - Antes de alterar `agents/*.py`, `tools/*_tools.py` ou contrato de relatório:
   1. [conferencia-fontes-pipeline.md](conferencia-fontes-pipeline.md)
   2. [pipeline-fontes-deterministicas.md](pipeline-fontes-deterministicas.md)
+- **Não conformidade em tool (custo/fonte/fallback):** [auditoria-tools.md](auditoria-tools.md) (Draft→Approved, 5 Whys + `.mmd`) sob guarda-chuva [auditoria-conformidade.md](auditoria-conformidade.md).
 
 ### 3.2 Pipeline / agentes A0–A9
 
@@ -163,6 +164,8 @@ Conflito tool vs LLM → **tool vence** no pós-processamento.
 | UX, formulário, FK, mobile | [processo-mudanca.md](processo-mudanca.md) |
 | Qualidade código, naming, git | [workspace.md](workspace.md) |
 | Pipeline / fontes Maps/aluguel/obra | [conferencia-fontes-pipeline.md](conferencia-fontes-pipeline.md) |
+| Conformidade global (ciclo gaps) | [auditoria-conformidade.md](auditoria-conformidade.md) |
+| NC em tool (5 Whys / custo API) | [auditoria-tools.md](auditoria-tools.md) |
 | Agente específico A0–A9 | `.agent/skills/gymsite-pipeline/SKILL.md` + `agents/specs/SPEC_A*.md` |
 | Deploy / env / CF gotchas | P-000 §7–§8 + `CLAUDE.md` |
 | Lineage de dados | `docs/metodologia/data_lineage.md` |

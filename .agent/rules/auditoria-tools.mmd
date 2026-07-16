@@ -1,0 +1,31 @@
+---
+id: 53b022ed-57e2-46b9-a0ad-7f2a31675961
+---
+%% Auditoria de Tools — processo canônico GymSite
+%% Ver .agent/rules/auditoria-tools.md
+%% Abrir → Ctrl+Shift+P → MermaidChart: Preview Diagram
+
+stateDiagram-v2
+    [*] --> Draft
+
+    state "SLA: 2d — Author: sintoma + 5 Whys + .mmd\n⚠️ Notify Author se >1d" as Draft
+    Draft --> Submitted: "submit (Author)"
+
+    state "SLA: 1d — Awaiting Reviewer\n⚠️ Notify Reviewer Lead se >1d" as Submitted
+    Submitted --> Reviewed: "review (Reviewer)"
+
+    state "SLA: 3d — Causa raiz validada vs fontes\n⚠️ Notify Approver se >2d" as Reviewed
+    Reviewed --> Approved: "approve (Approver)"
+    Reviewed --> Rejected: "reject (Approver)"
+    Reviewed --> Draft: "request changes (Reviewer)"
+
+    state "SLA: Immediate — Act-on + teste + Cloud Run se tools/\n✅ Notify Author" as Approved
+    state "SLA: Immediate — fecha com motivo\n✅ Notify Author" as Rejected
+
+    Approved --> [*]
+    Rejected --> [*]
+
+    note right of Draft
+      Caso Maps (jul/2026): Approved —
+      empty≠Places + A1 listing=cascata
+    end note

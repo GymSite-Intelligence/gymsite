@@ -252,7 +252,8 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
         res = _searchapi_maps_local(
             "shopping centro comercial supermercado mercado", latitude, longitude,
             raio_metros, tool_name="buscar_pontos_comerciais")
-        if res:
+        # None = erro/sem key → Places. [] = SearchAPI OK sem hit → NÃO fallback (custo).
+        if res is not None:
             out = [_extrair_lugar(p) for p in res]
             _places_cache_set(cache_key, out)
             return out
@@ -298,7 +299,11 @@ def buscar_pontos_comerciais(latitude: float, longitude: float,
 
 def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
                           raio_metros: int = 5000) -> list[dict]:
-    """Text Search para imóveis comerciais: 'galpão para alugar', etc."""
+    """Text Search Maps Local p/ POI/âncora (supermercado, terminal, etc.).
+
+    NÃO é cascata de listing/aluguel — candidato anunciado = `listing_cascata`.
+    SearchAPI primário; Places só se SearchAPI indisponível (None), nunca se [].
+    """
     cache_key = f"imoveis:{query.strip().lower()}:{latitude:.4f}:{longitude:.4f}:{raio_metros}"
     cached = _places_cache_get(cache_key)
     if cached is not None:
@@ -306,7 +311,8 @@ def buscar_imoveis_texto(query: str, latitude: float, longitude: float,
     if _imoveis_backend_searchapi():
         res = _searchapi_maps_local(
             query, latitude, longitude, raio_metros, tool_name="buscar_imoveis_texto", max_results=10)
-        if res:
+        # None = erro/sem key → Places. [] = OK sem hit → honesto, sem Places.
+        if res is not None:
             out = [_extrair_lugar(p) for p in res]
             _places_cache_set(cache_key, out)
             return out

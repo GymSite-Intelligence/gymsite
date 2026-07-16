@@ -1,0 +1,41 @@
+%% 5 Whys — buscar_imoveis_texto paga SearchAPI + Places (Cocó c908)
+%% Fonte: tools/maps_tools.py + tools/anchoring_tools.py (A1 GeoScout)
+%% Abrir este arquivo → Ctrl+Shift+P → "MermaidChart: Preview Diagram"
+
+flowchart TB
+  P["PROBLEMA<br/>Ledger busca_imoveis: searchapi_google_maps<br/>E places_search_new · R$~2,5 no Cocó"]
+
+  W1["POR QUÊ 1?<br/>Places fallback roda depois do SearchAPI<br/>na mesma função"]
+  W2["POR QUÊ 2?<br/>_searchapi_maps_local devolve None ou lista vazia<br/>→ if res: falha → cai Places"]
+  W3["POR QUÊ 3?<br/>Vazio tratado = falha de transporte<br/>+ Maps Local raramente indexa anúncio de aluguel"]
+  W4["POR QUÊ 4?<br/>A1 manda query de CLASSIFICADO<br/>ex: imóvel comercial aluguel / galpão<br/>no engine google_maps Local POI"]
+  W5["CAUSA RAIZ<br/>Tool misturou 3 jobs: polo POI + âncora comercial<br/>+ descoberta de listing. Canônico listing =<br/>listing_cascata google_light — não Maps Local.<br/>SearchAPI 'falha' = corpus errado, não outage"]
+
+  P --> W1 --> W2 --> W3 --> W4 --> W5
+
+  subgraph tool ["buscar_imoveis_texto hoje"]
+    A["IMOVEIS_MAPS_BACKEND=searchapi"] --> B["_searchapi_maps_local<br/>engine=google_maps + ll zoom"]
+    B -->|hits| C["return lugares"]
+    B -->|"None ou []"| D["Places searchText<br/>SKU places_search_new"]
+  end
+
+  subgraph mismatch ["Mismatch de metodologia"]
+    Q1["polo: terminal/Atacadão<br/>→ Maps Local OK"]
+    Q2["âncora: supermercado<br/>→ Maps Local OK"]
+    Q3["candidato listing: galpão aluguel<br/>→ precisa listing_cascata<br/>Maps Local = imobiliária/POI ou vazio"]
+  end
+
+  W5 -.-> tool
+  W4 -.-> mismatch
+
+  subgraph acao ["Plano de ação (correção na raiz)"]
+    A1["Separar canais: polo/POI ≠ listing"]
+    A2["Fallback Places só erro HTTP/sem key<br/>NÃO em local_results=[]"]
+    A3["A1 candidato → listing_cascata<br/>não buscar_imoveis_texto"]
+    A4["Ledger: marcar motivo_fallback<br/>empty vs error"]
+  end
+
+  W5 --> A1
+  W5 --> A2
+  W5 --> A3
+  W5 --> A4

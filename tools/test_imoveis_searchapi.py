@@ -50,6 +50,19 @@ def test_dispatch_imoveis_fallback_places(monkeypatch):
     assert out == []
 
 
+def test_dispatch_imoveis_empty_nao_fallback_places(monkeypatch):
+    """[] = SearchAPI OK sem hit — NÃO gastar Places (5 Whys / auditoria-tools)."""
+    monkeypatch.setenv("IMOVEIS_MAPS_BACKEND", "searchapi")
+    with patch.object(mt, "_searchapi_maps_local", return_value=[]) as sa, \
+         patch.object(mt.httpx, "Client") as client_cls, \
+         patch.object(mt, "_places_cache_get", return_value=None), \
+         patch.object(mt, "_places_cache_set"):
+        out = mt.buscar_imoveis_texto("galpão aluguel", -3.74, -38.48, 5000)
+    sa.assert_called_once()
+    client_cls.assert_not_called()
+    assert out == []
+
+
 def test_dispatch_forca_places(monkeypatch):
     monkeypatch.setenv("IMOVEIS_MAPS_BACKEND", "places")
     with patch.object(mt, "_searchapi_maps_local") as sa, \
