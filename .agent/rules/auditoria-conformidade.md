@@ -103,11 +103,11 @@ Caso Maps (`buscar_imoveis_texto`) = **incidente** sob conformidade Fontes/Tools
 
 | Campo | Valor |
 |---|---|
-| Estado | **Retest** (Corrective shipped · A0 PASS · wall/A3a em curso) |
+| Estado | **Closed** (A0 PASS · relatório `done` · A3a ainda NC latência · UX etapa paralelo documentada) |
 | Tipo | Por incidente · domínio **Deploy** (+ Tools latência A3a) |
-| Amostra baseline | `ed36ed08-ace3-414d-96e2-1e47e6d1fe0c` Cocó · `failed` 2151s |
-| Retest | `6bb90ff7-74e4-4f12-aff4-9950bbc7aa90` · ContextBuilder **29,6s** (alvo &lt;90) · running |
-| Critério | P-000 §7 worker = mesma imagem **e** env de pipeline; `PIPELINE_MAX_WALL_SEC` |
+| Amostra baseline | `ed36ed08…` Cocó · `failed` 2151s · wall 1800 |
+| Retest | `6bb90ff7-74e4-4f12-aff4-9950bbc7aa90` · **`done`** · wall **2331s** (teto worker 3600) |
+| Critério | P-000 §7 worker env+imagem; SPEC_market_bundle_v2 |
 | 5 Whys | [`tools/pipeline_wall_timeout_5whys.mmd`](../../tools/pipeline_wall_timeout_5whys.mmd) |
 | SPEC | [`agents/specs/SPEC_market_bundle_v2.md`](../../agents/specs/SPEC_market_bundle_v2.md) · [`.mmd`](../../agents/specs/SPEC_market_bundle_v2.mmd) |
 
@@ -145,12 +145,20 @@ Maps Retest (mesmo run): `buscar_imoveis_texto` só `searchapi_google_maps` — 
 2. **Código:** A3a Playwright gated; `_fetch_reviews_bundle` → `search_raw` + `cache_reviews`; SPEC_market_bundle_v2.
 3. **Bundle:** Cocó upsert Supabase (`renda_media=2095.2`).
 
-### Retest parcial (`6bb90ff7…`)
+### Retest final (`6bb90ff7…`) — `done`
 
-| Agente | Antes | Agora |
-|---|---:|---:|
-| ContextBuilder (A0) | 766 | **29,6** PASS |
-| GeoScout | 5,5 | 4,6 |
-| CompetitorSearch / A6 / done | — | em curso (poll) |
+| Agente | Antes (`ed36`) | Retest | Verdict |
+|---|---:|---:|---|
+| ContextBuilder (A0) | 766 | **29,6** | **PASS** (bundle + `ckan_bundle` worker) |
+| GeoScout | 5,5 | 4,6 | OK |
+| FinancialEstimator | 2,5 | 1,7 | OK |
+| CompetitorSearch (A3a) | 834 | **1844** | **FAIL latência** (Playwright off ≠ suficiente; Places/reviews seq ainda long-pole) |
+| ReportConsolidator | 478 | 369 | melhor |
+| PositioningStrategist | cortado | 1,7 | OK |
+| Wall | fail 1800 | **2331 done** | passa só com teto 3600 |
 
-**Fechar Closed** quando `done` + CompetitorSearch ≪834s.
+### Achado UX — `etapa_atual` mentiroso no paralelo
+
+FinancialEstimator **acabou** em 03:02:26 (`etapas_concluidas`), mas `etapa_atual` ficou `FinancialEstimator` ~30 min. Causa: bloco paralelo A2‖A3a‖A4 — último `progress_before` vence; A4 curto sobrescreve label enquanto **CompetitorSearch** ainda roda. Stepper ≠ long-pole real. Filho: Act-on `pipeline_progress` (não sobrescrever se outra etapa paralela ainda em `_inicio_etapa`, ou priorizar A3a).
+
+**Caso wall-clock A0/deploy = Closed.** NC A3a latência continua em [`auditoria-tools`](auditoria-tools.md) (filho aberto).

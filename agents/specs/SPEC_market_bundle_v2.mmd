@@ -2,42 +2,90 @@
 config:
   layout: elk
   theme: mc
-id: 876bf716-6943-462a-bc73-90358e98a13a
+  flowchart:
+    defaultRenderer: elk
+id: aud-l1-batch-highlight-dfmea
 ---
+%% SPEC_market_bundle_v2 — L1 DFMEA + L2/L3
+%% Writer renda: tools/renda_bairro_loader.py → tabela renda_bairro
+%% Reader hot-path: tools/bairro_renda_loader.enrich_demografia_bairro
+%% enrichment_cache = legado FS (scripts/enrichment/cache) — paralelo/antecessor do bundle
 flowchart TB
-  subgraph batch [Batch_1x_historico]
-    Build["build_market_bundles"]
-    SaveB["save_market_bundle"]
-    UpsertB["market_store.upsert_bundle"]
-    SA["SearchAPI maps_reviews"]
-    CacheR["cache_reviews + search_raw"]
+
+  classDef L1 stroke:#818cf8,fill:#eef2ff
+  classDef L2 stroke:#2dd4bf,fill:#f0fdfa
+  classDef L3 stroke:#facc15,fill:#fefce8
+  classDef audit stroke:#fb923c,fill:#fff7ed,stroke-width:2px
+  classDef warn stroke:#f87171,fill:#fef2f2,stroke-width:2px
+  classDef legacy stroke:#a3a3a3,fill:#fafafa,stroke-dasharray: 5 5
+
+  subgraph L1["L1 primário"]
+    subgraph AuditBatch["Auditoria: Pipeline de Batch DFMEA"]
+      RB@{ shape: cyl, label: "renda_bairro<br/>Chk1 schema/nulls<br/>writer: renda_bairro_loader" }
+      Start@{ shape: circle, label: "Batch semanal<br/>Chk2 timeout/retry" }
+      Batch@{ shape: rect, label: "build_market_bundles<br/>Chk3 integridade<br/>enrich via bairro_renda_loader" }
+      Save@{ shape: rect, label: "save + upsert<br/>Chk4 duplicidade" }
+      MB@{ shape: cyl, label: "market_bundles<br/>Chk5 rollback" }
+
+      RB -->|enrich 1x| Start ==> Batch --> Save --> MB
+      class RB,Start,Batch,Save,MB audit,warn
+    end
+
+    PID@{ shape: rect, label: "place_id caches<br/>reviews + search_raw" }
+    Report@{ shape: rect, label: "start relatório<br/>api / worker" }
+    Load@{ shape: lean-right, label: "inject_market_bundle<br/>+ carregar_market_bundle" }
+    EC@{ shape: rect, label: "enrichment_cache FS<br/>TTL 7d legado" }
+    Fresh@{ shape: diam, label: "bundle fresco<br/>+ sem batch_missing?" }
+    A0@{ shape: rect, label: "A0 ContextBuilder<br/>bundle-only · DR off" }
+    Miss@{ shape: stadium, label: "dados_nao_disponiveis<br/>sem Kimi/DR" }
+    Stale@{ shape: hex, label: "compute_bundle_stale<br/>TTL · CVM · SINAPI" }
+    Gate@{ shape: rect, label: "e2e / golden gate" }
+    Sched@{ shape: rect, label: "Agendador<br/>dependência semanal" }
+
+    MB --> Load --> Fresh
+    Fresh -->|sim| A0
+    Fresh -->|não| Miss --> A0
+    Report --> Load
+    Report -.->|ainda injeta| EC
+    EC -.->|skip OSM/BCB se gerado_em≤7d| A0
+    Stale -.->|motivos no briefing| A0
+    MB -->|publica dados| Sched
+    MB --> Gate
+
+    class EC legacy
+    class Miss warn
   end
 
-  subgraph stores [Stores_separados]
-    MB["market_bundles payload<br/>chave slug"]
-    RB["renda_bairro tabela<br/>bairro_renda_loader"]
-    PID["place_id caches<br/>reviews maps pico"]
+  subgraph L2["L2 secundário"]
+    A2@{ shape: rect, label: "A2 DemoAnalyst<br/>enrich_demografia_bairro" }
+    A4@{ shape: rect, label: "A4 MRLR Tier0" }
+    SA@{ shape: rect, label: "SearchAPI" }
+    A3a@{ shape: rect, label: "A3a CompetitorSearch" }
+
+    SA --> PID --> A3a
+    Sched -->|dispara análises| A2
+    Sched --> A4
+    RB -.->|SELECT hot-path| A2
+    RB -.->|SELECT hot-path| A4
   end
 
-  subgraph report [Cada_relatorio]
-    LoadB["load_market_bundle"]
-    A0["A0 ContextBuilder<br/>briefing only"]
-    A2["A2 DemoAnalyst vivo"]
-    A3a["A3a get_or_fetch SearchAPI"]
-    A4["A4 MRLR aluguel"]
-    A6["A6 LLM"]
+  subgraph L3["L3 terciário auditoria"]
+    Gap@{ shape: diam, label: "gap tipo?" }
+    AudConf@{ shape: rect, label: "auditoria-conformidade" }
+    AudTools@{ shape: rect, label: "auditoria-tools" }
+    Done@{ shape: circle, label: "Closed / Act-on" }
+
+    Stale -.->|Deploy / Fontes| Gap
+    A3a -.->|latência / SKU| Gap
+    Gap -->|env / política| AudConf --> Done
+    Gap -->|tool NC| AudTools --> Done
   end
 
-  Build --> SaveB --> UpsertB --> MB
-  Build --> RB
-  SA --> CacheR --> PID
+  NoteNo@{ shape: rect, label: "A3a ≠ competicao_local · A4 aluguel ≠ bundle · A0 ≠ place_id · 2 loaders ≠ duplicata" }
+  NoteNo ~~~ MB
+  NoteNo ~~~ A3a
+  NoteNo ~~~ A4
 
-  MB --> LoadB --> A0
-  RB -.->|enrich no batch| Build
-  PID --> A3a
-  A2
-  A4
-  A6
-
-  A0 -.->|nao usa| PID
-  A3a -.->|nao le competicao_local| MB
+  class L1 L1
+  class L2 L2
+  class L3 L3

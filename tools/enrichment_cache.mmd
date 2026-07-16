@@ -1,0 +1,59 @@
+---
+config:
+  layout: elk
+  theme: mc
+  flowchart:
+    defaultRenderer: elk
+id: cache_subflow_audit
+---
+%% tools/enrichment_cache.py — AS-IS real + TO-BE auditoria (não misturar)
+%% NÃO existe no .py: update_cache_records · log_cache_event · LOG_STORE
+%% Input ≠ renda_bairro — cache = OSM competicao_local + BCB (batch write)
+flowchart TB
+
+  classDef cache stroke:#4ade80,fill:#f0fdf4
+  classDef warn stroke:#f87171,fill:#fef2f2
+  classDef io stroke:#2dd4bf,fill:#f0fdfa
+  classDef code stroke:#818cf8,fill:#eef2ff
+  classDef decision stroke:#facc15,fill:#fefce8
+  classDef proposed stroke:#fb923c,fill:#fff7ed,stroke-dasharray: 5 5
+
+  subgraph AsIs["AS-IS — tools/enrichment_cache.py"]
+    Batch@{ shape: procs, label: "cache_enrichment.build_cache<br/>OSM + BCB" }
+    File@{ shape: cyl, label: "scripts/enrichment/cache<br/>{slug}.json · gerado_em" }
+    Start@{ shape: lean-r, label: "api.py start<br/>cidade bairro uf" }
+    Inject@{ shape: rect, label: "inject_cache_context" }
+    Fresh@{ shape: diam, label: "cache_is_fresh?<br/>gerado_em ≤ 7d" }
+    Skip@{ shape: rect, label: "should_skip_tool<br/>local_market_facts<br/>bcb_imobiliario_olinda" }
+    OutOk@{ shape: docs, label: "skip_tools + summary<br/>fresh=true" }
+    OutStale@{ shape: docs, label: "cache no ctx<br/>fresh=false · tools live" }
+    Ctx@{ shape: win-pane, label: "ContextVar<br/>set_pipeline_enrichment_context" }
+
+    Batch ==> File
+    Start --> Inject
+    File -.-> Inject
+    Inject --> Fresh
+    Fresh -->|sim| Skip --> OutOk
+    Fresh -->|não / miss| OutStale
+    OutOk --> Ctx
+    Skip -.->|cached_*| Ctx
+
+    class AsIs cache
+    class Start,OutOk,OutStale io
+    class Batch,Inject,Skip,Ctx code
+    class Fresh decision
+    class File warn
+  end
+
+  subgraph ToBe["TO-BE proposto — NÃO no código"]
+    Log@{ shape: docs, label: "log_cache_event<br/>type·status·age·ts·meta" }
+    Store@{ shape: cyl, label: "LOG_STORE" }
+    Aud@{ shape: docs, label: "AudConf L3<br/>Evidence opcional" }
+    Fresh -.->|gap: sem ledger| Log
+    Skip -.->|gap: skip sem log| Log
+    Log -.-> Store -.-> Aud
+    class ToBe,Log,Store,Aud proposed
+  end
+
+  Note@{ shape: comment, label: "≠ market_bundles · ≠ renda_bairro · TTL só lê gerado_em · write = batch" }
+  Note ~~~ File

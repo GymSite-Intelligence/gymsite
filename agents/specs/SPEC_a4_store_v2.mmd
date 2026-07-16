@@ -1,0 +1,22 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart TB
+  subgraph prod [A4_prod_BaseAgent]
+    A4["FinancialEstimatorAgent"]
+    Macro["analise_financeira_a4_completo"]
+    MRLR["Tier0 aluguel_mrlr"]
+    Just["_justificativa_det"]
+    Out["analise_financeira_pronto"]
+  end
+
+  subgraph bak [A4bak_LLM_LEGADO_fora_grafo]
+    LLM["Agent gemini-2.5-pro"]
+    Echo["echo macro + justificativa LLM"]
+  end
+
+  A4 --> Macro --> MRLR --> Just --> Out
+  LLM -.->|nao usar| Echo
+  Echo -.->|regressao| Out

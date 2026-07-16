@@ -1,0 +1,47 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart TB
+  subgraph agent [a3a_competitor_search.py]
+    A["CompetitorSearchAgent BaseAgent"]
+    Shim["_StateShim"]
+    Delta["state_delta concorrentes_brutos"]
+  end
+
+  subgraph macro [analisar_concorrentes_a3a_completo]
+    B1["1 buscar_concorrentes_balanceados"]
+    B2["2 filtro _eh_academia_tradicional"]
+    B3["3 loop seq MAX_ENRIQUECIMENTO"]
+    B4["4 classificar_dores card"]
+    B5["5 Gemini dores se flag"]
+  end
+
+  subgraph perConc ["_processar_um place_id"]
+    R["reviews SearchAPI<br/>cache_reviews + search_raw"]
+    PW["Playwright KP<br/>OFF prod"]
+    D["obter_atributos_place<br/>places_details_new"]
+    P["pesquisar_horarios_pico<br/>FS cache CR-ephemeral"]
+    Pr["planos google_light"]
+    IG["competidor_intel_cache IG"]
+  end
+
+  subgraph storeHist [Store_historico_alvo]
+    SR["search_raw"]
+    CR["cache_reviews"]
+    CPT["cache_popular_times SB"]
+    CPD["cache_places_details"]
+    CIC["competidor_intel_cache"]
+  end
+
+  A --> Shim --> B1 --> B2 --> B3
+  B3 --> R & PW & D & P & Pr & IG
+  B3 --> B4 --> B5 --> Delta
+
+  R --> SR & CR
+  P -.->|hoje FS| P
+  P --> CPT
+  D --> CPD
+  IG --> CIC
+  Pr --> SR

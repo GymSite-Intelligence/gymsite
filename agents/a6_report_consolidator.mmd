@@ -1,0 +1,12 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart TB
+  A6["a6_report_consolidator.py"] --> Pre["precompute"]
+  Pre --> Maps["buscar_academias x bairros"]
+  Pre --> LLM["Flash + thinking"]
+  LLM --> After["estruturado + SB"]
+  Maps --> Hot["Act-on: cache bairro_alt"]
+  LLM --> Hot2["Act-on: thinking ↓"]

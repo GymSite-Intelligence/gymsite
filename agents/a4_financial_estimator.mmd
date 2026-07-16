@@ -1,0 +1,10 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart LR
+  A4["a4_financial_estimator.py BaseAgent"] --> M["MRLR Tier0"]
+  M --> C["cenarios CPU"]
+  C --> J["justificativa template"]
+  BAK["A4bak LLM"] -.->|morto no grafo| X["nao deploy"]

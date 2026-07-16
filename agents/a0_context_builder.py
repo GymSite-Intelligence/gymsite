@@ -2,13 +2,11 @@
 """
 A0: Context Builder — primeiro agente do pipeline.
 
-Deep Research (qualitativo) + fatos CNPJ/CNO (quantitativo).
+Act-on A0 bundle-only (2026-07-16): Deep Research / Kimi FORA das tools.
+Qualitativo = market_bundle; quantitativo = CNPJ/CNO + fatos_competicao_local.
 Sem interpretação além dos dados retornados pelas tools.
 """
-from google.adk.agents import Agent
 from google.genai import types
-from tools.deep_research_tool import rodar_deep_research
-from tools.kimi_research import rodar_kimi_research
 from tools.cnpj_fitness_tools import dados_parque_cnpj_para_a0
 from tools.local_market_facts import fatos_competicao_local
 from tools.market_bundle import carregar_market_bundle
@@ -21,13 +19,13 @@ _GENERATE_CONFIG = types.GenerateContentConfig(
 def _a0_override_cnpj_numeros(callback_context):
     """Override DETERMINÍSTICO dos números CNPJ no market_context.
 
-    A0 é LlmAgent (precisa do Deep Research qualitativo), mas o LLM NÃO pode produzir
+    A0 é LlmAgent (consolida bundle + tools), mas o LLM NÃO pode produzir
     número — a instrução manda "Copiar metricas_objetivas", e copiar via LLM arrisca
     transcrição errada/arredondamento sem guardrail. Este callback RE-RODA a tool
     determinística `dados_parque_cnpj_para_a0` e sobrescreve os campos numéricos do CNPJ
     + pluga `arvore_2x2_parque` (que o schema de saída do LLM dropava). Número = sempre da
-    tool (banco), nunca da boca do LLM. Mesmo padrão do override do A9. Os campos
-    QUALITATIVOS (ticket/aluguel/tendência/insights, do Deep Research) ficam intactos.
+    tool (banco), nunca da boca do LLM. Mesmo padrão do override do A9. Campos
+    qualitativos vêm do market_bundle (não de DR).
 
     Best-effort: nunca derruba. _attach_telemetry encadeia ANTES do otel/state_dump.
     """
@@ -90,8 +88,8 @@ context_builder_agent = build_llm_agent(
     model="gemini-2.5-flash",
     generate_content_config=_GENERATE_CONFIG,
     description=(
-        "Constrói contexto de mercado (Deep Research + fatos CNPJ/CNO) "
-        "sem inferências além dos dados das tools."
+        "Constrói contexto de mercado (market_bundle + fatos CNPJ/CNO) "
+        "sem Deep Research/Kimi e sem inferências além das tools."
     ),
     instruction="""
 Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
@@ -102,24 +100,21 @@ Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
 - PROIBIDO a palavra **estoque** — use **parque ativo** (unidades no CNPJ) e
   **aberturas recentes** / **fluxo de aberturas** (novas unidades 90d).
 - Você **consolida e cruza fatos** das tools; não é consultor criativo.
+- PROIBIDO chamar Deep Research / Kimi — tools removidas (Act-on A0 bundle-only).
 
 ## FLUXO
 1. Extrair cidade, bairro, uf, genero_alvo, tipo_negocio, tamanho_preset.
 2. **`carregar_market_bundle(cidade, bairro, uf)` primeiro** — se retornar briefing com
    `<!-- market_bundle` (sem `status=missing`), use como `briefing_completo_md` e preencha
-   demografia/aluguel a partir do texto. **Não** chame `rodar_deep_research` se o bundle estiver completo.
-3. Só se bundle `missing` (inexistente) ou `missing_fields` contiver lacuna SUBSTANTIVA
-   (aluguel_medio_m2, ticket_medio, tendencia) → `rodar_deep_research` ou `rodar_kimi_research`.
-   **EXCEÇÃO — não chame DR** quando os únicos missing forem `renda_media_bairro` e/ou
-   `competicao_osm`: o Deep Research comprovadamente não entrega renda por bairro
-   (caso Parangaba) e a concorrência real vem do A3a (Places) adiante no pipeline.
-   Nesses casos use `"dados_nao_disponiveis"` e siga — pagar pesquisa cara por lacuna
-   que ela não preenche é desperdício.
+   ticket/tendência/demografia a partir do texto.
+3. Se bundle `missing` ou lacuna de campo qualitativo → use `"dados_nao_disponiveis"`
+   nesse campo e **siga**. NÃO existe fallback de pesquisa web no A0.
+   Renda: A2/`renda_bairro`. Concorrência detalhada: A3a. Aluguel viabilidade: A4 MRLR.
 4. `dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)` — fatos CNPJ + CNO.
 5. `fatos_competicao_local(cidade, bairro, uf)` — marcas no raio via OSM (se geocode ok), salvo cache/skip.
-6. Montar JSON. Bundle/DR → ticket, aluguel, tendência (qualitativo).
+6. Montar JSON. Bundle → ticket, tendência (qualitativo).
    `principais_redes_concorrentes` = **somente** `redes_detectadas_osm` da tool local.
-   Se a tool local falhar ou retornar lista vazia, use `[]` — **não** copie redes do DR.
+   Se a tool local falhar ou retornar lista vazia, use `[]` — **não** invente redes.
    Tool CNPJ → números e composição. Tool CNO → área m² só onde houver match.
 
 ## SAÍDA (JSON)
@@ -181,18 +176,16 @@ objeto JSON — sem markdown, sem fence ```, começando por { e terminando por }
 - Se `sem_obra` > 0, listar em `lacunas` — não estimar m² por chute.
 
 ## INSIGHTS
-- Cada insight = 1 frase com **fonte** entre parênteses: (Deep Research), (CNPJ), (CNO).
-- Pelo menos 1 insight deve citar número CNPJ; pelo menos 1 pode vir do DR.
-- Sem palavra "estoque".
+- Cada insight = 1 frase com **fonte** entre parênteses: (market_bundle), (CNPJ), (CNO), (OSM).
+- Pelo menos 1 insight deve citar número CNPJ.
+- Sem palavra "estoque". Sem inventar ticket/tendência se bundle ausente.
 
 ## DEGRADAÇÃO
-- DR indisponível → campos DR como dados_nao_disponiveis; CNPJ ainda preenche se ok.
+- Bundle missing → campos qualitativos `dados_nao_disponiveis`; CNPJ/OSM ainda preenchem se ok.
 - CNPJ indisponível → lacunas explicam; não inventar parque.
 """,
     tools=[
         carregar_market_bundle,
-        rodar_deep_research,
-        rodar_kimi_research,
         dados_parque_cnpj_para_a0,
         fatos_competicao_local,
     ],

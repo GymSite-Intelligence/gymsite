@@ -1,0 +1,9 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart LR
+  A2["a2_demo_analyst.py"] --> M["macro IBGE"]
+  M --> S["stores: renda_bairro censo_setor"]
+  A2 --> D["~8s retest — OK"]

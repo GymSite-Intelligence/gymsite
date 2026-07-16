@@ -93,9 +93,44 @@ Auditoria **não** substitui checklist pré-merge do pipeline — **precede** qu
 
 | Campo | Valor |
 |---|---|
-| Estado | **Approved → Act-on parcial** (Playwright off + search_raw; Retest com cache quente pendente) |
-| Sintoma | Cocó `ed36ed08` · CompetitorSearch **834s** · contribui pro fail 30 min |
-| 5 Whys (pai) | [`tools/pipeline_wall_timeout_5whys.mmd`](../../tools/pipeline_wall_timeout_5whys.mmd) |
-| Causa | Enrich **sequencial** Playwright KP + Places; reviews já tinham `cache_reviews` mas rede miss + PW dominava |
-| Act-on | (1) `COMPETITOR_PLAYWRIGHT_ENRICH` default **0** (2) `_fetch_reviews_bundle` → `search_raw` (3) SPEC_market_bundle_v2 |
-| Bloqueio restante | Deploy imagem worker com código novo + bundle Cocó fresco + Retest operacional |
+| Estado | **Submitted** (Draft+5 Whys+SPEC v2 · aguarda Approver Act-on) |
+| Sintoma | Cocó `6bb90ff7` · A3a **1844s** (pior que 834) · wall 2331s done só c/ teto 3600 |
+| 5 Whys | [`tools/a3a_competitor_search_5whys.mmd`](../../tools/a3a_competitor_search_5whys.mmd) |
+| SPEC | [`agents/specs/SPEC_a3a_store_v2.md`](../../agents/specs/SPEC_a3a_store_v2.md) · [`.mmd`](../../agents/specs/SPEC_a3a_store_v2.mmd) |
+| Causa raiz | Loop seq ×6: Places details + pico (FS ephemeral CR) + reviews/planos frios; PW não era único vilão |
+| Ledger | `obter_atributos_place`×6 · `places_search_new`×7 · reviews/pico/planos×6 |
+| Act-on proposto | (1) pico → Supabase TTL (2) skip/cache details (3) `MAX_ENRIQUECIMENTO=3` prod (4) dedupe reviews baixa_nota (5) Maps empty≠Places em descobrir |
+| Pai | conformidade A0/wall **Closed** |
+
+## Caso — A2 DemoAnalyst (filho · jul/2026)
+
+| Campo | Valor |
+|---|---|
+| Estado | **Closed** (não long-pole) |
+| Sintoma | n/a · `6bb90ff7` DemoAnalyst **7,8s** |
+| SPEC | [`SPEC_a2_store_v2.md`](../../agents/specs/SPEC_a2_store_v2.md) |
+| Forma | BaseAgent · macro IBGE · zero LLM |
+| Act-on | nenhum wall · dívida renda CKAN 2010 vs IBGE 2022 (doc only) |
+
+## Caso — A4 FinancialEstimator + A4bak (filho · jul/2026)
+
+| Campo | Valor |
+|---|---|
+| Estado | **Closed** (não long-pole) |
+| Sintoma | n/a · `6bb90ff7` FinancialEstimator **1,7s** |
+| SPEC | [`SPEC_a4_store_v2.md`](../../agents/specs/SPEC_a4_store_v2.md) |
+| Forma prod | BaseAgent · MRLR Tier0 · justificativa template |
+| A4bak | LLM Pro eco-macro · **fora do grafo** · não reintroduzir |
+| Act-on | monitorar miss MRLR → Tier1/2 |
+
+## Caso — A6 ReportConsolidator latência (filho · jul/2026)
+
+| Campo | Valor |
+|---|---|
+| Estado | **Submitted** (aguarda Approver · após A3a) |
+| Sintoma | Cocó `6bb90ff7` · A6 **369s** (#2 wall) |
+| 5 Whys | [`tools/a6_report_consolidator_5whys.mmd`](../../tools/a6_report_consolidator_5whys.mmd) |
+| SPEC | [`SPEC_a6_store_v2.md`](../../agents/specs/SPEC_a6_store_v2.md) |
+| Causa raiz | Flash+thinking + precompute `bairros_alternativos` Places live ×N sem cache bairro_alt |
+| Act-on proposto | (1) cache Places `(bairro_alt,cidade)` (2) fallback CNPJ/parque antes Maps (3) thinking ↓ medir golden |
+| Prioridade | **depois** Act-on A3a |

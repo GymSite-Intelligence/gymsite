@@ -4,14 +4,14 @@
 id: spec-a0-001
 agente: ContextBuilder
 modelo_llm: gemini-2.5-flash (thinking_budget=1024)
-versao: 1.0
-data: 2026-06-18
+versao: 1.1
+data: 2026-07-16
 constitution: C2.1, C2.3, C6.1
 ---
 
 ## 1. Responsabilidade Única
 
-O A0 ContextBuilder é o **primeiro agente do pipeline** e tem escopo exclusivo de **coleta e consolidação de fatos de mercado**: dados qualitativos via Deep Research / Kimi, dados quantitativos CNPJ/CNO e competição OSM local. Ele não faz análise preditiva, não pontua candidatos e não emite recomendações além dos dados devolvidos pelas tools — qualquer dado não retornado por tool é marcado como `"dados_nao_disponiveis"`.
+O A0 ContextBuilder é o **primeiro agente do pipeline** e tem escopo exclusivo de **coleta e consolidação de fatos de mercado**: dados qualitativos via **market_bundle** (Deep Research / Kimi **removidos** — Act-on 2026-07-16), dados quantitativos CNPJ/CNO e competição OSM local. Ele não faz análise preditiva, não pontua candidatos e não emite recomendações além dos dados devolvidos pelas tools — qualquer dado não retornado por tool é marcado como `"dados_nao_disponiveis"`.
 
 ---
 
@@ -80,16 +80,16 @@ Se a tool não retornou o dado, o campo recebe `"dados_nao_disponiveis"` ou é o
 O term "estoque" é proibido em toda saída. Usar "parque ativo" para unidades no CNPJ e "aberturas recentes" / "fluxo de aberturas" para novas unidades em 90 dias.
 
 **RN-A0-03 — Prioridade do market bundle**
-`carregar_market_bundle(cidade, bairro, uf)` é chamado **primeiro**. Se retornar briefing com marcador `<!-- market_bundle` (sem `status=missing`), o bundle é usado como `briefing_completo_md` e `rodar_deep_research` **não** é chamado.
+`carregar_market_bundle(cidade, bairro, uf)` é chamado **primeiro**. Se retornar briefing com marcador `<!-- market_bundle` (sem `status=missing`), o bundle é usado como `briefing_completo_md`.
 
-**RN-A0-04 — Condição de acionamento do Deep Research**
-Deep Research (`rodar_deep_research` ou `rodar_kimi_research`) só é chamado se o bundle tiver `status=missing` (inexistente) ou `missing_fields` contiver lacuna substantiva: `ticket_medio` ou `tendencia`. **`aluguel_medio_m2` em `LIVE_TRAIL_FIELDS` não dispara DR** — aluguel viabilidade resolve no A4 MRLR. **Exceção**: quando os únicos campos ausentes são `renda_media_bairro`, `competicao_osm` e/ou `aluguel_medio_m2`, Deep Research **não** é chamado — concorrência real vem do A3a; aluguel do A4 MRLR.
+**RN-A0-04 — Deep Research / Kimi OFF (Act-on 2026-07-16)**
+`rodar_deep_research` e `rodar_kimi_research` **não estão** nas tools do A0. Bundle missing ou lacuna qualitativa → `"dados_nao_disponiveis"`. Renda = A2/`renda_bairro`; concorrência detalhada = A3a; aluguel viabilidade = A4 MRLR.
 
 **RN-A0-05 — Fonte de concorrentes**
-`principais_redes_concorrentes` é preenchido **somente** com `redes_detectadas_osm` retornado pela tool `fatos_competicao_local`. Se a tool falhar ou retornar lista vazia, o campo recebe `[]`. É proibido copiar redes do Deep Research para este campo.
+`principais_redes_concorrentes` é preenchido **somente** com `redes_detectadas_osm` retornado pela tool `fatos_competicao_local`. Se a tool falhar ou retornar lista vazia, o campo recebe `[]`. Proibido inventar redes.
 
 **RN-A0-06 — Insights com fonte rotulada**
-Cada item de `insights_estrategicos` deve ser 1 frase com a fonte entre parênteses: `(Deep Research)`, `(CNPJ)` ou `(CNO)`. Ao menos 1 insight deve citar número CNPJ; ao menos 1 pode vir do Deep Research.
+Cada item de `insights_estrategicos` deve ser 1 frase com a fonte entre parênteses: `(market_bundle)`, `(CNPJ)`, `(CNO)` ou `(OSM)`. Ao menos 1 insight deve citar número CNPJ.
 
 **RN-A0-07 — Regras CNPJ (campos escalares)**
 Os campos escalares (`parque_ativo_total`, `novos_cnpj_fitness_90d`, etc.) devem ser copiados de `metricas_objetivas` retornado pela tool `dados_parque_cnpj_para_a0`. `fatos_parque_cnpj.indicadores_derivados` recebe apenas o que a tool calculou (ex: `taxa_renovacao_parque_90d_pct`, `segmento_dominante_parque`).
@@ -101,7 +101,7 @@ Se a tool CNPJ retornar `divergencia_parque_vs_aberturas=true`, o fato deve ser 
 `cruzamento_cno` recebe `resumo_match` e até 5 entrantes com `area_m2_obra` preenchida. Se `sem_obra > 0`, listar em `lacunas` — não estimar m² por chute.
 
 **RN-A0-10 — Ordem canônica das tools**
-1. `carregar_market_bundle` → 2. `rodar_deep_research`/`rodar_kimi_research` (condicional) → 3. `dados_parque_cnpj_para_a0` → 4. `fatos_competicao_local`.
+1. `carregar_market_bundle` → 2. `dados_parque_cnpj_para_a0` → 3. `fatos_competicao_local`.
 
 ---
 
@@ -109,11 +109,10 @@ Se a tool CNPJ retornar `divergencia_parque_vs_aberturas=true`, o fato deve ser 
 
 - [ ] `market_context` é sempre um dict (nunca `None` ou string).
 - [ ] `insights_estrategicos` contém ao menos 1 item com `(CNPJ)` na string.
-- [ ] `insights_estrategicos` contém ao menos 1 item com `(Deep Research)` ou `(CNPJ)` ou `(CNO)` em todos os itens.
 - [ ] Nenhum item de `insights_estrategicos` contém a palavra "estoque".
 - [ ] `principais_redes_concorrentes` é `list` (pode ser vazia, nunca `None`).
-- [ ] Quando bundle disponível (`cached=true`), `rodar_deep_research` **não** aparece no trace de tool calls.
-- [ ] Quando `missing_fields` contém apenas `renda_media_bairro`, `rodar_deep_research` **não** é chamado e `renda_media_bairro` recebe `"dados_nao_disponiveis"`.
+- [ ] Trace A0 **não** contém `rodar_deep_research` nem `rodar_kimi_research`.
+- [ ] Bundle ausente → campos qualitativos `"dados_nao_disponiveis"`; pipeline segue.
 - [ ] `parque_ativo_total` é `int >= 0` (não string, não None).
 - [ ] `fonte` contém a string `"CNPJ/CNO (tools)"`.
 - [ ] `data_coleta` está no formato `YYYY-MM-DD`.
@@ -124,11 +123,10 @@ Se a tool CNPJ retornar `divergencia_parque_vs_aberturas=true`, o fato deve ser 
 
 | Cenário | Comportamento |
 |---|---|
-| `rodar_deep_research` indisponível ou erro | Campos DR recebem `"dados_nao_disponiveis"`; pipeline segue com CNPJ |
+| Bundle missing / lacuna qualitativa | Campos → `"dados_nao_disponiveis"`; **sem** DR/Kimi |
 | `dados_parque_cnpj_para_a0` erro | `fatos_parque_cnpj.lacunas` descreve a falha; campos CNPJ recebem `0` ou `{}` |
-| `fatos_competicao_local` falha ou lista vazia | `principais_redes_concorrentes = []`; não copia redes do DR |
-| `carregar_market_bundle` retorna `status=missing` | Prossegue para Deep Research conforme RN-A0-04 |
-| Todos os tools falham | JSON emitido com campos escalares zerados/`dados_nao_disponiveis` e `lacunas` preenchidas; **nunca** derruba o pipeline |
+| `fatos_competicao_local` falha ou lista vazia | `principais_redes_concorrentes = []` |
+| Todos os tools falham | JSON com zeros/`dados_nao_disponiveis`; **nunca** derruba o pipeline |
 
 ---
 

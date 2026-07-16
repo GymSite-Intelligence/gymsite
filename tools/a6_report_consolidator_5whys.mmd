@@ -1,0 +1,11 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart TB
+  W1["Why A6 ~369s?"] --> W2["LLM + precompute Maps"]
+  W2 --> W3["bairros alt = Places live x N"]
+  W3 --> W4["sem cache por bairro_alt"]
+  W4 --> W5["design: confiança > store"]
+  W5 --> Act["Act-on: cache Places bairro_alt + thinking↓"]

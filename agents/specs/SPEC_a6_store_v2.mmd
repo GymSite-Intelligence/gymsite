@@ -1,0 +1,25 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart TB
+  subgraph pre [before_agent_precompute]
+    B["bairros_alternativos_inteligentes<br/>Places x N LIVE"]
+    E["entrantes_cnpj store SB"]
+    O["obras_cno FS"]
+  end
+
+  subgraph llm [LLM_Flash]
+    Inj["before_model inject MD"]
+    Gen["gerar relatorio_md<br/>thinking 8192"]
+  end
+
+  subgraph post [after_agent]
+    Ext["_extrair_relatorio_estruturado<br/>zoneamento fluxo aneis gate"]
+    Align["_alinhar_markdown"]
+    Persist["JSON + Supabase"]
+  end
+
+  StateIn["state A0-A5"] --> pre --> Inj --> Gen --> Ext --> Align --> Persist
+  B -->|cold Maps| Cost["custo alto precompute"]

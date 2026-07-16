@@ -1,0 +1,11 @@
+%%{init: {'theme': 'neutral'}}%%
+flowchart TD
+  S["Sintoma: A3a 1844s em 6bb90ff7<br/>Playwright já off"] --> W1
+  W1["Por quê 1: macro seq × até 6 conc."] --> W2
+  W2["Por quê 2: cada conc. faz reviews+details+pico+planos+IG"] --> W3
+  W3["Por quê 3: popular_times cache em FS<br/>some no Cloud Run → sempre frio"] --> W4
+  W4["Por quê 4: obter_atributos_place Places ×N<br/>sem skip se Maps já tem contato"] --> W5
+  W5["Causa raiz: enrich hot-path trata<br/>dado semi-estável como live obrigatório<br/>+ store incompleto no worker"]
+
+  S --> UX["UX: etapa_atual=FinancialEstimator<br/>enquanto A3a roda no paralelo"]
+  UX --> UXc["Race progress_before no Parallel"]

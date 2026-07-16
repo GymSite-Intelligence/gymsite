@@ -1,0 +1,28 @@
+---
+config:
+  layout: elk
+  theme: mc
+---
+flowchart TB
+  subgraph agent [a3a_competitor_search.py]
+    A["CompetitorSearchAgent"]
+    Ext["_extrair_bairro_cidade"]
+    Macro["await analisar_concorrentes_a3a_completo"]
+    Out["Event state_delta concorrentes_brutos"]
+  end
+
+  A --> Ext --> Macro --> Out
+
+  subgraph custo [Custo_tempo_real_na_macro_nao_no_agente]
+    L1["busca + filtro"]
+    L2["_processar_um x N seq"]
+    L3["dores card"]
+  end
+
+  Macro --> L1 --> L2 --> L3
+
+  L2 --> R["reviews store"]
+  L2 --> D["Places details"]
+  L2 --> P["popular_times FS=CR frio"]
+  L2 --> Pr["planos light"]
+  L2 --> IG["IG cache OK"]
