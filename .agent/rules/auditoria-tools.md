@@ -81,10 +81,21 @@ Auditoria **não** substitui checklist pré-merge do pipeline — **precede** qu
 
 | Campo | Valor |
 |---|---|
-| Estado | **Closed** (Corrective shipped + Retest `/api/version`) |
+| Estado | **Closed** (Corrective + Retest operacional ledger) |
 | Sintoma | Cocó `c908…` · dual SKU SearchAPI+Places · ~R$2,53 em `buscar_imoveis_texto` |
 | 5 Whys | [`tools/maps_tools_5whys_imoveis.mmd`](../../tools/maps_tools_5whys_imoveis.mmd) |
 | Causa raiz | Tool misturou polo/POI + listing; Maps Local vazio ≠ outage; fallback Places em `[]` |
 | Act-on feito | (1) Places só se SearchAPI `None` (2) A1 removeu queries listing — cascata já em `_fetch_listings_como_candidatos` (3) teste `empty_nao_fallback_places` |
 | Done prod | commit `8095337` · API `00477` · worker `00074` · `GIT_SHA=8095337` · `stale:false` |
-| Retest pendente | próximo relatório: ledger sem dual SKU em `buscar_imoveis_texto` (prova operacional) |
+| Retest | `699371c7…` + `ed36ed08…` · `buscar_imoveis_texto` = só `searchapi_google_maps` (11·R$0,24) · **sem** `places_search_new` · `buscar_pontos_comerciais` idem · (relatórios failed por wall/restart — não Maps) |
+
+## Caso — A3a enrich latência (filho · jul/2026)
+
+| Campo | Valor |
+|---|---|
+| Estado | **Approved → Act-on parcial** (Playwright off + search_raw; Retest com cache quente pendente) |
+| Sintoma | Cocó `ed36ed08` · CompetitorSearch **834s** · contribui pro fail 30 min |
+| 5 Whys (pai) | [`tools/pipeline_wall_timeout_5whys.mmd`](../../tools/pipeline_wall_timeout_5whys.mmd) |
+| Causa | Enrich **sequencial** Playwright KP + Places; reviews já tinham `cache_reviews` mas rede miss + PW dominava |
+| Act-on | (1) `COMPETITOR_PLAYWRIGHT_ENRICH` default **0** (2) `_fetch_reviews_bundle` → `search_raw` (3) SPEC_market_bundle_v2 |
+| Bloqueio restante | Deploy imagem worker com código novo + bundle Cocó fresco + Retest operacional |

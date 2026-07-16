@@ -1,34 +1,33 @@
+---
+id: 41567be6-9750-476b-a614-61adb29643ed
+---
 %% Auditoria de Conformidade Global — GymSite
 %% Ver .agent/rules/auditoria-conformidade.md
 %% SailPoint-inspired: snapshot ≠ monitoring
 %% Abrir → Ctrl+Shift+P → MermaidChart: Preview Diagram
 
----
-config:
-  layout: elk
----
 stateDiagram-v2
     [*] --> Scoped
 
-    Scoped: "SLA: 1d — domínio + critério + amostra\nFontes|Tools|Número|Schema|Deploy|Segurança"
-    Scoped --> Evidence: "collect (Author)"
+    state "SLA: 1d — domínio + critério + amostra\nFontes|Tools|Número|Schema|Deploy|Segurança" as Scoped
+    Scoped --> Evidence: collect (Author)
 
-    Evidence: "SLA: 2d — ledger / diff / UUID / SPEC"
-    Evidence --> Findings: "analyze (Author→Reviewer)"
+    state "SLA: 2d — ledger / diff / UUID / SPEC" as Evidence
+    Evidence --> Findings: analyze (Author→Reviewer)
 
-    Findings: "SLA: 2d — gaps Crítico|Alto|Médio|Baixo\n⚠️ Approver se >2d"
-    Findings --> Corrective: "approve findings (Approver)"
-    Findings --> Closed: "defer / accept risk (Approver)"
-    Findings --> Evidence: "request more evidence (Reviewer)"
+    state "SLA: 2d — gaps Crítico|Alto|Médio|Baixo\n⚠️ Approver se >2d" as Findings
+    Findings --> Corrective: approve findings (Approver)
+    Findings --> Closed: defer / accept risk (Approver)
+    Findings --> Evidence: request more evidence (Reviewer)
 
-    Corrective: "Act-on / ticket\nSe gap Tool → auditoria-tools Draft→Approved"
-    Corrective --> Retest: "fix shipped"
+    state "Act-on / ticket\nSe gap Tool → auditoria-tools Draft→Approved" as Corrective
+    Corrective --> Retest: fix shipped
 
-    Retest: "SLA: 1d — prova que gap fechou"
-    Retest --> Closed: "pass"
-    Retest --> Corrective: "fail → rework"
+    state "SLA: 1d — prova que gap fechou" as Retest
+    Retest --> Closed: pass
+    Retest --> Corrective: fail → rework
 
-    Closed: "relatório 1p + links\n✅ Notify Author"
+    state "relatório 1p + links\n✅ Notify Author" as Closed
     Closed --> [*]
 
     note right of Corrective

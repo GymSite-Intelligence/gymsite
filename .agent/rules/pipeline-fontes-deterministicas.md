@@ -53,4 +53,4 @@
 - **SearchAPI `topics[]`** — wired jul/2026 em `_fetch_reviews_bundle`.
 - **Gemini `categoria_dor`** — off prod; `CLASSIFICAR_DORES_GEMINI=1` só p/ A/B.
 - **Calibragem fluxo** Cocó golden vs smoke 26.7.
-- **Auditoria Tools — `buscar_imoveis_texto`:** **Closed** Corrective `8095337` em prod (API+worker). Retest operacional = próximo relatório sem dual SKU. Ver [`auditoria-tools.md`](auditoria-tools.md).
+- **Auditoria Tools — `buscar_imoveis_texto`:** **Closed** Corrective `8095337` + Retest ledger `699371c7…` (só SearchAPI, sem Places). Ver [`auditoria-tools.md`](auditoria-tools.md).

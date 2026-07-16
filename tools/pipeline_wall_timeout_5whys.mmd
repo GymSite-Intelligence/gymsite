@@ -1,0 +1,18 @@
+%%{init: {'theme': 'neutral'}}%%
+flowchart TD
+  S["Sintoma: ed36ed08 failed<br/>Pipeline excedeu 30 min · 2151s · A9 cortado"] --> W1
+  W1["Por quê 1: wait_for cancela ADK<br/>ao atingir PIPELINE_MAX_WALL_SEC"] --> W2
+  W2["Por quê 2: worker leu default 1800<br/>mensagem = 30 min"] --> W3
+  W3["Por quê 3: gymsite-worker SEM<br/>PIPELINE_MAX_WALL_SEC no env"] --> W4
+  W4["Por quê 4: API tem 3600 + A0_ckan_bundle<br/>worker não herda env — só imagem"] --> W5
+  W5["Causa raiz: drift config API↔worker<br/>pipeline roda no worker Redis"]
+
+  S --> L1["Latência A0 766s"]
+  L1 --> L1a["Worker sem A0_CONTEXT_SOURCE=ckan_bundle<br/>→ path research longo"]
+  S --> L2["Latência A3a 834s"]
+  L2 --> L2a["Enrich seq: reviews + Playwright<br/>+ Places details · MAX_ENRIQUECIMENTO=6"]
+  S --> L3["Latência A6 478s"]
+  L3 --> L3a["ReportConsolidator LLM"]
+
+  W5 --> C1["Corrective 1: sync env worker<br/>PIPELINE + A0_* + KIMI_*"]
+  L2a --> C2["Corrective 2 opcional: gate Playwright<br/>/ baixar MAX_ENRIQUECIMENTO"]

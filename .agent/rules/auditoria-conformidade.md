@@ -97,4 +97,60 @@ Conformidade GLOBAL (este doc)
     └─ gap Segurança  → advisors + skill supabase (não misturar com Maps)
 ```
 
-Caso Maps (`buscar_imoveis_texto`) = **incidente** sob conformidade Fontes/Tools → já em `auditoria-tools` Approved (código local); Conformidade marca Corrective até Cloud Run = Retest Closed.
+Caso Maps (`buscar_imoveis_texto`) = **incidente** sob conformidade Fontes/Tools → já em `auditoria-tools` **Closed** (Retest ledger `699371c7` / `ed36ed08`).
+
+## Caso — wall-clock 30 min / drift API↔worker (jul/2026)
+
+| Campo | Valor |
+|---|---|
+| Estado | **Retest** (Corrective shipped · A0 PASS · wall/A3a em curso) |
+| Tipo | Por incidente · domínio **Deploy** (+ Tools latência A3a) |
+| Amostra baseline | `ed36ed08-ace3-414d-96e2-1e47e6d1fe0c` Cocó · `failed` 2151s |
+| Retest | `6bb90ff7-74e4-4f12-aff4-9950bbc7aa90` · ContextBuilder **29,6s** (alvo &lt;90) · running |
+| Critério | P-000 §7 worker = mesma imagem **e** env de pipeline; `PIPELINE_MAX_WALL_SEC` |
+| 5 Whys | [`tools/pipeline_wall_timeout_5whys.mmd`](../../tools/pipeline_wall_timeout_5whys.mmd) |
+| SPEC | [`agents/specs/SPEC_market_bundle_v2.md`](../../agents/specs/SPEC_market_bundle_v2.md) · [`.mmd`](../../agents/specs/SPEC_market_bundle_v2.mmd) |
+
+### Evidence (etapas `ed36ed08`)
+
+| Agente | duracao_s | Nota |
+|---|---:|---|
+| ContextBuilder (A0) | 766 | worker sem `A0_CONTEXT_SOURCE=ckan_bundle` (API tem) |
+| GeoScout (A1) | 5,5 | OK |
+| CompetitorSearch (A3a) | 834 | enrich seq Playwright + Places |
+| ReportConsolidator (A6) | 478 | LLM |
+| PositioningStrategist (A9) | — | cortado pelo teto |
+
+Mensagem erro: `Pipeline excedeu o tempo máximo (30 min)` → processo leu **1800**, não 3600.
+
+| Serviço | `PIPELINE_MAX_WALL_SEC` | `A0_CONTEXT_SOURCE` | `A0_RESEARCH_PROVIDER` |
+|---|---|---|---|
+| `gymsite-api` | **3600** | `ckan_bundle` | `kimi` |
+| `gymsite-worker` | **ausente → default 1800** | ausente → `auto` | ausente |
+
+Maps Retest (mesmo run): `buscar_imoveis_texto` só `searchapi_google_maps` — **PASS** (fora deste caso).
+
+### Findings
+
+| Sev | Gap | Evidência |
+|---|---|---|
+| **Crítico** | Pipeline roda no **worker**; teto/config A0 só na **API** | gcloud describe + mensagem 30 min vs API 3600 |
+| **Alto** | A3a enrich sequencial ≈14 min (Playwright + details) | código `analisar_concorrentes_a3a_completo` + 834s |
+| **Médio** | Docs/`MARKET_ATLAS` falam “`.env` da API” — omitem worker | doc vs runtime Redis |
+| **Baixo** | OTEL Token Context no abort | ruído pós-timeout |
+
+### Corrective (shipped jul/2026)
+
+1. **Ops:** worker `00076` — `PIPELINE_MAX_WALL_SEC=3600`, `A0_CONTEXT_SOURCE=ckan_bundle`, `A0_RESEARCH_PROVIDER=kimi`, `KIMI_RESEARCH_TIMEOUT_SEC=90`, `MARKET_BUNDLE_SUPABASE=1`, `COMPETITOR_PLAYWRIGHT_ENRICH=0` (+ mesma imagem API).
+2. **Código:** A3a Playwright gated; `_fetch_reviews_bundle` → `search_raw` + `cache_reviews`; SPEC_market_bundle_v2.
+3. **Bundle:** Cocó upsert Supabase (`renda_media=2095.2`).
+
+### Retest parcial (`6bb90ff7…`)
+
+| Agente | Antes | Agora |
+|---|---:|---:|
+| ContextBuilder (A0) | 766 | **29,6** PASS |
+| GeoScout | 5,5 | 4,6 |
+| CompetitorSearch / A6 / done | — | em curso (poll) |
+
+**Fechar Closed** quando `done` + CompetitorSearch ≪834s.

@@ -1,0 +1,43 @@
+---
+config:
+  layout: elk
+  theme: mc
+id: 876bf716-6943-462a-bc73-90358e98a13a
+---
+flowchart TB
+  subgraph batch [Batch_1x_historico]
+    Build["build_market_bundles"]
+    SaveB["save_market_bundle"]
+    UpsertB["market_store.upsert_bundle"]
+    SA["SearchAPI maps_reviews"]
+    CacheR["cache_reviews + search_raw"]
+  end
+
+  subgraph stores [Stores_separados]
+    MB["market_bundles payload<br/>chave slug"]
+    RB["renda_bairro tabela<br/>bairro_renda_loader"]
+    PID["place_id caches<br/>reviews maps pico"]
+  end
+
+  subgraph report [Cada_relatorio]
+    LoadB["load_market_bundle"]
+    A0["A0 ContextBuilder<br/>briefing only"]
+    A2["A2 DemoAnalyst vivo"]
+    A3a["A3a get_or_fetch SearchAPI"]
+    A4["A4 MRLR aluguel"]
+    A6["A6 LLM"]
+  end
+
+  Build --> SaveB --> UpsertB --> MB
+  Build --> RB
+  SA --> CacheR --> PID
+
+  MB --> LoadB --> A0
+  RB -.->|enrich no batch| Build
+  PID --> A3a
+  A2
+  A4
+  A6
+
+  A0 -.->|nao usa| PID
+  A3a -.->|nao le competicao_local| MB

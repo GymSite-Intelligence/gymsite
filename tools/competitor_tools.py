@@ -712,25 +712,44 @@ def _searchapi_maps_textsearch(query: str, *, max_results: int = 20) -> list[dic
     Custo ~4× menor. Best-effort: erro/sem key → []."""
     import os as _os
 
-    key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
-    if not key:
-        return []
+    sa_params = {"q": query, "gl": "br", "hl": "pt-br"}
+    data: dict = {}
     try:
-        from tools.api_cost_tracker import track_api_call
+        from tools.search_raw_cache import get_search_raw, set_search_raw
 
-        with track_api_call("descobrir_concorrentes_bairro", "searchapi_google_maps", 1):
-            with httpx.Client(timeout=25) as c:
-                data = c.get(
-                    "https://www.searchapi.io/api/v1/search",
-                    params={"engine": "google_maps", "q": query, "gl": "br", "hl": "pt-br"},
-                    headers={"Authorization": f"Bearer {key}"},
-                ).json()
-    except Exception as exc:
-        logger.debug("searchapi google_maps '%s': %s", query, exc)
-        return []
+        cached = get_search_raw("google_maps", sa_params)
+        if cached:
+            data = cached
+    except Exception:
+        pass
+
+    if not data.get("local_results"):
+        key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
+        if not key:
+            return []
+        try:
+            from tools.api_cost_tracker import track_api_call
+
+            with track_api_call("descobrir_concorrentes_bairro", "searchapi_google_maps", 1):
+                with httpx.Client(timeout=25) as c:
+                    data = c.get(
+                        "https://www.searchapi.io/api/v1/search",
+                        params={"engine": "google_maps", **sa_params},
+                        headers={"Authorization": f"Bearer {key}"},
+                    ).json()
+            try:
+                from tools.search_raw_cache import set_search_raw
+
+                if isinstance(data, dict) and data.get("local_results"):
+                    set_search_raw("google_maps", sa_params, data)
+            except Exception:
+                pass
+        except Exception as exc:
+            logger.debug("searchapi google_maps '%s': %s", query, exc)
+            return []
 
     out: list[dict] = []
-    for p in (data.get("local_results") or [])[:max_results]:
+    for p in (data.get("local_results") or data.get("places") or [])[:max_results]:
         tipos_raw = p.get("types") or ([p["type"]] if p.get("type") else [])
         blob = _norm_txt(" ".join(tipos_raw) + " " + (p.get("title") or ""))
         eh_fitness = any(_norm_txt(kw) in blob for kw in _SEARCHAPI_FITNESS_KW)
@@ -1214,7 +1233,10 @@ def _unwrap_reviews_cache_payload(payload: dict | None) -> dict:
 
 
 def _fetch_reviews_bundle(place_id: str) -> dict | None:
-    """SearchAPI google_maps_reviews → {reviews[], topics[]}. None = sem key/erro."""
+    """SearchAPI google_maps_reviews → {reviews[], topics[]}. None = sem key/erro.
+
+    Store histórico (SPEC_market_bundle_v2): cache_reviews → search_raw → rede 1×.
+    """
     import os as _os
 
     if not place_id:
@@ -1231,6 +1253,33 @@ def _fetch_reviews_bundle(place_id: str) -> dict | None:
             return bundle
     except Exception:
         pass
+
+    sa_params = {
+        "place_id": place_id,
+        "sort_by": "lowest_rating",
+        "hl": "pt-br",
+        "gl": "br",
+    }
+    try:
+        from tools.search_raw_cache import get_search_raw
+
+        cached = get_search_raw("google_maps_reviews", sa_params)
+        if isinstance(cached, dict) and (cached.get("reviews") or cached.get("topics")):
+            bundle = {
+                "reviews": cached.get("reviews") or [],
+                "topics": cached.get("topics") or [],
+            }
+            _REVIEWS_BUNDLE_MEMO[place_id] = bundle
+            try:
+                from tools.cache_store import set_reviews
+
+                set_reviews(place_id, bundle["reviews"], topics=bundle["topics"])
+            except Exception:
+                pass
+            return bundle
+    except Exception:
+        pass
+
     key = (_os.getenv("SEARCHAPI_KEY") or "").strip()
     if not key:
         _REVIEWS_BUNDLE_MEMO[place_id] = None
@@ -1242,8 +1291,7 @@ def _fetch_reviews_bundle(place_id: str) -> dict | None:
             with httpx.Client(timeout=45) as c:
                 data = c.get(
                     "https://www.searchapi.io/api/v1/search",
-                    params={"engine": "google_maps_reviews", "place_id": place_id,
-                            "sort_by": "lowest_rating", "hl": "pt-br", "gl": "br"},
+                    params={"engine": "google_maps_reviews", **sa_params},
                     headers={"Authorization": f"Bearer {key}"},
                 ).json()
         revs = data.get("reviews") or []
@@ -1258,6 +1306,13 @@ def _fetch_reviews_bundle(place_id: str) -> dict | None:
 
         if revs or topics:
             set_reviews(place_id, revs, topics=topics)
+    except Exception:
+        pass
+    try:
+        from tools.search_raw_cache import set_search_raw
+
+        if isinstance(data, dict):
+            set_search_raw("google_maps_reviews", sa_params, data)
     except Exception:
         pass
     return bundle
@@ -2704,14 +2759,18 @@ async def analisar_concorrentes_a3a_completo(
         reviews_data = buscar_reviews_academia(place_id, nome)
         reviews = reviews_data.get("reviews", []) if "erro" not in reviews_data else []
 
-        # Enrichment Google Knowledge Panel (async — Playwright).
-        # Best-effort: pode falhar por Cloudflare; não bloqueia pipeline.
+        # Knowledge Panel Playwright — OFF no hot-path prod (SPEC_market_bundle_v2).
+        # Store histórico = SearchAPI reviews/maps; Playwright só se flag explícita.
         enrichment: dict = {}
-        try:
-            result = await enriquecer_concorrente_via_google(nome, cidade)
-            enrichment = result if isinstance(result, dict) else {}
-        except Exception as e:
-            enrichment = {"scraping_status": f"exception: {type(e).__name__}"}
+        _pw = (os.getenv("COMPETITOR_PLAYWRIGHT_ENRICH") or "0").strip().lower()
+        if _pw in ("1", "true", "yes", "on"):
+            try:
+                result = await enriquecer_concorrente_via_google(nome, cidade)
+                enrichment = result if isinstance(result, dict) else {}
+            except Exception as e:
+                enrichment = {"scraping_status": f"exception: {type(e).__name__}"}
+        else:
+            enrichment = {"scraping_status": "playwright_skip_hot_path"}
 
         # Horários de pico via popular_times_tool (Tier 0 SearchAPI, Tier 1 lib,
         # Tier 2 Playwright). Best-effort — falha vira dados_por_dia vazio,

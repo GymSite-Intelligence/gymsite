@@ -33,6 +33,7 @@ _GYMSITE = frozenset({
     # caches/estado do pipeline GymSite (classificados jun/2026; alguns ainda não criados)
     "market_bundles", "market_snapshots", "relatorio_state_checkpoint",
     "cache_market_context", "cache_places_details", "cache_popular_times",
+    "search_raw",
 })
 
 # Dado aberto + tenancy → schema `shared`
