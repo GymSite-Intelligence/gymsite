@@ -61,6 +61,27 @@ def _nome_agente(callback_context: Any) -> str | None:
         return None
 
 
+def _publish_progress(
+    rid: str,
+    nome: str,
+    status: str,
+    *,
+    latency_ms: int = 0,
+) -> None:
+    """ADR-006: canal quente Redis — best-effort, nunca propaga."""
+    try:
+        from tools.redis_pubsub import publish_pipeline_progress_sync
+
+        publish_pipeline_progress_sync(
+            relatorio_id=rid,
+            agent_id=nome,
+            status=status,
+            latency_ms=latency_ms,
+        )
+    except Exception:
+        pass
+
+
 def progress_before_agent(callback_context: Any = None, **kwargs) -> None:
     try:
         nome = _nome_agente(callback_context)
@@ -68,6 +89,7 @@ def progress_before_agent(callback_context: Any = None, **kwargs) -> None:
         if not nome or nome not in ETAPAS_VISIVEIS or not rid:
             return
         _inicio_etapa[f"{rid}:{nome}"] = time.time()
+        _publish_progress(rid, nome, "running")
         sb = _sb()
         if sb is None:
             return
@@ -84,6 +106,8 @@ def progress_after_agent(callback_context: Any = None, **kwargs) -> None:
             return
         t0 = _inicio_etapa.pop(f"{rid}:{nome}", None)
         duracao = round(time.time() - t0, 1) if t0 else None
+        latency_ms = int(round((duracao or 0) * 1000))
+        _publish_progress(rid, nome, "completed", latency_ms=latency_ms)
         sb = _sb()
         if sb is None:
             return

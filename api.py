@@ -3314,7 +3314,7 @@ _pipeline_state: dict[str, Any] = {
 
 
 def _update_agent_status(agent_id: str, status: str, tokens: int = 0, latency_ms: int = 0):
-    """Chamado pelos callbacks de telemetria para atualizar estado em tempo real."""
+    """Cache local da instância — fonte de verdade quente = Redis (ADR-006)."""
     now = datetime.now(timezone.utc).isoformat()
     if agent_id not in _pipeline_state["agents"]:
         _pipeline_state["agents"][agent_id] = {
@@ -3335,70 +3335,138 @@ def _update_agent_status(agent_id: str, status: str, tokens: int = 0, latency_ms
     _pipeline_state["metrics"]["lastUpdate"] = now
 
 
-# ── Hook nos callbacks existentes de telemetria ──
-# Você já tem em tools/token_telemetry.py:
-#   before_agent_callback, after_model_callback
-# E em tools/agent_telemetry.py:
-#   before_agent_callback, after_agent_callback
-# 
-# Basta injetar _update_agent_status() no final desses callbacks.
+def _apply_progress_event_to_local(event: dict[str, Any]) -> None:
+    agent_id = str(event.get("agent_id") or "")
+    if not agent_id:
+        return
+    _update_agent_status(
+        agent_id,
+        str(event.get("status") or "running"),
+        tokens=int(event.get("tokens") or 0),
+        latency_ms=int(event.get("latency_ms") or 0),
+    )
+    rid = event.get("relatorio_id")
+    if rid:
+        _pipeline_state["currentRun"] = rid
 
-# Exemplo de hook no after_model_callback:
-"""
-# Em tools/token_telemetry.py, no after_model_callback existente:
 
-from api import _update_agent_status  # ou melhor: usar um signal/pubsub
+async def _ws_pipeline_memory_fallback(websocket: WebSocket, client_id: str) -> None:
+    """Polling do dict local quando Redis está down (ADR-006 degraded)."""
+    last_hash = None
+    while True:
+        await asyncio.sleep(2)
+        current = json.dumps(_pipeline_state, sort_keys=True, default=str)
+        current_hash = hash(current)
+        if current_hash != last_hash:
+            await websocket.send_json({
+                "type": "update",
+                "source": "memory",
+                "data": _pipeline_state,
+            })
+            last_hash = current_hash
 
-def after_model_callback(callback_context, llm_response):
-    # ... código existente de log de tokens ...
-    
-    # NOVO: notifica o mapa
-    agent_id = callback_context.agent_name  # A0, A1, etc.
-    tokens = llm_response.usage_metadata.total_token_count if llm_response.usage_metadata else 0
-    _update_agent_status(agent_id, "active", tokens=tokens)
-"""
 
-# ── WebSocket endpoint ──
+# ── WebSocket endpoint (ADR-006: Redis pub/sub; fallback memória) ──
 
 @app.websocket("/ws/pipeline")
-async def websocket_pipeline(websocket: WebSocket):
-    """Streama estado do pipeline em tempo real para o Living Agent Map."""
+async def websocket_pipeline(
+    websocket: WebSocket,
+    relatorio_id: str | None = Query(None),
+):
+    """Streama progresso do pipeline (Living Agent Map). Preferir ?relatorio_id=."""
     await websocket.accept()
     client_id = f"map_{time.time()}"
-    logger.info("Living Agent Map conectado: %s", client_id)
-    
+    logger.info(
+        "Living Agent Map conectado: %s relatorio_id=%s",
+        client_id,
+        relatorio_id,
+    )
+    pubsub = None
     try:
-        # Envia estado inicial completo
-        await websocket.send_json({
-            "type": "init",
-            "data": _pipeline_state,
-        })
-        
-        # Loop de push a cada 2 segundos
-        last_hash = None
+        from tools.redis_client import get_redis
+        from tools.redis_pubsub import get_pipeline_snapshot, pipeline_channel
+
+        if relatorio_id:
+            snap = await get_pipeline_snapshot(relatorio_id)
+            await websocket.send_json({
+                "type": "init",
+                "source": "redis",
+                "relatorio_id": relatorio_id,
+                "agents": snap,
+                "data": _pipeline_state,
+            })
+        else:
+            await websocket.send_json({
+                "type": "init",
+                "source": "memory",
+                "data": _pipeline_state,
+            })
+
+        r = await get_redis()
+        pubsub = r.pubsub()
+        if relatorio_id:
+            await pubsub.subscribe(pipeline_channel(relatorio_id))
+        else:
+            await pubsub.psubscribe("gymsite:pipeline:*")
+
         while True:
-            await asyncio.sleep(2)
-            
-            # Só envia se mudou algo (dedup)
-            current = json.dumps(_pipeline_state, sort_keys=True, default=str)
-            current_hash = hash(current)
-            if current_hash != last_hash:
-                await websocket.send_json({
-                    "type": "update",
-                    "data": _pipeline_state,
-                })
-                last_hash = current_hash
-                
+            msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+            if not msg:
+                continue
+            raw = msg.get("data")
+            if raw is None:
+                continue
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="replace")
+            try:
+                event = json.loads(raw) if isinstance(raw, str) else raw
+            except Exception:
+                continue
+            if not isinstance(event, dict):
+                continue
+            _apply_progress_event_to_local(event)
+            await websocket.send_json({"type": "agent.progress", "source": "redis", "data": event})
+
     except WebSocketDisconnect:
         logger.info("Living Agent Map desconectado: %s", client_id)
     except Exception as e:
-        logger.warning("WebSocket pipeline erro: %s", e)
+        logger.warning("WebSocket pipeline Redis erro (%s) — degraded memória", e)
+        try:
+            await websocket.send_json({
+                "type": "degraded",
+                "error": str(e),
+                "data": _pipeline_state,
+            })
+            await _ws_pipeline_memory_fallback(websocket, client_id)
+        except WebSocketDisconnect:
+            logger.info("Living Agent Map desconectado (degraded): %s", client_id)
+        except Exception as e2:
+            logger.warning("WebSocket pipeline degraded erro: %s", e2)
+    finally:
+        if pubsub is not None:
+            try:
+                await pubsub.aclose()
+            except Exception:
+                pass
 
 
 @app.get("/api/pipeline/status")
-def pipeline_status():
-    """REST fallback para o Map (quando WebSocket não disponível)."""
-    return _pipeline_state
+async def pipeline_status(relatorio_id: str | None = Query(None)):
+    """REST fallback pro Map. Com relatorio_id tenta snapshot Redis (ADR-006)."""
+    if relatorio_id:
+        try:
+            from tools.redis_pubsub import get_pipeline_snapshot
+
+            snap = await get_pipeline_snapshot(relatorio_id)
+            return {
+                "source": "redis" if snap else "memory",
+                "relatorio_id": relatorio_id,
+                "agents": snap,
+                "data": _pipeline_state,
+            }
+        except Exception:
+            pass
+    return {"source": "memory", "data": _pipeline_state}
 
 
 # ─── Consultor V2 (Jarvis) ────────────────────────────────────────────────────

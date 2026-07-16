@@ -64,12 +64,42 @@ def _google_maps_status() -> str:
         return "error"
 
 
+def _redis_status() -> str:
+    """Ping síncrono curto — ADR-006: Redis deixa de ser cego no /health.
+
+    Não entra no conjunto critical de serving (fila degrada pra BackgroundTasks).
+    """
+    url = (os.getenv("REDIS_URL") or "").strip()
+    if not url:
+        return "missing"
+    try:
+        import redis as redis_sync
+
+        client = redis_sync.from_url(
+            url,
+            socket_connect_timeout=1.5,
+            socket_timeout=1.5,
+        )
+        try:
+            if client.ping():
+                return "ok"
+            return "error"
+        finally:
+            try:
+                client.close()
+            except Exception:
+                pass
+    except Exception:
+        return "error"
+
+
 def gather_health_components(*, probe_supabase: bool = True) -> dict[str, str]:
     """Status por componente para /health e CI."""
     out: dict[str, str] = {
         "langcache": _langcache_status(),
         "gemini": _gemini_status(),
         "google_maps": _google_maps_status(),
+        "redis": _redis_status(),
     }
     if probe_supabase:
         out["supabase"] = _supabase_status()

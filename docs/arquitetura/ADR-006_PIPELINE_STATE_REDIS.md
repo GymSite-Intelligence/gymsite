@@ -100,7 +100,9 @@ WS/SSE: snapshot hash no connect, depois só deltas pub/sub.
 
 ## Verificação
 
-- [ ] `GET /health` → `components.redis == ok` com Upstash no ar
-- [ ] Run com api≠worker: WS/SSE na api reflete agentes do worker
+- [x] `GET /health` → `components.redis` (código; ok com Upstash no ar)
+- [x] Publish sync em `pipeline_progress` + snapshot hash + WS subscribe (código)
+- [ ] Run com api≠worker: WS/SSE na api reflete agentes do worker (smoke prod)
 - [ ] Redis down: enqueue degrada; stream sinaliza `degraded`; stepper via polling OK
 - [ ] Sem regressão: job ainda “concluído via RedisQueue” nos logs
+- [ ] Ops: `RUN_QUEUE_WORKER=0` na API
