@@ -118,7 +118,7 @@ _LAZY_PARAM_ATTRS = frozenset({
 })
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Resolve constantes param()-backed sob demanda (não no import)."""
     if name == "TICKET_MEDIO":
         return param("ticket_medio_nacional")
@@ -159,7 +159,7 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def _lp(name: str):
+def _lp(name: str) -> Any:
     """Lazy const neste módulo — bare name NÃO passa por __getattr__."""
     return __getattr__(name)
 
