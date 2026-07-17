@@ -33,7 +33,7 @@ flowchart TB
   IG@{ shape: lean-l, label: "get_or_fetch_ig_intel" }
   Out@{ shape: cyl, label: "concorrentes_brutos → state" }
   End@{ shape: fr-circ, label: "A3b" }
-  Note@{ shape: comment, label: "jul/17: 1× place=pico+reviews; slim cache_places_details; reviews engine fallback" }
+  Note@{ shape: comment, label: "jul/17: place_raw→pico; PW pico OFF default; slim cache; site→light→ground" }
 
   Start ==> Lista ==> Filtro
   Filtro -->|sim| Cap

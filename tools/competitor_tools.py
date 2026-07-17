@@ -2800,6 +2800,7 @@ async def analisar_concorrentes_a3a_completo(
 
         # 1× google_maps_place (cache) — alimenta pico + reviews antes das etapas.
         _t = _t0
+        _place_raw: dict | None = None
         if place_id:
             try:
                 from tools.searchapi_maps_place import (
@@ -2877,6 +2878,7 @@ async def analisar_concorrentes_a3a_completo(
                     cidade=cidade,
                     lat=c.get("lat"),
                     lng=c.get("lng"),
+                    place_raw=_place_raw,
                 )
                 if pico_resultado.get("status") == "ok":
                     horarios_pico_dict = pico_resultado.get("dados_por_dia") or None

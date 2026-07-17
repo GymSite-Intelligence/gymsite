@@ -404,7 +404,10 @@ def _cache_deve_ignorar(
         return True
     if dados.get("status") != "sem_popular_times":
         return False
-    # Re-scrape quando temos busca rica (evita repetir falso negativo de URL place//)
+    # SearchAPI já respondeu "sem pico" — não reabrir Playwright por ter coords.
+    if (dados.get("fonte") or "") == "searchapi":
+        return False
+    # Re-scrape só quando falso negativo Playwright (URL place//) + busca rica.
     return bool((nome or "").strip() and lat is not None and lng is not None)
 
 
@@ -902,22 +905,26 @@ async def pesquisar_horarios_pico(
     lat: float | None = None,
     lng: float | None = None,
     force_refresh: bool = False,
+    place_raw: dict | None = None,
 ) -> dict:
     """
     Extrai horários de pico (7 dias × 24h) de uma ficha Google Maps.
 
     Estratégia em 3 tiers (cascata):
-      0. SearchAPI free tier (100 req/mês) — quando SEARCHAPI_KEY definida
+      0. SearchAPI google_maps_place (ou `place_raw` já buscado no A3a)
       1. Lib `populartimes` (Places API legacy) — gratuita mas frágil
-      2. Playwright sync_api scraping — último recurso
+      2. Playwright sync_api — OFF no hot-path (`POPULAR_TIMES_PLAYWRIGHT=1`)
 
     Args:
         maps_url: URL da ficha
         place_id: Place ID Google (necessário pra cache 7 dias e Tiers 0/1)
+        place_raw: payload SearchAPI já em memória (A3a) — evita 2ª call + PW
 
     Returns:
         Dict com: status, dados_por_dia, resumo_por_dia, dia_mais_movimentado, etc.
     """
+    import os as _os
+
     from tools.maps_place_id import extrair_hex_ftid_de_url, montar_maps_url_place
 
     hex_ftid = extrair_hex_ftid_de_url(maps_url)
@@ -934,9 +941,18 @@ async def pesquisar_horarios_pico(
         if cached is not None:
             return cached
 
-    # Tier 0: SearchAPI (free tier 100 req/mês)
+    # Tier 0a: place já buscado no A3a (mesmo processo) — zero rede.
+    if isinstance(place_raw, dict) and place_raw:
+        resultado_place = _converter_searchapi(place_raw, place_id or "")
+        if place_id:
+            _save_pico_cache(place_id, resultado_place)
+        return resultado_place
+
+    # Tier 0b: SearchAPI
     resultado_searchapi = await asyncio.to_thread(_tentar_searchapi, place_id)
-    if resultado_searchapi and resultado_searchapi.get("status") == "ok":
+    # Qualquer resposta SearchAPI (ok OU sem_popular_times) fecha o caso —
+    # NÃO cai em Playwright (long-pole ~300s/gym no smoke Cocó).
+    if resultado_searchapi is not None:
         if place_id:
             _save_pico_cache(place_id, resultado_searchapi)
         return resultado_searchapi
@@ -947,6 +963,25 @@ async def pesquisar_horarios_pico(
         if place_id:
             _save_pico_cache(place_id, resultado_lib)
         return resultado_lib
+
+    allow_pw = (_os.getenv("POPULAR_TIMES_PLAYWRIGHT") or "0").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+    if not allow_pw:
+        resultado = {
+            "status": "sem_popular_times",
+            "motivo": "playwright_skip_hot_path",
+            "place_id": place_id,
+            "maps_url": maps_url,
+            "dados_por_dia": {},
+            "resumo_por_dia": {},
+            "fonte": "playwright_skipped",
+            "data_coleta": datetime.now().strftime("%Y-%m-%d"),
+            "cached": False,
+        }
+        if place_id:
+            _save_pico_cache(place_id, resultado)
+        return resultado
 
     # Normaliza URL Playwright: evita place/{nome}/1sChIJ (vira place// vazio)
     url_playwright = maps_url
@@ -967,7 +1002,7 @@ async def pesquisar_horarios_pico(
                 nome, place_id, lat, lng, cidade=cidade, hex_ftid=hex_ftid or ""
             ) or maps_url
 
-    # Tier 2: Playwright fallback
+    # Tier 2: Playwright fallback (opt-in)
     try:
         resultado = await asyncio.to_thread(
             _extrair_sync,
