@@ -2737,13 +2737,10 @@ async def analisar_concorrentes_a3a_completo(
         else:
             excluidos.append({"nome": c.get("nome", "?"), "motivo": motivo})
 
-    # Cap de enriquecimento: o enrichment (reviews + Playwright Knowledge Panel +
-    # popular_times) roda SEQUENCIAL por concorrente (~30-60s cada) — é o long-pole de
-    # latência do parallel block + o maior custo de API (Places/pico) por relatório.
-    # Enriquece só os top-N mais relevantes (por nº de avaliações); os demais ficam na
-    # lista com dado básico. Paralelizar seria mais rápido mas Playwright concorrente
-    # trava no Windows. N via env MAX_ENRIQUECIMENTO (default 6).
-    _max_enriq = max(1, int(os.getenv("MAX_ENRIQUECIMENTO", "6")))
+    # Cap de enriquecimento: reviews + pico + details + planos rodam SEQUENCIAL
+    # por concorrente — long-pole do parallel block. Default 3 (SPEC_a3a_store_v2 /
+    # Act-on); override via MAX_ENRIQUECIMENTO. Resto fica na lista só com Maps básico.
+    _max_enriq = max(1, int(os.getenv("MAX_ENRIQUECIMENTO", "3")))
     if len(incluidos) > _max_enriq:
         incluidos.sort(key=_avaliacoes_int, reverse=True)
         incluidos = incluidos[:_max_enriq]
@@ -2774,17 +2771,25 @@ async def analisar_concorrentes_a3a_completo(
 
         # Horários de pico via popular_times_tool (Tier 0 SearchAPI, Tier 1 lib,
         # Tier 2 Playwright). Best-effort — falha vira dados_por_dia vazio,
-        # NÃO bloqueia pipeline. Cache 7d por place_id.
+        # NÃO bloqueia pipeline. Cache: Supabase TTL 7d (+ FS local).
         horarios_pico_dict: dict | None = None
         pico_semanal_str: str | None = enrichment.get("pico_semanal")
         atributos_sobre: dict = {}
-        if place_id:
+        # Places Details Atmosphere (SKU caro): skip se listing Maps já trouxe
+        # telefone ou website (Act-on A3a). Force com A3A_FETCH_ATRIBUTOS=1.
+        _fetch_attr = (os.getenv("A3A_FETCH_ATRIBUTOS") or "0").strip().lower() in (
+            "1", "true", "yes", "on",
+        )
+        _tem_contato = bool((c.get("telefone") or "").strip() or (c.get("website") or "").strip())
+        if place_id and (_fetch_attr or not _tem_contato):
             try:
                 from tools.maps_tools import obter_atributos_place
 
                 atributos_sobre = obter_atributos_place(place_id) or {}
             except Exception:
                 atributos_sobre = {}
+        elif place_id and _tem_contato:
+            atributos_sobre = {}
 
         if place_id:
             try:

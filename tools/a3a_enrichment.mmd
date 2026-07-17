@@ -1,0 +1,56 @@
+---
+config:
+  layout: elk
+  theme: mc
+  flowchart:
+    defaultRenderer: elk
+id: 5beb69ba-3664-4642-b805-1ce9600f9ff0
+---
+flowchart TB
+  Start@{ shape: sm-circ, label: "analisar_concorrentes_a3a_completo" }
+  Lista@{ shape: lean-r, label: "Maps SearchAPI top-N" }
+  Filtro@{ shape: diam, label: "academia_tradicional?" }
+  Cap@{ shape: hex, label: "MAX_ENRIQUECIMENTO=3" }
+  Loop@{ shape: procs, label: "_processar_um × N seq" }
+  Reviews@{ shape: bolt, label: "buscar_reviews_academia" }
+  PWgate@{ shape: diam, label: "COMPETITOR_PLAYWRIGHT_ENRICH?" }
+  PW@{ shape: delay, label: "Playwright KP legado" }
+  PWskip@{ shape: stadium, label: "playwright_skip_hot_path" }
+  Contato@{ shape: diam, label: "tel ou website no listing?" }
+  Attr@{ shape: bolt, label: "obter_atributos_place" }
+  AttrSkip@{ shape: stadium, label: "skip Places Atmosphere" }
+  Pico@{ shape: subproc, label: "pesquisar_horarios_pico" }
+  SbHit@{ shape: diam, label: "cache_popular_times hit?" }
+  Sb@{ shape: cyl, label: "Supabase cache_popular_times" }
+  Fs@{ shape: das, label: "FS competitor_cache" }
+  Tier0@{ shape: bolt, label: "SearchAPI popular_times" }
+  Tier1@{ shape: bolt, label: "lib populartimes" }
+  Tier2@{ shape: delay, label: "Playwright Maps DOM" }
+  Save@{ shape: subproc, label: "write-through SB + FS" }
+  Planos@{ shape: bolt, label: "planos_precos SearchAPI" }
+  IG@{ shape: lean-l, label: "get_or_fetch_ig_intel" }
+  Out@{ shape: cyl, label: "concorrentes_brutos → state" }
+  End@{ shape: fr-circ, label: "A3b" }
+  Note@{ shape: comment, label: "Act-on jul/16: pico→SB · cap 3 · skip attr se contato" }
+
+  Start ==> Lista ==> Filtro
+  Filtro -->|sim| Cap
+  Filtro -->|não| Lista
+  Cap ==> Loop
+  Loop ==> Reviews ==> PWgate
+  PWgate -->|on| PW --> Contato
+  PWgate -->|off| PWskip --> Contato
+  Contato -->|não / force| Attr --> Pico
+  Contato -->|sim| AttrSkip --> Pico
+  Pico ==> SbHit
+  SbHit -->|sim| Sb --> Planos
+  SbHit -->|não| Fs
+  Fs -.->|miss| Tier0
+  Tier0 -->|ok| Save
+  Tier0 -->|fail| Tier1
+  Tier1 -->|ok| Save
+  Tier1 -->|fail| Tier2 --> Save
+  Save --> Sb
+  Save --> Planos
+  Planos --> IG --> Out --> End
+  Loop ~~~ Note

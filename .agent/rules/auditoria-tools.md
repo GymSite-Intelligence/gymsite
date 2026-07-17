@@ -93,13 +93,13 @@ Auditoria **não** substitui checklist pré-merge do pipeline — **precede** qu
 
 | Campo | Valor |
 |---|---|
-| Estado | **Submitted** (Draft+5 Whys+SPEC v2 · aguarda Approver Act-on) |
+| Estado | **Act-on parcial (jul/16)** — pico→SB + MAX=3 + skip attributes; dual-SKU Maps ainda aberto |
 | Sintoma | Cocó `6bb90ff7` · A3a **1844s** (pior que 834) · wall 2331s done só c/ teto 3600 |
 | 5 Whys | [`tools/a3a_competitor_search_5whys.mmd`](../../tools/a3a_competitor_search_5whys.mmd) |
 | SPEC | [`agents/specs/SPEC_a3a_store_v2.md`](../../agents/specs/SPEC_a3a_store_v2.md) · [`.mmd`](../../agents/specs/SPEC_a3a_store_v2.mmd) |
 | Causa raiz | Loop seq ×6: Places details + pico (FS ephemeral CR) + reviews/planos frios; PW não era único vilão |
 | Ledger | `obter_atributos_place`×6 · `places_search_new`×7 · reviews/pico/planos×6 |
-| Act-on proposto | (1) pico → Supabase TTL (2) skip/cache details (3) `MAX_ENRIQUECIMENTO=3` prod (4) dedupe reviews baixa_nota (5) Maps empty≠Places em descobrir |
+| Act-on | (1)~~pico → Supabase TTL~~ **done** (2)~~skip details se contato~~ **done** (3)~~`MAX_ENRIQUECIMENTO=3`~~ **done** (4) dedupe reviews baixa_nota (5) Maps empty≠Places em descobrir |
 | Pai | conformidade A0/wall **Closed** |
 
 ## Caso — A2 DemoAnalyst (filho · jul/2026)

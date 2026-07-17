@@ -22,6 +22,8 @@ CACHE:
 - TTL 7 dias para status="ok"
 - TTL 1 dia para status="sem_popular_times" (Google pode passar a expor depois
   que ganha mais data points; reavalia cedo)
+- Ordem: Supabase `cache_popular_times` (durável no Cloud Run) → FS
+  `competitor_cache/` (dev / mesma instância). Write-through nos dois.
 """
 import asyncio
 import json
@@ -67,6 +69,94 @@ def _cache_valido(path: Path, status_cached: str) -> bool:
     mtime = datetime.fromtimestamp(path.stat().st_mtime)
     ttl = CACHE_TTL_OK_DAYS if status_cached == "ok" else CACHE_TTL_SEM_DADOS_DAYS
     return (datetime.now() - mtime) < timedelta(days=ttl)
+
+
+def _load_pico_cache(
+    place_id: str,
+    *,
+    force_refresh: bool,
+    nome: str,
+    lat: float | None,
+    lng: float | None,
+) -> dict | None:
+    """Hit order: Supabase `cache_popular_times` (Cloud Run) → FS legado.
+
+    ADR/SPEC_a3a_store_v2: FS em `/tmp` some no CR — SB é a fonte durável.
+    """
+    if not place_id or force_refresh:
+        return None
+
+    # 1) Supabase
+    try:
+        from tools.cache_store import get_popular_times
+
+        hit = get_popular_times(place_id)
+        if hit.hit and isinstance(hit.payload, dict):
+            row = hit.payload
+            dados = row.get("payload") if isinstance(row.get("payload"), dict) else None
+            if dados is None and row.get("status"):
+                # row já é o payload em alguns upserts legados
+                dados = {k: v for k, v in row.items() if k not in (
+                    "place_id", "cached_at", "expires_at", "last_hit_at", "hit_count"
+                )}
+            if isinstance(dados, dict):
+                cached_status = dados.get("status") or row.get("status") or "ok"
+                if cached_status in ("ok", "sem_popular_times") and not _cache_deve_ignorar(
+                    dados, force_refresh=False, nome=nome, lat=lat, lng=lng
+                ):
+                    out = dict(dados)
+                    out["status"] = cached_status
+                    out["cached"] = True
+                    out["cache_fonte"] = "supabase"
+                    return out
+    except Exception:
+        pass
+
+    # 2) FS local (dev / warm same-instance)
+    cp = _cache_path(place_id)
+    if not cp.exists():
+        return None
+    try:
+        dados = json.loads(cp.read_text(encoding="utf-8"))
+        cached_status = dados.get("status", "ok")
+        if _cache_valido(cp, cached_status) and not _cache_deve_ignorar(
+            dados, force_refresh=False, nome=nome, lat=lat, lng=lng
+        ):
+            dados["cached"] = True
+            dados["cache_fonte"] = "fs"
+            return dados
+    except (json.JSONDecodeError, OSError):
+        pass
+    return None
+
+
+def _save_pico_cache(place_id: str, resultado: dict) -> None:
+    """Grava FS (best-effort) + Supabase TTL (obrigatório no hot-path CR)."""
+    if not place_id:
+        return
+    status = resultado.get("status")
+    if status not in ("ok", "sem_popular_times"):
+        return
+    try:
+        cp = _cache_path(place_id)
+        cp.write_text(
+            json.dumps(resultado, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+    try:
+        from tools.cache_store import set_popular_times
+
+        set_popular_times(
+            place_id,
+            resultado,
+            status=status,
+            ttl_days_ok=CACHE_TTL_OK_DAYS,
+            ttl_days_sem_dados=CACHE_TTL_SEM_DADOS_DAYS,
+        )
+    except Exception:
+        pass
 
 
 def _parsear_aria_label(label: str):
@@ -850,52 +940,30 @@ async def pesquisar_horarios_pico(
 
     hex_ftid = extrair_hex_ftid_de_url(maps_url)
 
-    # Cache hit? (ignora sem_popular_times quando há busca rica ou force_refresh)
+    # Cache hit? Supabase primeiro (CR), FS depois. force_refresh ignora ambos.
     if place_id:
-        cp = _cache_path(place_id)
-        if cp.exists():
-            try:
-                dados = json.loads(cp.read_text(encoding="utf-8"))
-                cached_status = dados.get("status", "ok")
-                ignorar = _cache_deve_ignorar(
-                    dados,
-                    force_refresh=force_refresh,
-                    nome=nome,
-                    lat=lat,
-                    lng=lng,
-                )
-                if _cache_valido(cp, cached_status) and not ignorar:
-                    dados["cached"] = True
-                    return dados
-            except (json.JSONDecodeError, OSError):
-                pass
+        cached = _load_pico_cache(
+            place_id,
+            force_refresh=force_refresh,
+            nome=nome,
+            lat=lat,
+            lng=lng,
+        )
+        if cached is not None:
+            return cached
 
     # Tier 0: SearchAPI (free tier 100 req/mês)
     resultado_searchapi = await asyncio.to_thread(_tentar_searchapi, place_id)
     if resultado_searchapi and resultado_searchapi.get("status") == "ok":
         if place_id:
-            try:
-                cp = _cache_path(place_id)
-                cp.write_text(
-                    json.dumps(resultado_searchapi, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-            except OSError:
-                pass
+            _save_pico_cache(place_id, resultado_searchapi)
         return resultado_searchapi
 
     # Tier 1: lib populartimes (rápida, sem Chrome) — abandonware, raramente OK
     resultado_lib = await asyncio.to_thread(_tentar_populartimes_lib, place_id)
     if resultado_lib and resultado_lib.get("status") == "ok":
         if place_id:
-            try:
-                cp = _cache_path(place_id)
-                cp.write_text(
-                    json.dumps(resultado_lib, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-            except OSError:
-                pass
+            _save_pico_cache(place_id, resultado_lib)
         return resultado_lib
 
     # Normaliza URL Playwright: evita place/{nome}/1sChIJ (vira place// vazio)
@@ -971,13 +1039,6 @@ async def pesquisar_horarios_pico(
 
     # Salva cache (mesmo pra sem_popular_times — TTL menor evita re-tentativa em loop)
     if place_id and resultado.get("status") in ("ok", "sem_popular_times"):
-        try:
-            cp = _cache_path(place_id)
-            cp.write_text(
-                json.dumps(resultado, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-        except OSError:
-            pass
+        _save_pico_cache(place_id, resultado)
 
     return resultado

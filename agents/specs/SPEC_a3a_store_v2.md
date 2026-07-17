@@ -38,7 +38,7 @@ Retest Cocó `6bb90ff7`: A3a **1844s** (long-pole). Playwright já off — vilã
 | 4. Dores | card + topics; Gemini só se flag | — | CPU | Gemini off default |
 | Loop | `for c in incluidos: await _processar_um` | — | — | seq por design; N↓ via `MAX_ENRIQUECIMENTO` |
 
-Cap: `MAX_ENRIQUECIMENTO` default **6** → até 6× (reviews+details+pico+planos) em série ≈ minutos×6.
+Cap: `MAX_ENRIQUECIMENTO` default **3** (Act-on jul/2026; era 6) → até 3× (reviews+pico+planos) em série.
 
 ## 3. Evidência ledger `6bb90ff7` (A3a frio)
 
@@ -71,10 +71,10 @@ Soma API barata ≠ 1844s: tempo = **I/O seq + timeouts** (httpx 45s reviews, pi
 
 ## 6. Critérios de aceite
 
-- [ ] `popular_times` hit Supabase no worker (não só `competitor_cache/` local)
+- [x] `popular_times` hit Supabase no worker (não só `competitor_cache/` local) — `_load_pico_cache` / `_save_pico_cache`
 - [ ] 2º relatório mesma praça: `reviews_concorrente` calls ≈ 0 (só hit)
-- [ ] `obter_atributos_place` ≤ 1 por place com cache fresco, ou 0 se website/tel já na lista Maps
-- [ ] `MAX_ENRIQUECIMENTO` prod documentado (ex. 3)
+- [x] `obter_atributos_place` skip se listing já tem telefone/website (`A3A_FETCH_ATRIBUTOS=1` força)
+- [x] `MAX_ENRIQUECIMENTO` default **3** (código + `.env.production.example`)
 - [ ] Dual-SKU `descobrir_concorrentes` sem Places quando SearchAPI `[]` (mesmo padrão Maps Act-on)
 - [ ] Diagrama `.mmd` + 5 Whys atualizados
 
