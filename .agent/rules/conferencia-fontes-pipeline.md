@@ -10,13 +10,13 @@
 | Tipo de dado | Fonte canônica | Proibido no caminho crítico |
 |---|---|---|
 | Concorrência Maps | SearchAPI `google_maps` | Scraping Maps; LLM inventando N |
-| Reviews | SearchAPI `google_maps_reviews` + card det. | LLM como única classificação |
+| Reviews | SearchAPI `google_maps_place.review_results` (1 call c/ pico); fallback `google_maps_reviews` | LLM como única classificação |
 | Imóveis candidato | `listing_cascata` (SearchAPI) | Listing como **fonte de aluguel** |
 | **Aluguel viabilidade (OPEX)** | **`aluguel_deterministico` → `mrlr_modelo`** (A4 Tier 0) | Preço de anúncio; SearchAPI `rent_sqm`; A7 grounding |
 | Aluguel referência batch | ~~`bundle.aluguel_portais`~~ | **removido** — `tools/9_obsolete/` |
 | Demografia | IBGE Censo 2022 / espelhos BQ | LLM inventando número |
 | CNPJ/CNO | RFB/Supabase determinístico | LLM (A0 override fecha CNPJ) |
-| Pico / popular times | SearchAPI A3a + cache | A7 como fonte primária no pipeline |
+| Pico / popular times | SearchAPI `google_maps_place` + `cache_places_details` / `cache_popular_times` | A7 como fonte primária no pipeline |
 | Crowdsource §14 | Input usuário + validação | SearchAPI inventando demanda |
 | A7 gaps qualitativos | Google Search Grounding (chat on-demand) | Aluguel, concorrência, demografia |
 

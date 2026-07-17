@@ -217,7 +217,7 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 | **A6** ReportConsolidator | parcial (é redator) | 🟡 médio | guardrail cobre só o resumo executivo; estender p/ todo número da saída ∈ state |
 | **A0** ContextBuilder | só o lado Deep Research/qualitativo | ✅ fechado | LLM mantém a prosa; `_a0_override_cnpj_numeros` sobrescreve todo número CNPJ com tool (banco). Travado em `tools/test_a0_override.py`. |
 | **A3a** (sub-passo reviews) | ✅ fechado | baixo | SearchAPI `google_maps_reviews` + `topics[]` + card det. + `temas_insatisfacao`. Gemini **off** default (`CLASSIFICAR_DORES_GEMINI=1` opt-in). |
-| **A3b** (sub-passo planos) | 🟡 parcial | baixo | `_planos_precos_searchapi` pode chamar Gemini p/ extrair preço de snippet — dado bruto = SearchAPI. |
+| **A3a** (sub-passo planos) | 🟡 parcial | médio | Tier0 **site HTML** (`planos_site_fetcher`, Smart Fit `plans[]`) → Tier1 SearchAPI `google_light`+Gemini extract → Tier2 grounding. Balcão ≠ Wellhub. |
 | ~~A3b agent~~ | — | — | ✅ determinizado + fundiu A3c |
 | ~~A3c~~ | — | — | ✅ morto (lógica no A3b) |
 

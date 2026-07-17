@@ -208,7 +208,9 @@ PLACES_API_USD_PER_CALL: dict[str, float] = {
     "places_aggregate": 0.040,  # areaInsights INSIGHT_COUNT (com filtros rating/tipo) — tier caro
     "geocoding": 0.005,
     "searchapi_popular_times": _SEARCHAPI_USD,
+    "searchapi_google_maps_place": _SEARCHAPI_USD,
     "searchapi_google_light": _SEARCHAPI_USD,
+    "site_oficial_html": 0.0,  # scrape balcão — sem SearchAPI
     "searchapi_google_maps": _SEARCHAPI_USD,
     "searchapi_instagram_profile": _SEARCHAPI_USD,
     "searchapi_google_maps_reviews": _SEARCHAPI_USD,

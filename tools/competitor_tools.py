@@ -646,13 +646,6 @@ _SEARCHAPI_FITNESS_KW = (
     "treinamento", "personal", "yoga", "funcional",
 )
 
-# Termo PT do tipo do formulário p/ a query do cross-check (Google entende melhor PT).
-_TIPO_QUERY_PT = {
-    "academia": "academia", "crossfit_box": "crossfit", "studio_pilates": "pilates",
-    "studio_funcional": "treinamento funcional", "outro": "academia",
-}
-
-
 def cross_check_concorrentes_bairro(
     cidade: str, uf: str, bairro: str, tipo_negocio: str,
     *, existentes: list[dict] | None = None,
@@ -664,8 +657,12 @@ def cross_check_concorrentes_bairro(
 
     Retorna {status, query, google_n, gated_n, no_bairro[], novos[], ja_no_set_n}.
     no_bairro[] = academias gated (place_id, nome, endereco, rating, num_avaliacoes, deep).
-    Best-effort: sem key/erro → status indisponivel."""
-    termo = _TIPO_QUERY_PT.get((tipo_negocio or "").strip().lower(), "academia")
+    Best-effort: sem key/erro → status indisponivel.
+
+    Mesmo mapa `_TIPO_NEGOCIO_KW` da âncora A3a — evita q duplicada
+    (`academia` vs `academias`) e miss de search_raw.
+    """
+    termo = _TIPO_NEGOCIO_KW.get((tipo_negocio or "").strip().lower(), "academias")
     query = " ".join(p for p in (termo, bairro, cidade, uf) if p)
     raw = _searchapi_maps_textsearch(query, max_results=40)
     if not raw:
@@ -1250,9 +1247,10 @@ def _unwrap_reviews_cache_payload(payload: dict | None) -> dict:
 
 
 def _fetch_reviews_bundle(place_id: str) -> dict | None:
-    """SearchAPI google_maps_reviews → {reviews[], topics[]}. None = sem key/erro.
+    """Reviews do concorrente — prefer google_maps_place (1 call c/ pico).
 
-    Store histórico (SPEC_market_bundle_v2): cache_reviews → search_raw → rede 1×.
+    Ordem: memo → cache_reviews → cache_places_details.review_results →
+    google_maps_reviews (só se place sem reviews ou A3A_FORCE_REVIEWS_ENGINE=1).
     """
     import os as _os
 
@@ -1266,10 +1264,32 @@ def _fetch_reviews_bundle(place_id: str) -> dict | None:
         hit = get_reviews(place_id)
         if hit.hit and isinstance(hit.payload, dict):
             bundle = _unwrap_reviews_cache_payload(hit.payload)
-            _REVIEWS_BUNDLE_MEMO[place_id] = bundle
-            return bundle
+            if bundle.get("reviews"):
+                _REVIEWS_BUNDLE_MEMO[place_id] = bundle
+                return bundle
     except Exception:
         pass
+
+    force_reviews = (_os.getenv("A3A_FORCE_REVIEWS_ENGINE") or "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+    if not force_reviews:
+        try:
+            from tools.searchapi_maps_place import (
+                get_or_fetch_maps_place,
+                reviews_raw_from_maps_place,
+                seed_reviews_cache_from_place,
+            )
+
+            place_raw = get_or_fetch_maps_place(place_id)
+            place_revs = reviews_raw_from_maps_place(place_raw)
+            if place_revs:
+                seed_reviews_cache_from_place(place_id, place_raw)
+                bundle = {"reviews": place_revs, "topics": []}
+                _REVIEWS_BUNDLE_MEMO[place_id] = bundle
+                return bundle
+        except Exception:
+            pass
 
     sa_params = {
         "place_id": place_id,
@@ -2766,12 +2786,38 @@ async def analisar_concorrentes_a3a_completo(
     concorrentes_brutos: list[dict] = []
 
     async def _processar_um(c: dict) -> dict:
+        import time as _time
+
         place_id = c.get("place_id", "")
         nome = c.get("nome", "?")
+        _t0 = _time.perf_counter()
+        _steps: dict[str, float] = {}
+
+        def _mark(label: str, started: float) -> float:
+            now = _time.perf_counter()
+            _steps[label] = round((now - started) * 1000)
+            return now
+
+        # 1× google_maps_place (cache) — alimenta pico + reviews antes das etapas.
+        _t = _t0
+        if place_id:
+            try:
+                from tools.searchapi_maps_place import (
+                    get_or_fetch_maps_place,
+                    seed_reviews_cache_from_place,
+                )
+
+                _place_raw = get_or_fetch_maps_place(place_id)
+                if _place_raw:
+                    seed_reviews_cache_from_place(place_id, _place_raw)
+            except Exception as e:
+                logger.debug("[A3a maps_place] %s: %s", nome, e)
+        _t = _mark("maps_place", _t)
 
         # Reviews via Places Details (síncrono — httpx blocking)
         reviews_data = buscar_reviews_academia(place_id, nome)
         reviews = reviews_data.get("reviews", []) if "erro" not in reviews_data else []
+        _t = _mark("reviews", _t)
 
         # Knowledge Panel Playwright — OFF no hot-path prod (SPEC_market_bundle_v2).
         # Store histórico = SearchAPI reviews/maps; Playwright só se flag explícita.
@@ -2785,6 +2831,7 @@ async def analisar_concorrentes_a3a_completo(
                 enrichment = {"scraping_status": f"exception: {type(e).__name__}"}
         else:
             enrichment = {"scraping_status": "playwright_skip_hot_path"}
+        _t = _mark("playwright", _t)
 
         # Horários de pico via popular_times_tool (Tier 0 SearchAPI, Tier 1 lib,
         # Tier 2 Playwright). Best-effort — falha vira dados_por_dia vazio,
@@ -2807,6 +2854,7 @@ async def analisar_concorrentes_a3a_completo(
                 atributos_sobre = {}
         elif place_id and _tem_contato:
             atributos_sobre = {}
+        _t = _mark("atributos", _t)
 
         if place_id:
             try:
@@ -2842,6 +2890,7 @@ async def analisar_concorrentes_a3a_completo(
                 print(f"[A3a popular_times] {nome}: {type(e).__name__}: {e}")
         if horarios_pico_dict is None:
             horarios_pico_dict = enrichment.get("horarios_pico")
+        _t = _mark("pico", _t)
 
         # Reviews de MENOR NOTA via SearchAPI — Places Details devolve só 5
         # "mais relevantes" enviesadas pro elogio (Smart Fit 1.329 aval sem
@@ -2861,22 +2910,28 @@ async def analisar_concorrentes_a3a_completo(
                     reviews = reviews[:15]
             except Exception as e:
                 logger.warning(f"[A3a reviews_baixa_nota] {nome}: {type(e).__name__}: {e}")
+        _t = _mark("reviews_baixa", _t)
 
-        # Planos × preços públicos via grounding (cache 7d por academia).
-        # Metodologia analise_mercado_fitness: comparativo plano/preço/oferta
-        # é decisão de posicionamento — sem preço confiável, fica None.
+        # Planos × preços BALCÃO: site oficial → google_light+Gemini → grounding.
+        # Site-first (Smart Fit JSON) evita light+LLM quando HTML já tem preço.
         planos_precos: list | None = None
         try:
-            # SearchAPI (google_light) PRIMEIRO — coleta determinística do JSON da busca;
-            # o grounding-LLM vinha None demais. Fallback pro grounding se SearchAPI vazio.
             import asyncio as _asyncio
 
+            from tools.planos_site_fetcher import fetch_planos_from_website
+
             _bai = c.get("bairro_concorrente") or bairro
-            planos_precos = await _asyncio.to_thread(_planos_precos_searchapi, nome, _bai, cidade)
+            _site = (c.get("website") or "").strip()
+            planos_precos = await _asyncio.to_thread(fetch_planos_from_website, _site)
+            if not planos_precos:
+                planos_precos = await _asyncio.to_thread(
+                    _planos_precos_searchapi, nome, _bai, cidade
+                )
             if not planos_precos:
                 planos_precos = await _planos_precos_grounding(nome, _bai, cidade)
         except Exception as e:
             logger.warning(f"[A3a planos_precos] {nome}: {type(e).__name__}: {e}")
+        _t = _mark("planos", _t)
 
         # Instagram público via SearchAPI (12/06): atividade de marketing REAL
         # (followers/posts/bio). Site e IG são COMPLEMENTARES — duas rotas de
@@ -2914,12 +2969,28 @@ async def analisar_concorrentes_a3a_completo(
                     servicos_ig = intel.get("servicos")  # chaves p/ a ERRC (nutricao/recovery...)
         except Exception as e:
             logger.warning(f"[A3a instagram] {nome}: {type(e).__name__}: {e}")
+        _t = _mark("ig", _t)
 
         maps_uri = (c.get("google_maps_uri") or "").strip() or None
         bundle = _fetch_reviews_bundle(place_id) if place_id else None
         topics_raw = (bundle or {}).get("topics") or []
         searchapi_topics = _normalize_searchapi_topics(topics_raw)
         temas_insatisfacao = _build_temas_insatisfacao(topics_raw, reviews)
+        _mark("topics", _t)
+        _total_ms = round((_time.perf_counter() - _t0) * 1000)
+        logger.info(
+            "[A3a enrich timing] %s total_ms=%s steps_ms=%s planos=%s ig=%s",
+            nome,
+            _total_ms,
+            _steps,
+            bool(planos_precos),
+            bool(instagram_profile),
+        )
+        print(
+            f"[A3a enrich timing] {nome} total_ms={_total_ms} steps_ms={_steps} "
+            f"planos={bool(planos_precos)} ig={bool(instagram_profile)}",
+            flush=True,
+        )
         return {
             "place_id": place_id,
             "nome": nome,

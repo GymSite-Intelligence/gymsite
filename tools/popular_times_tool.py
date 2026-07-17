@@ -773,42 +773,24 @@ def _converter_searchapi(raw: dict, place_id: str) -> dict:
 
 
 def _tentar_searchapi(place_id: str) -> dict | None:
-    """Tier 0 — SearchAPI (free tier 100 req/mês).
+    """Tier 0 — SearchAPI google_maps_place (cache compartilhado com reviews).
 
-    Quando SEARCHAPI_KEY definida, faz GET em /search?engine=google_maps_place.
-    Retorna None se chave ausente ou falha — caller cai pro próximo tier.
+    1 call → popular_times + review_results. Cache em cache_places_details;
+    também seeda cache_reviews. Miss de rede → None (próximo tier).
     """
     if not place_id:
         return None
     try:
-        import os
-        import requests
-        api_key = os.environ.get("SEARCHAPI_KEY", "").strip()
-        if not api_key:
+        from tools.searchapi_maps_place import (
+            get_or_fetch_maps_place,
+            seed_reviews_cache_from_place,
+        )
+
+        raw = get_or_fetch_maps_place(place_id)
+        if not raw:
             return None
-        from tools.api_cost_tracker import track_api_call
-        with track_api_call("searchapi_popular_times", "searchapi_popular_times", 1):
-            resp = requests.get(
-                "https://www.searchapi.io/api/v1/search",
-                params={
-                    "engine": "google_maps_place",
-                    "place_id": place_id,
-                    "hl": "pt",
-                    "gl": "br",
-                    "api_key": api_key,
-                },
-                timeout=15,
-            )
-        if resp.status_code == 429:
-            global _avisou_searchapi_429
-            if not _avisou_searchapi_429:
-                _avisou_searchapi_429 = True
-                print("[searchapi] quota mensal esgotada (HTTP 429) — tier desabilitado até renovar; Playwright assume")
-            return None
-        if resp.status_code != 200:
-            print(f"[searchapi] {place_id}: HTTP {resp.status_code}: {resp.text[:140]}")
-            return None
-        return _converter_searchapi(resp.json(), place_id)
+        seed_reviews_cache_from_place(place_id, raw)
+        return _converter_searchapi(raw, place_id)
     except Exception as e:
         print(f"[searchapi] {place_id}: {type(e).__name__}: {str(e)[:140]}")
         return None

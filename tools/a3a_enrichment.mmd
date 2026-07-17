@@ -12,32 +12,35 @@ flowchart TB
   Filtro@{ shape: diam, label: "academia_tradicional?" }
   Cap@{ shape: hex, label: "MAX_ENRIQUECIMENTO=3" }
   Loop@{ shape: procs, label: "_processar_um × N seq" }
-  Reviews@{ shape: bolt, label: "buscar_reviews_academia" }
+  PlaceCall@{ shape: bolt, label: "1× google_maps_place" }
+  PlaceCache@{ shape: cyl, label: "cache_places_details + seed cache_reviews" }
+  Reviews@{ shape: bolt, label: "reviews ← place (fallback reviews engine)" }
   PWgate@{ shape: diam, label: "COMPETITOR_PLAYWRIGHT_ENRICH?" }
   PW@{ shape: delay, label: "Playwright KP legado" }
   PWskip@{ shape: stadium, label: "playwright_skip_hot_path" }
   Contato@{ shape: diam, label: "tel ou website no listing?" }
   Attr@{ shape: bolt, label: "obter_atributos_place" }
   AttrSkip@{ shape: stadium, label: "skip Places Atmosphere" }
-  Pico@{ shape: subproc, label: "pesquisar_horarios_pico" }
+  Pico@{ shape: subproc, label: "pesquisar_horarios_pico ← mesmo place" }
   SbHit@{ shape: diam, label: "cache_popular_times hit?" }
   Sb@{ shape: cyl, label: "Supabase cache_popular_times" }
   Fs@{ shape: das, label: "FS competitor_cache" }
-  Tier0@{ shape: bolt, label: "SearchAPI popular_times" }
+  Tier0@{ shape: bolt, label: "place cache / SearchAPI" }
   Tier1@{ shape: bolt, label: "lib populartimes" }
   Tier2@{ shape: delay, label: "Playwright Maps DOM" }
   Save@{ shape: subproc, label: "write-through SB + FS" }
-  Planos@{ shape: bolt, label: "planos_precos SearchAPI" }
+  Planos@{ shape: bolt, label: "planos: site→light→ground" }
   IG@{ shape: lean-l, label: "get_or_fetch_ig_intel" }
   Out@{ shape: cyl, label: "concorrentes_brutos → state" }
   End@{ shape: fr-circ, label: "A3b" }
-  Note@{ shape: comment, label: "Act-on jul/16: pico→SB · cap 3 · skip attr se contato" }
+  Note@{ shape: comment, label: "jul/17: 1× place=pico+reviews; slim cache_places_details; reviews engine fallback" }
 
   Start ==> Lista ==> Filtro
   Filtro -->|sim| Cap
   Filtro -->|não| Lista
   Cap ==> Loop
-  Loop ==> Reviews ==> PWgate
+  Loop ==> PlaceCall ==> PlaceCache
+  PlaceCache --> Reviews --> PWgate
   PWgate -->|on| PW --> Contato
   PWgate -->|off| PWskip --> Contato
   Contato -->|não / force| Attr --> Pico
