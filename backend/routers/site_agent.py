@@ -298,9 +298,16 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
                                 detail="Verificação anti-bot falhou.")
 
     sb = _sb()
-    bypass = _email_com_bypass(data.email)
+    # Token/IP de dono = mesmo bypass do e-mail allowlist: sem entitlement, sem
+    # cap IP/global, sem gate SearchAPI. Leads sem token seguem o funil normal.
+    token_bypass = _bypass_autorizado(request, data.dev_token, ip)
+    bypass = token_bypass or _email_com_bypass(data.email)
     if bypass:
-        logger.info("analise gratuita com bypass de entitlement email=%s", data.email)
+        logger.info(
+            "analise gratuita com bypass entitlement token=%s email=%s",
+            token_bypass,
+            data.email,
+        )
 
     # 2. Entitlement: 1 grátis por email.
     if not bypass and _email_ja_usou(sb, data.email):
