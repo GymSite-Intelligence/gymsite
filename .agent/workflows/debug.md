@@ -1,57 +1,73 @@
 ---
-description: Systematic debugging guide for any issue in the GymSite Intelligence stack. Follows root-cause analysis methodology.
+description: Systematic debugging — isolate API vs worker, Cloud Run logs, fontes/Places. Root-cause first.
 ---
 
 # Workflow: /debug
 
-Systematic debugging protocol.
+> **Skill:** conforme domínio. **Regras:** P-000 §2 (ler fonte) · [REGRAS §3.5](../rules/REGRAS_USO_GLOBAL.md).
+> **Não confundir:** `/audit` · `/review`. Pipeline ADK = **`gymsite-worker`**; API enfileira Redis.
+> **Não existe:** `docs/KNOWN_ISSUES.md` (não criar stub vazio — documentar no PR/caso auditoria).
+
+## Triagem rápida (prod)
+
+| Sintoma | Onde olhar primeiro |
+|---|---|
+| POST ok, `status=queued` eterno | Redis `gymsite:queue` / worker up / `RUN_QUEUE_WORKER` |
+| `running` + `etapa_atual` vazia/travada | Worker logs + `gymsite:queue:processing` órfãos |
+| A3a lento / Places caro | ledger `api_sku` · log `fallback Places` |
+| Aluguel “errado” | `fonte_aluguel` MRLR vs listing |
+| Front 200 API 5xx | `api.getgymsite.com.br` vs Pages; CORS/`VITE_API_BASE` |
+| Split API≠worker | imagem/`GIT_SHA`/`PIPELINE_MAX_WALL_SEC` nos **dois** serviços |
+
+GCP: `gen-lang-client-0106729343` · `us-central1`.
 
 ## Steps
 
 1. **Reproduce**
-   - Get exact error message and stack trace
-   - Identify environment (local/docker/prod)
-   - Note recent changes (git log --oneline -5)
+   - Erro exato, UUID `relatorio_id`, horário UTC
+   - Ambiente: local / prod Cloud Run (não “docker” como path canônico)
+   - `git log --oneline -5` no branch relevante
 
-2. **Isolate**
-   - Which module/file/line?
-   - Which skill domain? (backend/frontend/pipeline/intel)
-   - Can you reproduce with minimal data?
+2. **Isolate API vs worker**
+   ```powershell
+   gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="gymsite-api" AND textPayload:"RELATORIO_ID"' --project=gen-lang-client-0106729343 --limit=30 --freshness=2h
+   gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="gymsite-worker" AND textPayload:"RELATORIO_ID"' --project=gen-lang-client-0106729343 --limit=50 --freshness=2h
+   ```
+   Enqueue/WS → API. A0–A9 / enrich → **worker**.
 
-3. **Hypothesize**
-   - List 3 possible causes
-   - Rank by probability
-   - Check logs for clues
+3. **Redis / fila** (se pipeline preso)
+   - `LLEN gymsite:queue` · `HGETALL gymsite:queue:processing`
+   - Pós-deploy SIGTERM: jobs órfãos em `processing` — drain + fail stuck + re-smoke
 
-4. **Test**
-   - Add targeted logging (not print!)
-   - Use debugger or inspect state
-   - Create minimal reproduction script
+4. **Hypothesize** (≤3 causas, rank)
+   - Ler código/tool antes de “achismo” (P-000 §2)
+   - Fontes: SearchAPI 401? Places fallback? MRLR inputs cidade/bairro?
 
-5. **Fix**
-   - Fix the ROOT cause, not the symptom
-   - Add regression test
-   - Verify fix doesn't break other features
+5. **Test**
+   ```powershell
+   .\.venv\Scripts\python.exe -m pytest path\to\test_repro.py -x --tb=short
+   Invoke-RestMethod https://api.getgymsite.com.br/api/version
+   Invoke-RestMethod https://api.getgymsite.com.br/api/health
+   ```
+   SB: `relatorios` / `relatorio_api_calls` / `relatorio_outputs` schema `gymsite`.
 
-6. **Document**
-   - Update relevant docs if behavior changed
-   - Add to `docs/KNOWN_ISSUES.md` if applicable
+6. **Fix**
+   - Causa raiz + teste que falhava antes
+   - Se `agents/`/`tools/`: Cloud Run API **+** sync worker (`/deploy`)
 
-## Debug Commands
+7. **Document**
+   - PR / caso `/audit` se conformidade
+   - Não inventar `KNOWN_ISSUES.md`
 
-```bash
-# Python stack trace with locals
-python -c "import traceback; traceback.print_exc()"
+## Comandos úteis
 
-# FastAPI endpoint test
-curl -s http://localhost:8000/api/health | jq .
+```powershell
+# Versão / health prod
+Invoke-RestMethod https://api.getgymsite.com.br/api/version
 
-# Frontend network errors
-# Open DevTools → Network → check failed requests
+# Status relatório
+Invoke-RestMethod "https://api.getgymsite.com.br/api/relatorios/<UUID>/status"
 
-# ADK agent state inspection
-python -c "import json; print(json.dumps(session.state, indent=2))"
-
-# Database query inspection
-psql $DATABASE_URL -c "SELECT * FROM oportunidades_prospeccao ORDER BY created_at DESC LIMIT 5"
+# Imagem API (p/ sync worker)
+gcloud run services describe gymsite-api --region=us-central1 --project=gen-lang-client-0106729343 --format="value(spec.template.spec.containers[0].image)"
 ```

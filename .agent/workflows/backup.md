@@ -1,81 +1,80 @@
 ---
-description: Create a full backup of the project — database, artifacts, cache, and configuration. Stores backups with timestamps.
+description: Backup operacional — dump Supabase + inventário de secrets (sem valores) + artifacts opcionais. PowerShell.
 ---
 
 # Workflow: /backup
 
-Create a comprehensive backup of all project assets.
+> **Canônico:** P-000 §7 (projeto `epgedaiukjippepujuzc`) · `/migrate` pré-DDL.
+> **Removido (legado):** `docker-compose.yml`, `competitor_cache/`, `.env.example` na raiz como “config completa”, Bash `date +%Y%m%d` sem nota Windows.
+> Shell: **PowerShell**. Git Bash/WSL ok se adaptar paths — não misturar sem cuidado.
+
+## O que entra
+
+| Item | Como |
+|---|---|
+| Schema + dados críticos | Dump Supabase / `pg_dump` (schemas `gymsite`, `shared`, views `public` se necessário) |
+| Inventário de secrets | Nomes das env vars / secrets Cloud Run + CF — **nunca** valores no zip |
+| Artifacts | Opcional: `artifacts/` PDFs recentes |
+| Código | Já no Git — não duplicar tree inteira no backup |
 
 ## Steps
 
-1. **Create backup directory** // turbo
-   ```bash
-   BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
-   mkdir -p "$BACKUP_DIR"
-   echo "Backup dir: $BACKUP_DIR"
+1. **Diretório** // turbo
+   ```powershell
+   $ts = Get-Date -Format "yyyyMMdd_HHmmss"
+   $BACKUP_DIR = "backups\$ts"
+   New-Item -ItemType Directory -Force -Path $BACKUP_DIR | Out-Null
+   Write-Host "Backup dir: $BACKUP_DIR"
    ```
 
-2. **Backup database**
-   ```bash
-   pg_dump $DATABASE_URL > "$BACKUP_DIR/db_full.sql"
-   echo "Database backup complete"
+2. **Dump banco**
+   Preferência: Supabase Dashboard → Database → Backups / ou CLI:
+   ```powershell
+   # Requer DATABASE_URL (service) — NÃO commitar o .sql
+   pg_dump $env:DATABASE_URL --schema=gymsite --schema=shared -f "$BACKUP_DIR\db_gymsite_shared.sql"
+   ```
+   Alternativa mínima pré-migrate: só tabelas tocadas (`--table=gymsite.foo`).
+
+3. **Inventário de secrets (sem valores)**
+   ```powershell
+   @"
+   # Nomes apenas — preencher check manual
+   - Cloud Run gymsite-api / gymsite-worker env + Secret Manager
+   - SEARCHAPI_KEY, REDIS_URL, SUPABASE_SERVICE_ROLE_KEY
+   - CF Pages VITE_* / wrangler
+   - APOLLO_* (se prospecção)
+   "@ | Set-Content "$BACKUP_DIR\secrets_inventory.txt"
+   ```
+   Listar nomes via:
+   ```powershell
+   gcloud run services describe gymsite-api --region=us-central1 --project=gen-lang-client-0106729343 --format="yaml(spec.template.spec.containers[0].env)" | Select-String "name:"
    ```
 
-3. **Backup artifacts (PDFs, reports)**
-   ```bash
-   cp -r artifacts/ "$BACKUP_DIR/artifacts/"
-   echo "Artifacts backup complete"
-   ```
-
-4. **Backup cache**
-   ```bash
-   cp -r metrics/cache/ "$BACKUP_DIR/cache/"
-   cp -r competitor_cache/ "$BACKUP_DIR/competitor_cache/"
-   echo "Cache backup complete"
-   ```
-
-5. **Backup configuration**
-   ```bash
-   cp .env.example "$BACKUP_DIR/"
-   cp docker-compose.yml "$BACKUP_DIR/"
-   cp pyproject.toml "$BACKUP_DIR/"
-   echo "Config backup complete"
-   ```
-
-6. **Generate manifest**
-   ```bash
-   cat > "$BACKUP_DIR/manifest.json" <<EOF
-   {
-     "timestamp": "$(date -Iseconds)",
-     "files": {
-       "database": "db_full.sql",
-       "artifacts": "artifacts/",
-       "cache": "cache/",
-       "competitor_cache": "competitor_cache/"
-     },
-     "size_mb": $(du -sm "$BACKUP_DIR" | cut -f1)
+4. **Artifacts (opcional)**
+   ```powershell
+   if (Test-Path artifacts) {
+     Copy-Item -Recurse artifacts "$BACKUP_DIR\artifacts"
    }
-   EOF
    ```
 
-7. **Verify backup**
-   ```bash
-   du -sh "$BACKUP_DIR"
-   ls -la "$BACKUP_DIR"
+5. **Manifest**
+   ```powershell
+   @{
+     timestamp = (Get-Date).ToString("o")
+     schemas   = @("gymsite", "shared")
+     note      = "No secret values. DB dump may contain PII — store securely."
+   } | ConvertTo-Json | Set-Content "$BACKUP_DIR\manifest.json"
+   Get-ChildItem $BACKUP_DIR -Recurse | Select-Object FullName, Length
    ```
 
 ## Restore
 
-```bash
-# Restore database
-psql $DATABASE_URL < backups/20260529_120000/db_full.sql
-
-# Restore artifacts
-cp -r backups/20260529_120000/artifacts/* artifacts/
-```
+- Banco: restore dump completo ou PITR Supabase — **não** confundir schema-only com undo de dados.
+- Secrets: recriar no Secret Manager / CF a partir do cofre — não a partir do inventário sozinho.
+- Artifacts: copiar de volta se preciso.
 
 ## Safety
 
-- ⚠️ Backups include sensitive data — store securely
-- ⚠️ `.env` with real keys is NOT backed up (use `.env.example` only)
-- ⚠️ Verify backup integrity before considering it complete
+- ⚠️ Dump = dados sensíveis — fora do Git; storage criptografado
+- ⚠️ Nunca copiar `.env` real para `backups/` versionado
+- ⚠️ Verificar tamanho/arquivo `.sql` não-vazio antes de apagar origem

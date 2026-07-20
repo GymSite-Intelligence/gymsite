@@ -38,12 +38,16 @@ gymsite_intelligence/           ← Project Root
 │   │   ├── gymsite-reporting/
 │   │   ├── gymsite-prospecting/
 │   │   └── gymsite-devops/
-│   └── workflows/              ← Slash commands (/prospect, /report, /deploy)
+│   └── workflows/              ← Slash commands (/prospect … /audit)
 │       ├── prospect.md
 │       ├── report.md
 │       ├── deploy.md
 │       ├── review.md
-│       └── debug.md
+│       ├── debug.md
+│       ├── test.md
+│       ├── migrate.md
+│       ├── backup.md
+│       └── audit.md
 └── [project source code]
 ```
 
@@ -70,11 +74,12 @@ Antes de qualquer ação, identifique qual skill é mais relevante:
 |---|---|
 | Criar/modificar endpoint FastAPI, schema Pydantic, query Supabase | `gymsite-backend` |
 | Criar/modificar página React, componente, hook, rota | `gymsite-frontend` |
-| Depurar/estender agentes Google ADK (A0–A6), runner, callback | `gymsite-pipeline` |
+| Depurar/estender agentes Google ADK (A0–A9), runner, callback | `gymsite-pipeline` |
 | Buscar dados CNPJ, CNO, Google Maps, scraping de concorrentes | `gymsite-intelligence` |
 | Gerar/modificar PDF, gráfico, relatório | `gymsite-reporting` |
 | Pipeline de prospecção, webhooks, status de oportunidade | `gymsite-prospecting` |
-| Docker, deploy, Cloudflared, variáveis de ambiente | `gymsite-devops` |
+| Cloud Run, Wrangler/Pages, env, worker sync | `gymsite-devops` (+ workflows `/deploy` canônicos; skill pode estar stale) |
+| Auditoria de conformidade (políticas → gaps) | workflow `/audit` + `auditoria-conformidade.md` |
 
 ### 3.2 Carregamento Sob Demanda
 
@@ -100,10 +105,14 @@ Workflows são procedimentos salvos que você ativa com `/` no chat do Antigravi
 | Comando | Quando usar |
 |---|---|
 | `/prospect` | Executar engine de prospecção CNPJ×CNO |
-| `/report` | Gerar relatório de viabilidade completo |
-| `/deploy` | Fazer deploy de backend + frontend |
-| `/review` | Revisar código com checagens automáticas |
-| `/debug` | Seguir protocolo sistemático de debugging |
+| `/report` | Gerar relatório de viabilidade completo (A0–A9) |
+| `/deploy` | Cloud Run API+worker + Wrangler Pages (P-000 §7) |
+| `/test` | Gate: pytest no `.venv` + `tsc --noEmit` |
+| `/migrate` | Uma migration SQL (schema `gymsite` / views `public`) |
+| `/backup` | Dump Supabase + inventário de secrets (sem valores) |
+| `/review` | Revisar código / PR com gates fontes+schema |
+| `/debug` | Protocolo de debugging (API vs worker) |
+| `/audit` | Conformidade: Scoped→Evidence→Findings→Corrective→Retest→Closed |
 
 ### 4.1 Anotações Turbo
 
@@ -172,7 +181,7 @@ from google.adk.runners import Runner  # NUNCA faça isso em tools/
 3. LEIA os arquivos existentes relacionados
 4. PLANEJE a mudança (mental ou em nota)
 5. IMPLEMENTE com mudanças MÍNIMAS
-6. TESTE localmente (pytest, npm run lint)
+6. TESTE localmente (`.venv` pytest + `cd frontend && npx tsc --noEmit` — ver `/test`)
 7. VERIFIQUE que não quebrou features existentes
 ```
 
@@ -274,7 +283,7 @@ export function OportunidadeCard({ oportunidade, onStatusChange }: Props) {
 Antes de considerar uma tarefa concluída:
 
 - [ ] Código passa em `pyrefly check .` (Python)
-- [ ] Código passa em `npm run lint` (Frontend)
+- [ ] Frontend passa em `npx tsc --noEmit` (`npm run lint` = alias tsc neste repo)
 - [ ] Não há `print()` — apenas `logging` (Python)
 - [ ] Não há `alert()` — apenas `toast` (Frontend)
 - [ ] Inputs validados (Pydantic / Zod)
@@ -322,21 +331,21 @@ gymsite_intelligence/
 ├── GEMINI.md                 ← Global agent config
 ├── .agent/
 │   ├── AGENTS.md             ← Master prompt (this file)
-│   ├── rules/workspace.md    ← Governance rules
-│   ├── skills/               ← 7 specialized skills
-│   └── workflows/            ← 5 slash commands
+│   ├── rules/                ← P-000, REGRAS, auditoria-conformidade, fontes
+│   ├── skills/               ← specialized skills (load on demand)
+│   └── workflows/            ← 9 slash commands (+ /audit)
 ├── api.py                    ← FastAPI app — entrypoint REST
 ├── models/schemas.py         ← Schemas Pydantic compartilhados
-├── agents/                   ← Google ADK agents (A0–A6)
+├── agents/                   ← Google ADK agents (A0–A9)
 ├── db/migrations/            ← SQL migrations Supabase
-├── frontend/src/             ← React SPA
+├── frontend/src/             ← React SPA (CF Pages projeto gymsite)
 │   ├── components/           ← UI components (shadcn/ui + custom)
 │   ├── hooks/                ← TanStack Query hooks
 │   ├── routes/               ← Páginas (TanStack Router)
 │   └── router.tsx            ← Registro de rotas
-├── pdf/                      ← ReportLab builders e charts
+├── pdf/                      ← ReportLab / Weasy builders e charts
 ├── prospecting/              ← Engine CNPJ×CNO + webhooks
-├── tools/                    ← Utilitários (maps, CNPJ, scraping)
+├── tools/                    ← Utilitários (SearchAPI, CNPJ, MRLR, …)
 └── docs/                     ← Documentação do projeto
 ```
 
@@ -346,12 +355,15 @@ gymsite_intelligence/
 
 | Recurso | Local |
 |---|---|
+| Regra mestra + deploy | `.agent/rules/P-000_REGRA_MESTRA_MUDANCA.md` |
+| Checklist diário | `.agent/rules/REGRAS_USO_GLOBAL.md` |
+| Conformidade | `.agent/rules/auditoria-conformidade.md` · `/audit` |
+| Fontes pipeline | `.agent/rules/conferencia-fontes-pipeline.md` |
 | Documento do módulo de prospecção | `docs/MODULO_PROSPECCAO.md` |
-| Migration do banco | `db/migrations/20260529_prospeccao_oportunidades.sql` |
+| Migrations | `db/migrations/` (aplicar via `/migrate`) |
 | Schema do backend | `models/schemas.py` |
-| Hooks do frontend | `frontend/src/hooks/useProspeccao.ts` |
-| Config Docker | `docker-compose.yml` |
-| Env template | `.env.example` |
+| Hooks do frontend | `frontend/src/hooks/` |
+| Env (não versionar secrets) | `.env` local · Secret Manager / CF em prod |
 
 ---
 

@@ -78,7 +78,7 @@ result = client.table("oportunidades_prospeccao") \
 | `models/schemas.py` | Schemas Pydantic compartilhados |
 | `db/` | Migrations SQL + writers |
 | `prospecting/` | Engine de prospecção CNPJ×CNO |
-| `agents/` | Agentes Google ADK (A0–A6) |
+| `agents/` | Agentes Google ADK (A0–A9) |
 | `tools/` | Utilitários (maps, CNPJ, CNO, scraping) |
 
 ## Anti-padrões

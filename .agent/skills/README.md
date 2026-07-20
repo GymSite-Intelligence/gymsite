@@ -9,12 +9,12 @@ Este diretório contém as **Agent Skills** especializadas para o projeto **GymS
 ├── README.md                          # Este arquivo
 ├── gymsite-backend/SKILL.md           # FastAPI, Pydantic, Supabase
 ├── gymsite-frontend/SKILL.md          # React, TanStack, shadcn/ui
-├── gymsite-pipeline/SKILL.md          # Google ADK, agentes A0–A6
+├── gymsite-pipeline/SKILL.md          # Google ADK, agentes A0–A9
 ├── gymsite-intelligence/SKILL.md      # Google Maps, CNPJ, CNO, scraping
 ├── gymsite-reporting/SKILL.md         # ReportLab, matplotlib, PDF
 ├── gymsite-prospecting/SKILL.md       # Prospecção, pipeline, webhooks
-├── gymsite-devops/SKILL.md            # Docker, Cloudflared, deploy
-└── gymsite-testing/SKILL.md           # pytest, Vitest, Playwright
+├── gymsite-devops/SKILL.md            # Cloud Run, Wrangler/Pages, env
+└── gymsite-testing/SKILL.md           # pytest (.venv) + tsc; Vitest/Playwright quando existir
 ```
 
 ## Como Funciona
@@ -35,7 +35,7 @@ O Antigravity carrega automaticamente o **metadata** (`name` + `description`) de
 | "Busque concorrentes no bairro Aldeota" | `gymsite-intelligence` |
 | "Gere um gráfico de payback" | `gymsite-reporting` |
 | "Mude o status da oportunidade para fechado" | `gymsite-prospecting` |
-| "Configure o Docker para produção" | `gymsite-devops` |
+| "Configure deploy de produção" | `gymsite-devops` + `/deploy` |
 | "Crie testes para o endpoint de prospecção" | `gymsite-testing` |
 
 ## Adicionando Novas Skills
@@ -70,6 +70,6 @@ description: Descrição curta de quando usar esta skill. Use ao... NÃO use qua
 
 - **Backend:** Python 3.14, FastAPI, Pydantic v2, Supabase
 - **Frontend:** React 19, TypeScript, TanStack Router/Query, shadcn/ui, Tailwind
-- **Agentes:** Google ADK, Gemini Flash, session state puro
-- **Deploy:** Docker, Cloudflared, Vercel (frontend)
+- **Agentes:** Google ADK, Gemini Flash, session state puro (A0–A9)
+- **Deploy:** Cloud Run + Wrangler/Pages — ver `/deploy` e P-000 §7–§8
 - **Estilo:** Minimalista, funcional, sem over-engineering

@@ -1,130 +1,76 @@
 ---
 name: gymsite-devops
-description: Infraestrutura, deploy, Docker e operações para GymSite Intelligence. Use ao configurar ambientes, containers, túneis Cloudflared, ou CI/CD. NÃO use para lógica de negócio, endpoints REST ou componentes UI.
+description: Deploy e ops GymSite — Cloud Run (API+worker), Cloudflare Pages/Wrangler, env/secrets. Use ao publicar, sincronizar worker, health prod. NÃO use para lógica de negócio, endpoints REST ou UI. Path canônico = workflow /deploy (P-000 §7–§8).
 ---
 
-# GymSite Intelligence — DevOps e Infraestrutura
+# GymSite Intelligence — DevOps
 
-## Contexto da Stack
+> **Canônico:** [P-000 §7–§8](../../rules/P-000_REGRA_MESTRA_MUDANCA.md) · [REGRAS §3.5](../../rules/REGRAS_USO_GLOBAL.md) · workflow [`.agent/workflows/deploy.md`](../../workflows/deploy.md).
+> **Legado (não seguir como prod):** Docker Compose local, Cloudflared tunnel, Vercel/Netlify, `cloudbuild.frontend.yaml`, Actions `pages.yml`.
 
-- **Container:** Docker + Docker Compose
-- **Reverse Proxy / Tunnel:** Cloudflared (cloudflare tunnel)
-- **Frontend:** Vite build → Nginx (opcional) ou Vercel
-- **Backend:** Uvicorn + FastAPI (porta 8000)
-- **Banco:** Supabase (PostgreSQL hospedado) — NÃO roda local
-- **Cache:** Redis (opcional, via Supabase ou local)
+## Stack produção
 
-## Docker
+| Camada | Destino |
+|---|---|
+| API | Cloud Run `gymsite-api` · GCP `gen-lang-client-0106729343` · `us-central1` |
+| Worker pipeline | Cloud Run `gymsite-worker` — **mesma imagem** da API (não auto-deploya) |
+| Front app logado | CF Pages projeto `gymsite` → `getgymsite.com.br` |
+| Landing | CF `gym-insight-hub` → `gymsite.com.br` (repo separado) |
+| Banco | Supabase `epgedaiukjippepujuzc` (`gymsite` / `shared`; `public` = views) |
+| Fila | Redis (`gymsite:queue`) |
 
-### Dockerfile (Backend)
+**Órfão:** não usar projeto GCP `gen-lang-client-0662901510`.
 
-```dockerfile
-FROM python:3.14-slim
+## Deploy (resumo)
 
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+Detalhe: **`/deploy`**. Ordem:
 
-COPY . .
-EXPOSE 8000
+1. Gate: `.venv` pytest + `frontend` `tsc --noEmit`
+2. Migrations → `/migrate` (1 SQL)
+3. API Cloud Run (Build em `main` ou `gcloud run deploy`)
+4. **Sync worker imagem** (obrigatório após API):
+   ```powershell
+   $IMG = gcloud run services describe gymsite-api --region=us-central1 --project=gen-lang-client-0106729343 --format="value(spec.template.spec.containers[0].image)"
+   gcloud run services update gymsite-worker --region=us-central1 --project=gen-lang-client-0106729343 --image $IMG
+   ```
+5. Front: `cd frontend; npm run build; npx wrangler pages deploy ./dist --project-name gymsite`
+6. Health: `https://api.getgymsite.com.br/api/version` + `/api/health`
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+**Act-on:** mudou `agents/` · `tools/` · `api.py` · `parametros_metodologia.py` → Cloud Run **sim** + worker. Só seed SQL → Cloud Run **não**.
+
+## Env / secrets (nomes)
+
+Backend/worker (Secret Manager / Cloud Run env): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SEARCHAPI_KEY`, `REDIS_URL`, `GEMINI_*` / Vertex, `GOOGLE_MAPS_API_KEY`, `GYMSITE_SCHEMA_SEP`, `PIPELINE_MAX_WALL_SEC`, `A0_*`, `RUN_QUEUE_WORKER` (worker=`1`; API preferível `0` se só enqueue).
+
+Front build (`VITE_*`): `VITE_API_BASE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (`sb_publishable_*` — não JWT legado). Ver P-000 gotcha CF Pages.
+
+## Domínios
+
+| Host | Papel |
+|---|---|
+| `getgymsite.com.br` | App logado |
+| `gymsite.com.br` | Landing / degustação |
+| `api.getgymsite.com.br` | API Cloud Run |
+
+## Health / logs
+
+```powershell
+Invoke-RestMethod https://api.getgymsite.com.br/api/version
+Invoke-RestMethod https://api.getgymsite.com.br/api/health
+
+gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="gymsite-worker"' --project=gen-lang-client-0106729343 --limit=20 --freshness=1h
 ```
 
-### Docker Compose
-
-```yaml
-version: "3.8"
-services:
-  api:
-    build: .
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    volumes:
-      - ./artifacts:/app/artifacts
-      - ./competitor_cache:/app/competitor_cache
-```
-
-## Cloudflared Tunnel
-
-```bash
-# Configuração em cloudflared/config.yml
-tunnel: <tunnel-id>
-credentials-file: /app/cloudflared/credentials.json
-ingress:
-  - hostname: api.gymsite.app
-    service: http://localhost:8000
-  - service: http_status:404
-```
-
-### Comandos Úteis
-
-```bash
-# Iniciar túnel
-cloudflared tunnel run <nome>
-
-# Verificar status
-cloudflared tunnel info <nome>
-
-# Logs
-cloudflared tunnel tail <nome>
-```
-
-## Variáveis de Ambiente Obrigatórias
-
-```bash
-# Backend
-SUPABASE_URL=https://<ref>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_GYMSITE_ORG_ID=uuid-da-org
-GEMINI_API_KEY=AIza...
-GOOGLE_MAPS_API_KEY=AIza...
-APOLLO_API_KEY=apk_...          # opcional
-
-# Frontend
-VITE_API_BASE_URL=https://api.gymsite.app
-VITE_SUPABASE_URL=https://<ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
-```
-
-## Deploy — Checklist
-
-1. **Banco:** Rodar migrations em `db/migrations/`
-2. **Backend:** Build Docker image → push → restart container
-3. **Frontend:** `npm run build` → deploy dist/ (Vercel/Netlify)
-4. **Cloudflared:** Verificar tunnel ativo
-5. **Health check:** `GET /api/health` deve retornar 200
-
-## Health Check
-
-```python
-@app.get("/api/health")
-def health() -> dict:
-    return {
-        "status": "ok",
-        "version": "1.0.0",
-        "timestamp": datetime.utcnow().isoformat(),
-    }
-```
+Pipeline preso → Redis `processing` órfãos + `/debug`.
 
 ## Anti-padrões
 
-- ❌ Nunca commite `.env` — use `.env.example` como template
-- ❌ Não exponha porta 8000 diretamente — use Cloudflared ou Nginx
-- ❌ Não use `python -m api` em produção — use `uvicorn` com workers
-- ❌ Não ignore logs do Cloudflared — monitore erros de ingress
+- ❌ Deploy “prod” via Docker local / Cloudflared
+- ❌ Atualizar API sem sync `gymsite-worker`
+- ❌ Publicar monorepo no CF da landing (`gym-insight-hub`)
+- ❌ Commitar `.env` / secrets
+- ❌ Reaplicar `db/migrations/*.sql` em lote no deploy
 
-## Monitoramento
+## Local (dev only)
 
-```bash
-# Verificar consumo de memória
-docker stats gymsite_api
-
-# Logs em tempo real
-docker logs -f gymsite_api
-
-# Health check remoto
-curl https://api.gymsite.app/api/health
-```
+Uvicorn local + `.env` ok para smoke de endpoint. **Não** é path de produção. Compose/Cloudflared = histórico handbook Part 4.

@@ -1,6 +1,6 @@
 ---
 name: gymsite-pipeline
-description: Orquestração de agentes Google ADK e pipelines de relatórios para GymSite Intelligence. Use ao criar, depurar ou estender agentes (A0–A6), runners de pipeline, ou callbacks de agente. NÃO use para endpoints REST ou componentes UI.
+description: Orquestração de agentes Google ADK e pipelines de relatórios para GymSite Intelligence. Use ao criar, depurar ou estender agentes (A0–A9), runners de pipeline, ou callbacks de agente. NÃO use para endpoints REST ou componentes UI.
 ---
 
 # GymSite Intelligence — Pipeline de Agentes
@@ -13,7 +13,9 @@ description: Orquestração de agentes Google ADK e pipelines de relatórios par
 - **Callbacks:** `after_agent_callback` para persistência defensiva
 - **Estado:** Session state (dict) passado entre agentes
 
-## Pipeline de Relatórios (A0 → A6)
+## Pipeline de Relatórios (A0 → A9)
+
+Mapa completo: [`docs/arquitetura/PIPELINE_AGENTES.md`](../../docs/arquitetura/PIPELINE_AGENTES.md) · workflow `/report`. Núcleo sequencial A0–A6; A7 = chat lateral; A9 = posicionamento/ERRC.
 
 ```mermaid
 flowchart LR

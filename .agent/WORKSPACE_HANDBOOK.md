@@ -20,21 +20,8 @@
   - [2.6 gymsite-prospecting](#26-gymsite-prospecting)
   - [2.7 gymsite-devops](#27-gymsite-devops)
   - [2.8 gymsite-testing](#28-gymsite-testing)
-- [Parte 3 — Workflows (8)](#parte-3--workflows-8)
-  - [3.1 /prospect](#31-prospect)
-  - [3.2 /report](#32-report)
-  - [3.3 /deploy](#33-deploy)
-  - [3.4 /review](#34-review)
-  - [3.5 /debug](#35-debug)
-  - [3.6 /test](#36-test)
-  - [3.7 /migrate](#37-migrate)
-  - [3.8 /backup](#38-backup)
-- [Parte 4 — Cloudflared + CORS](#parte-4--cloudflared--cors)
-  - [4.1 Arquitetura](#41-arquitetura)
-  - [4.2 Arquivos](#42-arquivos)
-  - [4.3 Validação](#43-validação)
-  - [4.4 Troubleshooting](#44-troubleshooting)
-  - [4.5 Checklist de Deploy](#45-checklist-de-deploy)
+- [Parte 3 — Workflows (9)](#parte-3--workflows-9) — canônico = .agent/workflows/*.md + AGENTS.md §4
+- [Parte 4 — Cloudflared (legado)](#parte-4--cloudflared--cors) — removido; prod = /deploy
 
 ---
 
@@ -47,7 +34,7 @@ You are a senior software engineer pair-programming on **GymSite Intelligence**,
 **Tech Stack:**
 - Backend: Python 3.14, FastAPI, Pydantic v2, Supabase (PostgreSQL)
 - Frontend: React 19, TypeScript, TanStack Router/Query, shadcn/ui, Tailwind
-- Agents: Google ADK (A0–A6 pipeline), Gemini Flash
+- Agents: Google ADK (A0–A9 pipeline), Gemini Flash
 - PDF: ReportLab, matplotlib
 - Maps/Scraping: Google Maps Platform, Playwright, BeautifulSoup4
 
@@ -59,8 +46,8 @@ gymsite_intelligence/
 ├── .agent/
 │   ├── AGENTS.md             ← Master prompt
 │   ├── rules/workspace.md    ← Governance rules
-│   ├── skills/               ← 8 specialized skills
-│   └── workflows/            ← 8 slash commands
+│   ├── skills/               ← specialized skills (load on demand)
+│   └── workflows/            ← 9 slash commands (+ /audit)
 ```
 
 ### Core Principles
@@ -198,12 +185,12 @@ Você é um engenheiro de software sênior especialista em:
 |---|---|
 | Criar/modificar endpoint FastAPI, schema Pydantic, query Supabase | `gymsite-backend` |
 | Criar/modificar página React, componente, hook, rota | `gymsite-frontend` |
-| Depurar/estender agentes Google ADK (A0–A6), runner, callback | `gymsite-pipeline` |
+| Depurar/estender agentes Google ADK (A0–A9), runner, callback | `gymsite-pipeline` |
 | Buscar dados CNPJ, CNO, Google Maps, scraping de concorrentes | `gymsite-intelligence` |
 | Gerar/modificar PDF, gráfico, relatório | `gymsite-reporting` |
 | Pipeline de prospecção, webhooks, status de oportunidade | `gymsite-prospecting` |
-| Docker, deploy, Cloudflared, variáveis de ambiente | `gymsite-devops` |
-| Testes (pytest, Vitest, Playwright) | `gymsite-testing` |
+| Cloud Run, Wrangler/Pages, env, worker sync | `gymsite-devops` + `/deploy` |
+| Gate teste (pytest `.venv` + tsc) | `gymsite-testing` + `/test` |
 
 ### Princípios de Design
 
@@ -327,11 +314,11 @@ gymsite_intelligence/
 ├── .agent/
 │   ├── AGENTS.md             ← Master prompt
 │   ├── rules/workspace.md    ← Governance rules
-│   ├── skills/               ← 8 specialized skills
-│   └── workflows/            ← 8 slash commands
+│   ├── skills/               ← specialized skills (load on demand)
+│   └── workflows/            ← 9 slash commands (+ /audit)
 ├── api.py                    ← FastAPI app — entrypoint REST
 ├── models/schemas.py         ← Schemas Pydantic compartilhados
-├── agents/                   ← Google ADK agents (A0–A6)
+├── agents/                   ← Google ADK agents (A0–A9)
 ├── db/migrations/            ← SQL migrations Supabase
 ├── frontend/src/             ← React SPA
 │   ├── components/           ← UI components (shadcn/ui + custom)
@@ -414,7 +401,7 @@ result = client.table("oportunidades_prospeccao") \
 | `models/schemas.py` | Schemas Pydantic compartilhados |
 | `db/` | Migrations SQL + writers |
 | `prospecting/` | Engine de prospecção CNPJ×CNO |
-| `agents/` | Agentes Google ADK (A0–A6) |
+| `agents/` | Agentes Google ADK (A0–A9) |
 | `tools/` | Utilitários (maps, CNPJ, CNO, scraping) |
 
 ### Anti-padrões
@@ -549,7 +536,7 @@ toast.error('Erro ao salvar.')
 
 ## 2.3 gymsite-pipeline
 
-**Descrição:** Orquestração de agentes Google ADK e pipelines de relatórios. Use ao criar, depurar ou estender agentes (A0–A6), runners de pipeline, ou callbacks de agente.
+**Descrição:** Orquestração de agentes Google ADK e pipelines de relatórios. Use ao criar, depurar ou estender agentes (A0–A9), runners de pipeline, ou callbacks de agente. Mapa: `docs/arquitetura/PIPELINE_AGENTES.md` · `/report`.
 
 **Stack:** Google ADK Python, Gemini, `Runner` + `InMemorySessionService`, callbacks `after_agent_callback`
 
@@ -869,74 +856,10 @@ ProspeccaoPage.tsx
 
 ## 2.7 gymsite-devops
 
-**Descrição:** Infraestrutura, deploy, Docker e operações. Use ao configurar ambientes, containers, túneis Cloudflared, ou CI/CD.
+**Descrição:** Deploy Cloud Run + Wrangler. **Fonte viva:** [`.agent/skills/gymsite-devops/SKILL.md`](skills/gymsite-devops/SKILL.md) · workflow [`deploy.md`](workflows/deploy.md) · P-000 §7–§8.
 
-**Stack:** Docker + Docker Compose, Cloudflared (cloudflare tunnel), Vite build → Nginx/Vercel, Uvicorn + FastAPI (porta 8000), Supabase (PostgreSQL hospedado)
-
-### Dockerfile (Backend)
-
-```dockerfile
-FROM python:3.14-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-EXPOSE 8000
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-### Docker Compose (resumido)
-
-```yaml
-services:
-  api:
-    build: .
-    ports: ["8000:8000"]
-    env_file: [".env"]
-    volumes:
-      - ./artifacts:/app/artifacts
-      - ./competitor_cache:/app/competitor_cache
-```
-
-### Cloudflared Tunnel
-
-```bash
-tunnel: <tunnel-id>
-credentials-file: /app/cloudflared/credentials.json
-ingress:
-  - hostname: api.gymsite.app
-    service: http://localhost:8000
-  - service: http_status:404
-```
-
-### Variáveis de Ambiente Obrigatórias
-
-```bash
-SUPABASE_URL=https://<ref>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_GYMSITE_ORG_ID=uuid-da-org
-GEMINI_API_KEY=AIza...
-GOOGLE_MAPS_API_KEY=AIza...
-APOLLO_API_KEY=apk_...          # opcional
-VITE_API_BASE_URL=https://api.gymsite.app
-VITE_SUPABASE_URL=https://<ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
-```
-
-### Deploy — Checklist
-
-1. **Banco:** Rodar migrations em `db/migrations/`
-2. **Backend:** Build Docker image → push → restart container
-3. **Frontend:** `npm run build` → deploy dist/ (Vercel/Netlify)
-4. **Cloudflared:** Verificar tunnel ativo
-5. **Health check:** `GET /api/health` deve retornar 200
-
-### Anti-padrões
-
-- ❌ Nunca commite `.env` — use `.env.example` como template
-- ❌ Não exponha porta 8000 diretamente — use Cloudflared ou Nginx
-- ❌ Não use `python -m api` em produção — use `uvicorn` com workers
-- ❌ Não ignore logs do Cloudflared — monitore erros de ingress
+**Stack prod:** Cloud Run `gymsite-api` / `gymsite-worker` (mesma imagem) · CF Pages `gymsite` · Supabase · Redis.  
+**Legado neste handbook:** Part 4 era Docker/Cloudflared — conteúdo removido; prod = `/deploy`.
 
 ---
 
@@ -1058,374 +981,34 @@ npx playwright test --headed       # Playwright com browser visível
 
 ---
 
-# Parte 3 — Workflows (8)
+# Parte 3 — Workflows (9)
 
-## 3.1 /prospect
+> **Canônico:** arquivos em [`.agent/workflows/`](workflows/) · índice [AGENTS.md](AGENTS.md) §4.  
+> **Não executar** o texto legado que existia aqui (Docker, `psql *.sql`, Vitest fantasmas).
 
-Execute a complete prospecting run for a target city.
+| Comando | Arquivo |
+|---|---|
+| `/prospect` | [workflows/prospect.md](workflows/prospect.md) |
+| `/report` | [workflows/report.md](workflows/report.md) |
+| `/deploy` | [workflows/deploy.md](workflows/deploy.md) |
+| `/test` | [workflows/test.md](workflows/test.md) |
+| `/migrate` | [workflows/migrate.md](workflows/migrate.md) |
+| `/backup` | [workflows/backup.md](workflows/backup.md) |
+| `/review` | [workflows/review.md](workflows/review.md) |
+| `/debug` | [workflows/debug.md](workflows/debug.md) |
+| `/audit` | [workflows/audit.md](workflows/audit.md) |
 
-**Prerequisites:** `GOOGLE_MAPS_API_KEY`, `SUPABASE_*`, CNO CSV data
-
-**Steps:**
-1. Validate inputs (city, UF — default Fortaleza/CE)
-2. Clear prospecting cache // turbo
-   ```bash
-   rm -rf metrics/cache/prospeccao_* 2>/dev/null
-   ```
-3. Run engine
-   ```bash
-   python -m prospecting.engine --cidade="FORTALEZA" --uf="CE" --dias=90
-   ```
-4. Validate output (new records, score 0.0–1.0, status='novo')
-5. Generate summary (count, top 5 by score, check errors in CSV)
-
-**Safety:** Creates DB records — do NOT run on production without confirmation.
-
----
-
-## 3.2 /report
-
-Generate a full viability report with PDF output.
-
-**Prerequisites:** `GEMINI_API_KEY`, city/bairro, area range
-
-**Steps:**
-1. Collect inputs (city, UF, bairro, area, ticket, modelo, tamanho)
-2. Validate Google Maps API key // turbo
-3. Execute A0–A6 pipeline
-4. Validate report (PDF > 10KB, first page renders)
-5. Store metadata in `relatorios` table
-
-**Output:** `artifacts/gymsite-relatorio-{cidade}-{uuid}.pdf`
-
----
-
-## 3.3 /deploy
-
-Deploy the entire application stack.
-
-**Steps:**
-1. Pre-deploy checks // turbo (`pyrefly check .`, `npm run lint`)
-2. Run database migrations (`psql $DATABASE_URL -f db/migrations/*.sql`)
-3. Build and deploy backend (docker build → run)
-4. Health check (`curl -s http://localhost:8000/api/health`)
-5. Build and deploy frontend (`npm run build` → Vercel/Netlify)
-6. Verify Cloudflared tunnel (`cloudflared tunnel info <name>`)
-
-**Rollback:**
-```bash
-docker stop gymsite-api
-docker rename gymsite-api-old gymsite-api
-docker start gymsite-api
-```
-
----
-
-## 3.4 /review
-
-Code review with automated + manual checks.
-
-**Steps:**
-1. Type check // turbo (`pyrefly check .`, `npm run lint`)
-2. Security scan (hardcoded secrets, `eval()`, SQL injection)
-3. Performance check (N+1 queries, missing indexes, sync I/O in async)
-4. Style review (≤30 lines, type hints, docstrings, no print/console)
-5. Generate report (CRITICAL / WARNING / NIT with code examples)
-
----
-
-## 3.5 /debug
-
-Systematic debugging protocol.
-
-**Steps:**
-1. Reproduce — error message, stack trace, environment, recent changes
-2. Isolate — module/file/line, skill domain, minimal reproduction
-3. Hypothesize — 3 possible causes, rank by probability, check logs
-4. Test — targeted logging, debugger, minimal script
-5. Fix — root cause, add regression test, verify no breakage
-6. Document — update docs, add to `docs/KNOWN_ISSUES.md`
-
-**Debug Commands:**
-```bash
-python -c "import traceback; traceback.print_exc()"
-curl -s http://localhost:8000/api/health | jq .
-python -c "import json; print(json.dumps(session.state, indent=2))"
-psql $DATABASE_URL -c "SELECT * FROM oportunidades_prospeccao ORDER BY created_at DESC LIMIT 5"
-```
-
----
-
-## 3.6 /test
-
-Execute the full test suite across all layers.
-
-**Steps:**
-1. Pre-check // turbo (`pyrefly check .`, `npm run lint`)
-2. Backend unit tests (`pytest -x --tb=short`)
-3. Backend coverage (`pytest --cov=tools --cov=agents --cov=prospecting --cov-report=html`)
-   - Target: ≥60% tools, ≥80% API
-4. Frontend unit tests (`npm run test:run`)
-5. Frontend coverage (`npx vitest run --coverage`)
-   - Target: ≥50% components, ≥70% hooks
-6. E2E tests (`npx playwright test`)
-   - Critical paths: login, criar relatório, prospecção, exportar CSV
-7. Generate report (backend + frontend coverage %)
-
-**Safety:** E2E tests need backend running locally; may modify DB state.
-
----
-
-## 3.7 /migrate
-
-Apply database migrations with zero-downtime safety.
-
-**Prerequisites:** `DATABASE_URL`, backup storage, migration files in `db/migrations/`
-
-**Steps:**
-1. Backup current schema // turbo (`pg_dump --schema-only`)
-2. Backup data (optional: `pg_dump --data-only --table=...`)
-3. Check pending migrations (`ls -lt db/migrations/*.sql`)
-4. Apply migrations in order (`psql $DATABASE_URL -f $f`)
-5. Verify schema (`\dt`)
-6. Verify indexes (`\di`)
-7. Smoke test (`curl /api/health`)
-
-**Rollback:** `psql $DATABASE_URL < db/backups/schema_YYYYMMDD_HHMMSS.sql`
-
-**Safety:** Always backup before migrating; test in staging first; never `DROP TABLE` without confirmation.
-
----
-
-## 3.8 /backup
-
-Create a comprehensive backup of all project assets.
-
-**Steps:**
-1. Create backup directory // turbo (`backups/YYYYMMDD_HHMMSS`)
-2. Backup database (`pg_dump $DATABASE_URL`)
-3. Backup artifacts (`cp -r artifacts/`)
-4. Backup cache (`cp -r metrics/cache/`, `cp -r competitor_cache/`)
-5. Backup config (`.env.example`, `docker-compose.yml`, `pyproject.toml`)
-6. Generate manifest (`manifest.json`)
-7. Verify backup (`du -sh`, `ls -la`)
-
-**Restore:**
-```bash
-psql $DATABASE_URL < backups/20260529_120000/db_full.sql
-cp -r backups/20260529_120000/artifacts/* artifacts/
-```
-
-**Safety:** Backups include sensitive data — store securely; `.env` with real keys is NOT backed up.
+Espelho Cursor (opcional): `.cursor/commands/*.md` apontam para os mesmos arquivos.
 
 ---
 
 # Parte 4 — Cloudflared + CORS
 
-## 4.1 Arquitetura
+> **LEGADO (maio/2026 e antes).** Produção = Cloud Run + Wrangler. Seguir [P-000 §7–§8](rules/P-000_REGRA_MESTRA_MUDANCA.md) · [deploy.md](workflows/deploy.md).
 
-```
-┌─────────────────────────────┐      ┌─────────────────────────────┐
-│   Browser (app.vectracargo) │ ──►  │  Cloudflare Edge (HTTPS)    │
-└─────────────────────────────┘      └─────────────────────────────┘
-                                              │
-                                              ▼
-                                     ┌─────────────────────────────┐
-                                     │  cloudflared container      │
-                                     │  (túnel seguro)             │
-                                     └─────────────────────────────┘
-                                              │
-                                              ▼
-                                     ┌─────────────────────────────┐
-                                     │  FastAPI (uvicorn)          │
-                                     │  porta 8000                 │
-                                     └─────────────────────────────┘
-```
+Conteúdo histórico Docker/Cloudflared removido (jul/2026). Git history se precisar do setup túnel Vectra Cargo.
 
----
-
-## 4.2 Arquivos
-
-### 4.2.1 `cloudflared/config.yml`
-
-```yaml
-tunnel: dbad2419-2271-42e1-840f-40864fa53298
-credentials-file: /etc/cloudflared/credentials.json
-
-ingress:
-  - hostname: api.vectracargo.com.br
-    service: http://api:8000
-    originRequest:
-      connectTimeout: 30s
-      keepAliveTimeout: 90s
-      keepAliveConnections: 100
-      http2Origin: false        # evita inconsistências com preflight/headers
-      noTLSVerify: true
-
-  - hostname: gymsite-api.vectracargo.com.br
-    service: http://api:8000
-    originRequest:
-      connectTimeout: 30s
-      keepAliveTimeout: 90s
-      keepAliveConnections: 100
-      http2Origin: false
-      noTLSVerify: true
-
-  - service: http_status:404
-```
-
-> **Nota:** `http2Origin: false` remove variáveis de HTTP/2 para origin que podem quebrar preflight.
-
----
-
-### 4.2.2 `docker-compose.yml`
-
-```yaml
-services:
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: gymsite-api
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    volumes:
-      - ${CNO_DATA_DIR_HOST}:/data/cno:ro
-    env_file:
-      - .env
-    environment:
-      DEEP_RESEARCH_AGENT: deep-research-preview-04-2026
-      DEEP_RESEARCH_TIMEOUT_SEC: "420"
-      CNPJ_ENRIQUECER_MAX: "3"
-    command: >
-      uvicorn api:app
-      --host 0.0.0.0
-      --port 8000
-      --proxy-headers
-      --forwarded-allow-ips='*'
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8000/health"]
-      interval: 30s
-      timeout: 5s
-      start_period: 40s
-      retries: 3
-    networks:
-      - appnet
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: gymsite-tunnel
-    restart: unless-stopped
-    command: tunnel --config /etc/cloudflared/config.yml run
-    volumes:
-      - ./cloudflared:/etc/cloudflared:ro
-    depends_on:
-      api:
-        condition: service_healthy
-    networks:
-      - appnet
-
-networks:
-  appnet:
-    driver: bridge
-```
-
----
-
-### 4.2.3 `Dockerfile` (relevante)
-
-```dockerfile
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
-```
-
----
-
-### 4.2.4 CORS no `api.py`
-
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
-
-_cors_origins = [
-    o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_origins,
-    allow_origin_regex=r"http://localhost:\d+",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    expose_headers=["Content-Disposition"],
-    max_age=600,
-)
-
-# Preflight catch-all — garante 204 mesmo se o router nao capturar
-@app.options("/{path:path}")
-async def preflight_catchall(path: str) -> None:
-    return None
-```
-
-Configure no `.env`:
-```
-CORS_ORIGINS=https://app.vectracargo.com.br,https://gymsite.vectracargo.com.br
-```
-
----
-
-## 4.3 Validação
-
-### Build e subir
-
-```bash
-docker compose up -d --build
-```
-
-### Testar preflight (OPTIONS)
-
-```bash
-curl -i -X OPTIONS "https://api.vectracargo.com.br/api/auth/login" \
-  -H "Origin: https://app.vectracargo.com.br" \
-  -H "Access-Control-Request-Method: POST" \
-  -H "Access-Control-Request-Headers: content-type,authorization"
-```
-
-**Esperado:** status `200` ou `204` com header `access-control-allow-origin: https://app.vectracargo.com.br`
-
-### Testar GET real
-
-```bash
-curl -i "https://api.vectracargo.com.br/health" \
-  -H "Origin: https://app.vectracargo.com.br"
-```
-
-**Esperado:** status `200` com header `access-control-allow-origin` presente.
-
----
-
-## 4.4 Troubleshooting
-
-| Sintoma | Causa provável | Solução |
-|---|---|---|
-| `CORS error` no browser | `allow_origins` não contém o domínio do frontend | Adicionar ao `.env` `CORS_ORIGINS` |
-| `403` no OPTIONS | Cloudflared ou proxy bloqueando preflight | Verificar `http2Origin: false`, adicionar `@app.options` catch-all |
-| `301/302` no OPTIONS | Redirect de HTTP→HTTPS no origin | Garantir que `service:` aponta direto para o container, não para um proxy externo |
-| `Connection refused` | Porta do backend errada no `config.yml` | Verificar se FastAPI está realmente na porta declarada (`8000`) |
-
----
-
-## 4.5 Checklist de Deploy
-
-- [ ] `credentials.json` do Cloudflared está em `./cloudflared/`
-- [ ] `.env` contém `CORS_ORIGINS` com o domínio do frontend
-- [ ] `config.yml` aponta `service:` para a porta correta do backend
-- [ ] `docker-compose.yml` tem `--proxy-headers --forwarded-allow-ips='*'`
-- [ ] Teste de preflight (`curl -X OPTIONS`) retorna 200/204 com headers CORS
-- [ ] Teste de GET real retorna 200 com `access-control-allow-origin`
+**Prod GymSite:** `getgymsite.com.br` + `api.getgymsite.com.br` · deploy = [`/deploy`](workflows/deploy.md).
 
 ---
 

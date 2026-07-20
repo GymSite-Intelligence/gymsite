@@ -1,56 +1,57 @@
 ---
-description: Run the complete test suite (backend + frontend + E2E) with coverage reports. Validates all critical paths before deploy.
+description: Gate mínimo de testes — pytest no venv do projeto + tsc no frontend. Sem scripts fantasmas.
 ---
 
 # Workflow: /test
 
-Execute the full test suite across all layers.
+> **Canônico:** [REGRAS_USO_GLOBAL §2#9](../rules/REGRAS_USO_GLOBAL.md) · [CLAUDE.md](../../CLAUDE.md) · skill `gymsite-testing` se existir.
+> **Não usar:** `pytest` solto (Python global 3.13 sem deps) · `npm run test:run` / Vitest / Playwright **como gate** (scripts ausentes ou não canônicos neste monorepo).
 
-## Steps
+Ambiente: **PowerShell**, raiz do repo `gymsite_intelligence`.
 
-1. **Pre-check** // turbo
-   ```bash
-   pyrefly check . && echo "Types OK"
-   cd frontend && npm run lint && echo "Lint OK"
-   ```
+## Gate mínimo (obrigatório — fecha a etapa)
 
-2. **Backend unit tests**
-   ```bash
-   pytest -x --tb=short
-   ```
+```powershell
+.\.venv\Scripts\python.exe -m pytest -x --tb=short
+cd frontend; npx tsc --noEmit; cd ..
+```
 
-3. **Backend coverage**
-   ```bash
-   pytest --cov=tools --cov=agents --cov=prospecting --cov-report=term-missing --cov-report=html
-   ```
-   - Target: ≥60% tools, ≥80% API endpoints
+Critério de sucesso: exit code **0** nos dois.
 
-4. **Frontend unit tests**
-   ```bash
-   cd frontend && npm run test:run
-   ```
+### Escopo focável
 
-5. **Frontend coverage**
-   ```bash
-   cd frontend && npx vitest run --coverage
-   ```
-   - Target: ≥50% components, ≥70% hooks
+```powershell
+# só tools / agents / um arquivo
+.\.venv\Scripts\python.exe -m pytest tools\test_aluguel_mrlr.py -x --tb=short
+.\.venv\Scripts\python.exe -m pytest tests\ -x --tb=short -q
+```
 
-6. **E2E tests**
-   ```bash
-   cd frontend && npx playwright test
-   ```
-   - Critical paths: login, criar relatório, prospecção, exportar CSV
+`pytest.ini` deve ter `asyncio_mode = auto` — sem isso, `async def test_*` falha em modo strict.
 
-7. **Generate report**
-   ```bash
-   echo "=== BACKEND COVERAGE ==="
-   cat htmlcov/index.html | grep -o '[0-9]\+%' | head -1
-   echo "=== FRONTEND COVERAGE ==="
-   cat frontend/coverage/index.html | grep -o '[0-9]\+%' | head -1
-   ```
+## Coverage (opcional, não bloqueia merge)
 
-## Safety
+```powershell
+.\.venv\Scripts\python.exe -m pytest --cov=tools --cov=agents --cov-report=term-missing -q
+```
 
-- ⚠️ E2E tests need the backend running locally
-- ⚠️ Playwright tests may modify DB state — use test database if possible
+Alvos históricos (≥60% tools) = aspiração, não gate hard.
+
+## Frontend — quando existir
+
+| Script | Status no monorepo |
+|---|---|
+| `npx tsc --noEmit` | **Gate** |
+| `npm run test:run` / Vitest | Só se `frontend/package.json` tiver o script — senão **pular** |
+| Playwright E2E | Só se config + specs existirem — senão **pular** |
+
+Não inventar Vitest/Playwright como passo bloqueante.
+
+## Anti-padrões
+
+- ❌ `pytest` / `python -m pytest` sem `.venv\Scripts\`
+- ❌ `npm run build` / `npm run dev` “pra testar”
+- ❌ Assumir que pre-commit rodou os mesmos gates
+
+## Saída
+
+Relatar: quantos testes ok/fail, arquivo que quebrou, `tsc` limpo ou lista de erros. Fix → **re-rodar o gate** antes de commit/deploy.

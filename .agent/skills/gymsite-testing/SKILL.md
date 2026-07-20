@@ -1,9 +1,11 @@
 ---
 name: gymsite-testing
-description: Testes automatizados para GymSite Intelligence. Use ao criar, modificar ou depurar testes de backend (pytest), testes de frontend (Vitest/Playwright), ou testes de integração. NÃO use para lógica de negócio, endpoints REST ou componentes UI sem testes.
+description: Testes automatizados para GymSite Intelligence. Use ao criar, modificar ou depurar testes de backend (pytest no .venv) ou gate frontend (tsc). Vitest/Playwright só quando scripts existirem. NÃO use para lógica de negócio sem testes.
 ---
 
 # GymSite Intelligence — Testes
+
+> **Gate canônico:** workflow [`/test`](../../workflows/test.md) — `.venv\Scripts\python.exe -m pytest` + `cd frontend && npx tsc --noEmit`. **Não** usar `pytest` solto nem Vitest/Playwright como bloqueio enquanto scripts não existirem em `frontend/package.json`.
 
 ## Contexto da Stack
 
