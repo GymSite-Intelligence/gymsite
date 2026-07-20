@@ -1,0 +1,20 @@
+responsavel_agente,tool_name,api_sku,multiplicidade,custo_usd_por_call,custo_brl_por_call,notas
+A3a_CompetitorIntel,descobrir_concorrentes_bairro,searchapi_google_maps,1x,0.004,0.0216,descoberta Maps do bairro
+A3a_CompetitorIntel,reviews_concorrente,searchapi_google_maps_reviews,ate_6x,0.004,0.0216,1 por concorrente no MAX_ENRIQUECIMENTO
+A3a_CompetitorIntel,pesquisar_horarios_pico,searchapi_popular_times,ate_6x,0.004,0.0216,1 por place_id enriquecido
+A3a_CompetitorIntel,competidor_ig,searchapi_instagram_profile,ate_6x,0.004,0.0216,1 se username resolvido
+A1_Geoscout_Listings,listing_cascata,searchapi_google_light,Nx,0.004,0.0216,cascata listings / planos
+A3a_CompetitorIntel,planos_precos,searchapi_google_light,Nx,0.004,0.0216,planos mensalidade por nome
+A3a_CompetitorIntel,descobrir_concorrentes_bairro,places_search_new,0a1x_fallback,0.032,0.1728,fallback se SearchAPI vazio
+A3a_CompetitorIntel,buscar_academias_nearby,places_search_new,0a1x,0.032,0.1728,nearby opcional
+A3a_CompetitorIntel,buscar_rede_geofenced,places_search_new,0aNx,0.032,0.1728,redes geo
+A1_Geoscout,geocode_google,geocoding,1x,0.005,0.027,cache 90d
+A1_Geoscout,buscar_pontos_comerciais,places_search_new,0aNx,0.032,0.1728,pontos comerciais
+A1_Geoscout,buscar_imoveis_texto,places_search_new,0aNx,0.032,0.1728,imoveis texto
+A3a_CompetitorIntel,obter_detalhes_contato,places_details_new,0aNx,0.02,0.108,details contato
+A3a_CompetitorIntel,obter_atributos_place,places_details_new,ate_6x,0.02,0.108,atributos por place enriquecido
+A2_Demo,places_aggregate,places_aggregate,0a1x,0.04,0.216,area insights caro
+A0_Context_LLM,llm_a0,gemini_flash,1x_llm,,,custo via tokens — ver telemetry
+A4_Financial_LLM,llm_a4,gemini_flash_or_pro,1x_llm,,,ver AUDITORIA_CUSTO_LLM
+A6_Consolidator_LLM,llm_a6,gemini_pro,1x_llm,,,maior bolso LLM tipico
+A9_Positioning_LLM,llm_a9,gemini_pro,1x_llm,,,LangCache recomendado

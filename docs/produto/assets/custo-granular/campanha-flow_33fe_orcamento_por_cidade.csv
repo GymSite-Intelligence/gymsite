@@ -1,0 +1,126 @@
+city,state,leads_na_cidade,se_1_relatorio_A3_por_cidade_creditos_mid,custo_usd_mid,custo_brl_mid,nota
+BRASILIA,DF,17,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SAO PAULO,SP,14,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+FORTALEZA,CE,9,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+RIO DE JANEIRO,RJ,6,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+GOIANIA,GO,5,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+ITAJAI,SC,5,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+NATAL,RN,5,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BALNEARIO CAMBORIU,SC,4,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+FLORIANOPOLIS,SC,4,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+RECIFE,PE,4,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BELO HORIZONTE,MG,3,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+GUARULHOS,SP,3,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+ITAUNA,MG,3,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+VITORIA,ES,3,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+APARECIDA DE GOIAN,GO,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BARRA VELHA,SC,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BARRAS,PI,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CAJUEIRO DA PRAIA,PI,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CANOINHAS,SC,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CAXIAS DO SUL,RS,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CURITIBA,PR,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+EUSEBIO,CE,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+GUAPIRAMA,PR,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+HORTOLANDIA,SP,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+JOAO PESSOA,PB,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+MACEIO,AL,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+OURO PRETO,MG,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PALHOCA,SC,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PALMAS,TO,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PARACATU,MG,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PAULISTA,PE,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PETROLINA,PE,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SANTAREM,PA,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SAO JOSE DOS CAMPO,SP,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SUZANO,SP,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+TERESINA,PI,2,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+AGUAS LINDAS DE GO,GO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+ARAGUAINA,TO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BALNEARIO PICARRAS,SC,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BARCARENA,PA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BARRETOS,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BARUERI,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BATATAIS,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BIGUACU,SC,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BIRIGUI,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BLUMENAU,SC,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BOM DESPACHO,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+BOTUCATU,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CACHOEIRO DE ITAPE,ES,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CAICARA DO RIO DO,RN,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CAMPO BOM,RS,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CANAA DOS CARAJAS,PA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CAPELA,AL,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CARAPICUIBA,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CARUARU,PE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CASCAVEL,PR,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CATANDUVA,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CAUCAIA,CE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CEDRAL,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CHAPECO,SC,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+COLOMBO,PR,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CRUZ DAS ALMAS,BA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+CUIABA,MT,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+EXTREMOZ,RN,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+FARROUPILHA,RS,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+FRANCA,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+FRANCISCO BELTRAO,PR,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+GARIBALDI,RS,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+GOIANINHA,RN,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+IGUATU,CE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+IPUBI,PE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+IRECE,BA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+ITAITUBA,PA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+JABOATAO DOS GUARA,PE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+JATAI,GO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+JUAZEIRO DO NORTE,CE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+JUNDIAI,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+MARACANAU,CE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+MARIANA,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+MOGI MIRIM,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+MONTES CLAROS,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+NITEROI,RJ,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+NOVA VICOSA,BA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PALMARES,PE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PARAUAPEBAS,PA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PAULO AFONSO,BA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PAULO LOPES,SC,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PETROPOLIS,RJ,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+POCOS DE CALDAS,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PONTES E LACERDA,MT,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PORTO NACIONAL,TO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PORTO VELHO,RO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PRATA,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PRESIDENTE PRUDENT,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+PRIMAVERA DO LESTE,MT,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+RESENDE,RJ,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+RIO AZUL,PR,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+RIO CLARO,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+RONDONOPOLIS,MT,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SALVADOR,BA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SANTA MARIA DO PAR,PA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SANTANA DO IPANEMA,AL,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SANTO ANTONIO DE J,BA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SANTO ANTONIO DO D,GO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SAO BERNARDO DO CA,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SAO CARLOS,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SAO JOAO EVANGELIS,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SAO LOURENCO,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SAO LUIS,MA,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SENADOR CANEDO,GO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SERRA TALHADA,PE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SINOP,MT,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SIQUEIRA CAMPOS,PR,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SOBRAL,CE,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SORRISO,MT,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+SÃO PAULO,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+TATUI,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+TAUBATE,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+TOCANTINS,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+UBATUBA,SP,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+UBERLANDIA,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+VALPARAISO DE GOIA,GO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+VARGINHA,MG,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+VILHENA,RO,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
+VOLTA REDONDA,RJ,1,20,0.08,0.432,Projecao SearchAPI apenas; LLM/Places a parte. Score nao vem deste arquivo.
