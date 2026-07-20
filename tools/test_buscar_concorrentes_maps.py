@@ -1,8 +1,12 @@
-"""Formato 1: query tipada = link Maps; gates tipo+bairro determinísticos."""
+"""Formato 1: query tipada = link Maps; gates tipo+bairro; fold acento."""
 from __future__ import annotations
 
 import tools.competitor_tools as ct
 from agents_site.tools import buscar_concorrentes
+
+# Use escapes so Windows/editor encoding cannot corrupt ? ? ?
+_COCO = "Coc\u00f3"  # Coc?
+_QUERY_FOLD = "academia no bairro Coco, Fortaleza - CE"
 
 
 def _fake_place(title: str, address: str, *, place_id: str = "ChIJx", tipos=None) -> dict:
@@ -18,32 +22,46 @@ def _fake_place(title: str, address: str, *, place_id: str = "ChIJx", tipos=None
     }
 
 
+def test_query_formato1_fold_acento_unifica_coco():
+    q_accent = ct._query_formato1("academia", _COCO, "Fortaleza", "CE")
+    q_plain = ct._query_formato1("academia", "Coco", "Fortaleza", "CE")
+    assert q_accent == q_plain == _QUERY_FOLD
+    url = ct._maps_search_url_from_query(q_accent)
+    assert "Coco" in url or "coco" in url.lower()
+    assert "Coc%C3%B3" not in url  # acento nao fragmenta cache/URL
+
+
 def test_query_formato1_e_url_1_a_1():
-    q = ct._query_formato1("academia", "Cocó", "Fortaleza", "CE")
-    assert q == "academia no bairro Cocó, Fortaleza - CE"
+    q = ct._query_formato1("academia", _COCO, "Fortaleza", "CE")
+    assert q == _QUERY_FOLD
     url = ct._maps_search_url_from_query(q)
-    assert url == (
-        "https://www.google.com/maps/search/"
-        "academia+no+bairro+Coc%C3%B3%2C+Fortaleza+-+CE/"
-    )
+    assert url == ct._maps_search_url_from_query(_QUERY_FOLD)
 
 
 def test_buscar_concorrentes_formato1_query_gates_e_url(monkeypatch):
     captured: dict = {}
+    addr = f"R. X - {_COCO}, Fortaleza - CE"
 
     def fake_ts(query: str, **kwargs):
         captured["query"] = query
         captured["kwargs"] = kwargs
         return [
-            _fake_place("Academia Uniq Club Cocó", "R. X - Cocó, Fortaleza - CE", place_id="a"),
-            _fake_place("Keep in shape Academia", "R. Z - Cocó, Fortaleza - CE", place_id="d"),
+            _fake_place(f"Academia Uniq Club {_COCO}", addr, place_id="a"),
+            _fake_place("Keep in shape Academia", f"R. Z - {_COCO}, Fortaleza - CE", place_id="d"),
+            _fake_place("Parque Esportes", f"Av. Y - {_COCO}, Fortaleza - CE", place_id="e"),
+            _fake_place("CT Greenlife", f"R. W - {_COCO}, Fortaleza - CE", place_id="f"),
             _fake_place(
-                "REK CrossFit Cocó",
-                "R. Y - Cocó, Fortaleza - CE",
+                f"REK CrossFit {_COCO}",
+                f"R. Y - {_COCO}, Fortaleza - CE",
                 place_id="b",
                 tipos=["gym", "Crossfit"],
             ),
             _fake_place("Max Forma", "Av. Z - Aldeota, Fortaleza - CE", place_id="c"),
+            _fake_place(
+                "S3 - Treinamento Personalizado",
+                f"R. A - {_COCO}, Fortaleza - CE",
+                place_id="s3",
+            ),
         ]
 
     monkeypatch.setattr(ct, "_places_textsearch", fake_ts)
@@ -60,13 +78,18 @@ def test_buscar_concorrentes_formato1_query_gates_e_url(monkeypatch):
         lambda *a, **k: {"status": "ok", "concorrentes": []},
     )
 
-    out = buscar_concorrentes("Fortaleza", "Cocó", "CE", "academia")
-    assert captured["query"] == "academia no bairro Cocó, Fortaleza - CE"
-    assert out["query"] == "academia no bairro Cocó, Fortaleza - CE"
+    out = buscar_concorrentes("Fortaleza", _COCO, "CE", "academia")
+    assert captured["query"] == _QUERY_FOLD
+    assert out["query"] == _QUERY_FOLD
     assert out["maps_smoke_url"] == ct._maps_search_url_from_query(out["query"])
-    assert out["total_concorrentes"] == 2
     nomes = {c["nome"] for c in out["concorrentes"]}
-    assert "Academia Uniq Club Cocó" in nomes
+    assert f"Academia Uniq Club {_COCO}" in nomes
     assert "Keep in shape Academia" in nomes
-    assert "REK CrossFit Cocó" not in nomes
+    assert "Parque Esportes" in nomes
+    assert "CT Greenlife" in nomes
+    assert f"REK CrossFit {_COCO}" not in nomes
+    assert "S3 - Treinamento Personalizado" not in nomes
+    assert "Max Forma" not in nomes
+    assert out["total_concorrentes"] == 4
     assert "crossfit" in out["exclude_aplicado"]
+    assert "personalizado" in out["exclude_aplicado"]
