@@ -162,3 +162,78 @@ Maps Retest (mesmo run): `buscar_imoveis_texto` só `searchapi_google_maps` — 
 FinancialEstimator **acabou** em 03:02:26 (`etapas_concluidas`), mas `etapa_atual` ficou `FinancialEstimator` ~30 min. Causa: bloco paralelo A2‖A3a‖A4 — último `progress_before` vence; A4 curto sobrescreve label enquanto **CompetitorSearch** ainda roda. Stepper ≠ long-pole real. Filho: Act-on `pipeline_progress` (não sobrescrever se outra etapa paralela ainda em `_inicio_etapa`, ou priorizar A3a).
 
 **Caso wall-clock A0/deploy = Closed.** NC A3a latência continua em [`auditoria-tools`](auditoria-tools.md) (filho aberto).
+
+---
+
+## Caso — Fontes / pipeline · amostra `3862ba63` (jul/2026)
+
+| Campo | Valor |
+|---|---|
+| Estado | **Corrective** (Approver: Marcelo · 2026-07-19) |
+| Tipo | Interna periódica · domínio **Fontes / pipeline** |
+| Amostra | `3862ba63-5ba5-49a4-8184-de0a5c698125` · Cocó/Fortaleza · `done` · wall ~526s · veredito REPROVADO |
+| Critérios | [`conferencia-fontes-pipeline.md`](conferencia-fontes-pipeline.md) · [`pipeline-fontes-deterministicas.md`](pipeline-fontes-deterministicas.md) |
+| Evidência | ledger `gymsite.relatorio_api_calls` · `relatorio_outputs` · `competidores` · logs A3a enrich (pico) |
+
+### Evidence — ledger `api_sku`
+
+| api_sku | calls | tool_name (agregado) | Nota vs política |
+|---:|---:|---|---|
+| `searchapi_google_maps` | 20 | `buscar_imoveis_texto` 11 · `descobrir_concorrentes_bairro` 8 · `buscar_pontos_comerciais` 1 | Listing **PASS** (só SearchAPI) |
+| `places_search_new` | 7 | **só** `descobrir_concorrentes_bairro` | Fallback Places quando SearchAPI vazio — **dual SKU** no mesmo agente |
+| `searchapi_google_maps_place` | 6 | `searchapi_maps_place` | Place/reviews/pico path SearchAPI |
+| `searchapi_google_light` | 3 | `planos_precos` | Planos via light (site-first não persistiu) |
+| `geocoding` | 1 | `geocode_google` | OK |
+
+- Coluna `motivo_fallback` **ausente** no schema ledger (dívida doc/telemetria).
+- Sem SKU Playwright/scrape no ledger deste run.
+- Sem SKU `rent_sqm` / grounding de aluguel.
+
+### Evidence — aluguel / demografia / CNPJ
+
+| Dado | Valor · base · fonte (amostra) | Verdict |
+|---|---|---|
+| Aluguel OPEX | `aluguel_mensal=25440` · `fonte_aluguel=MRLR IBAPE-GO (R²=0,8633) — espelhos municipio_pib + renda_bairro` · `queries_aluguel_com_dados=0` | **PASS** Tier 0 MRLR |
+| Demografia pop | `60165` · `censo_n_setores=105` · `populacao_fonte=IBGE Censo 2022…` | **PASS** (janela implícita 2022 via renda) |
+| Renda | `4952.75` · `renda_fonte=IBGE… Responsável` · `renda_data_referencia=2022` | **PASS** (proxy responsável — rótulo ok) |
+| CNPJ entrantes | `fonte=RFB CNPJ Aberto` · `status=ok` · Places validate **off** | **PASS** |
+| CNO | `status=nao_configurado` · `CNO_DATA_DIR ausente` | **Médio** (falha honesta) |
+| Listing→aluguel | candidatos=0; listing ledger só SearchAPI; aluguel ≠ portal | **PASS** (não alimentou OPEX) |
+
+### Evidence — A3a persistido vs runtime
+
+| Sinal | Runtime (log enrich) | Persistido `competidores` (2 rows) |
+|---|---|---|
+| Pico | `pico` 1.5–3.7s · `playwright: 0` | `horarios_pico` / `pico_semanal` = **null** |
+| Planos | `planos` 10–20s · `planos=False` | `planos_precos` = **null** |
+| Reviews | SearchAPI path | presentes · `categoria_dor` card (substring) |
+
+### Findings
+
+| Sev | Gap | Evidência | Critério |
+|---|---|---|---|
+| **Alto** | Dual SKU concorrentes: SearchAPI **8** + Places **7** no mesmo tool | ledger `descobrir_concorrentes_bairro` | SearchAPI primário; Places só fallback — taxa de fallback ~47% das calls Places vs SearchAPI no agente |
+| **Alto** | Pico coletado no enrich **não chega** ao `competidores` | log `[A3a enrich timing]` vs colunas null | Número/fonte no relatório = tool; dado some na persistência |
+| **Médio** | Planos: `google_light` rodou (3) mas `planos_precos` null · site-first `planos=False` | ledger + competidores | Oferta site/IG no caminho crítico |
+| **Médio** | Ledger sem `motivo_fallback` | schema `relatorio_api_calls` | Telemetria de fallback Places opaca |
+| **Médio** | CNO `nao_configurado` no golden Cocó | `obras_cno_em_curso` | CNPJ/CNO determinístico incompleto em prod |
+| **Baixo** | `perfil_sexo_publico` granularidade **município** (647k) ao lado de pop bairro 60k | `demografia_bairro` | Risco de leitura cruzada sem carimbo de escala no PDF/UI |
+| **Baixo** | `censo_n_setores=105` vs `perfil_idade_sexo_bairro.n_setores=183` | mesmo JSON | Duas bases de setor sem rótulo unificado |
+
+### PASS (domínio Fontes)
+
+1. Aluguel viabilidade = **MRLR** (não listing, não SearchAPI rent, não A7).
+2. Listing (`buscar_imoveis_texto`) = **só** `searchapi_google_maps` (Retest alinhado ao caso Maps Closed).
+3. Demografia / CNPJ com fonte RFB/IBGE explícita.
+4. Pico path runtime sem Playwright (NC latência A3a parcial fechada neste ângulo).
+
+### Corrective (proposto — não executado)
+
+1. Instrumentar `motivo_fallback` (ou log estruturado) em `_places_textsearch` quando SearchAPI→Places; investigar por que 7 queries Cocó caíram no Places.
+2. Act-on persistência A3a: `horarios_pico` / `planos_precos` do enrich → `competidores` (e PDF).
+3. Site-first planos: por que `website` presente e `planos=False` (Smart Fit ausente neste persist; Parque/VS sem preço público).
+4. Ops: garantir `CNO_DATA_DIR` no worker ou selo ORANGE explícito no PDF.
+
+### Retest
+
+Pendente pós-Corrective — mesma amostra Cocó ou novo UUID; checklist: Places calls≈0 com SearchAPI saudável · pico/planos non-null em `competidores` · `fonte_aluguel` continua MRLR.

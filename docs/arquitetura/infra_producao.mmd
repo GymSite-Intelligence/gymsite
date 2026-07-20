@@ -1,0 +1,41 @@
+flowchart TB
+  subgraph users [Usuarios]
+    U[Browser]
+  end
+
+  subgraph cf [Cloudflare]
+    DNS[DNS + WAF]
+    PagesApp["Pages: getgymsite.com.br<br/>frontend monorepo"]
+    PagesLand["Pages: gymsite.com.br<br/>landing gym-insight-hub"]
+  end
+
+  subgraph gcp [GCP us-central1]
+    API["Cloud Run: gymsite-api<br/>FastAPI + ADK A0-A9"]
+    Worker["Cloud Run: gymsite-worker<br/>mesma imagem, deploy manual"]
+    Vertex[Vertex AI / Gemini]
+  end
+
+  subgraph data [Dados externos]
+    SB[(Supabase Postgres)]
+    Redis[(Redis Cloud)]
+    SearchAPI[SearchAPI Maps]
+    Apollo[Apollo CRM]
+  end
+
+  U --> DNS
+  DNS --> PagesApp
+  DNS --> PagesLand
+  DNS --> API
+  PagesApp -->|VITE_API_BASE| API
+  PagesLand -->|POST /api/leads| API
+  API --> Worker
+  API --> Vertex
+  Worker --> Vertex
+  API --> SB
+  API --> Redis
+  API --> SearchAPI
+  API --> Apollo
+
+  classDef edge fill:#181c22,stroke:#84cc01,color:#eef1f4
+  classDef cloud fill:#1c212a,stroke:#2b323d,color:#eef1f4
+  class PagesApp,PagesLand,API,Worker,Vertex,SB,Redis,SearchAPI,Apollo,DNS edge

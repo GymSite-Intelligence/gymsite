@@ -1,6 +1,7 @@
 import { API_BASE, supabase } from '@/lib/supabase'
 import type { AgenteApiId } from '@/config/site-agent-map'
 import type { ConsultorPesquisas } from '@/hooks/useConsultorChat'
+import type { CarimboCitacao } from '@/components/chat/CitationStamp'
 
 export interface PollConsultorMensagem {
   role: 'user' | 'assistant'
@@ -8,6 +9,7 @@ export interface PollConsultorMensagem {
   created_at: string
   agente?: AgenteApiId | null
   tool_calls?: { ferramenta: string; status: string; resumo: string }[]
+  citacoes?: CarimboCitacao[]
 }
 
 export interface PollConsultorResponse {

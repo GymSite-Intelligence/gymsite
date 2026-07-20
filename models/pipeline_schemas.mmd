@@ -1,0 +1,65 @@
+classDiagram
+  direction TB
+
+  class _Lenient {
+    <<BaseModel>>
+    +extra = allow
+  }
+
+  class A9Output {
+    <<A9 PositioningStrategist>>
+    +veredito_posicionamento: str?
+    +gaps_identificados: list?
+    +recomendacao_ticket: dict?
+    +framework_errc: dict?
+    +janela_de_entrada: dict?
+    +markdown: str?
+    +zona_percepcao: int?
+    +zona_nome: str?
+    +alertas_financeiros_fiscais: list?
+  }
+
+  class AnaliseDemografica {
+    <<A2 DemoAnalyst>>
+    +codigo_ibge: Any?
+    +score_demografico: float?
+    +publico_potencial_fitness: Any?
+    +insights: list?
+    +perfil_sexo_publico: dict?
+    +densidade_setor: dict?
+  }
+
+  class InteligenciaCompetitiva {
+    <<A3b CompetitorAnalysis>>
+    +academias_analisadas: list?
+    +nivel_saturacao: str?
+    +score_concorrencia: float?
+    +rating_medio_concorrentes: float?
+    +total_concorrentes_analisados: int?
+  }
+
+  class MarketResearch {
+    <<A7 MarketResearch>>
+    note: markdown narrativo + "## Fontes"
+  }
+
+  _Lenient <|-- A9Output
+  _Lenient <|-- AnaliseDemografica
+  _Lenient <|-- InteligenciaCompetitiva
+  _Lenient <|-- MarketResearch
+
+  class validar_lenient {
+    <<function>>
+    +modelo: type[BaseModel]
+    +dado: Any
+    +agente: str
+    --
+    valida + loga divergência
+    SEMPRE retorna dado original
+    nunca derruba pipeline
+  }
+
+  validar_lenient ..> A9Output : valida
+  validar_lenient ..> AnaliseDemografica : valida
+  validar_lenient ..> InteligenciaCompetitiva : valida
+  validar_lenient ..> MarketResearch : valida

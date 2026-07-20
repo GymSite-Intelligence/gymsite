@@ -48,8 +48,10 @@ Variáveis de ambiente necessárias:
 
 - `APOLLO_API_KEY` — chave da API do Apollo (obrigatória para ativar).
 - `APOLLO_BASE_URL` — opcional, padrão para a API pública do Apollo.
-- `APOLLO_SEQUENCE_ID` — opcional, sequência para enrollment automático.
+- `APOLLO_SEQUENCE_ID` — sequence/campanha nurture pós-lead (obrigatório pro enrollment).
+- `APOLLO_EMAIL_ACCOUNT_ID` — caixa remetente Apollo (obrigatório pro enrollment; sem ela só upsert contact).
 - `APOLLO_SYNC_ENABLED` — liga/desliga o sync sem remover a chave.
+- `GYMSITE_SCHEMA_SEP=1` / `SHARED_SCHEMA_SEP=1` — roteamento `tbl()` (obrigatório em prod).
 
 ## Frente 3 — Subdomínios (ação manual)
 

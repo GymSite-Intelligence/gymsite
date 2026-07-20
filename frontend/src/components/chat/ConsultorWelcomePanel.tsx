@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import { ChatMiniCard } from '@/components/chat/ChatMiniCard'
 import { ConsultorAgentAvatar } from '@/components/chat/ConsultorAgentAvatar'
-import { copyDegustacao, type Especialista } from '@/config/consultor-agentes'
+import { metaConsultor, type Especialista } from '@/config/consultor-agentes'
 import { CONSULTOR_COPY } from '@/config/gymsite-design-system'
 
 interface ConsultorWelcomePanelProps {
@@ -10,14 +10,12 @@ interface ConsultorWelcomePanelProps {
 }
 
 export function ConsultorWelcomePanel({ especialista, onSend }: ConsultorWelcomePanelProps) {
-  const meta = copyDegustacao(especialista.id)
+  const meta = metaConsultor(especialista.id)
   const contextoPesquisas = 'contextoPesquisas' in meta ? meta.contextoPesquisas : undefined
 
   return (
     <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center px-2 py-8 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border bg-card shadow-inner">
-        <ConsultorAgentAvatar Icone={especialista.Icone} isActive size="tile" />
-      </div>
+      <ConsultorAgentAvatar Icone={especialista.Icone} isActive size="hero" className="mb-4" />
 
       <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
         {CONSULTOR_COPY.tagline}

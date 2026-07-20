@@ -787,9 +787,21 @@ def _places_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
     if backend != "places":
         res = _searchapi_maps_textsearch(query, max_results=max_results)
         if res:
+            for p in res:
+                if isinstance(p, dict):
+                    p["_fonte_textsearch"] = "searchapi_google_maps"
             return res
-        logger.debug("searchapi google_maps vazio p/ '%s' → fallback Places", query)
-    return _places_textsearch_google(query, max_results=max_results)
+        motivo = "searchapi_vazio_ou_erro"
+        logger.warning(
+            "maps_textsearch fallback Places query=%r motivo=%s",
+            (query or "")[:120],
+            motivo,
+        )
+    out = _places_textsearch_google(query, max_results=max_results)
+    for p in out:
+        if isinstance(p, dict):
+            p["_fonte_textsearch"] = "places_search_new"
+    return out
 
 
 def _places_textsearch_google(query: str, *, max_results: int = 20) -> list[dict]:
@@ -889,6 +901,7 @@ def _descobrir_concorrentes_bairro(
         loc = p.get("location") or {}
         plat, plng = loc.get("latitude", 0.0), loc.get("longitude", 0.0)
         periodos = (p.get("regularOpeningHours") or {}).get("weekdayDescriptions", [])
+        backend = p.get("_fonte_textsearch") or "places_textsearch"
         out.append({
             "place_id": p.get("id", ""),
             "nome": nome,
@@ -905,7 +918,7 @@ def _descobrir_concorrentes_bairro(
             "google_maps_uri": p.get("googleMapsUri", ""),
             "tem_24h": any("24" in h for h in periodos) if periodos else False,
             "horarios": periodos[:3],
-            "fonte_busca": "places_textsearch",
+            "fonte_busca": backend,
             "_query_formato1": query,
         })
     cruzados = _cross_parque_contato(out, cidade, uf, bairro)
@@ -2116,41 +2129,72 @@ def _buscar_rede_geofenced(
     """
     Busca a unidade MAIS PRÓXIMA de uma rede dentro do raio do bairro alvo.
 
-    Existe pra corrigir bug encontrado em Eusébio/CE (2026-05-11): a busca
-    expandida anterior chamava `buscar_academias(rede, cidade, raio)`, mas o
-    geocode interno usava `f"{rede}, {cidade}"` como endereço, caindo numa
-    unidade da rede em Fortaleza-centro (~15km de Eusébio). Resultado: trazia
-    Selfit/Dumbbells/Porão de Fortaleza como "concorrentes de Eusébio".
-
-    Fix: usar Places Text Search com `locationBias.circle` centrado no
-    BAIRRO ALVO + filtro Haversine rígido pós-fetch. Se nenhuma unidade
-    da rede estiver dentro do raio, retorna None — nada é trazido de fora.
-
-    Args:
-        rede: nome da rede (ex: "Smart Fit", "Selfit").
-        lat_alvo, lng_alvo: coordenadas do bairro/cidade alvo da análise.
-        raio_max_metros: raio máximo (Haversine) — matches fora são descartados.
-
-    Returns:
-        Dict do match mais próximo, ou None se nenhuma unidade no raio.
+    SearchAPI google_maps primeiro; Places searchText só se SearchAPI vazio
+    ou sem match no raio (Haversine). Nada é trazido de fora do raio.
     """
+    raio_km = raio_max_metros / 1000.0
+    query = f"{rede} academia"
+
+    def _pick_from_adapted(places: list[dict], *, fonte: str) -> dict | None:
+        candidatos_no_raio = []
+        for p in places:
+            nome = (p.get("displayName") or {}).get("text", "") or ""
+            if not _matches_rede(nome, rede):
+                continue
+            plat = (p.get("location") or {}).get("latitude", 0)
+            plng = (p.get("location") or {}).get("longitude", 0)
+            dist = calcular_distancia_km(lat_alvo, lng_alvo, plat, plng)
+            if dist > raio_km:
+                continue
+            horarios = p.get("regularOpeningHours", {}) or {}
+            periodos = horarios.get("weekdayDescriptions", []) if horarios else []
+            candidatos_no_raio.append({
+                "place_id": p.get("id", ""),
+                "nome": nome,
+                "endereco": p.get("formattedAddress", ""),
+                "lat": plat,
+                "lng": plng,
+                "distancia_km": round(dist, 2),
+                "rating": p.get("rating"),
+                "num_avaliacoes": p.get("userRatingCount", 0),
+                "nivel_preco": p.get("priceLevel", ""),
+                "status": p.get("businessStatus", ""),
+                "tipos": p.get("types", []),
+                "telefone": p.get("nationalPhoneNumber", ""),
+                "website": p.get("websiteUri", ""),
+                "tem_24h": any("24" in h for h in periodos) if periodos else False,
+                "horarios": periodos[:3],
+                "fonte_busca": fonte,
+            })
+        if not candidatos_no_raio:
+            return None
+        candidatos_no_raio.sort(key=lambda x: x["distancia_km"])
+        return candidatos_no_raio[0]
+
+    sa = _searchapi_maps_textsearch(query, max_results=10)
+    hit = _pick_from_adapted(sa, fonte="searchapi_google_maps")
+    if hit:
+        return hit
+
     if not get_google_maps_api_key():
         return None
+
+    logger.warning(
+        "rede_geofenced fallback Places rede=%r motivo=searchapi_vazio_ou_sem_match_raio",
+        (rede or "")[:80],
+    )
 
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": get_google_maps_api_key(),
         "X-Goog-FieldMask": (
-            # Validação de presença da rede no raio: só identidade + posição.
-            # Contact/hours/priceLevel cortados — quem usa o dado completo é
-            # a busca principal de concorrentes, não este check booleano.
             "places.id,places.displayName,places.formattedAddress,"
             "places.location,places.rating,places.userRatingCount,"
             "places.businessStatus,places.types"
         ),
     }
     body = {
-        "textQuery": f"{rede} academia",
+        "textQuery": query,
         "includedType": "gym",
         "locationBias": {"circle": {
             "center": {"latitude": lat_alvo, "longitude": lng_alvo},
@@ -2167,44 +2211,24 @@ def _buscar_rede_geofenced(
     except Exception:
         return None
 
-    raio_km = raio_max_metros / 1000.0
-    candidatos_no_raio = []
+    adapted = []
     for p in data.get("places", []):
-        nome = (p.get("displayName") or {}).get("text", "") or ""
-        if not _matches_rede(nome, rede):
-            continue  # text search às vezes retorna academias de outras redes
-        plat = (p.get("location") or {}).get("latitude", 0)
-        plng = (p.get("location") or {}).get("longitude", 0)
-        dist = calcular_distancia_km(lat_alvo, lng_alvo, plat, plng)
-        if dist > raio_km:
-            continue  # safety net Haversine — locationBias é só viés, não restrição
-        horarios = p.get("regularOpeningHours", {}) or {}
-        periodos = horarios.get("weekdayDescriptions", []) if horarios else []
-        candidatos_no_raio.append({
-            "place_id": p.get("id", ""),
-            "nome": nome,
-            "endereco": p.get("formattedAddress", ""),
-            "lat": plat,
-            "lng": plng,
-            "distancia_km": round(dist, 2),
+        adapted.append({
+            "id": p.get("id", ""),
+            "displayName": p.get("displayName") or {},
+            "formattedAddress": p.get("formattedAddress", ""),
+            "location": p.get("location") or {},
             "rating": p.get("rating"),
-            "num_avaliacoes": p.get("userRatingCount", 0),
-            "nivel_preco": p.get("priceLevel", ""),
-            "status": p.get("businessStatus", ""),
-            "tipos": p.get("types", []),
-            "telefone": p.get("nationalPhoneNumber", ""),
-            "website": p.get("websiteUri", ""),
-            "tem_24h": any("24" in h for h in periodos) if periodos else False,
-            "horarios": periodos[:3],
+            "userRatingCount": p.get("userRatingCount", 0),
+            "priceLevel": p.get("priceLevel", ""),
+            "businessStatus": p.get("businessStatus", ""),
+            "types": p.get("types", []),
+            "nationalPhoneNumber": p.get("nationalPhoneNumber", ""),
+            "websiteUri": p.get("websiteUri", ""),
+            "regularOpeningHours": p.get("regularOpeningHours") or {},
         })
+    return _pick_from_adapted(adapted, fonte="places_search_new")
 
-    if not candidatos_no_raio:
-        return None
-
-    # Escolhe a unidade MAIS PRÓXIMA — quando a rede tem múltiplas filiais,
-    # essa é a competidora real (não a sede ou uma unidade aleatória).
-    candidatos_no_raio.sort(key=lambda x: x["distancia_km"])
-    return candidatos_no_raio[0]
 
 
 def buscar_concorrentes_balanceados(
@@ -2243,7 +2267,10 @@ def buscar_concorrentes_balanceados(
     if _st0 is not None:
         _mc0 = _parse_market_context(_st0.get("market_context"))
         if isinstance(_mc0, dict):
-            _in0 = _mc0.get("market_context") if isinstance(_mc0.get("market_context"), dict) else _mc0
+            _in0: dict = _mc0
+            _inner_mc = _mc0.get("market_context")
+            if isinstance(_inner_mc, dict):
+                _in0 = _inner_mc
             _tn = (_in0.get("tipo_negocio") or "academia")
             _uf = (_in0.get("uf") or _st0.get("uf") or "")
     busca_nearby = buscar_academias(bairro, cidade, raio_metros, uf=_uf, tipo_negocio=_tn)
@@ -3183,13 +3210,18 @@ def analisar_concorrentes_completo(tool_context) -> dict:
     # Marciais/Pilates num relatório de "academia"). Mesma salvaguarda <2.
     tipo_negocio = ""
     try:
-        st = getattr(tool_context, "state", {}) or {}
-        ip = st.get("input_params") if isinstance(st.get("input_params"), dict) else {}
+        _st_raw = getattr(tool_context, "state", None)
+        st: dict = _st_raw if isinstance(_st_raw, dict) else {}
+        _ip = st.get("input_params")
+        ip: dict = _ip if isinstance(_ip, dict) else {}
         tipo_negocio = (st.get("tipo_negocio") or ip.get("tipo_negocio") or "").strip()
         if not tipo_negocio:
             mc = _parse_market_context(st.get("market_context"))
-            inner = mc.get("market_context") if isinstance(mc.get("market_context"), dict) else mc
-            tipo_negocio = (inner.get("tipo_negocio") if isinstance(inner, dict) else "") or ""
+            inner: dict = mc
+            _inner_mc = mc.get("market_context")
+            if isinstance(_inner_mc, dict):
+                inner = _inner_mc
+            tipo_negocio = (inner.get("tipo_negocio") or "") or ""
     except Exception:
         tipo_negocio = ""
     _tn_norm = (tipo_negocio or "").strip().lower()

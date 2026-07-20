@@ -1,68 +1,83 @@
-# HANDOFF — Frente Apollo (sequências) + Marketing
+# HANDOFF — Apollo (landing leads) + Marketing
 
-> Criado em 2026-07-09 pra transferir esta frente pra um chat/agente paralelo.
-> **Primeira instrução ao novo agente:** ler `CLAUDE.md` (raiz) e este arquivo;
-> carregar a skill `gymsite-prospecting` sob demanda. NÃO mexer na frente de
-> auditoria de relatório (quadros/motor financeiro) — ela corre em outro chat.
+> Atualizado 2026-07-13. Alinhado a `.agent/rules/P-000_REGRA_MESTRA_MUDANCA.md`.
+> **Dois funis Apollo distintos — não misturar.**
 
-## 1. Objetivo da frente
+## 1. Dois funis (P-000 §2 — ler fonte antes de mexer)
 
-Retomar duas coisas que ficaram paradas:
-1. **Sequência Apollo** — cadência de e-mails pra leads/oportunidades da
-   prospecção (engine CNPJ×CNO gera oportunidades; Apollo faz enrichment,
-   sync de CRM e sequências de outreach).
-2. **Marketing** — material/plano que estava em `docs/marketing/` (pasta criada,
-   conteúdo a inventariar) e a ponte prospecção → campanha.
+| Funil | Entrada | Código | Apollo |
+|-------|---------|--------|--------|
+| **Landing / análise grátis** | Form, `/api/leads`, `site_agent._capturar_lead` | `tools/apollo_client.py` | Contact upsert + **sequence** (nurture) |
+| **Scout CNPJ×CNO** | `oportunidades_prospeccao` | `services/apollo_crm_sync.py` | Person/Account CRM enrichment |
 
-## 2. O que JÁ EXISTE no repo (ler antes de criar qualquer coisa)
+`sequence-load` (MCP/skill) = passos manuais do funil **landing** já codificados em `apollo_client._add_to_sequence`.
 
-| Artefato | O que faz |
-|---|---|
-| `tools/apollo_client.py` | Cliente da API Apollo (auth, chamadas base) |
-| `tools/apollo_enrichment.py` + `tools/test_apollo_enrichment.py` | Enrichment de contatos/empresas das oportunidades |
-| `services/apollo_crm_sync.py` | Sync de oportunidades da prospecção → Apollo CRM |
-| `db/migrations/20250610_apollo_crm_sync_oportunidades.sql` | Colunas/estado do sync no banco |
-| `docs/MODULO_PROSPECCAO.md` | Doc do módulo de prospecção (fluxo, status de oportunidade) |
-| `prospecting/` | Engine CNPJ×CNO + webhooks |
-| `.agent/skills/gymsite-prospecting/SKILL.md` | Skill com convenções da frente |
-| MCP Apollo conectado no Cowork | tools `apollo_*` (sequences, emailer_campaigns, contacts, tasks…) |
+## 2. E2E landing → sequence (checklist pré-teste)
 
-Estado da SEQUÊNCIA: foi começada em chat anterior — **inventariar primeiro**:
-`apollo_emailer_campaigns_search` (MCP) lista sequências existentes na conta;
-conferir o que já foi criado lá antes de criar de novo.
+**Banco (Supabase `epgedaiukjippepujuzc`):**
+- `gymsite.analise_gratuita` existe + Cloud Run com `GYMSITE_SCHEMA_SEP=1`
+- `leads` via `tbl(sb, "leads")` — ver `tools/db_schema.py`
 
-## 3. Regras da casa que valem aqui (resumo do CLAUDE.md)
+**Cloud Run `gymsite-api` — três envs Apollo obrigatórias pro E2E completo:**
 
-- Chaves/tokens NUNCA em chat ou commit; `.env` local só.
-- Backend testa com `.venv\Scripts\python.exe -m pytest` (pytest solto quebra).
-- Toda mudança fecha com teste ANTES do commit.
-- Banco: projeto Supabase `epgedaiukjippepujuzc`, schema `gymsite`
-  (compartilhado com Vectra Cargo — cuidado). Dinheiro em centavos, UTC.
-- ⚠️ Coluna nova em tabela do gymsite → atualizar a VIEW espelho em `public`
-  (lista explícita de colunas; senão PGRST204 e a gravação falha em silêncio).
-- Git: branch a partir de `origin/main` (`git checkout -b feat/x origin/main` —
-  a árvore local tem frente paralela suja, não usar `checkout main`).
-  PR pra main; checks do GitHub Actions estão QUEBRADOS por billing — ignorar;
-  o deploy real é Cloud Build (projeto `gen-lang-client-0106729343`, us-central1).
-- E-mails/sequências: NUNCA ativar envio sem aprovação explícita do Marcelo —
-  criar em rascunho/pausado e pedir revisão.
+| Env | Função | Estado jul/13 |
+|-----|--------|---------------|
+| `APOLLO_API_KEY` | auth | ✅ setada |
+| `APOLLO_SEQUENCE_ID` | campanha (`6a4ab3f5…`) | ✅ setada |
+| `APOLLO_SENDER_EMAIL` | `suporte@gymsite.com.br` — lookup → account_id | ✅ Cloud Run jul/13 |
 
-## 4. Próximos passos sugeridos (validar com o Marcelo no novo chat)
+Sem `APOLLO_EMAIL_ACCOUNT_ID`, status no banco fica `sincronizado_sem_sequencia` (não `sincronizado_sequencia`).
 
-1. Inventário: sequências/campanhas existentes na conta Apollo (MCP) + estado
-   do `apollo_crm_sync` (rodou? oportunidades sincadas? conferir tabela).
-2. Retomar a sequência: definir público (status de oportunidade), copy dos
-   passos, cadência — em RASCUNHO pra aprovação.
-3. Inventariar `docs/marketing/` e listar o que estava planejado vs parado.
-4. Plano de marketing: amarrar com o produto atual (relatório auditado é o
-   argumento de venda — margem/imposto/BE agora fecham na conferência).
+**Obter account_id:** vincular `suporte@gymsite.com.br` no Apollo (Settings → Mailboxes), depois `GET /api/v1/email_accounts` com **master API key** ou setar `APOLLO_EMAIL_ACCOUNT_ID` direto.
 
-## 5. O que NÃO é desta frente
+**Rerun leads pendentes (únicos por email):**
+```powershell
+.venv\Scripts\python.exe tools/resync_leads_apollo.py
+```
 
-Auditoria de quadros do relatório, motor financeiro (A4), ERRC/A9, fila de
-tasks #26–#39 — tudo isso segue no chat original. Se esbarrar em bug dessas
-áreas, ANOTAR aqui embaixo e avisar, não corrigir.
+**Apollo conta:** jul/13 API retorna `401 Invalid access credentials` em `/contacts` — conferir billing/plano Apollo antes do teste real.
 
-## 6. Log de passagem (o novo chat escreve aqui)
+## 3. Fluxo código (normalizado jul/13)
 
-- (vazio)
+```
+POST /api/leads  ou  site_agent._capturar_lead
+  → leads._persistir_lead (tbl)
+  → BackgroundTasks._sync_apollo_bg
+  → apollo_client.sync_lead_to_apollo
+       POST /api/v1/contacts (run_dedupe=true)
+       POST /api/v1/emailer_campaigns/{APOLLO_SEQUENCE_ID}/add_contact_ids
+  → leads.apollo_sync_status:
+       sincronizado_sequencia | sincronizado_sem_sequencia | erro
+```
+
+Base URL canônica: `https://api.apollo.io/api/v1` (igual `apollo_crm_sync.py`).
+
+## 4. Artefatos
+
+| Arquivo | Papel |
+|---------|-------|
+| `tools/apollo_client.py` | Landing → Contact + Sequence |
+| `backend/routers/leads.py` | POST `/api/leads` + status sequence |
+| `backend/routers/site_agent.py` | `_capturar_lead` reusa `leads._persistir_lead` |
+| `services/apollo_crm_sync.py` | Scout — **outro funil** |
+| `tools/test_apollo_client.py` | Mock httpx — rodar antes de commit |
+| `.env.production.example` | `APOLLO_*` documentado |
+
+## 5. Regras P-000 que mordem aqui
+
+- Segredos só `.env` / Cloud Run — nunca commit
+- Teste: `.venv\Scripts\python.exe -m pytest tools/test_apollo_client.py`
+- Schema: `tbl()` + flags `GYMSITE_SCHEMA_SEP` / `SHARED_SCHEMA_SEP`
+- Sequence: **nunca ativar envio** sem OK explícito Marcelo — campanha nasce pausada/rascunho
+- Deploy API: Cloud Run `gen-lang-client-0106729343` us-central1 (não southamerica)
+
+## 6. Próximo passo operacional
+
+1. Resolver billing Apollo (401)
+2. Setar `APOLLO_EMAIL_ACCOUNT_ID` no Cloud Run api + worker
+3. Teste E2E: form landing → lead `sincronizado_sequencia` no Supabase
+4. Scout/marketing: inventário `apollo_crm_sync` + `docs/marketing/` (frente paralela)
+
+## 7. Log
+
+- 2026-07-13: Normalizado `apollo_client` (base `/api/v1`, run_dedupe, sequence status). Handoff alinhado P-000. Bloqueador: EMAIL_ACCOUNT_ID + 401 Apollo.

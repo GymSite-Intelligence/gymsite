@@ -6,14 +6,14 @@ import {
   IconeEngenheiro,
   type Icon,
 } from '@/components/icons/gymsite-icons'
-import { AGENTES_DEGUSTACAO_META } from '@/config/gymsite-design-system'
+import { AGENTES_CONSULTOR_META } from '@/config/gymsite-design-system'
 import { uiIdFromApi } from '@/config/site-agent-map'
 
 export type EspecialistaId = 'mercado' | 'tecnico' | 'regulatorio' | 'arquiteto' | 'engenheiro'
 
-const COPY_BY_ID = Object.fromEntries(AGENTES_DEGUSTACAO_META.map((a) => [a.id, a])) as Record<
+const COPY_BY_ID = Object.fromEntries(AGENTES_CONSULTOR_META.map((a) => [a.id, a])) as Record<
   EspecialistaId,
-  (typeof AGENTES_DEGUSTACAO_META)[number]
+  (typeof AGENTES_CONSULTOR_META)[number]
 >
 
 export interface Especialista {
@@ -43,7 +43,7 @@ const SAUDACOES: Record<EspecialistaId, string> = {
   engenheiro: 'Me diz se é reforma ou obra nova que eu vejo estrutura, instalações e licenças.',
 }
 
-export const ESPECIALISTAS: Especialista[] = AGENTES_DEGUSTACAO_META.map((meta) => ({
+export const ESPECIALISTAS: Especialista[] = AGENTES_CONSULTOR_META.map((meta) => ({
   id: meta.id,
   nome: meta.nome,
   especialidade: meta.especialidade,
@@ -89,6 +89,11 @@ export function especialistaPorId(id?: EspecialistaId | null): Especialista | un
   return id ? ESPECIALISTAS.find((e) => e.id === id) : undefined
 }
 
-export function copyDegustacao(id: EspecialistaId) {
+export function metaConsultor(id: EspecialistaId) {
   return COPY_BY_ID[id]
+}
+
+/** @deprecated use metaConsultor */
+export function copyDegustacao(id: EspecialistaId) {
+  return metaConsultor(id)
 }

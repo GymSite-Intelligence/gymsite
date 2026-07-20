@@ -317,9 +317,9 @@ def consultar_engenharia_obra(pergunta: str) -> dict:
     from tools.discovery_engine_tools import buscar_conhecimento
     engine = os.environ.get("DISCOVERY_OBRA_ENGINE_ID", "gymsite-obra-app")
     try:
+        from agents_site.carimbo import anotar_retrieval_legal
         r = buscar_conhecimento(pergunta, n=5, engine_id=engine)
-        r["fonte"] = "Vertex AI Search (engenharia de obra / projeto)"
-        return r
+        return anotar_retrieval_legal(r, "Vertex AI Search (engenharia de obra / projeto)")
     except Exception as e:  # noqa: BLE001
         logger.exception("consultar_engenharia_obra falhou")
         return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
@@ -397,9 +397,9 @@ def consultar_base_regulatoria(pergunta: str) -> dict:
     from tools.discovery_engine_tools import buscar_conhecimento
     engine = os.environ.get("DISCOVERY_REGULATORIO_ENGINE_ID", "gymsite-regulatorio-app")
     try:
+        from agents_site.carimbo import anotar_retrieval_legal
         r = buscar_conhecimento(pergunta, n=4, engine_id=engine)
-        r["fonte"] = "Vertex AI Search (regulatório CREF/Lei)"
-        return r
+        return anotar_retrieval_legal(r, "Vertex AI Search (regulatório CREF/Lei)")
     except Exception as e:  # noqa: BLE001
         logger.exception("consultar_base_regulatoria falhou")
         return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}

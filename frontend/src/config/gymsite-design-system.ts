@@ -8,24 +8,32 @@ export const GYMSITE_PALETTE = {
   border: '#2b323d',
 } as const
 
-/** Copy do consultor logado (app). Regras de cap/monetização vêm depois do MVP — ver MODELO_NEGOCIO.md */
+/** Copy do consultor logado (app). Sem cap degustação — ver MODELO_NEGOCIO.md */
 export const CONSULTOR_COPY = {
   tagline: 'CONSULTOR · ANÁLISE EM TEMPO REAL',
+  subtitle: 'Projeto vinculado ao bairro · fontes carimbadas · relatório formal',
   miniCards: [
     { kicker: 'Projeto salvo', detail: 'Conversa vinculada ao bairro que você está avaliando' },
     { kicker: 'Fonte carimbada', detail: 'Valor · base · fonte · janela em cada dado citado' },
     { kicker: 'Relatório formal', detail: 'Gere o dossiê quando os dados do projeto fecharem' },
   ],
+  basesOficiais: {
+    kicker: 'Bases oficiais',
+    detail:
+      '+27 fontes catalogadas (IBGE, CREF, mapas públicos). Respostas com carimbo de fonte e janela.',
+  },
 } as const
 
 export const DEGUSTACAO_COPY = {
   tagline: 'DEGUSTAÇÃO · 5 ESPECIALISTAS',
+  subtitle: 'Trilha em 3 passos · uma região por vez',
   h1: 'Escolha o especialista. Faça sua pergunta.',
   p: 'Cinco agentes, cada um com sua especialidade. Pergunte direto pra quem entende do assunto — concorrência, equipamentos, obra, projeto ou regulatório — e receba uma amostra da inteligência que alimenta o relatório completo.',
+  /** Trilha pública — NÃO é cap "1 pergunta/especialista". Ver eval `degustacao_1_condicao`. */
   badgesAtritoZero: [
-    '1 pergunta grátis por especialista',
+    'uma região por vez — sem comparar bairros',
     'dados com fonte carimbada',
-    'sem cadastro pra começar',
+    'trilha: pergunta → bastão → análise completa',
   ],
   metodologia: {
     titulo: 'Cada pergunta afina o especialista',
@@ -59,7 +67,7 @@ export const HANDOFF_COPY = {
     `${anterior} passou a palavra para ${novo}.`,
 } as const
 
-export const AGENTES_DEGUSTACAO_META = [
+export const AGENTES_CONSULTOR_META = [
   {
     id: 'mercado' as const,
     nome: 'Mercado',
@@ -100,3 +108,6 @@ export const AGENTES_DEGUSTACAO_META = [
     exemploPergunta: 'a laje aguenta peso livre?',
   },
 ] as const
+
+/** @deprecated Landing/degustação — app logado usa AGENTES_CONSULTOR_META */
+export const AGENTES_DEGUSTACAO_META = AGENTES_CONSULTOR_META

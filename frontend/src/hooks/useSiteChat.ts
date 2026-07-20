@@ -79,6 +79,7 @@ export function useSiteChat() {
               role: 'assistant' as const,
               content: ultima.content,
               agenteId: ultima.agente ?? null,
+              citacoes: ultima.citacoes,
             }
           }
         }

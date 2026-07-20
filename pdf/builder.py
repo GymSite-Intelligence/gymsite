@@ -28,8 +28,8 @@ from reportlab.platypus import (
 
 from pdf.charts import chart_capex_stacked, chart_lucro_cenarios, chart_scores_bar
 from pdf.models import LayoutId, RelatorioPdfModel
-from tools.telemetry import span
 from tools.maps_street_view import build_street_view_google_url
+from tools.telemetry import span
 from pdf.theme import (
     BORDER,
     CARD_BG,
@@ -431,7 +431,7 @@ def _candidatos_section(model: RelatorioPdfModel, styles: dict) -> list:
     if not model.candidatos:
         return []
     flow = _section_title("4. Top candidatos (imóveis)", styles)
-    data = [["#", "Nome", "Tipo", "m²", "Geo", "Ancor.", "Endereço"]]
+    data: list[list[str | Paragraph]] = [["#", "Nome", "Tipo", "m²", "Geo", "Ancor.", "Endereço"]]
     for c in model.candidatos:
         data.append(
             [
@@ -647,7 +647,7 @@ def _posicionamento_estrategico_flow(
             flow.append(Spacer(1, 4))
             rows = []
             for row in data:
-                rows.append([
+                rows.append([  # type: ignore
                     Paragraph(str(row[0]), styles[body_style]),
                     Paragraph(str(row[1]), styles[body_style]),
                 ])
@@ -710,7 +710,7 @@ def _extras_section(model: RelatorioPdfModel, styles: dict) -> list:
 
     if model.bairros_alternativos:
         flow.extend(_section_title("8. Bairros alternativos", styles))
-        data = [["Bairro", "Prior.", "Conc.", "Motivo"]]
+        data: list[list[str | Paragraph]] = [["Bairro", "Prior.", "Conc.", "Motivo"]]
         for b in model.bairros_alternativos[:6]:
             data.append(
                 [

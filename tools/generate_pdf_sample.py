@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import sys
 from pathlib import Path
@@ -14,7 +15,6 @@ if str(_ROOT) not in sys.path:
 
 from pdf import LayoutId, generate_relatorio_pdf
 from pdf.adapters import relatorio_from_api_payload, relatorio_from_nested_json
-
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Gera PDF GymSite de amostra")
@@ -40,9 +40,23 @@ def main() -> None:
         from dotenv import load_dotenv
 
         load_dotenv(_ROOT / ".env")
-        from api import get_relatorio  # noqa: WPS433 — script de dev
+        from api import get_relatorio  # noqa: WPS433
+        from starlette.requests import Request
 
-        payload = get_relatorio(args.relatorio_id)
+        # Mock da request FastAPI. A função `get_relatorio` é um endpoint que
+        # espera um objeto de request, então criamos um com o escopo mínimo.
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": f"/api/relatorios/{args.relatorio_id}",
+            "headers": [],
+        }
+        mock_request = Request(scope)
+
+        # `get_relatorio` é uma função async, então a executamos em um event loop.
+        # pyright: ignore[reportArgumentType]
+        payload = asyncio.run(get_relatorio(args.relatorio_id, request=mock_request))  # type: ignore
+        # O adapter `relatorio_from_api_payload` também precisa do request.
         model = relatorio_from_api_payload(payload)
     else:
         default_mock = _ROOT / "frontend" / "src" / "mocks" / "relatorios" / "rpt_1778468764.json"

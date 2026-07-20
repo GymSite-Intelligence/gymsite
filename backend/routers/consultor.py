@@ -116,14 +116,18 @@ async def consultor_mensagens(
 
     q = (
         tbl(db, "project_messages")
-        .select("role, content, created_at, agente, tool_calls")
+        .select("role, content, created_at, agente, tool_calls, tool_results")
         .eq("projeto_id", projeto_id)
     )
     if desde:
         q = q.gt("created_at", desde)
     msgs = q.order("created_at").execute().data or []
+    from agents_site.carimbo import unpack_citacoes_from_msg
+
     for m in msgs:
         m["agente"] = id_publico(m.get("agente"))
+        m["citacoes"] = unpack_citacoes_from_msg(m)
+        m.pop("tool_results", None)
 
     pesq = projeto.pesquisas_realizadas or {}
     pode_relatorio = bool(
@@ -188,6 +192,7 @@ async def detalhe_projeto(
         raise HTTPException(status_code=404, detail=str(e))
 
     mensagens = await carregar_historico_completo(projeto_id)
+    from agents_site.carimbo import unpack_citacoes_from_msg
 
     return {
         "projeto": {
@@ -206,6 +211,7 @@ async def detalhe_projeto(
                 "role": m["role"],
                 "content": m["content"],
                 "tool_calls": m.get("tool_calls"),
+                "citacoes": unpack_citacoes_from_msg(m),
                 "agente": id_publico(m.get("agente")),
                 "created_at": m["created_at"],
             }

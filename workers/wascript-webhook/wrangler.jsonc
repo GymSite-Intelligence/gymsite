@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wascript-webhook",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-03-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "kv_namespaces": [
+    {
+      "binding": "WEBHOOK_EVENTS",
+      "id": "6961869fdb68488fb47ceee08c01c97c"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "webhook.vectracargo.com.br/*",
+      "zone_name": "vectracargo.com.br"
+    }
+  ]
+}

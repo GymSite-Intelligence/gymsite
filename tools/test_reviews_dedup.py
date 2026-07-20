@@ -1,6 +1,5 @@
 """Reviews: fetch raw compartilhado (memo + cache) mata o 2× (duas funções batiam o
 MESMO place_id) e deixa determinístico. Causa de divergência do audit Cocó."""
-import os
 import httpx
 import tools.competitor_tools as ct
 import tools.cache_store as cs
@@ -26,7 +25,8 @@ class _Client:
 
 def _setup(monkeypatch):
     monkeypatch.setenv("SEARCHAPI_KEY", "fake")
-    ct._REVIEWS_RAW_MEMO.clear()
+    monkeypatch.setenv("A3A_FORCE_REVIEWS_ENGINE", "1")  # isola path reviews engine
+    ct._REVIEWS_BUNDLE_MEMO.clear()
     monkeypatch.setattr(cs, "get_reviews", lambda pid: cs.CacheHit(hit=False, payload=None))
     monkeypatch.setattr(cs, "set_reviews", lambda *a, **k: None)
     _Client.calls = 0
@@ -44,7 +44,7 @@ def test_dois_consumidores_uma_chamada(monkeypatch):
 def test_cache_hit_zero_chamada(monkeypatch):
     """DB cache hit → zero SearchAPI (cross-run determinístico)."""
     monkeypatch.setenv("SEARCHAPI_KEY", "fake")
-    ct._REVIEWS_RAW_MEMO.clear()
+    ct._REVIEWS_BUNDLE_MEMO.clear()
     monkeypatch.setattr(cs, "get_reviews",
         lambda pid: cs.CacheHit(hit=True, payload={"reviews": [{"text": "ok", "rating": 2}]}))
     _Client.calls = 0
@@ -57,6 +57,7 @@ def test_cache_hit_zero_chamada(monkeypatch):
 def test_sem_key_cai_pro_places(monkeypatch):
     """Sem SEARCHAPI_KEY → card retorna None (caller cai pro Places)."""
     monkeypatch.delenv("SEARCHAPI_KEY", raising=False)
-    ct._REVIEWS_RAW_MEMO.clear()
+    monkeypatch.setenv("A3A_FORCE_REVIEWS_ENGINE", "1")
+    ct._REVIEWS_BUNDLE_MEMO.clear()
     monkeypatch.setattr(cs, "get_reviews", lambda pid: cs.CacheHit(hit=False, payload=None))
     assert ct._reviews_searchapi_card("ChIJ_nokey") is None

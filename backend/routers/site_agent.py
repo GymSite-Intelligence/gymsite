@@ -473,15 +473,21 @@ async def conversar_mensagens(projeto_id: str, desde: Optional[str] = None):
     if not proj or proj.get("user_id") != _ANON_SITE_USER_ID:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
 
-    q = tbl(sb, "project_messages").select("role, content, created_at, agente").eq("projeto_id", projeto_id)
+    q = tbl(sb, "project_messages").select(
+        "role, content, created_at, agente, tool_calls, tool_results"
+    ).eq("projeto_id", projeto_id)
     if desde:
         q = q.gt("created_at", desde)
     msgs = q.order("created_at").execute().data or []
     # A coluna guarda o nome ADK (Event.author); a API fala id público nos dois sentidos.
     # É este campo que acende o crachá do especialista em cada balão — com o roteador,
     # quem respondeu só se sabe DEPOIS do turno.
+    from agents_site.carimbo import unpack_citacoes_from_msg
+
     for m in msgs:
         m["agente"] = id_publico(m.get("agente"))
+        m["citacoes"] = unpack_citacoes_from_msg(m)
+        m.pop("tool_results", None)
 
     mn = dict(proj.get("modelo_negocio") or {})
     mn.pop("_site", None)

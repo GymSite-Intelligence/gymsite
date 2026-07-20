@@ -66,10 +66,19 @@ load_dotenv(_ROOT / "gymsite_intelligence" / ".env", override=False)
 # sobrar no processo — o SDK/ADK prefere key quando presente e o pipeline
 # inteiro caía no free-tier do AI Studio (5 runs mortos com 429 disfarçado
 # de "pico do Vertex"). Vertex usa SA via GOOGLE_APPLICATION_CREDENTIALS.
+# GYMSITE_GEMINI_FALLBACK_KEY: cópia pra degustação/consultor escapar dunning
+# Vertex (403 Lightning) sem reabrir o free-tier no pipeline A0–A9.
+_FALLBACK = (
+    (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip() or None
+)
 if (os.getenv("GOOGLE_GENAI_USE_VERTEXAI") or "").strip().lower() in ("1", "true", "yes"):
     for _k in ("GOOGLE_API_KEY", "GEMINI_API_KEY"):
         if os.environ.pop(_k, None) is not None:
             print(f"[llm-route] {_k} removida do processo — modo Vertex estrito")
+    if _FALLBACK and not (os.getenv("GYMSITE_GEMINI_FALLBACK_KEY") or "").strip():
+        os.environ["GYMSITE_GEMINI_FALLBACK_KEY"] = _FALLBACK
+        print("[llm-route] GYMSITE_GEMINI_FALLBACK_KEY preservada (site/consultor)")
+del _FALLBACK
 
 logger = setup_json_logging(os.getenv("LOG_LEVEL", "INFO"))
 

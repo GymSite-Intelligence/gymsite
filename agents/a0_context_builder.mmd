@@ -1,0 +1,37 @@
+---
+config:
+  layout: elk
+  theme: mc
+  flowchart:
+    defaultRenderer: elk
+id: 8da1eec0-ef42-44a5-8467-bd9cfdf9c946
+---
+%% agents/a0_context_builder.py — A0 ContextBuilder (bundle-only · DR/Kimi OFF)
+flowchart TB
+
+  Start@{ shape: event, label: "pipeline start<br/>input_params" }
+  A0@{ shape: rect, label: "ContextBuilder<br/>gemini-2.5-flash" }
+  Bundle@{ shape: lean-r, label: "carregar_market_bundle" }
+  Fresh@{ shape: diam, label: "briefing OK<br/>sem status=missing?" }
+  Qual@{ shape: stadium, label: "ticket · tendência<br/>briefing_completo_md" }
+  Miss@{ shape: hex, label: "dados_nao_disponiveis<br/>sem DR/Kimi" }
+  Cnpj@{ shape: lean-r, label: "dados_parque_cnpj_para_a0<br/>CNPJ + CNO" }
+  Osm@{ shape: lean-r, label: "fatos_competicao_local<br/>OSM redes" }
+  Json@{ shape: docs, label: "market_context JSON<br/>output_key" }
+  Override@{ shape: subproc, label: "after_agent<br/>_a0_override_cnpj_numeros" }
+  Store@{ shape: cyl, label: "market_bundles<br/>Supabase" }
+  RFB@{ shape: datastore, label: "RFB CNPJ Aberto" }
+  Done@{ shape: fr-circ, label: "state market_context" }
+
+  Note@{ shape: comment, label: "redes = só OSM · número CNPJ = tool override · renda→A2 · conc→A3a · aluguel→A4" }
+
+  Start ==> A0
+  Store -.-> Bundle
+  A0 ==> Bundle ==> Fresh
+  Fresh -->|sim| Qual
+  Fresh -->|não| Miss
+  Qual --> Cnpj
+  Miss --> Cnpj
+  RFB -.-> Cnpj
+  Cnpj --> Osm --> Json ==> Override ==> Done
+  Note ~~~ Done

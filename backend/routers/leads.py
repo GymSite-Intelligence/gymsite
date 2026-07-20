@@ -22,6 +22,8 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from supabase import create_client
 
+from tools.db_schema import tbl
+
 logger = logging.getLogger("gymsite.leads")
 
 router = APIRouter(prefix="/api/leads", tags=["Leads — Landing"])
@@ -84,7 +86,7 @@ def _persistir_lead(sb, data: LeadInput) -> dict:
         "apollo_sync_status": "pendente",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    res = sb.table("leads").insert(registro).execute()
+    res = tbl(sb, "leads").insert(registro).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Falha ao gravar lead")
     return res.data[0]
@@ -105,9 +107,17 @@ def _sync_apollo_bg(lead_id: str, data: LeadInput) -> None:
             perfil=data.perfil,
             fonte=data.fonte,
         )
-        status = "sincronizado" if resultado.get("ok") else "erro"
+        if resultado.get("ok"):
+            if resultado.get("sequence_enrolled"):
+                status = "sincronizado_sequencia"
+            elif resultado.get("sequence_id"):
+                status = "sincronizado_sem_sequencia"
+            else:
+                status = "sincronizado"
+        else:
+            status = "erro"
         try:
-            _sb().table("leads").update({
+            tbl(_sb(), "leads").update({
                 "apollo_sync_status": status,
                 "apollo_contact_id": resultado.get("contact_id"),
                 "apollo_synced_at": datetime.now(timezone.utc).isoformat(),
@@ -117,7 +127,7 @@ def _sync_apollo_bg(lead_id: str, data: LeadInput) -> None:
     except Exception as e:  # noqa: BLE001
         logger.warning("lead %s: sync Apollo falhou (segue): %s", lead_id, e)
         try:
-            _sb().table("leads").update(
+            tbl(_sb(), "leads").update(
                 {"apollo_sync_status": "erro"}
             ).eq("id", lead_id).execute()
         except Exception:

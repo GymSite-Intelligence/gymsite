@@ -15,6 +15,11 @@ from google.genai.types import Content, Part
 
 from agents_site.agent import root_agent
 from agents_site.catalog import ESPECIALISTAS
+from agents_site.carimbo import extrair_citacoes, pack_citacoes_tool_results
+from agents_site.llm_route import (
+    mensagem_falha_turno,
+    site_chat_developer_api,
+)
 from services.consultor.project_messages import carregar_historico, salvar_mensagem
 from services.consultor.project_state import (
     atualizar_campo_projeto,
@@ -259,6 +264,28 @@ async def _sync_consultor_pos_turno(
             await marcar_pesquisa_realizada(projeto_id, pesq, usuario_id)
 
 
+async def _persistir_falha_turno(projeto_id: str, exc: BaseException) -> str:
+    msg = mensagem_falha_turno(exc)
+    logger.exception(
+        "adk turno falhou projeto=%s — persistindo assistant de erro",
+        projeto_id,
+        extra={"agent": "SITE_ADK"},
+    )
+    try:
+        await salvar_mensagem(
+            projeto_id,
+            role="assistant",
+            content=msg,
+            agente="sistema",
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception(
+            "falha ao persistir mensagem de erro projeto=%s",
+            projeto_id,
+        )
+    return msg
+
+
 async def run_site_agent_adk(
     projeto_id: str,
     mensagem: str,
@@ -308,34 +335,53 @@ async def run_site_agent_adk(
     await salvar_mensagem(projeto_id, role="user", content=mensagem)
 
     escolhido = _resolver_agente(agente)
-    resposta, autor, alvo, acoes = await _rodar_turno(
-        escolhido, historico, mensagem_efetiva, projeto_id, tier="degustacao", app_name=_APP_SITE
-    )
-    resposta, autor_retry, acoes_retry = await _retry_pos_transfer(
-        resposta, alvo, historico, mensagem_efetiva, projeto_id, tier="degustacao", app_name=_APP_SITE
-    )
-    if autor_retry:
-        autor = autor_retry
-    if acoes_retry:
-        acoes = acoes_retry
+    try:
+        with site_chat_developer_api(escolhido):
+            resposta, autor, alvo, acoes = await _rodar_turno(
+                escolhido,
+                historico,
+                mensagem_efetiva,
+                projeto_id,
+                tier="degustacao",
+                app_name=_APP_SITE,
+            )
+            resposta, autor_retry, acoes_retry = await _retry_pos_transfer(
+                resposta,
+                alvo,
+                historico,
+                mensagem_efetiva,
+                projeto_id,
+                tier="degustacao",
+                app_name=_APP_SITE,
+            )
+        if autor_retry:
+            autor = autor_retry
+        if acoes_retry:
+            acoes = acoes_retry
+    except Exception as exc:  # noqa: BLE001
+        return await _persistir_falha_turno(projeto_id, exc)
 
     if not resposta:
         resposta = "Tive um problema ao gerar a resposta agora. Pode reformular a pergunta ou tentar de novo?"
+
+    resposta, citacoes = extrair_citacoes(resposta)
 
     await salvar_mensagem(
         projeto_id,
         role="assistant",
         content=resposta,
         tool_calls=acoes or None,
+        tool_results=pack_citacoes_tool_results(citacoes),
         agente=autor,
     )
     logger.info(
-        "site_agent_adk turno OK projeto=%s pedido=%s respondeu=%s len_resp=%d loc=%s",
+        "site_agent_adk turno OK projeto=%s pedido=%s respondeu=%s len_resp=%d loc=%s citacoes=%d",
         projeto_id,
         agente,
         autor,
         len(resposta),
         loc.origem or "-",
+        len(citacoes),
         extra={"agent": "SITE_ADK"},
     )
     return resposta
@@ -351,46 +397,54 @@ async def run_consultor_adk(
     await salvar_mensagem(projeto_id, role="user", content=mensagem)
 
     escolhido = _resolver_agente(agente)
-    resposta, autor, alvo, acoes = await _rodar_turno(
-        escolhido,
-        historico,
-        mensagem,
-        projeto_id,
-        tier="consultor",
-        app_name=_APP_CONSULTOR,
-    )
-    resposta, autor_retry, acoes_retry = await _retry_pos_transfer(
-        resposta,
-        alvo,
-        historico,
-        mensagem,
-        projeto_id,
-        tier="consultor",
-        app_name=_APP_CONSULTOR,
-    )
-    if autor_retry:
-        autor = autor_retry
-    if acoes_retry:
-        acoes = acoes_retry
+    try:
+        with site_chat_developer_api(escolhido):
+            resposta, autor, alvo, acoes = await _rodar_turno(
+                escolhido,
+                historico,
+                mensagem,
+                projeto_id,
+                tier="consultor",
+                app_name=_APP_CONSULTOR,
+            )
+            resposta, autor_retry, acoes_retry = await _retry_pos_transfer(
+                resposta,
+                alvo,
+                historico,
+                mensagem,
+                projeto_id,
+                tier="consultor",
+                app_name=_APP_CONSULTOR,
+            )
+        if autor_retry:
+            autor = autor_retry
+        if acoes_retry:
+            acoes = acoes_retry
+    except Exception as exc:  # noqa: BLE001
+        return await _persistir_falha_turno(projeto_id, exc)
 
     if not resposta:
         resposta = "Tive um problema ao gerar a resposta agora. Pode reformular a pergunta ou tentar de novo?"
 
     await _sync_consultor_pos_turno(projeto_id, usuario_id, acoes)
 
+    resposta, citacoes = extrair_citacoes(resposta)
+
     await salvar_mensagem(
         projeto_id,
         role="assistant",
         content=resposta,
         tool_calls=acoes or None,
+        tool_results=pack_citacoes_tool_results(citacoes),
         agente=autor,
     )
     logger.info(
-        "consultor_adk turno OK projeto=%s pedido=%s respondeu=%s tools=%d",
+        "consultor_adk turno OK projeto=%s pedido=%s respondeu=%s tools=%d citacoes=%d",
         projeto_id,
         agente,
         autor,
         len(acoes),
+        len(citacoes),
         extra={"agent": "CONSULTOR_ADK"},
     )
     return resposta

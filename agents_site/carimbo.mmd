@@ -1,0 +1,33 @@
+---
+config:
+  layout: elk
+  theme: mc
+  flowchart:
+    defaultRenderer: elk
+---
+%% agents_site/carimbo.py — P-000 §5 / P-002
+%% Fonte legal = lei/NBR/resolução · nunca Vertex · nunca .txt
+flowchart TB
+  Prompt@{ shape: docs, label: "INSTRUCAO_CARIMBO_LEGAL\nvalor · base · fonte · janela" }
+  Ag@{ shape: procs, label: "Regulatorio / Arquiteto\nEngenheiroObra" }
+  Rag@{ shape: bolt, label: "consultar_base_*\nconsultar_engenharia_obra" }
+  Annot@{ shape: hex, label: "anotar_retrieval_legal\npop fonte · canal_retrieval" }
+  Llm@{ shape: rect, label: "Resposta LLM\ntexto + JSON citacoes" }
+  Ext@{ shape: subproc, label: "extrair_citacoes\n+ remover_carimbos_inline" }
+  Val@{ shape: diam, label: "validar_citacao\n4 campos + norma?" }
+  Forbid@{ shape: trap-b, label: "fonte proibida?\nVertex / slug / trecho" }
+  Pack@{ shape: lean-r, label: "pack_citacoes_tool_results" }
+  Db@{ shape: cyl, label: "project_messages\ntool_results tipo=citacoes" }
+  Unp@{ shape: lean-l, label: "unpack_citacoes_from_msg" }
+  Ui@{ shape: stadium, label: "CitationStamp" }
+  Drop@{ shape: fr-circ, label: "Descarta / não cita" }
+  Note@{ shape: comment, label: "Municipal: município+UF\nou abstenha" }
+
+  Prompt ==> Ag
+  Ag ==> Rag ==> Annot ==> Llm ==> Ext ==> Val
+  Val -->|faltam campos| Drop
+  Val -->|ok| Forbid
+  Forbid -->|sim| Drop
+  Forbid -->|não| Pack ==> Db ==> Unp ==> Ui
+  Prompt ~~~ Note
+  Note -.-> Val

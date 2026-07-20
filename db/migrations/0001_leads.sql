@@ -24,7 +24,8 @@ create table if not exists public.leads (
     utm_medium           text,
     utm_campaign         text,
     fonte                text not null default 'landing-getgymsite',
-    apollo_sync_status   text not null default 'pendente',  -- pendente|sincronizado|erro
+    apollo_sync_status   text not null default 'pendente',
+    -- pendente | sincronizado | sincronizado_sequencia | sincronizado_sem_sequencia | erro
     apollo_contact_id    text,
     apollo_synced_at     timestamptz,
     created_at           timestamptz not null default now(),

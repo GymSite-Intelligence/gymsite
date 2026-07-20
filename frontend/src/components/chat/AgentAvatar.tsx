@@ -4,15 +4,16 @@ import type { Icon } from '@/components/icons/gymsite-icons'
 
 type AgentAvatarProps = {
   Icone: Icon
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   active?: boolean
   className?: string
 }
 
 const SIZE_CLASS = {
   sm: 'h-8 w-8',
-  md: 'h-7 w-7 sm:h-8 sm:w-8',
-  lg: 'h-10 w-10',
+  md: 'h-9 w-9',
+  lg: 'h-11 w-11',
+  xl: 'h-16 w-16',
 } as const
 
 export function AgentAvatar({ Icone, size = 'md', active = false, className }: AgentAvatarProps) {

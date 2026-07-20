@@ -5,6 +5,7 @@ import { ConsultorAgentAvatar } from '@/components/chat/ConsultorAgentAvatar'
 import { DegustacaoJornadaAside } from '@/components/landing/DegustacaoJornadaAside'
 import { Button } from '@/components/ui/button'
 import { especialistaPadrao } from '@/config/consultor-agentes'
+import { DEGUSTACAO_COPY } from '@/config/gymsite-design-system'
 import type { UseConsultorChatReturn } from '@/hooks/useConsultorChat'
 import type { AgenteApiId } from '@/config/site-agent-map'
 
@@ -59,7 +60,7 @@ export function DegustacaoChatShell({
               {mode === 'landing' ? 'Degustação GymSite' : 'Consultor GymSite'}
             </h1>
             <p className="truncate text-[10px] text-muted-foreground">
-              {locLabel || (mode === 'landing' ? '5 especialistas · 1 pergunta grátis' : 'Análise em tempo real')}
+              {locLabel || (mode === 'landing' ? DEGUSTACAO_COPY.subtitle : 'Análise em tempo real')}
             </p>
           </div>
           {headerExtra}

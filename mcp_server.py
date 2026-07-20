@@ -9,20 +9,36 @@ Auth: Bearer token (GYMSITE_API_KEY)
 import os
 import json
 import asyncio
+from pathlib import Path
 from typing import Any
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
 import httpx
-from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+
+from mcp.segments import segment_tool_text
+from mcp.segments.listings import LISTINGS_HANDLERS, LISTINGS_TOOLS
+from mcp.segments.mercado import MERCADO_HANDLERS, MERCADO_TOOLS
+from mcp.segments.reviews import REVIEWS_HANDLERS, REVIEWS_TOOLS
+from mcp.segments.social import SOCIAL_HANDLERS, SOCIAL_TOOLS
 
 # ─── Config ─────────────────────────────────────────────────────────────────
 GYMSITE_API_BASE = os.getenv("GYMSITE_API_BASE", "http://127.0.0.1:8000")
 GYMSITE_API_KEY = os.getenv("GYMSITE_API_KEY", "")
 SERVER_NAME = "gymsite-mcp"
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.2.0"
 
-# ─── MCP Protocol Helpers ───────────────────────────────────────────────────
+_SEGMENT_TOOL_PREFIXES = (
+    "gymsite_mercado_",
+    "gymsite_reviews_",
+    "gymsite_social_",
+    "gymsite_listings_",
+)
 
 MCP_TOOLS = [
     {
@@ -183,8 +199,24 @@ async def handle_buscar_cnpj(args: dict) -> dict:
     return await _gymsite_get(f"/api/canais/cnpj", {"cnpj": cnpj})
 
 
+def _parse_endereco_cidade_uf(endereco: str) -> tuple[str, str]:
+    raw = (endereco or "").strip()
+    if not raw:
+        return "", ""
+    if "," not in raw:
+        return raw, ""
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if len(parts) >= 2 and len(parts[-1]) <= 3:
+        return ", ".join(parts[:-1]), parts[-1].upper()
+    return raw, ""
+
+
 async def handle_geocodificar(args: dict) -> dict:
-    return await _gymsite_get("/api/geocode/cidade", {"cidade": args["endereco"]})
+    cidade, uf = _parse_endereco_cidade_uf(args["endereco"])
+    params: dict[str, str] = {"cidade": cidade}
+    if uf:
+        params["uf"] = uf
+    return await _gymsite_get("/api/geocode/cidade", params)
 
 
 TOOL_ROUTER = {
@@ -195,7 +227,16 @@ TOOL_ROUTER = {
     "gymsite_executar_prospeccao": handle_executar_prospeccao,
     "gymsite_buscar_cnpj": handle_buscar_cnpj,
     "gymsite_geocodificar": handle_geocodificar,
+    **MERCADO_HANDLERS,
+    **REVIEWS_HANDLERS,
+    **SOCIAL_HANDLERS,
+    **LISTINGS_HANDLERS,
 }
+
+MCP_TOOLS.extend(MERCADO_TOOLS)
+MCP_TOOLS.extend(REVIEWS_TOOLS)
+MCP_TOOLS.extend(SOCIAL_TOOLS)
+MCP_TOOLS.extend(LISTINGS_TOOLS)
 
 
 # ─── FastAPI App ────────────────────────────────────────────────────────────
@@ -209,6 +250,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="GymSite MCP Server", lifespan=lifespan)
+
+
+@app.get("/mcp")
+async def mcp_get_no_sse():
+    """Streamable HTTP: servidor stateless sem SSE — 405 spec-compliant."""
+    return Response(status_code=405)
 
 
 @app.post("/mcp")
@@ -254,11 +301,15 @@ async def mcp_endpoint(request: Request):
 
         try:
             result = await handler(tool_args)
+            if any(tool_name.startswith(p) for p in _SEGMENT_TOOL_PREFIXES):
+                text = segment_tool_text(result)
+            else:
+                text = json.dumps(result, ensure_ascii=False, indent=2)
             return JSONResponse({
                 "jsonrpc": "2.0",
                 "id": req_id,
                 "result": {
-                    "content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False, indent=2)}]
+                    "content": [{"type": "text", "text": text}]
                 }
             })
         except httpx.HTTPStatusError as e:

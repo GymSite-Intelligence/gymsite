@@ -63,6 +63,7 @@ interface ProjetoDetailResponse {
     role: 'user' | 'assistant'
     content: string
     tool_calls?: { ferramenta: string; status: string; resumo: string }[]
+    citacoes?: CarimboCitacao[]
     agente?: string | null
     created_at: string
   }[]
@@ -175,6 +176,7 @@ function messagesFromApi(mensagens: ProjetoDetailResponse['mensagens']): ChatMes
       status: t.status,
       resumo: t.resumo,
     })),
+    citacoes: m.citacoes,
   }))
 }
 
@@ -342,7 +344,7 @@ export function useConsultorChat(): UseConsultorChatReturn {
                 status: t.status,
                 resumo: t.resumo,
               })),
-              citacoes: undefined as CarimboCitacao[] | undefined,
+              citacoes: ultima.citacoes,
             }
             setMessages((prev) => {
               const next = [...prev, assistantMsg]

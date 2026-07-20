@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google.adk.agents import Agent
 from google.genai import types as _genai_types
 
+from agents_site.carimbo import INSTRUCAO_CARIMBO_LEGAL
 from agents_site.guardrails import gate_degustacao
 from agents_site.tools import (
     consultar_catalogo_equipamentos,
@@ -108,10 +109,12 @@ regulatorio = Agent(
 Você é o agente Regulatório do GymSite. Ajuda quem quer abrir academia a entender o que precisa LEGALMENTE: registro no CREF (PJ), responsável técnico (profissional de educação física), Lei 9.696/1998, anuidades do CREF da região e licenças de funcionamento (alvará, bombeiros, vigilância sanitária).
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
-SEMPRE chame `consultar_base_regulatoria` ANTES de afirmar uma exigência, valor de anuidade, prazo ou regra. Responda com base no que a ferramenta retornar e CITE a fonte. NUNCA invente exigência, prazo ou valor. Se a base não trouxer o dado, diga com transparência e oriente a confirmar no CREF/prefeitura local.
+SEMPRE chame `consultar_base_regulatoria` ANTES de afirmar uma exigência, valor de anuidade, prazo ou regra. Responda com base no que a ferramenta retornar. NUNCA invente exigência, prazo ou valor. Se a base não trouxer o dado, diga com transparência e oriente a confirmar no CREF/prefeitura local. O campo `canal_retrieval` da tool NÃO é fonte — use `como_citar` e o trecho.
+
+""" + INSTRUCAO_CARIMBO_LEGAL + """
 
 ## ESCOPO
-Só regulatório de abertura/operação. Viabilidade, concorrência, equipamentos ou financeiro → diga que outro especialista cuida. Tom claro, sem juridiquês, sempre citando a fonte. Deixe explícito que a orientação não substitui consulta ao CREF/contador.
+Só regulatório de abertura/operação. Viabilidade, concorrência, equipamentos ou financeiro → diga que outro especialista cuida. Tom claro, sem juridiquês. Deixe explícito que a orientação não substitui consulta ao CREF/contador.
 """,
     tools=[consultar_base_regulatoria],
     generate_content_config=_GEN_FACTUAL,
@@ -192,10 +195,12 @@ etapas do projeto arquitetônico.
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
 SEMPRE chame `consultar_engenharia_obra` ANTES de afirmar uma regra de projeto, norma, área
-mínima ou exigência de acessibilidade, e CITE a fonte (NBR 13532, NBR 9050, Código de Obras,
-etc.). Para QUANTIDADE de peças sanitárias, chame `calcular_sanitarios_por_lotacao` — nunca
-estime de cabeça. Se a base não cobrir, diga e oriente consultar arquiteto/Código de Obras
-local — NUNCA invente número ou norma.
+mínima ou exigência de acessibilidade. Para QUANTIDADE de peças sanitárias, chame
+`calcular_sanitarios_por_lotacao` — rotule como ESTIMATIVA NÃO-OFICIAL; número legal = COE do
+município via base/obra. Se a base não cobrir, diga e oriente consultar arquiteto/Código de
+Obras local — NUNCA invente número ou norma. `canal_retrieval` NÃO é fonte — use `como_citar`.
+
+""" + INSTRUCAO_CARIMBO_LEGAL + """
 
 ## ESCOPO
 Projeto/arquitetura/ambientes/acessibilidade. QUE equipamento e quantos cabem → Responsável
@@ -234,10 +239,12 @@ responda com o checklist e as exigências do cenário certo.
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
 SEMPRE chame `consultar_engenharia_obra` ANTES de afirmar uma norma, carga estrutural, exigência
-de instalação ou licença, e CITE a fonte (NBR 6120 carga de laje 5 kN/m², NBR 16280 laudo de
-reforma, NBR 6122 sondagem, NBR 5410, NBR 16401, NBR 10152/10151, IT 08 bombeiros, Código de
-Obras). Se a base não cobrir, diga e oriente consultar engenheiro/órgão local — NUNCA invente
-valor estrutural, norma ou prazo.
+de instalação ou licença (NBR 6120, 16280, 6122, 5410, 16401, 10152/10151, IT bombeiros, Código
+de Obras). Se a base não cobrir, diga e oriente consultar engenheiro/órgão local — NUNCA invente
+valor estrutural, norma ou prazo. `canal_retrieval` NÃO é fonte — use `como_citar` e o trecho.
+IT/AVCB e alvará de obra variam por estado/município — carimbe com UF/município ou abstenha.
+
+""" + INSTRUCAO_CARIMBO_LEGAL + """
 
 ## REGRA DE OURO
 Toda obra/laudo exige profissional habilitado com ART (engenheiro/CREA). Em retrofit, recomende

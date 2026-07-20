@@ -1,11 +1,13 @@
 import { API_BASE } from '@/lib/supabase'
 import type { AgenteApiId } from '@/config/site-agent-map'
+import type { CarimboCitacao } from '@/components/chat/CitationStamp'
 
 export interface PollSiteMensagem {
   role: 'user' | 'assistant'
   content: string
   created_at: string
   agente?: AgenteApiId | null
+  citacoes?: CarimboCitacao[]
 }
 
 export interface PollSiteResponse {
