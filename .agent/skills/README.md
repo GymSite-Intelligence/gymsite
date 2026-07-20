@@ -7,6 +7,9 @@ Este diretório contém as **Agent Skills** especializadas para o projeto **GymS
 ```
 .agent/skills/
 ├── README.md                          # Este arquivo
+├── catalog/
+│   ├── sla-defaults.ts                # AgentRole (Product…Design)
+│   └── skills-catalog.ts              # Catálogo P-000 / ROT (skill → role → step)
 ├── gymsite-backend/SKILL.md           # FastAPI, Pydantic, Supabase
 ├── gymsite-frontend/SKILL.md          # React, TanStack, shadcn/ui
 ├── gymsite-pipeline/SKILL.md          # Google ADK, agentes A0–A9
@@ -16,6 +19,15 @@ Este diretório contém as **Agent Skills** especializadas para o projeto **GymS
 ├── gymsite-devops/SKILL.md            # Cloud Run, Wrangler/Pages, env
 └── gymsite-testing/SKILL.md           # pytest (.venv) + tsc; Vitest/Playwright quando existir
 ```
+
+## Catálogo de skills (governança)
+
+Fonte de verdade skill → `agentRole` → passo ROT: [`catalog/skills-catalog.ts`](catalog/skills-catalog.ts).
+
+- Pilares review (Strategy → Docs) + Design UX + Produtividade (P-000).
+- Helpers: `allSkills()`, `skillsForRole()`, `skillKeyForRotStep()`, `catalogSummary()`.
+- Skills **domínio GymSite** (`gymsite-*`) ficam nas pastas acima — não entram no mapa ROT do catálogo.
+- Skills Cursor espelho: `.cursor/skills/<id>/SKILL.md` (ex.: `pretty-mermaid`).
 
 ## Como Funciona
 
