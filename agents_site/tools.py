@@ -432,9 +432,8 @@ def buscar_concorrentes(
     tipo_negocio: str = "academia",
     raio_metros: int = 1500,
 ) -> dict:
-    """Conta e lista academias concorrentes num raio do bairro (Google Maps ao vivo).
-    Use para responder saturação/concorrência do entorno com NÚMERO REAL — nunca estime
-    a quantidade de cabeça.
+    """Conta e lista academias concorrentes no bairro (Google Maps / SearchAPI ao vivo).
+    Formato 1: query tipada + exclude pós-fetch — NUNCA estime a quantidade de cabeça.
 
     NÃO devolve texto de reviews. Para reclamações/dores/avaliações textuais, use
     `analisar_reviews_e_dores`.
@@ -444,27 +443,50 @@ def buscar_concorrentes(
         bairro: bairro de referência (ex.: "Cocó").
         uf: sigla do estado, opcional (ex.: "CE").
         tipo_negocio: "academia" | "crossfit" | "studio_pilates" | "studio_funcional".
-        raio_metros: raio de busca em metros (300 a 5000; padrão 1500).
+        raio_metros: raio de busca em metros (300 a 5000; padrão 1500) — centroide p/ distância.
 
     Returns:
-        dict com `total_concorrentes` (int), `nivel_saturacao` (baixo|medio|alto) e
-        `concorrentes` (top 8: nome, endereco, distancia_m, rating, avaliacoes, place_id).
+        dict Formato 1: total, nivel_saturacao, concorrentes (lista completa até 40),
+        query, exclude_aplicado, maps_smoke_url.
     """
     from tools.competitor_tools import buscar_academias
+    from urllib.parse import quote_plus
+
+    tn = (tipo_negocio or "academia").strip().lower()
+    exclude = []
+    if tn == "academia":
+        exclude = [
+            "crossfit", "studio", "estudio", "pilates", "funcional",
+            "jiu", "yoga", "boxe", "mma", "personalizado",
+        ]
     try:
         raio = max(300, min(5000, int(raio_metros)))
-        res = buscar_academias(bairro, cidade, raio, uf or "", tipo_negocio)
+        res = buscar_academias(bairro, cidade, raio, uf or "", tn)
     except Exception as e:  # noqa: BLE001
         logger.exception("buscar_concorrentes falhou")
-        return {"total_concorrentes": 0, "nivel_saturacao": "desconhecido",
-                "concorrentes": [], "erro": f"{type(e).__name__}: {e}",
-                "ferramenta": "buscar_concorrentes"}
+        return {
+            "total_concorrentes": 0,
+            "nivel_saturacao": "desconhecido",
+            "concorrentes": [],
+            "erro": f"{type(e).__name__}: {e}",
+            "ferramenta": "buscar_concorrentes",
+            "tipo_negocio": tn,
+            "query": "",
+            "exclude_aplicado": exclude,
+        }
 
     brutos = res.get("concorrentes") or []
+    # Reaplica gate tipo (pipeline Places pode ter entrado sem filtrar studio)
+    from tools.competitor_tools import filtrar_concorrentes_bairro_tipo
+    brutos = filtrar_concorrentes_bairro_tipo(brutos, bairro=bairro, tipo_negocio=tn)
+
     itens = []
+    query_usada = ""
     for c in brutos:
         if not isinstance(c, dict):
             continue
+        if c.get("_query_formato1") and not query_usada:
+            query_usada = str(c["_query_formato1"])
         dist = c.get("distancia_m") or c.get("distance_m") or c.get("distancia")
         if dist is None and c.get("distancia_km") is not None:
             try:
@@ -479,13 +501,34 @@ def buscar_concorrentes(
             "avaliacoes": c.get("num_avaliacoes") or c.get("avaliacoes") or c.get("user_ratings_total"),
             "place_id": c.get("place_id") or c.get("id") or "",
         })
-    total = len(itens)
     itens.sort(key=lambda x: x["distancia_m"] if x["distancia_m"] is not None else 99_999)
+    total = len(itens)
+    truncado = total > 40
+    if truncado:
+        itens = itens[:40]
+
+    if not query_usada:
+        uf_s = (uf or "").strip().upper()
+        if bairro and cidade and uf_s:
+            query_usada = f"academia no bairro {bairro}, {cidade} - {uf_s}" if tn == "academia" else (
+                f"{tn} no bairro {bairro}, {cidade} - {uf_s}"
+            )
+        else:
+            query_usada = " ".join(x for x in [tn, bairro, cidade, uf] if x)
+
+    smoke_q = "+".join(quote_plus(x) for x in [tn if tn != "academia" else "academia", bairro, cidade, (uf or "").strip()] if x)
+    maps_smoke_url = f"https://www.google.com/maps/search/{smoke_q}/"
+
     return {
         "total_concorrentes": total,
         "nivel_saturacao": _nivel_saturacao(total),
-        "concorrentes": itens[:8],
+        "concorrentes": itens,
+        "truncado": truncado,
         "ferramenta": "buscar_concorrentes",
+        "tipo_negocio": tn,
+        "query": query_usada,
+        "exclude_aplicado": exclude,
+        "maps_smoke_url": maps_smoke_url,
     }
 
 

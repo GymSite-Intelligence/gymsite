@@ -113,31 +113,65 @@ def _extrair_resposta(event) -> str:
 
 
 def _coletar_acoes(event) -> list[dict]:
+    """Extrai function_call e function_response (com `resultado` JSON da tool)."""
     content = getattr(event, "content", None)
     if not content or not getattr(content, "parts", None):
         return []
     acoes: list[dict] = []
     for p in content.parts:
         fc = getattr(p, "function_call", None)
-        if not fc:
+        if fc:
+            nome = getattr(fc, "name", "") or ""
+            if nome:
+                acoes.append({"ferramenta": nome, "status": "sucesso", "resumo": nome})
             continue
-        nome = getattr(fc, "name", "") or ""
+        fr = getattr(p, "function_response", None)
+        if not fr:
+            continue
+        nome = getattr(fr, "name", "") or ""
         if not nome:
             continue
-        acoes.append({"ferramenta": nome, "status": "sucesso", "resumo": nome})
+        resp = getattr(fr, "response", None)
+        if resp is not None and hasattr(resp, "model_dump"):
+            try:
+                resp = resp.model_dump()
+            except Exception:  # noqa: BLE001
+                pass
+        if not isinstance(resp, dict):
+            resp = {"valor": resp} if resp is not None else {}
+        status = "erro" if resp.get("erro") else "sucesso"
+        acoes.append({
+            "ferramenta": nome,
+            "status": status,
+            "resumo": nome,
+            "resultado": resp,
+        })
     return acoes
 
 
 def _normalizar_tool_calls(acoes: list[dict]) -> list[dict]:
-    return [
-        {
-            "ferramenta": a.get("ferramenta") or a.get("name") or "",
-            "status": a.get("status") or "sucesso",
-            "resumo": a.get("resumo") or a.get("ferramenta") or a.get("name") or "",
-        }
-        for a in acoes
-        if a.get("ferramenta") or a.get("name")
-    ]
+    """Dedup por ferramenta; preserva `resultado` quando a response chegou."""
+    ordem: list[str] = []
+    por_nome: dict[str, dict] = {}
+    for a in acoes:
+        nome = (a.get("ferramenta") or a.get("name") or "").strip()
+        if not nome:
+            continue
+        if nome not in por_nome:
+            ordem.append(nome)
+            por_nome[nome] = {
+                "ferramenta": nome,
+                "status": a.get("status") or "sucesso",
+                "resumo": a.get("resumo") or nome,
+            }
+        cur = por_nome[nome]
+        if a.get("status"):
+            cur["status"] = a["status"]
+        if a.get("resumo"):
+            cur["resumo"] = a["resumo"]
+        if a.get("resultado") is not None:
+            cur["resultado"] = a["resultado"]
+    return [por_nome[n] for n in ordem]
 
 
 async def _rodar_turno(

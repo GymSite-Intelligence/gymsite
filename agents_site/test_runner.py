@@ -72,6 +72,31 @@ def test_coletar_acoes_extrai_function_call():
     assert acoes[0]["ferramenta"] == "buscar_concorrentes"
 
 
+def test_coletar_acoes_preserva_resultado_function_response():
+    from agents_site.runner import _coletar_acoes, _normalizar_tool_calls
+
+    payload = {"total_concorrentes": 2, "concorrentes": [{"nome": "Aquazul"}]}
+    ev = SimpleNamespace(
+        content=SimpleNamespace(
+            parts=[
+                SimpleNamespace(
+                    function_call=None,
+                    function_response=SimpleNamespace(
+                        name="buscar_concorrentes",
+                        response=payload,
+                    ),
+                )
+            ]
+        )
+    )
+    acoes = _coletar_acoes(ev)
+    assert acoes[0]["resultado"]["total_concorrentes"] == 2
+    norm = _normalizar_tool_calls(
+        [{"ferramenta": "buscar_concorrentes", "status": "sucesso", "resumo": "buscar_concorrentes"}, *acoes]
+    )
+    assert norm[0]["resultado"]["concorrentes"][0]["nome"] == "Aquazul"
+
+
 def test_extrair_resposta_evento_sem_content():
     from agents_site.runner import _extrair_resposta
 
