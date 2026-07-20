@@ -432,8 +432,9 @@ def buscar_concorrentes(
     tipo_negocio: str = "academia",
     raio_metros: int = 1500,
 ) -> dict:
-    """Conta e lista academias concorrentes no bairro (Google Maps / SearchAPI ao vivo).
+    """Conta e lista academias concorrentes no bairro (SearchAPI / Maps ao vivo).
     Formato 1: query tipada + exclude pós-fetch — NUNCA estime a quantidade de cabeça.
+    Link Maps = mesma query (1:1).
 
     NÃO devolve texto de reviews. Para reclamações/dores/avaliações textuais, use
     `analisar_reviews_e_dores`.
@@ -447,18 +448,19 @@ def buscar_concorrentes(
 
     Returns:
         dict Formato 1: total, nivel_saturacao, concorrentes (lista completa até 40),
-        query, exclude_aplicado, maps_smoke_url.
+        query, exclude_aplicado, maps_smoke_url (URL = query).
     """
-    from tools.competitor_tools import buscar_academias
-    from urllib.parse import quote_plus
+    from tools.competitor_tools import (
+        _maps_search_url_from_query,
+        _query_formato1,
+        buscar_academias,
+        exclude_aplicado_tipo,
+        filtrar_concorrentes_bairro_tipo,
+    )
 
     tn = (tipo_negocio or "academia").strip().lower()
-    exclude = []
-    if tn == "academia":
-        exclude = [
-            "crossfit", "studio", "estudio", "pilates", "funcional",
-            "jiu", "yoga", "boxe", "mma", "personalizado",
-        ]
+    exclude = exclude_aplicado_tipo(tn)
+    query_usada = _query_formato1(tn, bairro, cidade, uf or "")
     try:
         raio = max(300, min(5000, int(raio_metros)))
         res = buscar_academias(bairro, cidade, raio, uf or "", tn)
@@ -471,21 +473,19 @@ def buscar_concorrentes(
             "erro": f"{type(e).__name__}: {e}",
             "ferramenta": "buscar_concorrentes",
             "tipo_negocio": tn,
-            "query": "",
+            "query": query_usada,
             "exclude_aplicado": exclude,
+            "maps_smoke_url": _maps_search_url_from_query(query_usada),
         }
 
     brutos = res.get("concorrentes") or []
-    # Reaplica gate tipo (pipeline Places pode ter entrado sem filtrar studio)
-    from tools.competitor_tools import filtrar_concorrentes_bairro_tipo
     brutos = filtrar_concorrentes_bairro_tipo(brutos, bairro=bairro, tipo_negocio=tn)
 
     itens = []
-    query_usada = ""
     for c in brutos:
         if not isinstance(c, dict):
             continue
-        if c.get("_query_formato1") and not query_usada:
+        if c.get("_query_formato1"):
             query_usada = str(c["_query_formato1"])
         dist = c.get("distancia_m") or c.get("distance_m") or c.get("distancia")
         if dist is None and c.get("distancia_km") is not None:
@@ -507,17 +507,7 @@ def buscar_concorrentes(
     if truncado:
         itens = itens[:40]
 
-    if not query_usada:
-        uf_s = (uf or "").strip().upper()
-        if bairro and cidade and uf_s:
-            query_usada = f"academia no bairro {bairro}, {cidade} - {uf_s}" if tn == "academia" else (
-                f"{tn} no bairro {bairro}, {cidade} - {uf_s}"
-            )
-        else:
-            query_usada = " ".join(x for x in [tn, bairro, cidade, uf] if x)
-
-    smoke_q = "+".join(quote_plus(x) for x in [tn if tn != "academia" else "academia", bairro, cidade, (uf or "").strip()] if x)
-    maps_smoke_url = f"https://www.google.com/maps/search/{smoke_q}/"
+    maps_smoke_url = _maps_search_url_from_query(query_usada)
 
     return {
         "total_concorrentes": total,

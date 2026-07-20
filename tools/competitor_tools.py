@@ -541,23 +541,52 @@ _TIPO_OFF_ACADEMIA = (
 )
 
 
-def filtrar_concorrentes_bairro_tipo(
-    concorrentes: list[dict], *, bairro: str, tipo_negocio: str
-) -> list[dict]:
-    """Filtro determinístico AUTORITATIVO (aplicado no A6, na lista final — A3b é LLM e
-    re-emite, então filtrar só dentro da tool não governa a saída).
+_TIPO_EXCLUDE_ACADEMIA = (
+    "crossfit", "studio", "estudio", "pilates", "funcional",
+    "jiu", "yoga", "boxe", "mma", "personalizado",
+)
+_TIPO_PLACES_PADRAO = "gym"
 
-    BAIRRO: mantém quem tem o bairro-alvo no NOME ou ENDEREÇO. NÃO usa bairro_concorrente
-    (corrompível: o parser de endereço taggeia 'Cocó' p/ academia de Papicu). Salvaguarda:
-    mantém todos só se ZERO casa o bairro.
-    TIPO: tira off-type (CrossFit/Artes Marciais/Pilates num relatório de 'academia')."""
+
+def exclude_aplicado_tipo(tipo_negocio: str) -> list[str]:
+    """Termos excluídos pós-fetch (Formato 1) conforme tipo_negocio do form."""
+    tn = (tipo_negocio or "academia").strip().lower()
+    if tn == "academia":
+        return list(_TIPO_EXCLUDE_ACADEMIA)
+    return []
+
+
+def _query_formato1(tipo_negocio: str, bairro: str, cidade: str, uf: str) -> str:
+    """Formato 1 determinístico: '<tipo> no bairro <bairro>, <cidade> - <UF>'."""
+    tn = (tipo_negocio or "academia").strip().lower()
+    kw = _TIPO_NEGOCIO_KW.get(tn, "academias")
+    termo_q = {
+        "academias": "academia",
+        "crossfit": "crossfit",
+        "pilates": "pilates",
+        "treinamento funcional": "treinamento funcional",
+    }.get(kw, kw[:-1] if kw.endswith("s") else kw)
+    uf_s = (uf or "").strip().upper()
+    if bairro and cidade and uf_s:
+        return f"{termo_q} no bairro {bairro}, {cidade} - {uf_s}"
+    if bairro and cidade:
+        return f"{termo_q} no bairro {bairro}, {cidade}"
+    return " ".join(x for x in [termo_q, bairro, cidade, uf_s] if x and str(x).strip())
+
+
+def _maps_search_url_from_query(query: str) -> str:
+    """Formato 2: URL Maps = mesma string da query Formato 1 (1:1 link = query)."""
+    from urllib.parse import quote_plus
+
+    return f"https://www.google.com/maps/search/{quote_plus((query or '').strip())}/"
+
+
+def _filtrar_status_e_bairro(concorrentes: list[dict], *, bairro: str) -> list[dict]:
+    """Descarta fechadas + mantém só quem tem bairro-alvo no nome/endereço."""
     if not concorrentes:
         return concorrentes
     out = [c for c in concorrentes if isinstance(c, dict)]
 
-    # STATUS: academia fechada não é concorrente — contá-la infla saturação/aneis/ticket.
-    # Dropa CLOSED_* explícito; mantém OPERATIONAL e desconhecido/vazio (não over-filtra
-    # quando o Places não informou). Salvaguarda: só aplica se sobrar ≥1 operacional.
     def _status(s: dict) -> str:
         return str(s.get("status") or s.get("business_status")
                    or s.get("businessStatus") or "").upper()
@@ -576,11 +605,27 @@ def filtrar_concorrentes_bairro_tipo(
             return alvo in blob
         no_bairro = [s for s in out if _do_bairro(s)]
         fora = [s for s in out if not _do_bairro(s)]
-        if no_bairro:  # mantém todos só se ZERO no bairro
+        if no_bairro:
             if fora:
                 logger.info("filtro bairro '%s': %d no bairro, %d fora (%s)", bairro,
                             len(no_bairro), len(fora), ", ".join(s.get("nome", "?") for s in fora[:5]))
             out = no_bairro
+    return out
+
+
+def filtrar_concorrentes_bairro_tipo(
+    concorrentes: list[dict], *, bairro: str, tipo_negocio: str
+) -> list[dict]:
+    """Filtro determinístico AUTORITATIVO (aplicado no A6, na lista final — A3b é LLM e
+    re-emite, então filtrar só dentro da tool não governa a saída).
+
+    BAIRRO: mantém quem tem o bairro-alvo no NOME ou ENDEREÇO. NÃO usa bairro_concorrente
+    (corrompível: o parser de endereço taggeia 'Cocó' p/ academia de Papicu). Salvaguarda:
+    mantém todos só se ZERO casa o bairro.
+    TIPO: tira off-type (CrossFit/Artes Marciais/Pilates num relatório de 'academia')."""
+    if not concorrentes:
+        return concorrentes
+    out = _filtrar_status_e_bairro(concorrentes, bairro=bairro)
     tn = (tipo_negocio or "").strip().lower()
     if tn == "academia" or tn in _TIPO_ON_KW:
         on_tipo = [s for s in out if _tipo_relevante(s, tipo_negocio)]
@@ -662,9 +707,11 @@ def cross_check_concorrentes_bairro(
     Mesmo mapa `_TIPO_NEGOCIO_KW` da âncora A3a — evita q duplicada
     (`academia` vs `academias`) e miss de search_raw.
     """
-    termo = _TIPO_NEGOCIO_KW.get((tipo_negocio or "").strip().lower(), "academias")
-    query = " ".join(p for p in (termo, bairro, cidade, uf) if p)
-    raw = _searchapi_maps_textsearch(query, max_results=40)
+    query = _query_formato1(tipo_negocio, bairro, cidade, uf)
+    region = ", ".join(p for p in (cidade, uf) if p)
+    raw = _searchapi_maps_textsearch(
+        query, max_results=40, region=region, places_type=_TIPO_PLACES_PADRAO,
+    )
     if not raw:
         return {"status": "indisponivel", "query": query, "google_n": 0, "gated_n": 0,
                 "no_bairro": [], "novos": [], "ja_no_set_n": 0}
@@ -706,13 +753,25 @@ def cross_check_concorrentes_bairro(
     }
 
 
-def _searchapi_maps_textsearch(query: str, *, max_results: int = 40) -> list[dict]:
+def _searchapi_maps_textsearch(
+    query: str,
+    *,
+    max_results: int = 40,
+    region: str = "",
+    places_type: str = "",
+) -> list[dict]:
     """SearchAPI engine=google_maps → adaptado p/ o MESMO shape do Places searchText
     (places[]). place_id é `ChIJ...` (idêntico ao Places API) → cache/dedup compatíveis.
-    Custo ~4× menor. Best-effort: erro/sem key → []."""
+    Custo ~4× menor. Best-effort: erro/sem key → [].
+
+    Formato 1: `q` = query tipada; `region` ancora cidade/UF; filtro gym pós-fetch."""
     import os as _os
 
-    sa_params = {"q": query, "gl": "br", "hl": "pt-br"}
+    sa_params: dict = {"q": query, "gl": "br", "hl": "pt-br"}
+    if region:
+        sa_params["region"] = region
+    if places_type:
+        sa_params["type"] = places_type
     data: dict = {}
     try:
         from tools.search_raw_cache import get_search_raw, set_search_raw
@@ -777,7 +836,13 @@ def _searchapi_maps_textsearch(query: str, *, max_results: int = 40) -> list[dic
     return out
 
 
-def _places_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
+def _places_textsearch(
+    query: str,
+    *,
+    max_results: int = 20,
+    region: str = "",
+    places_type: str = "",
+) -> list[dict]:
     """Âncora de concorrentes. Dispatcher: SearchAPI google_maps (default, ~4× barato,
     place_id idêntico) com fallback automático p/ Places API se vazio/erro.
     Força via COMPETIDOR_MAPS_BACKEND=places."""
@@ -785,7 +850,9 @@ def _places_textsearch(query: str, *, max_results: int = 20) -> list[dict]:
 
     backend = (_os.getenv("COMPETIDOR_MAPS_BACKEND") or "searchapi").strip().lower()
     if backend != "places":
-        res = _searchapi_maps_textsearch(query, max_results=max_results)
+        res = _searchapi_maps_textsearch(
+            query, max_results=max_results, region=region, places_type=places_type,
+        )
         if res:
             for p in res:
                 if isinstance(p, dict):
@@ -864,34 +931,28 @@ def _cross_parque_contato(out: list[dict], cidade: str, uf: str, bairro: str) ->
     return out
 
 
-def _descobrir_concorrentes_bairro(
-    tipo_negocio: str, bairro: str, cidade: str, uf: str,
-    lat_centro: float, lng_centro: float,
-) -> list[dict]:
-    """Âncora bairro Formato 1: query tipada + gate bairro (nome|end) + types fitness
-    + cruz parque CNPJ + filtro tipo (exclude studio/cross quando academia).
-    """
-    kw = _TIPO_NEGOCIO_KW.get((tipo_negocio or "").strip().lower(), "academias")
-    termo_q = {
-        "academias": "academia",
-        "crossfit": "crossfit",
-        "pilates": "pilates",
-        "treinamento funcional": "treinamento funcional",
-    }.get(kw, kw[:-1] if kw.endswith("s") else kw)
-    if bairro and cidade and uf:
-        query = f"{termo_q} no bairro {bairro}, {cidade} - {uf.strip().upper()}"
-    elif bairro and cidade:
-        query = f"{termo_q} no bairro {bairro}, {cidade}"
-    else:
-        query = " ".join(x for x in [kw, bairro, cidade, uf] if x and x.strip())
-    places = _places_textsearch(query)
-    alvo = _norm_txt(bairro or "")
+def _place_eh_fitness(p: dict) -> bool:
+    tipos = p.get("types") or []
+    if set(tipos) & _FITNESS_TYPES:
+        return True
+    nome = (p.get("displayName") or {}).get("text") or p.get("title") or ""
+    blob = _norm_txt(" ".join(str(t) for t in tipos) + " " + nome)
+    return any(_norm_txt(k) in blob for k in _SEARCHAPI_FITNESS_KW)
 
+
+def _places_para_concorrentes_bairro(
+    places: list[dict],
+    *,
+    query: str,
+    bairro: str,
+    lat_centro: float,
+    lng_centro: float,
+) -> list[dict]:
+    alvo = _norm_txt(bairro or "")
     out: list[dict] = []
     for p in places:
-        tipos = p.get("types") or []
-        if not (set(tipos) & _FITNESS_TYPES):
-            continue  # mata restaurante/escritório/loja
+        if not _place_eh_fitness(p):
+            continue
         end = p.get("formattedAddress", "")
         nome = (p.get("displayName") or {}).get("text") or ""
         if alvo:
@@ -912,7 +973,7 @@ def _descobrir_concorrentes_bairro(
             "num_avaliacoes": p.get("userRatingCount", 0),
             "nivel_preco": "",
             "status": p.get("businessStatus", ""),
-            "tipos": tipos,
+            "tipos": p.get("types") or [],
             "telefone": p.get("nationalPhoneNumber", ""),
             "website": p.get("websiteUri", ""),
             "google_maps_uri": p.get("googleMapsUri", ""),
@@ -921,6 +982,24 @@ def _descobrir_concorrentes_bairro(
             "fonte_busca": backend,
             "_query_formato1": query,
         })
+    return out
+
+
+def _descobrir_concorrentes_bairro(
+    tipo_negocio: str, bairro: str, cidade: str, uf: str,
+    lat_centro: float, lng_centro: float,
+) -> list[dict]:
+    """Formato 1: query tipada + gate bairro (nome|end) + types fitness
+    + cruz parque CNPJ + filtro tipo (exclude studio/cross quando academia).
+    """
+    query = _query_formato1(tipo_negocio, bairro, cidade, uf)
+    region = ", ".join(p for p in (cidade, uf) if p)
+    places = _places_textsearch(
+        query, max_results=40, region=region, places_type=_TIPO_PLACES_PADRAO,
+    )
+    out = _places_para_concorrentes_bairro(
+        places, query=query, bairro=bairro, lat_centro=lat_centro, lng_centro=lng_centro,
+    )
     cruzados = _cross_parque_contato(out, cidade, uf, bairro)
     return filtrar_concorrentes_bairro_tipo(
         cruzados, bairro=bairro or "", tipo_negocio=tipo_negocio or "academia",
