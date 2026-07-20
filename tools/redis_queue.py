@@ -35,7 +35,7 @@ class RedisQueue:
         """Adiciona job na fila."""
         r = await get_redis()
         job_id = f"job_{asyncio.get_event_loop().time()}_{id(job)}"
-        payload = json.dumps({"id": job_id, **job})
+        payload = json.dumps({"id": job_id, "enqueued_at": asyncio.get_event_loop().time(), **job})
         await r.lpush(QUEUE_KEY, payload)
         logger.info(f"Job enfileirado: {job_id} ({job.get('type', 'unknown')})")
         return job_id
@@ -146,3 +146,33 @@ async def gymsite_worker(job: dict) -> None:
 
     else:
         logger.warning(f"Job tipo desconhecido: {job_type}")
+
+
+async def requeue_stale_processing_jobs(max_age_sec: int = 300) -> int:
+    """Devolve jobs presos em `processing` à fila (worker morreu mid-job)."""
+    import time
+
+    r = await get_redis()
+    processing = await r.hgetall(PROCESSING_KEY)
+    if not processing:
+        return 0
+    requeued = 0
+    now = time.time()
+    for job_id, payload in processing.items():
+        try:
+            job = json.loads(payload)
+        except json.JSONDecodeError:
+            await r.hdel(PROCESSING_KEY, job_id)
+            continue
+        job_ts = float(job.get("enqueued_at") or 0)
+        if max_age_sec > 0 and job_ts and (now - job_ts) < max_age_sec:
+            continue
+        await r.lpush(QUEUE_KEY, payload)
+        await r.hdel(PROCESSING_KEY, job_id)
+        requeued += 1
+        logger.warning(
+            "Job re-enfileirado de processing: %s (%s)",
+            job_id,
+            job.get("type"),
+        )
+    return requeued

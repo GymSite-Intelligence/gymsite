@@ -1,0 +1,13 @@
+cidade,bairro,n_runs,custo_min,custo_med,custo_max,razao_max_min,cv_pct,tokens_med,hipotese_principal
+Fortaleza,Cocó,36,1.6,4.13,17.49,10.93,70.6,673519,tokens_LLM_variam_ordem_magnitude (pipeline/modelo/retries)
+Fortaleza,Aldeota,5,1.29,12.39,17.16,13.3,60.7,1799567,tokens_LLM_variam_ordem_magnitude (pipeline/modelo/retries)
+Fortaleza,Meireles,5,3.43,4.21,7.53,2.2,33.8,1130709,variacao_normal_run
+Niterói,Itaipu,4,2.53,3.75,4.79,1.89,25.5,726618,variacao_normal_run
+São Paulo,Vila Formosa,3,3.5,3.53,4.04,1.15,6.7,72217,variacao_normal_run
+João Pessoa,Bessa,3,9.95,10.98,11.92,1.2,7.3,1423706,variacao_normal_run
+Hortolândia,Santa Emilia,3,8.96,9.01,10.52,1.17,7.6,1656308,variacao_normal_run
+Fortaleza,Eusébio,3,4.97,6.78,6.95,1.4,14.4,1831784,variacao_normal_run
+Niterói,Camboinhas,3,4.32,4.37,4.45,1.03,1.2,954662,variacao_normal_run
+João Pessoa,Cabo Branco,2,11.76,11.91,12.06,1.03,1.3,1560592,variacao_normal_run
+Fortaleza,Parangaba,2,8.28,11.15,14.03,1.69,25.8,2642742,variacao_normal_run
+Castelo,(cidade inteira),2,0.96,1.21,1.47,1.53,21.0,169928,variacao_normal_run
