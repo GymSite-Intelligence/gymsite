@@ -556,8 +556,22 @@ def exclude_aplicado_tipo(tipo_negocio: str) -> list[str]:
     return []
 
 
+def _formato1_place_token(s: str) -> str:
+    """Bairro/cidade na query Formato 1: fold acento + Title Case legível.
+
+    Cocó ≡ Coco → mesma query → mesmo params_hash (search_raw) → mesmo recall.
+    """
+    from tools.bairro_normalize import fold_texto, formatar_bairro_exibicao
+
+    return formatar_bairro_exibicao(fold_texto(s))
+
+
 def _query_formato1(tipo_negocio: str, bairro: str, cidade: str, uf: str) -> str:
-    """Formato 1 determinístico: '<tipo> no bairro <bairro>, <cidade> - <UF>'."""
+    """Formato 1 determinístico: '<tipo> no bairro <bairro>, <cidade> - <UF>'.
+
+    Bairro/cidade vão foldados (sem acento) pra unificar cache SearchAPI e recall
+    Maps — Cocó e Coco não podem virar dois mundos.
+    """
     tn = (tipo_negocio or "academia").strip().lower()
     kw = _TIPO_NEGOCIO_KW.get(tn, "academias")
     termo_q = {
@@ -567,12 +581,13 @@ def _query_formato1(tipo_negocio: str, bairro: str, cidade: str, uf: str) -> str
         "treinamento funcional": "treinamento funcional",
     }.get(kw, kw[:-1] if kw.endswith("s") else kw)
     uf_s = (uf or "").strip().upper()
-    if bairro and cidade and uf_s:
-        return f"{termo_q} no bairro {bairro}, {cidade} - {uf_s}"
-    if bairro and cidade:
-        return f"{termo_q} no bairro {bairro}, {cidade}"
-    return " ".join(x for x in [termo_q, bairro, cidade, uf_s] if x and str(x).strip())
-
+    bairro_q = _formato1_place_token(bairro) if bairro else ""
+    cidade_q = _formato1_place_token(cidade) if cidade else ""
+    if bairro_q and cidade_q and uf_s:
+        return f"{termo_q} no bairro {bairro_q}, {cidade_q} - {uf_s}"
+    if bairro_q and cidade_q:
+        return f"{termo_q} no bairro {bairro_q}, {cidade_q}"
+    return " ".join(x for x in [termo_q, bairro_q, cidade_q, uf_s] if x and str(x).strip())
 
 def _maps_search_url_from_query(query: str) -> str:
     """Formato 2: URL Maps = mesma string da query Formato 1 (1:1 link = query)."""

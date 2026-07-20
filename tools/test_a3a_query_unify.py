@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import tools.competitor_tools as ct
 
-_QUERY_COCO = "academia no bairro Cocó, Fortaleza - CE"
+# Fold acento: Cocó ≡ Coco → mesmo params_hash / recall SearchAPI
+_QUERY_COCO = "academia no bairro Coco, Fortaleza - CE"
 
 
 def test_cross_check_usa_query_formato1(monkeypatch):
