@@ -29,6 +29,10 @@ from services.consultor.project_state import (
 
 logger = logging.getLogger("gymsite.site_adk")
 
+_FALLBACK_RESPOSTA = (
+    "Tive um problema ao gerar a resposta agora. Pode reformular a pergunta ou tentar de novo?"
+)
+
 _APP_SITE = "gymsite_site"
 _APP_CONSULTOR = "gymsite_consultor"
 
@@ -286,6 +290,75 @@ async def _persistir_falha_turno(projeto_id: str, exc: BaseException) -> str:
     return msg
 
 
+async def _executar_turno_site(
+    projeto_id: str,
+    mensagem_efetiva: str,
+    historico: list[dict],
+    agente: str,
+) -> tuple[str, str | None, list[dict]]:
+    escolhido = _resolver_agente(agente)
+    with site_chat_developer_api(escolhido):
+        resposta, autor, alvo, acoes = await _rodar_turno(
+            escolhido,
+            historico,
+            mensagem_efetiva,
+            projeto_id,
+            tier="degustacao",
+            app_name=_APP_SITE,
+        )
+        resposta, autor_retry, acoes_retry = await _retry_pos_transfer(
+            resposta,
+            alvo,
+            historico,
+            mensagem_efetiva,
+            projeto_id,
+            tier="degustacao",
+            app_name=_APP_SITE,
+        )
+    if autor_retry:
+        autor = autor_retry
+    if acoes_retry:
+        acoes = acoes_retry
+    if not resposta:
+        resposta = _FALLBACK_RESPOSTA
+    return resposta, autor, acoes
+
+
+async def completar_turno_orfao_site(projeto_id: str, agente: str = "degustacao") -> bool:
+    """Completa turno quando user já foi persistido mas assistant não (worker caiu)."""
+    historico = await carregar_historico(projeto_id, limite=20)
+    if not historico or historico[-1].get("role") != "user":
+        return False
+    mensagem = (historico[-1].get("content") or "").strip()
+    if not mensagem:
+        return False
+    historico_turno = historico[:-1]
+    mensagem_efetiva = mensagem
+    try:
+        resposta, autor, acoes = await _executar_turno_site(
+            projeto_id, mensagem_efetiva, historico_turno, agente
+        )
+    except Exception as exc:  # noqa: BLE001
+        await _persistir_falha_turno(projeto_id, exc)
+        return True
+    resposta, citacoes = extrair_citacoes(resposta)
+    await salvar_mensagem(
+        projeto_id,
+        role="assistant",
+        content=resposta,
+        tool_calls=acoes or None,
+        tool_results=pack_citacoes_tool_results(citacoes),
+        agente=autor,
+    )
+    logger.info(
+        "site_agent_adk órfão recuperado projeto=%s respondeu=%s",
+        projeto_id,
+        autor,
+        extra={"agent": "SITE_ADK"},
+    )
+    return True
+
+
 async def run_site_agent_adk(
     projeto_id: str,
     mensagem: str,
@@ -334,35 +407,12 @@ async def run_site_agent_adk(
     historico = await carregar_historico(projeto_id, limite=20)
     await salvar_mensagem(projeto_id, role="user", content=mensagem)
 
-    escolhido = _resolver_agente(agente)
     try:
-        with site_chat_developer_api(escolhido):
-            resposta, autor, alvo, acoes = await _rodar_turno(
-                escolhido,
-                historico,
-                mensagem_efetiva,
-                projeto_id,
-                tier="degustacao",
-                app_name=_APP_SITE,
-            )
-            resposta, autor_retry, acoes_retry = await _retry_pos_transfer(
-                resposta,
-                alvo,
-                historico,
-                mensagem_efetiva,
-                projeto_id,
-                tier="degustacao",
-                app_name=_APP_SITE,
-            )
-        if autor_retry:
-            autor = autor_retry
-        if acoes_retry:
-            acoes = acoes_retry
+        resposta, autor, acoes = await _executar_turno_site(
+            projeto_id, mensagem_efetiva, historico, agente
+        )
     except Exception as exc:  # noqa: BLE001
         return await _persistir_falha_turno(projeto_id, exc)
-
-    if not resposta:
-        resposta = "Tive um problema ao gerar a resposta agora. Pode reformular a pergunta ou tentar de novo?"
 
     resposta, citacoes = extrair_citacoes(resposta)
 

@@ -497,6 +497,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Startup stale recovery skip: %s", e)
 
+    try:
+        from tools.redis_queue import requeue_stale_processing_jobs
+
+        n = await requeue_stale_processing_jobs(0)
+        if n:
+            logger.info("Re-enfileirados %d job(s) presos em processing", n)
+    except Exception as e:
+        logger.warning("Startup redis processing recovery skip: %s", e)
+
+    try:
+        from services.consultor.site_chat_recovery import recover_stale_site_conversas_async
+
+        n = await recover_stale_site_conversas_async(_supabase_client())
+        if n:
+            logger.info("Recuperados %d turno(s) site_conversar órfão(s)", n)
+    except Exception as e:
+        logger.warning("Startup site chat recovery skip: %s", e)
+
     # Sweep periódico: reconciliação de boot só pega órfãos quando o processo
     # reinicia. Um pipeline que trava num processo VIVO (ex.: retry em loop) fica
     # running indefinidamente. Este loop varre a cada PIPELINE_RECOVERY_SWEEP_MINUTES
@@ -511,6 +529,29 @@ async def lifespan(app: FastAPI):
                 )
                 if n:
                     logger.warning("Sweep periódico: %d relatório(s) órfão(s) recuperado(s)", n)
+                from services.consultor.site_chat_recovery import (
+                    recover_stale_site_conversas_async,
+                )
+
+                ns = await recover_stale_site_conversas_async(_supabase_client())
+                if ns:
+                    logger.warning(
+                        "Sweep periódico: %d turno(s) site chat órfão(s) recuperado(s)",
+                        ns,
+                    )
+                try:
+                    from tools.redis_queue import requeue_stale_processing_jobs
+
+                    nr = await requeue_stale_processing_jobs(
+                        int(os.getenv("SITE_CHAT_PROCESSING_MAX_AGE_SEC", "300"))
+                    )
+                    if nr:
+                        logger.warning(
+                            "Sweep periódico: %d job(s) redis processing re-enfileirado(s)",
+                            nr,
+                        )
+                except Exception as re:
+                    logger.debug("Sweep redis processing skip: %s", re)
             except asyncio.CancelledError:
                 raise
             except Exception as e:
