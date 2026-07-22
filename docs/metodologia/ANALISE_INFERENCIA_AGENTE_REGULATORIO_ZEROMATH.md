@@ -2,7 +2,7 @@
 
 > Escopo: **Agente Regulatório** (`agents_site` / persona `regulatorio` no Consultor).  
 > Referência: [Knowledge Base](https://zeromathai.com/en/knowledge-base-en/), [Inference Engine](https://zeromathai.com/en/knowledge-base-en/inference-engine/), [Expert Systems](https://zeromathai.com/en/expert-system-en/), [Forward](https://zeromathai.com/en/knowledge-base-en/forward-chaining/) / [Backward Chaining](https://zeromathai.com/en/backward-chaining-en/), [Frames](https://zeromathai.com/en/frames-en/), [Scripts](https://zeromathai.com/en/scripts-en/), [OWA](https://zeromathai.com/en/open-world-assumption-en/) / [CWA](https://zeromathai.com/en/closed-world-assumption-en/).  
-> Data: 2026-07-22 · status: análise (sem mudança de código nesta entrega).
+> Data: 2026-07-22 · status: análise + **P0 implementado** (`tools/regulatorio_lookup.py`).
 
 ## Veredito em uma frase
 
@@ -83,19 +83,21 @@ O Técnico já separa KB e engine melhor:
 
 ## 3. O que pode (e vale) implementar — priorizado
 
-### P0 — Tabelas fechadas como FunctionTools (CWA local)
+### P0 — Tabelas fechadas como FunctionTools (CWA local) ✅ FEITO
 
-**Por quê:** mapa UF→CREF e anuidade-base nacional são conjuntos **completos e versionados**. CWA aqui é seguro: se a UF não estiver na tabela, é bug de dados, não “desconhecido jurídico”.
+**Implementado:** `tools/regulatorio_lookup.py` + seeds em `tools/regulatorio_seeds/`;
+wrappers em `agents_site/tools.py`; wire ADK (`agents_site/agent.py`) + Consultor
+(`consultor_engine.py`). Testes: `tests/agents_site/test_regulatorio_lookup_p0.py`.
 
-Tools candidatas (espelho do Técnico):
+Tools:
 
 1. `resolver_cref_por_uf(uf, data_ref?)`  
-   - Retorna: `cref_registro_hoje`, `cref_futuro?`, `em_transicao`, `vigencia`, carimbo (Res. CONFEF 623–627/2026, mapa CONFEF).  
-   - Fonte canônica no repo: `mapa_uf_cref_registro.txt` → virar JSON/YAML seedado.
+   - Retorna: `cref_registro`, `cref_futuro?`, `em_transicao`, `vigencia_futuro`, carimbo.  
+   - Fonte: seed de `mapa_uf_cref_registro.txt` (Res. CONFEF 623–627/2026).
 
 2. `consultar_anuidade_pj_cref(cref_ou_uf, exercicio?)`  
    - Valor-base nacional + variações regionais **só quando curadas**; senão `status=consultar_regional`.  
-   - Fonte: `regulatorio_anuidades_processo_2026.txt` / Res. CONFEF 596/2025.
+   - Fonte: seed de `regulatorio_anuidades_processo_2026.txt` / Res. CONFEF 596/2025.
 
 Efeito prático: pergunta “qual CREF da Paraíba?” deixa de depender de chunk lucky — a tool devolve o fato; o LLM só explica.
 

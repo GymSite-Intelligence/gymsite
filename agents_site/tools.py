@@ -377,10 +377,59 @@ def calcular_sanitarios_por_lotacao(
     }
 
 
+def resolver_cref_por_uf(uf: str, data_ref: str = "") -> dict:
+    """Resolve de forma DETERMINÍSTICA em qual CREF registrar a academia na UF.
+    Use SEMPRE para "qual CREF do meu estado" / jurisdição — NUNCA estime de cabeça
+    nem dependa só do RAG. Tabela fechada (27 UFs); UFs em transição usam o CREF pai
+    até 02/01/2027.
+
+    Args:
+        uf: sigla (PB) ou nome do estado (Paraíba).
+        data_ref: data ISO opcional (YYYY-MM-DD) para simular o corte 2027-01-02.
+
+    Returns:
+        dict com cref_registro, em_transicao, cref_futuro, citacao e regras_aplicadas.
+    """
+    from tools.regulatorio_lookup import resolver_cref_por_uf as _resolver
+
+    return _resolver(uf, data_ref=data_ref or None)
+
+
+def consultar_anuidade_pj_cref(
+    uf: str = "",
+    cref: str = "",
+    exercicio: int = 2026,
+    data_ref: str = "",
+) -> dict:
+    """Devolve a anuidade PJ DETERMINÍSTICA: valor-base nacional (Res. CONFEF 596/2025)
+    + nota regional quando curada. Use SEMPRE para "qual a anuidade do CREF" —
+    NUNCA chute o valor. Valor FINAL com desconto: oriente confirmar no regional.
+
+    Args:
+        uf: sigla ou nome do estado (alternativa a cref).
+        cref: código ou rótulo (10, CREF10, CREF10/PB).
+        exercicio: ano da anuidade (seed atual = 2026).
+        data_ref: data ISO opcional (p/ CREF23–27 ainda inoperantes).
+
+    Returns:
+        dict com valor_base_centavos, citacao, nota_regional e status
+        (ok | consultar_regional | exercicio_nao_coberto).
+    """
+    from tools.regulatorio_lookup import consultar_anuidade_pj_cref as _anu
+
+    return _anu(
+        uf=uf or None,
+        cref=cref or None,
+        exercicio=exercicio,
+        data_ref=data_ref or None,
+    )
+
+
 def consultar_base_regulatoria(pergunta: str) -> dict:
     """Consulta a base REGULATÓRIA dedicada (documentos CONFEF/CREF, Lei 9.696/1998,
-    anuidades, registro PJ, licenças de funcionamento). Use SEMPRE antes de afirmar uma
-    exigência legal, valor de anuidade, prazo ou regra.
+    anuidades, registro PJ, licenças de funcionamento). Use para prosa legal / contexto
+    (Lei 9.696, processo de registro, licenças). Para CREF por UF ou valor-base de
+    anuidade, prefira resolver_cref_por_uf / consultar_anuidade_pj_cref.
 
     Aponta pro engine `gymsite-regulatorio-app` (store gymsite-regulatorio-docs) — NÃO o
     market. Antes disso caía no default market e respondia CREF com doc de mercado.

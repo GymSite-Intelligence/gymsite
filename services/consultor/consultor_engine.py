@@ -374,6 +374,43 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
             "required": ["lotacao"],
         },
     ),
+    types.FunctionDeclaration(
+        name="resolver_cref_por_uf",
+        description=(
+            "Resolve DETERMINÍSTICO em qual CREF registrar a academia na UF (tabela das 27 UFs). "
+            "Chamar SEMPRE para 'qual CREF do meu estado', jurisdição, Paraíba/Maranhão/etc. "
+            "UFs em transição usam o CREF pai até 02/01/2027. NUNCA chute o CREF."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "uf": {"type": "string", "description": "Sigla (PB) ou nome do estado (Paraíba)"},
+                "data_ref": {
+                    "type": "string",
+                    "description": "Data ISO opcional YYYY-MM-DD (corte 2027-01-02)",
+                },
+            },
+            "required": ["uf"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="consultar_anuidade_pj_cref",
+        description=(
+            "Anuidade PJ DETERMINÍSTICA: valor-base nacional (Res. CONFEF 596/2025) + nota "
+            "regional quando curada. Chamar SEMPRE para 'qual a anuidade do CREF'. "
+            "Valor FINAL com desconto: orientar confirmar no regional. NUNCA chute o valor."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "uf": {"type": "string", "description": "Sigla ou nome do estado"},
+                "cref": {"type": "string", "description": "Código ou rótulo (10, CREF10)"},
+                "exercicio": {"type": "integer", "description": "Ano da anuidade (padrão 2026)"},
+                "data_ref": {"type": "string", "description": "Data ISO opcional YYYY-MM-DD"},
+            },
+            "required": [],
+        },
+    ),
 ])
 
 # ─── System prompt do consultor ───────────────────────────────────────────────
@@ -527,8 +564,13 @@ Técnico mas acessível, frases curtas. Sem preço de plano. Colete contato só 
 _PERSONA_REGULATORIO = """## PAPEL
 Você é o agente Regulatório do GymSite Intelligence. Ajuda quem quer abrir academia a entender o que precisa LEGALMENTE: registro no CREF (pessoa jurídica), responsável técnico (profissional de educação física), Lei 9.696/1998, anuidades do CREF da região e licenças/notas técnicas de funcionamento.
 
+## LOOKUPS DETERMINÍSTICOS (obrigatório)
+- CREF por UF/estado → SEMPRE `resolver_cref_por_uf` (não chute; não dependa só do RAG).
+- Anuidade PJ → SEMPRE `consultar_anuidade_pj_cref` (valor-base Res. CONFEF 596/2025 + nota regional). Valor FINAL = confirmar no CREF regional.
+- Prosa legal (Lei 9.696, RT, processo, licenças) → `consultar_base_conhecimento`.
+
 ## REGRA DE OURO (FONTE)
-Responda SEMPRE com base em consultar_base_conhecimento (documentos oficiais CONFEF/CREF/leis). Carimbo obrigatório `valor · base · fonte · janela` em toda exigência/prazo/valor. Fonte = lei nº + ano + artigo (ou resolução CONFEF/CREF) — NUNCA "Vertex AI Search" nem nome de arquivo. Exigência municipal só com município+UF. Ao final emita JSON `{{"citacoes": [{{"valor": "...", "base": "...", "fonte": "...", "janela": "..."}}]}}` só com os 4 campos. Sem carimbo completo → não cite; oriente CREF/prefeitura local.
+Carimbo obrigatório `valor · base · fonte · janela` em toda exigência/prazo/valor. Fonte = lei nº + ano + artigo (ou resolução CONFEF/CREF) — NUNCA "Vertex AI Search" nem nome de arquivo. Exigência municipal só com município+UF. Ao final emita JSON `{{"citacoes": [{{"valor": "...", "base": "...", "fonte": "...", "janela": "..."}}]}}` só com os 4 campos. Sem carimbo completo → não cite; oriente CREF/prefeitura local.
 
 ## ESCOPO
 Só regulatório de abertura (registro PJ no CREF, responsável técnico, Lei 9.696, anuidades CREF, licenças de funcionamento, zoneamento quando houver). Viabilidade/concorrência/equipamentos/financeiro → diga que é com os outros especialistas e ofereça redirecionar.
@@ -582,9 +624,13 @@ _AGENTES_SITE: dict[str, dict] = {
                             "calcular_equipamentos_por_area"}),
         "amostra_tools": frozenset(),  # RAG é barato → sem antifatiamento de amostra
     },
-    "regulatorio": {  # registro/licença/CREF — só a base de conhecimento (docs CONFEF/Lei 9.696)
+    "regulatorio": {  # registro/licença/CREF — lookups CWA + RAG prosa
         "persona": _PERSONA_REGULATORIO,
-        "tools": frozenset({"consultar_base_conhecimento"}),
+        "tools": frozenset({
+            "resolver_cref_por_uf",
+            "consultar_anuidade_pj_cref",
+            "consultar_base_conhecimento",
+        }),
         "amostra_tools": frozenset(),
     },
     "arquiteto": {  # projeto do espaço — base de engenharia/obra + sanitários por lotação
@@ -765,6 +811,28 @@ async def _executar_ferramenta(
             from agents_site.tools import calcular_sanitarios_por_lotacao
             resultado = calcular_sanitarios_por_lotacao(int(args.get("lotacao") or 0))
             resumo = f"sanitários p/ lotação {args.get('lotacao')}"
+
+        elif nome == "resolver_cref_por_uf":
+            from tools.regulatorio_lookup import resolver_cref_por_uf
+            resultado = resolver_cref_por_uf(
+                str(args.get("uf") or ""),
+                data_ref=args.get("data_ref") or None,
+            )
+            resumo = resultado.get("cref_registro") or "CREF não resolvido"
+
+        elif nome == "consultar_anuidade_pj_cref":
+            from tools.regulatorio_lookup import consultar_anuidade_pj_cref
+            ex = args.get("exercicio")
+            resultado = consultar_anuidade_pj_cref(
+                uf=args.get("uf") or None,
+                cref=args.get("cref") or None,
+                exercicio=int(ex) if ex is not None else None,
+                data_ref=args.get("data_ref") or None,
+            )
+            if resultado.get("valor_base_centavos") is not None:
+                resumo = f"R$ {resultado.get('valor_base_reais')} ({resultado.get('cref_registro')})"
+            else:
+                resumo = resultado.get("status") or "anuidade"
 
         else:
             resultado = {"erro": f"Ferramenta desconhecida: {nome}"}
@@ -1228,6 +1296,8 @@ _CUSTO_BRL_POR_TOOL: dict[str, float] = {
     "dimensionar_cardio_por_pico": 0.0,
     "dimensionar_musculacao": 0.0,
     "calcular_equipamentos_por_area": 0.0,
+    "resolver_cref_por_uf": 0.0,
+    "consultar_anuidade_pj_cref": 0.0,
 }
 
 def _custo_tools(tools_executadas: list[str]) -> float:

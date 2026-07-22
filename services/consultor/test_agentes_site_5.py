@@ -28,6 +28,15 @@ def test_engenheiro_tools_e_persona():
     assert "Engenheiro de Obra" in cfg["persona"]
 
 
+def test_regulatorio_tools_lookups_p0():
+    from services.consultor.consultor_engine import _agente_cfg
+
+    cfg = _agente_cfg("regulatorio")
+    assert "resolver_cref_por_uf" in cfg["tools"]
+    assert "consultar_anuidade_pj_cref" in cfg["tools"]
+    assert "consultar_base_conhecimento" in cfg["tools"]
+
+
 def test_tools_novas_declaradas_no_contrato():
     """As 2 tools novas têm FunctionDeclaration (senão o LLM não as chama)."""
     from services.consultor import consultor_engine as ce
@@ -37,6 +46,10 @@ def test_tools_novas_declaradas_no_contrato():
     src = inspect.getsource(ce)
     assert 'name="consultar_engenharia_obra"' in src
     assert 'name="calcular_sanitarios_por_lotacao"' in src
+    assert 'name="resolver_cref_por_uf"' in src
+    assert 'name="consultar_anuidade_pj_cref"' in src
     # E o dispatch conhece as duas (elif por nome).
     assert 'nome == "consultar_engenharia_obra"' in src
     assert 'nome == "calcular_sanitarios_por_lotacao"' in src
+    assert 'nome == "resolver_cref_por_uf"' in src
+    assert 'nome == "consultar_anuidade_pj_cref"' in src
