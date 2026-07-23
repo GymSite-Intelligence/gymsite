@@ -1,0 +1,166 @@
+{
+  "meta": {
+    "exercicio": 2026,
+    "valor_base_centavos": 156968,
+    "fonte_base": "Res. CONFEF nº 596/2025",
+    "base_descricao": "anuidade PJ CREF valor-base nacional",
+    "natureza": "contribuição social (art. 149 CF + Lei nº 12.514/2011)",
+    "aviso": "Regionais têm autonomia de desconto/parcelamento — confirme o valor final no CREF regional."
+  },
+  "por_cref": {
+    "1": {
+      "label": "CREF1/RJ",
+      "ufs": ["RJ"],
+      "status": "ok",
+      "nota_regional": "Capital R$200mil–R$500mil → R$ 941,00.",
+      "fonte_regional": "Res. CREF1 nº 144/2025"
+    },
+    "2": {
+      "label": "CREF2/RS",
+      "ufs": ["RS"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar proporcionalidade/parcelas no CREF2.",
+      "fonte_regional": "Reg. Interno / Res. 224/2024"
+    },
+    "3": {
+      "label": "CREF3/SC",
+      "ufs": ["SC"],
+      "status": "ok",
+      "nota_regional": "50% até capital R$200mil (R$ 784,84) até 10/09/2026; SLU R$ 470,90.",
+      "fonte_regional": "Res. 285/2025/CREF3"
+    },
+    "4": {
+      "label": "CREF4/SP",
+      "ufs": ["SP"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar faixas locais no CREF4/SP.",
+      "fonte_regional": "Reg. Interno CREF4"
+    },
+    "5": {
+      "label": "CREF5/CE",
+      "ufs": ["CE"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF5/CE.",
+      "fonte_regional": "Reg. Interno / Res. 491/2023"
+    },
+    "6": {
+      "label": "CREF6/MG",
+      "ufs": ["MG"],
+      "status": "ok",
+      "nota_regional": "SLU R$ 470,90; capital até R$50mil R$ 784,84 até 31/03/2026.",
+      "fonte_regional": "Res. anuidade CREF6/MG 2026"
+    },
+    "7": {
+      "label": "CREF7/DF",
+      "ufs": ["DF"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF7/DF.",
+      "fonte_regional": "Res. CREF7 nº 136/2025"
+    },
+    "8": {
+      "label": "CREF8/AM-AC-RO-RR",
+      "ufs": ["AM", "AC", "RO", "RR"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF8 (estados em transição de regionais).",
+      "fonte_regional": "Reg. Interno CREF8"
+    },
+    "9": {
+      "label": "CREF9/PR",
+      "ufs": ["PR"],
+      "status": "ok",
+      "nota_regional": "40% em jan/fev p/ capital até R$200mil (R$ 941,81).",
+      "fonte_regional": "Tabela 2026 CREF9"
+    },
+    "10": {
+      "label": "CREF10/PB",
+      "ufs": ["PB"],
+      "status": "ok",
+      "nota_regional": "Descontos até 50% até 11/07/2026 (R$ 784,84 a R$ 1.491,20).",
+      "fonte_regional": "Res. CREF10 nº 150/2025"
+    },
+    "11": {
+      "label": "CREF11/MS",
+      "ufs": ["MS"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF11/MS.",
+      "fonte_regional": "Reg. Interno CREF11"
+    },
+    "12": {
+      "label": "CREF12/PE",
+      "ufs": ["PE"],
+      "status": "ok",
+      "nota_regional": "50% p/ capital até R$200mil (R$ 784,84) de 02/01 a 30/06/2026.",
+      "fonte_regional": "Res. CREF12/PE nº 123/2025"
+    },
+    "13": {
+      "label": "CREF13/BA",
+      "ufs": ["BA"],
+      "status": "ok",
+      "nota_regional": "50% de 01/01 a 31/03/2026 p/ capital até R$50mil (R$ 784,84).",
+      "fonte_regional": "Res. CREF13/BA nº 081/2025"
+    },
+    "14": {
+      "label": "CREF14/GO-TO",
+      "ufs": ["GO", "TO"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF14.",
+      "fonte_regional": "Res. CREF14/GO-TO 2026"
+    },
+    "15": {
+      "label": "CREF15/PI",
+      "ufs": ["PI"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF15/PI. Maranhão NÃO é CREF15 — é CREF21.",
+      "fonte_regional": "Regulamento CREF15"
+    },
+    "16": {
+      "label": "CREF16/RN",
+      "ufs": ["RN"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF16.",
+      "fonte_regional": "Regulamento CREF16"
+    },
+    "17": {
+      "label": "CREF17/MT",
+      "ufs": ["MT"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF17/MT (faixas de capital).",
+      "fonte_regional": "Res. CREF17/MT 2026"
+    },
+    "18": {
+      "label": "CREF18/PA-AP",
+      "ufs": ["PA", "AP"],
+      "status": "ok",
+      "nota_regional": "50% até 02/02/2026 p/ capital até R$200mil (R$ 784,84).",
+      "fonte_regional": "Res. CREF18 2026"
+    },
+    "19": {
+      "label": "CREF19/AL",
+      "ufs": ["AL"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF19/AL.",
+      "fonte_regional": "Res. CREF19/AL 2026"
+    },
+    "20": {
+      "label": "CREF20/SE",
+      "ufs": ["SE"],
+      "status": "ok",
+      "nota_regional": "40% p/ capital até R$50mil (R$ 941,81) até 31/05/2026.",
+      "fonte_regional": "Notícia anuidade CREF20/SE"
+    },
+    "21": {
+      "label": "CREF21/MA",
+      "ufs": ["MA"],
+      "status": "ok",
+      "nota_regional": "50% p/ capital até R$50mil ou SLU (R$ 784,84) até 10/04/2026.",
+      "fonte_regional": "Res. CREF21 nº 055/2025"
+    },
+    "22": {
+      "label": "CREF22/ES",
+      "ufs": ["ES"],
+      "status": "consultar_regional",
+      "nota_regional": "Consultar o CREF22/ES.",
+      "fonte_regional": "Reg. Interno CREF22"
+    }
+  }
+}
