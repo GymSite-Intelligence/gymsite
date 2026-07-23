@@ -2,8 +2,10 @@
 
 João Pessoa (Lei 1.347/1971 art. 367) sizes gym/ginásio fixtures by training
 floor area (m²), not by headcount. São Paulo (Lei 16.642/2017) uses lotação
-by sex. Unknown cities → status municipio_nao_coberto (caller may use the
-generic estimativa_nao_oficial tool).
+by sex. Fortaleza (Lei 5.530/1981 art. 365) confirms athlete locker area by
+m²; athlete fixture table (Anexo II) is not curated yet. Rio (LC 198/2019
+art. 24) sizes commercial salas by m² / meeting places by público or
+espectadores. Unknown cities → status municipio_nao_coberto.
 """
 from __future__ import annotations
 
@@ -203,6 +205,164 @@ def _calc_sp_por_lotacao(seed: dict[str, Any], lotacao: int) -> dict[str, Any]:
     }
 
 
+def _calc_fortaleza_vestiario(seed: dict[str, Any], area_treino_m2: float) -> dict[str, Any]:
+    """Art. 365 VI — locker area only; athlete fixture table not curated."""
+    regra = seed["regras"]["vestiario_atletas_por_area_treino"]
+    area = float(area_treino_m2)
+    limite = float(regra.get("limite_area_treino_m2") or 10000)
+    area_efetiva = min(area, limite) if area > 0 else 0.0
+    ratio = float(regra["vestiario_m2_por_treino_m2"])
+    min_sexo = float(regra["min_m2_por_sexo"])
+    prop_total = area_efetiva * ratio
+    por_sexo = max(min_sexo, prop_total / 2.0) if area_efetiva > 0 else 0.0
+    total = round(por_sexo * 2.0, 1)
+    pecas = seed["regras"].get("pecas_atletas") or {}
+    return {
+        "status": "parcial_coe",
+        "tipo": "coe_municipal",
+        "municipio": seed["municipio"],
+        "uf": seed["uf"],
+        "modo": "vestiario_por_area_treino",
+        "area_treino_m2": area,
+        "area_treino_m2_efetiva_para_cota": area_efetiva,
+        "vestiario_m2_por_sexo_min": round(por_sexo, 1),
+        "vestiario_m2_total_min": total,
+        "bacias_femininas": None,
+        "bacias_masculinas": None,
+        "chuveiros_femininos": None,
+        "chuveiros_masculinos": None,
+        "pecas_atletas": {
+            "status": pecas.get("status") or "tabela_anexo_ii_nao_curada",
+            "artigo": pecas.get("artigo"),
+            "aviso": pecas.get("descricao"),
+        },
+        "regras_aplicadas": [
+            "FOR_ART_365_VI_VESTIARIO",
+            "FOR_ART_365_V_TABELA_NAO_CURADA",
+        ],
+        "citacao": _citacao(
+            seed,
+            f"{total:g} m² de vestiário (mín. {min_sexo:g} m²/sexo)",
+            f"prática de esporte · {area_efetiva:g} m² · art. 365 VI (1 m²/25 m²)",
+        ),
+        "aviso": (
+            "Cota PARCIAL do COE Fortaleza: só o vestiário de atletas (art. 365 VI) está "
+            "confirmado neste seed. Bacias/chuveiros/lavatórios dos atletas dependem da "
+            "tabela do art. 365 V / Anexo II — ainda não curada. Confirme com arquiteto "
+            "local / prefeitura antes do projeto."
+        ),
+        "fonte_url": seed.get("fonte_url"),
+    }
+
+
+def _rio_banheiro_funcionarios(seed: dict[str, Any]) -> dict[str, Any]:
+    reg = seed["regras"]["banheiro_funcionarios"]
+    return {
+        "bacias": int(reg["bacias"]),
+        "lavatorios": int(reg["lavatorios"]),
+        "chuveiros": int(reg["chuveiros"]),
+        "artigo": reg.get("artigo"),
+        "descricao": reg.get("descricao"),
+    }
+
+
+def _rio_vestiarios_nota(seed: dict[str, Any]) -> dict[str, Any]:
+    reg = seed["regras"].get("vestiarios_chuveiros_clientela") or {}
+    return {
+        "obrigatorio": bool(reg.get("obrigatorio")),
+        "cota_numerica_no_coe": bool(reg.get("cota_numerica_no_coe")),
+        "fonte": reg.get("fonte"),
+        "descricao": reg.get("descricao"),
+    }
+
+
+def _calc_rio_salas_por_area(seed: dict[str, Any], area_util_m2: float) -> dict[str, Any]:
+    regra = seed["regras"]["salas_comerciais_por_area"]
+    base = max(1.0, float(regra["base_m2"]))
+    area = float(area_util_m2)
+    blocos = math.ceil(area / base) if area > 0 else 0
+    sanitarios = blocos * int(regra["sanitarios_por_bloco"])
+    return {
+        "status": "ok",
+        "tipo": "coe_municipal",
+        "municipio": seed["municipio"],
+        "uf": seed["uf"],
+        "modo": "salas_comerciais_por_area",
+        "area_util_m2": area,
+        "sanitarios_coletivos_min": sanitarios,
+        "banheiro_funcionarios": _rio_banheiro_funcionarios(seed),
+        "vestiarios_chuveiros_clientela": _rio_vestiarios_nota(seed),
+        "regras_aplicadas": [
+            "RJ_LC198_ART24_PAR1_SALAS",
+            "RJ_LC198_ART25_FUNCIONARIOS",
+            "RJ_VESTIARIOS_QUALITATIVO_SMS",
+        ],
+        "citacao": _citacao(
+            seed,
+            f"{sanitarios} sanitário(s) coletivo(s) + 1 banheiro funcionários",
+            f"salas · {area:g} m² úteis · art. 24 §1 (1/250 m²) + art. 25",
+        ),
+        "aviso": (
+            "Cota do COE Rio (LC 198/2019) para salas comerciais por área útil. "
+            "Vestiários/chuveiros da clientela são exigência sanitária sem cota numérica "
+            "neste COE — use estimativa_por_pico só como planejamento. Confirme enquadramento "
+            "com arquiteto / prefeitura."
+        ),
+        "fonte_url": seed.get("fonte_url"),
+    }
+
+
+def _calc_rio_reuniao(
+    seed: dict[str, Any],
+    *,
+    area_publico_m2: float | None = None,
+    espectadores: int | None = None,
+) -> dict[str, Any]:
+    regra = seed["regras"]["locais_reuniao"]
+    grupos = 0
+    base_txt = ""
+    if area_publico_m2 is not None and area_publico_m2 > 0:
+        base_m2 = max(1.0, float(regra["por_m2_publico"]))
+        grupos = math.ceil(float(area_publico_m2) / base_m2)
+        base_txt = f"{area_publico_m2:g} m² de público · art. 24 §2 (1 kit/100 m²)"
+    elif espectadores is not None and espectadores > 0:
+        por = max(1, int(regra["por_espectadores"]))
+        grupos = math.ceil(int(espectadores) / por)
+        base_txt = f"{espectadores} espectadores · art. 24 §2 (1 kit/500)"
+    bac = grupos * int(regra["bacias"])
+    lav = grupos * int(regra["lavatorios"])
+    return {
+        "status": "ok",
+        "tipo": "coe_municipal",
+        "municipio": seed["municipio"],
+        "uf": seed["uf"],
+        "modo": "locais_reuniao",
+        "area_publico_m2": area_publico_m2,
+        "espectadores": espectadores,
+        "bacias_total": bac,
+        "lavatorios_total": lav,
+        "mictorio_facultativo": bool(regra.get("mictorio_facultativo")),
+        "banheiro_funcionarios": _rio_banheiro_funcionarios(seed),
+        "vestiarios_chuveiros_clientela": _rio_vestiarios_nota(seed),
+        "regras_aplicadas": [
+            "RJ_LC198_ART24_PAR2_REUNIAO",
+            "RJ_LC198_ART25_FUNCIONARIOS",
+            "RJ_VESTIARIOS_QUALITATIVO_SMS",
+        ],
+        "citacao": _citacao(
+            seed,
+            f"{bac} vasos + {lav} lavatórios (público) + 1 banheiro funcionários",
+            base_txt,
+        ),
+        "aviso": (
+            "Cota de sanitários de USO DO PÚBLICO em locais de reunião (art. 24 §2), "
+            "não a cota de salas comerciais. Para academia típica prefira área útil "
+            "(art. 24 §1). Confirme o enquadramento com arquiteto local."
+        ),
+        "fonte_url": seed.get("fonte_url"),
+    }
+
+
 def calcular_sanitarios_municipio(
     cidade: str,
     uf: str = "",
@@ -319,6 +479,90 @@ def calcular_sanitarios_municipio(
             }
         # SP official already is peak-based; no second generic lens (avoids two similar numbers).
         return _calc_sp_por_lotacao(seed, lot)
+
+    # Fortaleza — vestiário por área; peças Anexo II ainda não curadas
+    if preferida == "area_treino_parcial_vestiario":
+        if area is not None and area > 0:
+            return _com_estimativa_pico(_calc_fortaleza_vestiario(seed, area), lot)
+        miss = seed.get("sem_area_treino") or {}
+        return _com_estimativa_pico(
+            {
+                "status": miss.get("status") or "precisa_area_treino",
+                "tipo": "coe_municipal",
+                "municipio": seed["municipio"],
+                "uf": seed["uf"],
+                "lotacao_informada": lot,
+                "regra_resumo": (
+                    "vestiário de atletas: 1 m² por 25 m² de prática de esporte "
+                    "(mín. 8 m²/sexo); peças sanitárias no Anexo II ainda não curadas"
+                ),
+                "aviso": (
+                    (miss.get("mensagem") or "Informe a área útil de treino em m².")
+                    + (
+                        " Enquanto isso, estimativa_por_pico traz uma métrica de planejamento "
+                        "pelo pico — sem valor legal."
+                        if lot and lot > 0
+                        else ""
+                    )
+                ),
+                "regras_aplicadas": ["FOR_EXIGE_AREA_TREINO"],
+                "citacao": _citacao(
+                    seed,
+                    "área de prática de esporte necessária",
+                    "ginásio/clube · art. 365 VI · vestiário por m²",
+                ),
+                "fonte_url": seed.get("fonte_url"),
+            },
+            lot,
+        )
+
+    # Rio — área útil (salas) ou espectadores (locais de reunião)
+    if preferida == "area_util_ou_espectadores":
+        if area is not None and area > 0:
+            return _com_estimativa_pico(_calc_rio_salas_por_area(seed, area), lot)
+        if esp is not None and esp > 0:
+            return _com_estimativa_pico(
+                _calc_rio_reuniao(seed, espectadores=esp),
+                lot,
+            )
+        miss = seed.get("sem_area_treino") or {}
+        return _com_estimativa_pico(
+            {
+                "status": miss.get("status") or "precisa_area_util",
+                "tipo": "coe_municipal",
+                "municipio": seed["municipio"],
+                "uf": seed["uf"],
+                "lotacao_informada": lot,
+                "banheiro_funcionarios": _rio_banheiro_funcionarios(seed),
+                "vestiarios_chuveiros_clientela": _rio_vestiarios_nota(seed),
+                "regra_resumo": (
+                    "salas comerciais: 1 sanitário / 250 m² úteis (art. 24 §1); "
+                    "locais de reunião: 1 vaso+1 lav / 100 m² público ou / 500 espectadores "
+                    "(art. 24 §2); banheiro funcionários obrigatório (art. 25)"
+                ),
+                "aviso": (
+                    (miss.get("mensagem") or "Informe a área útil em m².")
+                    + (
+                        " Enquanto isso, estimativa_por_pico traz uma métrica de planejamento "
+                        "pelo pico — sem valor legal."
+                        if lot and lot > 0
+                        else ""
+                    )
+                ),
+                "regras_aplicadas": [
+                    "RJ_EXIGE_AREA_OU_ESPECTADORES",
+                    "RJ_LC198_ART25_FUNCIONARIOS",
+                    "RJ_VESTIARIOS_QUALITATIVO_SMS",
+                ],
+                "citacao": _citacao(
+                    seed,
+                    "área útil ou espectadores necessários",
+                    "LC 198/2019 art. 24 · cotas por m² / público",
+                ),
+                "fonte_url": seed.get("fonte_url"),
+            },
+            lot,
+        )
 
     return {
         "status": "erro",
