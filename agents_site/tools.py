@@ -325,6 +325,47 @@ def consultar_engenharia_obra(pergunta: str) -> dict:
         return {"resultados": [], "n_docs": 0, "erro": f"{type(e).__name__}: {e}"}
 
 
+def calcular_sanitarios_municipio(
+    cidade: str,
+    uf: str = "",
+    lotacao: int = 0,
+    area_treino_m2: float = 0.0,
+    espectadores: int = 0,
+) -> dict:
+    """Dimensiona sanitários pelo Código de Obras MUNICIPAL (tabela curada).
+    Use SEMPRE quando o usuário informar a cidade — priorize sobre
+    `calcular_sanitarios_por_lotacao` (que é só estimativa genérica).
+
+    João Pessoa/PB: o COE (Lei 1.347/1971 art. 367) exige ÁREA de treino (m²), não
+    lotação. São Paulo/SP: usa lotação por sexo (Lei 16.642/2017). Município fora
+    da tabela → status municipio_nao_coberto.
+
+    Se `lotacao` (pico) for informada, a resposta INCLUI também `estimativa_por_pico`
+    (métrica de planejamento, NÃO-oficial) — útil mesmo quando o COE pede outra entrada.
+    Apresente as duas lentes: legal (COE) vs planejamento (pico).
+
+    Args:
+        cidade: município (ex.: "João Pessoa", "São Paulo").
+        uf: sigla opcional (PB, SP) — desambigua homônimos.
+        lotacao: ocupação máxima simultânea / pico (pessoas).
+        area_treino_m2: área útil de treino/praça (m²) — necessária em João Pessoa.
+        espectadores: público assistente (JP art. 367 § único), opcional.
+
+    Returns:
+        dict com status ok | precisa_area_treino | precisa_lotacao | municipio_nao_coberto,
+        citacao, e opcionalmente estimativa_por_pico.
+    """
+    from tools.coe_sanitarios import calcular_sanitarios_municipio as _calc
+
+    return _calc(
+        cidade=cidade,
+        uf=uf or "",
+        lotacao=int(lotacao) if lotacao else None,
+        area_treino_m2=float(area_treino_m2) if area_treino_m2 else None,
+        espectadores=int(espectadores) if espectadores else None,
+    )
+
+
 def calcular_sanitarios_por_lotacao(
     lotacao: int,
     pessoas_por_conjunto: int = 20,
@@ -335,12 +376,9 @@ def calcular_sanitarios_por_lotacao(
 
     Regra genérica: 1 bacia + 1 lavatório a cada `pessoas_por_conjunto` (padrão 20; reunião
     pode usar 50), dividido 50/50 por gênero; no masculino até 50% das bacias viram mictórios;
-    mínimo 5% acessível (NBR 9050). O número OFICIAL vem do Código de Obras do MUNICÍPIO (via
-    `consultar_engenharia_obra` ou fonte oficial), que costuma ser ASSIMÉTRICO por gênero e mais
-    rígido — ex.: João Pessoa exige mais bacias femininas que o 50/50 daqui. NUNCA apresentar
-    este resultado como a contagem legal: rotular como estimativa e mandar confirmar no COE do
-    município. Para "quantos banheiros preciso" num município específico, priorizar a base/COE
-    sobre esta estimativa.
+    mínimo 5% acessível (NBR 9050). O número OFICIAL vem do Código de Obras do MUNICÍPIO via
+    `calcular_sanitarios_municipio` (quando a cidade está na tabela) ou fonte oficial.
+    NUNCA apresentar este resultado como a contagem legal.
 
     Args:
         lotacao: ocupação máxima simultânea da edificação (pessoas).

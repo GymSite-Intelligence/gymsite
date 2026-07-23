@@ -362,9 +362,9 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
     types.FunctionDeclaration(
         name="calcular_sanitarios_por_lotacao",
         description=(
-            "Calcula a QUANTIDADE de peças sanitárias (bacias/lavatórios/mictórios/acessíveis) "
-            "por lotação da academia. Chamar quando: 'quantos banheiros/sanitários/vestiários', "
-            "'peças sanitárias pra X pessoas'. Não estimar de cabeça."
+            "ESTIMATIVA NÃO-OFICIAL de peças sanitárias por lotação (regra genérica 50/50). "
+            "Só use se a cidade NÃO estiver na tabela municipal. Com cidade conhecida, "
+            "prefira calcular_sanitarios_municipio."
         ),
         parameters={
             "type": "object",
@@ -372,6 +372,32 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
                 "lotacao": {"type": "integer", "description": "Lotação/capacidade de pessoas"},
             },
             "required": ["lotacao"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="calcular_sanitarios_municipio",
+        description=(
+            "Dimensiona sanitários pelo Código de Obras MUNICIPAL (tabela curada). "
+            "Chamar SEMPRE quando houver cidade (ex.: João Pessoa, São Paulo). "
+            "João Pessoa exige área de treino em m² (Lei 1.347/1971 art. 367); "
+            "São Paulo usa lotação (Lei 16.642/2017). NUNCA chute COE de cabeça."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "cidade": {"type": "string", "description": "Município (ex.: João Pessoa)"},
+                "uf": {"type": "string", "description": "Sigla UF opcional (PB, SP)"},
+                "lotacao": {"type": "integer", "description": "Ocupação máxima simultânea"},
+                "area_treino_m2": {
+                    "type": "number",
+                    "description": "Área útil de treino/praça em m² (obrigatório em João Pessoa)",
+                },
+                "espectadores": {
+                    "type": "integer",
+                    "description": "Público assistente (JP art. 367 § único)",
+                },
+            },
+            "required": ["cidade"],
         },
     ),
     types.FunctionDeclaration(
@@ -583,7 +609,8 @@ _PERSONA_ARQUITETO = """## PAPEL
 Você é o Arquiteto do GymSite Intelligence — projeta o ESPAÇO da academia: zonas (musculação, cardio, funcional, alongamento), fluxos, recepção/vestiários/sanitários, acessibilidade, pisos e as etapas do projeto arquitetônico.
 
 ## REGRA DE OURO (FONTE)
-Chame SEMPRE consultar_engenharia_obra ANTES de afirmar regra de projeto, norma, área mínima ou exigência de acessibilidade. Carimbo `valor · base · fonte · janela` (ex.: NBR 9050 / NBR 13532 / COE municipal + município+UF). Sanitários via calcular_sanitarios_por_lotacao = estimativa NÃO-oficial. JSON final `{{"citacoes": [...]}}` só com 4 campos. Sem carimbo → não cite. NUNCA invente número ou norma.
+Chame SEMPRE consultar_engenharia_obra ANTES de afirmar regra de projeto, norma, área mínima ou exigência de acessibilidade.
+Sanitários: com CIDADE → SEMPRE `calcular_sanitarios_municipio` (COE curado). João Pessoa = área de treino em m² (não lotação). Se o usuário deu pico/lotação, a tool traz também `estimativa_por_pico` — apresente as duas lentes (legal vs planejamento), sem misturar. Sem cidade na tabela → estimativa NÃO-oficial. Carimbo `valor · base · fonte · janela`. JSON final `{{"citacoes": [...]}}` só com 4 campos. Sem carimbo → não cite. NUNCA invente número ou norma.
 
 ## ESCOPO
 Projeto/arquitetura/ambientes/acessibilidade. QUE equipamento e quantos cabem → Responsável Técnico; estrutura/instalações/licenças de obra → Engenheiro de Obra; regras do CREF → Regulatório. Deixe claro que o projeto deve ser assinado por arquiteto (RRT) e aprovado pela prefeitura.
@@ -633,9 +660,13 @@ _AGENTES_SITE: dict[str, dict] = {
         }),
         "amostra_tools": frozenset(),
     },
-    "arquiteto": {  # projeto do espaço — base de engenharia/obra + sanitários por lotação
+    "arquiteto": {  # projeto do espaço — base de engenharia/obra + COE municipal + estimativa
         "persona": _PERSONA_ARQUITETO,
-        "tools": frozenset({"consultar_engenharia_obra", "calcular_sanitarios_por_lotacao"}),
+        "tools": frozenset({
+            "consultar_engenharia_obra",
+            "calcular_sanitarios_municipio",
+            "calcular_sanitarios_por_lotacao",
+        }),
         "amostra_tools": frozenset(),
     },
     "engenheiro_obra": {  # viabilidade construtiva — base de engenharia/obra
@@ -811,6 +842,30 @@ async def _executar_ferramenta(
             from agents_site.tools import calcular_sanitarios_por_lotacao
             resultado = calcular_sanitarios_por_lotacao(int(args.get("lotacao") or 0))
             resumo = f"sanitários p/ lotação {args.get('lotacao')}"
+
+        elif nome == "calcular_sanitarios_municipio":
+            from tools.coe_sanitarios import calcular_sanitarios_municipio
+            resultado = calcular_sanitarios_municipio(
+                cidade=str(args.get("cidade") or ""),
+                uf=str(args.get("uf") or ""),
+                lotacao=int(args["lotacao"]) if args.get("lotacao") not in (None, "") else None,
+                area_treino_m2=(
+                    float(args["area_treino_m2"])
+                    if args.get("area_treino_m2") not in (None, "")
+                    else None
+                ),
+                espectadores=(
+                    int(args["espectadores"])
+                    if args.get("espectadores") not in (None, "")
+                    else None
+                ),
+            )
+            resumo = (
+                resultado.get("municipio")
+                or resultado.get("cidade")
+                or resultado.get("status")
+                or "COE"
+            )
 
         elif nome == "resolver_cref_por_uf":
             from tools.regulatorio_lookup import resolver_cref_por_uf
@@ -1298,6 +1353,8 @@ _CUSTO_BRL_POR_TOOL: dict[str, float] = {
     "calcular_equipamentos_por_area": 0.0,
     "resolver_cref_por_uf": 0.0,
     "consultar_anuidade_pj_cref": 0.0,
+    "calcular_sanitarios_municipio": 0.0,
+    "calcular_sanitarios_por_lotacao": 0.0,
 }
 
 def _custo_tools(tools_executadas: list[str]) -> float:

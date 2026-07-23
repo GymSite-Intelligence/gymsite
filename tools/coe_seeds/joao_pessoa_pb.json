@@ -1,0 +1,45 @@
+{
+  "municipio": "João Pessoa",
+  "uf": "PB",
+  "aliases": ["joao pessoa", "jampa", "jp"],
+  "lei": "Lei Municipal nº 1.347/1971 (Código de Obras)",
+  "fonte_url": "https://planodiretor.joaopessoa.pb.gov.br/wp-content/uploads/2025/03/Lei-Complementar-n.%C2%B0-1.347-1971-Codigo-de-Obras.pdf",
+  "verificado_em": "2026-07-22",
+  "janela": "1971",
+  "uso_academia": {
+    "enquadramento": "ginasio_esportes",
+    "nota": "Academia/musculação enquadra-se por analogia na seção de Ginásios de Esportes (arts. 364–368). O COE NÃO traz tabela por lotação de alunos — a cota de atletas/usuários do ginásio é por ÁREA da praça/treino.",
+    "artigos": ["366", "367"]
+  },
+  "regras": {
+    "vestiario_m2_por_10m2_treino": {
+      "artigo": "366",
+      "vestiario_m2_por_treino_m2": 0.1,
+      "descricao": "1,00 m² de vestiário por 10,00 m² da praça/treino, com armários, ligado aos sanitários, separado por sexo."
+    },
+    "sanitarios_por_100m2_treino_por_sexo": {
+      "artigo": "367",
+      "base_m2": 100,
+      "por_sexo": {
+        "bacias": 1,
+        "chuveiros": 3,
+        "lavatorios": 2,
+        "mictorios": 2
+      },
+      "nota_mictorios": "Mictórios aplicam-se ao masculino; no feminino o kit mantém bacias/chuveiros/lavatórios (sem mictório).",
+      "isolamento": "Isolamento individual para vasos e chuveiros."
+    },
+    "publico_espectadores": {
+      "artigo": "367 § único",
+      "por_grupo": 100,
+      "bacias": 1,
+      "lavatorios": 2,
+      "descricao": "Instalações sanitárias de uso do público: 1 vaso + 2 lavatórios por grupo de 100 espectadores."
+    }
+  },
+  "entrada_preferida": "area_treino_m2",
+  "sem_area_treino": {
+    "status": "precisa_area_treino",
+    "mensagem": "Em João Pessoa o COE (Lei 1.347/1971, art. 367) dimensiona sanitários de ginásio pela ÁREA da praça/treino (m²), não pela lotação de alunos. Informe a área útil de treino em m² para calcular a cota oficial."
+  }
+}
