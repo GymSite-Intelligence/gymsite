@@ -11,29 +11,36 @@ def test_municipios_seedados():
 
 
 def test_jp_com_lotacao_pede_area_treino():
-    """Caso do incidente: '200 alunos em João Pessoa' NÃO pode virar 10×50/50."""
+    """Caso do incidente: '200 alunos em João Pessoa' NÃO pode virar 10×50/50 oficial."""
     r = calcular_sanitarios_municipio("João Pessoa", "PB", lotacao=200)
     assert r["status"] == "precisa_area_treino"
     assert r["tipo"] == "coe_municipal"
     assert "367" in (r.get("citacao") or {}).get("base", "") + (r.get("aviso") or "")
-    # não devolve cota simétrica falsa
+    # não devolve cota simétrica como se fosse COE
     assert r.get("bacias_por_genero") is None
     assert r.get("bacias_total") is None
+    # mas oferece a lente de planejamento pelo pico
+    pico = r["estimativa_por_pico"]
+    assert pico["tipo"] == "estimativa_nao_oficial"
+    assert pico["papel"] == "planejamento_por_pico"
+    assert pico["bacias_total"] == 10
+    assert pico["bacias_por_genero"] == 5
+    assert "LENTE_PICO_PLANEJAMENTO" in r["regras_aplicadas"]
 
 
-def test_jp_por_area_treino_art_367():
-    # 300 m² → 3 kits/sexo: 3 vasos, 9 chuveiros, 6 lavatórios; mictórios só M
-    r = calcular_sanitarios_municipio("João Pessoa", uf="PB", area_treino_m2=300)
+def test_jp_area_mais_pico_traz_duas_lentes():
+    r = calcular_sanitarios_municipio(
+        "João Pessoa", "PB", lotacao=200, area_treino_m2=300,
+    )
     assert r["status"] == "ok"
-    assert r["bacias_femininas"] == 3
-    assert r["bacias_masculinas"] == 3
-    assert r["chuveiros_femininos"] == 9
-    assert r["chuveiros_masculinos"] == 9
-    assert r["lavatorios_femininos"] == 6
-    assert r["mictorios_masculinos"] == 6
-    assert r["assimetrico"] is True
-    assert "Lei Municipal nº 1.347/1971" in r["citacao"]["fonte"]
-    assert r["vestiario_m2_total_min"] == 30.0
+    assert r["bacias_femininas"] == 3  # COE
+    assert r["estimativa_por_pico"]["bacias_total"] == 10  # planejamento
+
+
+def test_municipio_nao_coberto_ainda_oferece_pico():
+    r = calcular_sanitarios_municipio("Campina Grande", "PB", lotacao=200)
+    assert r["status"] == "municipio_nao_coberto"
+    assert r["estimativa_por_pico"]["bacias_total"] == 10
 
 
 def test_jp_alias_jampa():
@@ -60,10 +67,20 @@ def test_sp_lotacao_200_oficial():
     assert "16.642/2017" in r["citacao"]["fonte"]
 
 
-def test_municipio_nao_coberto_owa():
-    r = calcular_sanitarios_municipio("Campina Grande", "PB", lotacao=200)
-    assert r["status"] == "municipio_nao_coberto"
-    assert "OWA" in " ".join(r.get("regras_aplicadas") or [])
+def test_jp_por_area_treino_art_367():
+    # 300 m² → 3 kits/sexo: 3 vasos, 9 chuveiros, 6 lavatórios; mictórios só M
+    r = calcular_sanitarios_municipio("João Pessoa", uf="PB", area_treino_m2=300)
+    assert r["status"] == "ok"
+    assert r["bacias_femininas"] == 3
+    assert r["bacias_masculinas"] == 3
+    assert r["chuveiros_femininos"] == 9
+    assert r["chuveiros_masculinos"] == 9
+    assert r["lavatorios_femininos"] == 6
+    assert r["mictorios_masculinos"] == 6
+    assert r["assimetrico"] is True
+    assert "Lei Municipal nº 1.347/1971" in r["citacao"]["fonte"]
+    assert r["vestiario_m2_total_min"] == 30.0
+    assert "estimativa_por_pico" not in r  # sem lotação, sem lente de pico
 
 
 def test_wire_arquiteto_menciona_tool():

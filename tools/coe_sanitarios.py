@@ -73,6 +73,43 @@ def _citacao(seed: dict[str, Any], valor: str, base: str) -> dict[str, str]:
     }
 
 
+def _estimativa_por_pico(lotacao: int) -> dict[str, Any]:
+    """Planning lens by peak occupancy — NEVER the legal COE count."""
+    lot = max(0, int(lotacao))
+    ppc = 20
+    conjuntos = math.ceil(lot / ppc) if lot else 0
+    por_genero = math.ceil(conjuntos / 2) if conjuntos else 0
+    acessiveis = max(1, math.ceil(conjuntos * 0.05)) if conjuntos else 0
+    return {
+        "tipo": "estimativa_nao_oficial",
+        "papel": "planejamento_por_pico",
+        "lotacao_pico": lot,
+        "bacias_total": conjuntos,
+        "lavatorios_total": conjuntos,
+        "bacias_por_genero": por_genero,
+        "lavatorios_por_genero": por_genero,
+        "mictorios_masc_possiveis": por_genero // 2,
+        "pecas_acessiveis_min": acessiveis,
+        "premissas": {"pessoas_por_conjunto": ppc, "fracao_sexo": 0.5, "pct_acessivel": 0.05},
+        "aviso": (
+            "Métrica de PLANEJAMENTO pelo pico de lotação (regra genérica ~1 conjunto/20 "
+            "pessoas, 50/50). NÃO substitui o Código de Obras do município."
+        ),
+    }
+
+
+def _com_estimativa_pico(payload: dict[str, Any], lotacao: int | None) -> dict[str, Any]:
+    if lotacao is None or int(lotacao) <= 0:
+        return payload
+    out = dict(payload)
+    out["estimativa_por_pico"] = _estimativa_por_pico(int(lotacao))
+    regras = list(out.get("regras_aplicadas") or [])
+    if "LENTE_PICO_PLANEJAMENTO" not in regras:
+        regras.append("LENTE_PICO_PLANEJAMENTO")
+    out["regras_aplicadas"] = regras
+    return out
+
+
 def _calc_jp_por_area(seed: dict[str, Any], area_treino_m2: float) -> dict[str, Any]:
     regra = seed["regras"]["sanitarios_por_100m2_treino_por_sexo"]
     base = float(regra["base_m2"])
@@ -176,21 +213,26 @@ def calcular_sanitarios_municipio(
     """Official municipal COE sizing when a curated seed exists.
 
     Prefer this over the generic estimativa whenever cidade/UF is known.
+    When `lotacao` (pico) is given, also attaches `estimativa_por_pico` as a
+    separate PLANNING lens — never as the legal COE count.
     """
     seed = _resolve_seed(cidade, uf or None)
     if not seed:
-        return {
-            "status": "municipio_nao_coberto",
-            "tipo": "coe_municipal",
-            "cidade": cidade,
-            "uf": (uf or "").upper() or None,
-            "aviso": (
-                "Ainda não temos o Código de Obras deste município na tabela curada. "
-                "Use calcular_sanitarios_por_lotacao só como ESTIMATIVA NÃO-OFICIAL e "
-                "confirme no COE da prefeitura."
-            ),
-            "regras_aplicadas": ["OWA_MUNICIPIO_AUSENTE"],
-        }
+        return _com_estimativa_pico(
+            {
+                "status": "municipio_nao_coberto",
+                "tipo": "coe_municipal",
+                "cidade": cidade,
+                "uf": (uf or "").upper() or None,
+                "aviso": (
+                    "Ainda não temos o Código de Obras deste município na tabela curada. "
+                    "Abaixo, se houver pico, vai uma estimativa de planejamento; o número "
+                    "legal continua sendo o COE da prefeitura."
+                ),
+                "regras_aplicadas": ["OWA_MUNICIPIO_AUSENTE"],
+            },
+            lotacao,
+        )
 
     preferida = seed.get("entrada_preferida")
     area = float(area_treino_m2) if area_treino_m2 is not None else None
@@ -200,55 +242,71 @@ def calcular_sanitarios_municipio(
     # João Pessoa — area-first
     if preferida == "area_treino_m2":
         if area is not None and area > 0:
-            return _calc_jp_por_area(seed, area)
+            return _com_estimativa_pico(_calc_jp_por_area(seed, area), lot)
         if esp is not None and esp > 0 and "publico_espectadores" in seed.get("regras", {}):
             reg = seed["regras"]["publico_espectadores"]
             grupos = math.ceil(esp / int(reg["por_grupo"]))
             bac = grupos * int(reg["bacias"])
             lav = grupos * int(reg["lavatorios"])
-            return {
-                "status": "ok",
+            return _com_estimativa_pico(
+                {
+                    "status": "ok",
+                    "tipo": "coe_municipal",
+                    "municipio": seed["municipio"],
+                    "uf": seed["uf"],
+                    "modo": "publico_espectadores",
+                    "espectadores": esp,
+                    "bacias_total": bac,
+                    "lavatorios_total": lav,
+                    "regras_aplicadas": ["JP_ART_367_PARAGRAFO_UNICO_PUBLICO"],
+                    "citacao": _citacao(
+                        seed,
+                        f"{bac} vasos + {lav} lavatórios (público)",
+                        f"{esp} espectadores · art. 367 § único · 1 vaso+2 lav/100",
+                    ),
+                    "aviso": (
+                        "Cota de sanitários de USO DO PÚBLICO (espectadores), não a dos "
+                        "atletas/usuários do ginásio. Para alunos/atletas informe a área de "
+                        "treino (m²). Se informou pico de alunos, veja também estimativa_por_pico."
+                    ),
+                    "fonte_url": seed.get("fonte_url"),
+                },
+                lot,
+            )
+        miss = seed.get("sem_area_treino") or {}
+        return _com_estimativa_pico(
+            {
+                "status": miss.get("status") or "precisa_area_treino",
                 "tipo": "coe_municipal",
                 "municipio": seed["municipio"],
                 "uf": seed["uf"],
-                "modo": "publico_espectadores",
-                "espectadores": esp,
-                "bacias_total": bac,
-                "lavatorios_total": lav,
-                "regras_aplicadas": ["JP_ART_367_PARAGRAFO_UNICO_PUBLICO"],
-                "citacao": _citacao(
-                    seed,
-                    f"{bac} vasos + {lav} lavatórios (público)",
-                    f"{esp} espectadores · art. 367 § único · 1 vaso+2 lav/100",
+                "lotacao_informada": lot,
+                "regra_resumo": (
+                    "por sexo, a cada 100 m² de treino: 1 vaso + 3 chuveiros + 2 lavatórios "
+                    "+ 2 mictórios (masculino)"
                 ),
                 "aviso": (
-                    "Cota de sanitários de USO DO PÚBLICO (espectadores), não a dos atletas/usuários "
-                    "do ginásio. Para alunos/atletas informe a área de treino (m²)."
+                    (miss.get("mensagem") or "Informe a área útil de treino em m².")
+                    + (
+                        " Enquanto isso, estimativa_por_pico traz uma métrica de planejamento "
+                        "pelo pico — sem valor legal."
+                        if lot and lot > 0
+                        else ""
+                    )
+                ),
+                "regras_aplicadas": ["JP_EXIGE_AREA_TREINO"],
+                "citacao": _citacao(
+                    seed,
+                    "área de treino necessária",
+                    "ginásio · art. 367 · dimensionamento por m² (não por lotação)",
                 ),
                 "fonte_url": seed.get("fonte_url"),
-            }
-        miss = seed.get("sem_area_treino") or {}
-        return {
-            "status": miss.get("status") or "precisa_area_treino",
-            "tipo": "coe_municipal",
-            "municipio": seed["municipio"],
-            "uf": seed["uf"],
-            "lotacao_informada": lot,
-            "regra_resumo": (
-                "por sexo, a cada 100 m² de treino: 1 vaso + 3 chuveiros + 2 lavatórios "
-                "+ 2 mictórios (masculino)"
-            ),
-            "aviso": miss.get("mensagem") or "Informe a área útil de treino em m².",
-            "regras_aplicadas": ["JP_EXIGE_AREA_TREINO"],
-            "citacao": _citacao(
-                seed,
-                "área de treino necessária",
-                "ginásio · art. 367 · dimensionamento por m² (não por lotação)",
-            ),
-            "fonte_url": seed.get("fonte_url"),
-        }
+            },
+            lot,
+        )
 
-    # São Paulo — lotação
+    # São Paulo — lotação (COE already uses peak; still expose the generic lens only if useful?
+    # SP COE IS the lotação path — don't duplicate confusing second count unless different.
     if preferida == "lotacao":
         if lot is None or lot <= 0:
             return {
@@ -256,9 +314,10 @@ def calcular_sanitarios_municipio(
                 "tipo": "coe_municipal",
                 "municipio": seed["municipio"],
                 "uf": seed["uf"],
-                "aviso": "Informe a lotação (ocupação máxima simultânea) para aplicar o COE de São Paulo.",
+                "aviso": "Informe a lotação (ocupação máxima simultânea / pico) para aplicar o COE de São Paulo.",
                 "regras_aplicadas": ["SP_EXIGE_LOTACAO"],
             }
+        # SP official already is peak-based; no second generic lens (avoids two similar numbers).
         return _calc_sp_por_lotacao(seed, lot)
 
     return {

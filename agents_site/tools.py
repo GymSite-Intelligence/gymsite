@@ -338,18 +338,22 @@ def calcular_sanitarios_municipio(
 
     João Pessoa/PB: o COE (Lei 1.347/1971 art. 367) exige ÁREA de treino (m²), não
     lotação. São Paulo/SP: usa lotação por sexo (Lei 16.642/2017). Município fora
-    da tabela → status municipio_nao_coberto (aí sim a estimativa genérica).
+    da tabela → status municipio_nao_coberto.
+
+    Se `lotacao` (pico) for informada, a resposta INCLUI também `estimativa_por_pico`
+    (métrica de planejamento, NÃO-oficial) — útil mesmo quando o COE pede outra entrada.
+    Apresente as duas lentes: legal (COE) vs planejamento (pico).
 
     Args:
         cidade: município (ex.: "João Pessoa", "São Paulo").
         uf: sigla opcional (PB, SP) — desambigua homônimos.
-        lotacao: ocupação máxima simultânea (pessoas) — necessária em SP.
+        lotacao: ocupação máxima simultânea / pico (pessoas).
         area_treino_m2: área útil de treino/praça (m²) — necessária em João Pessoa.
         espectadores: público assistente (JP art. 367 § único), opcional.
 
     Returns:
-        dict com status ok | precisa_area_treino | precisa_lotacao | municipio_nao_coberto
-        e citacao (valor · base · fonte · janela).
+        dict com status ok | precisa_area_treino | precisa_lotacao | municipio_nao_coberto,
+        citacao, e opcionalmente estimativa_por_pico.
     """
     from tools.coe_sanitarios import calcular_sanitarios_municipio as _calc
 
