@@ -16,8 +16,13 @@ def test_arquiteto_tools_e_persona():
     from services.consultor.consultor_engine import _agente_cfg
 
     cfg = _agente_cfg("arquiteto")
-    assert cfg["tools"] == frozenset({"consultar_engenharia_obra", "calcular_sanitarios_por_lotacao"})
+    assert cfg["tools"] == frozenset({
+        "consultar_engenharia_obra",
+        "calcular_sanitarios_municipio",
+        "calcular_sanitarios_por_lotacao",
+    })
     assert "Arquiteto" in cfg["persona"]
+    assert "calcular_sanitarios_municipio" in cfg["persona"]
 
 
 def test_engenheiro_tools_e_persona():
@@ -46,10 +51,12 @@ def test_tools_novas_declaradas_no_contrato():
     src = inspect.getsource(ce)
     assert 'name="consultar_engenharia_obra"' in src
     assert 'name="calcular_sanitarios_por_lotacao"' in src
+    assert 'name="calcular_sanitarios_municipio"' in src
     assert 'name="resolver_cref_por_uf"' in src
     assert 'name="consultar_anuidade_pj_cref"' in src
     # E o dispatch conhece as duas (elif por nome).
     assert 'nome == "consultar_engenharia_obra"' in src
     assert 'nome == "calcular_sanitarios_por_lotacao"' in src
+    assert 'nome == "calcular_sanitarios_municipio"' in src
     assert 'nome == "resolver_cref_por_uf"' in src
     assert 'nome == "consultar_anuidade_pj_cref"' in src

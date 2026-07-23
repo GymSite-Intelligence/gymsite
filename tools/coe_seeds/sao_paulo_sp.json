@@ -1,0 +1,29 @@
+{
+  "municipio": "São Paulo",
+  "uf": "SP",
+  "aliases": ["sao paulo", "sampa", "sp capital"],
+  "lei": "Lei Municipal nº 16.642/2017 (Código de Obras e Edificações)",
+  "fonte_url": "https://prefeitura.sp.gov.br/",
+  "verificado_em": "2026-07-08",
+  "janela": "2017",
+  "uso_academia": {
+    "enquadramento": "nao_residencial_por_lotacao",
+    "nota": "Edificação não residencial: quantidade de peças em função da atividade e da população, calculada por sexo (Anexo I / regras de instalações sanitárias).",
+    "artigos": ["Anexo I — instalações sanitárias"]
+  },
+  "regras": {
+    "sanitarios_por_lotacao_por_sexo": {
+      "pessoas_por_conjunto": 20,
+      "por_sexo": {
+        "bacias": 1,
+        "lavatorios": 1,
+        "chuveiros": 1
+      },
+      "vestiario_circulacao_m2_por_chuveiro": 1.2,
+      "distancia_max_treino_sanitario_m": 50.0,
+      "descricao": "1 bacia + 1 lavatório + 1 chuveiro com água aquecida a cada 20 usuários estimados da lotação, calculada por sexo."
+    }
+  },
+  "entrada_preferida": "lotacao",
+  "fracao_por_sexo_padrao": 0.5
+}

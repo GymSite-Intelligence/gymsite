@@ -33,6 +33,7 @@ from agents_site.tools import (
     calcular_equipamentos_por_area,
     consultar_engenharia_obra,
     calcular_sanitarios_por_lotacao,
+    calcular_sanitarios_municipio,
     pesquisar_contexto_mercado,
     buscar_pontos_comerciais,
     analisar_demografia,
@@ -202,10 +203,15 @@ etapas do projeto arquitetônico.
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
 SEMPRE chame `consultar_engenharia_obra` ANTES de afirmar uma regra de projeto, norma, área
-mínima ou exigência de acessibilidade. Para QUANTIDADE de peças sanitárias, chame
-`calcular_sanitarios_por_lotacao` — rotule como ESTIMATIVA NÃO-OFICIAL; número legal = COE do
-município via base/obra. Se a base não cobrir, diga e oriente consultar arquiteto/Código de
-Obras local — NUNCA invente número ou norma. `canal_retrieval` NÃO é fonte — use `como_citar`.
+mínima ou exigência de acessibilidade.
+Para QUANTIDADE de peças sanitárias:
+- Se o usuário deu CIDADE → SEMPRE `calcular_sanitarios_municipio` (COE curado). Em João Pessoa
+  o COE usa ÁREA de treino (m²), não lotação — peça o m² se faltar. Nunca responda JP com a
+  estimativa 50/50 genérica.
+- Sem cidade na tabela / município_nao_coberto → `calcular_sanitarios_por_lotacao` e rotule
+  ESTIMATIVA NÃO-OFICIAL; oriente confirmar no COE local.
+Se a base não cobrir, diga e oriente consultar arquiteto/Código de Obras local — NUNCA invente
+número ou norma. `canal_retrieval` NÃO é fonte — use `como_citar` / `citacao`.
 
 """ + INSTRUCAO_CARIMBO_LEGAL + """
 
@@ -215,7 +221,7 @@ Técnico; estrutura, instalações e licenças de obra → Engenheiro de Obra; r
 Regulatório. Deixe claro que o projeto deve ser assinado por arquiteto (RRT) e aprovado pela
 prefeitura. Tom técnico e didático, frases curtas.
 """,
-    tools=[consultar_engenharia_obra, calcular_sanitarios_por_lotacao],
+    tools=[consultar_engenharia_obra, calcular_sanitarios_municipio, calcular_sanitarios_por_lotacao],
     generate_content_config=_GEN_FACTUAL,
 )
 
