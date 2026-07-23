@@ -337,23 +337,25 @@ def calcular_sanitarios_municipio(
     `calcular_sanitarios_por_lotacao` (que é só estimativa genérica).
 
     João Pessoa/PB: o COE (Lei 1.347/1971 art. 367) exige ÁREA de treino (m²), não
-    lotação. São Paulo/SP: usa lotação por sexo (Lei 16.642/2017). Município fora
-    da tabela → status municipio_nao_coberto.
+    lotação. São Paulo/SP: usa lotação por sexo (Lei 16.642/2017). Fortaleza/CE:
+    vestiário por m² (art. 365 VI); peças Anexo II ainda não curadas. Rio/RJ:
+    sanitários de salas por m² úteis (LC 198 art. 24 §1) ou público/espectadores
+    (§2). Município fora da tabela → status municipio_nao_coberto.
 
     Se `lotacao` (pico) for informada, a resposta INCLUI também `estimativa_por_pico`
     (métrica de planejamento, NÃO-oficial) — útil mesmo quando o COE pede outra entrada.
     Apresente as duas lentes: legal (COE) vs planejamento (pico).
 
     Args:
-        cidade: município (ex.: "João Pessoa", "São Paulo").
-        uf: sigla opcional (PB, SP) — desambigua homônimos.
+        cidade: município (ex.: "João Pessoa", "São Paulo", "Fortaleza", "Rio de Janeiro").
+        uf: sigla opcional (PB, SP, CE, RJ) — desambigua homônimos.
         lotacao: ocupação máxima simultânea / pico (pessoas).
-        area_treino_m2: área útil de treino/praça (m²) — necessária em João Pessoa.
-        espectadores: público assistente (JP art. 367 § único), opcional.
+        area_treino_m2: área útil de treino/praça/salas (m²) — JP, Fortaleza, Rio.
+        espectadores: público assistente (JP art. 367 § único; Rio art. 24 §2), opcional.
 
     Returns:
-        dict com status ok | precisa_area_treino | precisa_lotacao | municipio_nao_coberto,
-        citacao, e opcionalmente estimativa_por_pico.
+        dict com status ok | parcial_coe | precisa_area_treino | precisa_area_util |
+        precisa_lotacao | municipio_nao_coberto, citacao, e opcionalmente estimativa_por_pico.
     """
     from tools.coe_sanitarios import calcular_sanitarios_municipio as _calc
 

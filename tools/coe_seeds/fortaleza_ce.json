@@ -1,0 +1,33 @@
+{
+  "municipio": "Fortaleza",
+  "uf": "CE",
+  "aliases": ["fortaleza", "ce capital", "fortal"],
+  "lei": "Lei Municipal nº 5.530/1981 (Código de Obras e Posturas)",
+  "fonte_url": "https://urbanismoemeioambiente.fortaleza.ce.gov.br/images/urbanismo-e-meio-ambiente/catalogodeservico/lei_5530_81.pdf",
+  "verificado_em": "2026-07-23",
+  "janela": "1981",
+  "uso_academia": {
+    "enquadramento": "locais_reunioes_esportivas_ginasios",
+    "nota": "Ginásios / clubes esportivos / prática de esporte (arts. 363–365). Academia enquadra-se por analogia. A cota de aparelhos sanitários dos atletas (art. 365 V) remete a tabela do Anexo II — nos PDFs oficiais disponíveis a tabela de peças NÃO veio OCR/extraível; este seed NÃO inventa bacias/chuveiros. Confirma só o vestiário (art. 365 VI), verificável no texto.",
+    "artigos": ["358", "363", "365"]
+  },
+  "regras": {
+    "vestiario_atletas_por_area_treino": {
+      "artigo": "365 VI",
+      "vestiario_m2_por_treino_m2": 0.04,
+      "min_m2_por_sexo": 8.0,
+      "limite_area_treino_m2": 10000,
+      "descricao": "1,00 m² de vestiário de atletas por 25,00 m² de área de prática de esporte; mínimo 8,00 m² por vestiário (sexo)."
+    },
+    "pecas_atletas": {
+      "artigo": "365 V",
+      "status": "tabela_anexo_ii_nao_curada",
+      "descricao": "Instalações sanitárias para atletas além das do público (art. 358 / Tabela IV Anexo II). Quantidade na tabela do item V — Anexo II ainda sem curadoria numérica confiável neste seed."
+    }
+  },
+  "entrada_preferida": "area_treino_parcial_vestiario",
+  "sem_area_treino": {
+    "status": "precisa_area_treino",
+    "mensagem": "Em Fortaleza o COE (Lei 5.530/1981, art. 365) dimensiona vestiário de atletas pela ÁREA de prática de esporte (m²). Informe a área útil de treino em m². A cota numérica de bacias/chuveiros dos atletas está no Anexo II (ainda não curada aqui)."
+  }
+}

@@ -206,10 +206,13 @@ SEMPRE chame `consultar_engenharia_obra` ANTES de afirmar uma regra de projeto, 
 mínima ou exigência de acessibilidade.
 Para QUANTIDADE de peças sanitárias:
 - Se o usuário deu CIDADE → SEMPRE `calcular_sanitarios_municipio` (COE curado). Em João Pessoa
-  o COE usa ÁREA de treino (m²), não lotação — peça o m² se faltar.
+  e Fortaleza o COE usa ÁREA de treino (m²), não lotação — peça o m² se faltar. No Rio, use
+  área útil (m²) para salas (art. 24 §1) ou espectadores/área de público (art. 24 §2).
+  Fortaleza pode devolver `parcial_coe` (só vestiário confirmado; peças Anexo II ainda não
+  curadas) — diga isso com clareza, sem inventar bacias/chuveiros.
 - Se o usuário deu PICO/lotação junto, a tool também devolve `estimativa_por_pico` (planejamento).
   Apresente as DUAS lentes com clareza:
-  1) **COE / legal** (quando completo) — o que a prefeitura exige;
+  1) **COE / legal** (quando completo ou parcial) — o que a prefeitura exige / o que já curamos;
   2) **Pico de lotação** — métrica de planejamento (não-oficial), útil para dimensionar conforto.
   Nunca misture as duas como se fossem a mesma coisa.
 - Sem cidade na tabela / municipio_nao_coberto → use a estimativa_por_pico da tool (ou
