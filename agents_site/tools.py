@@ -805,8 +805,17 @@ def criar_tool_consultar_eros(grupo_id_env: str):
 
     def consultar_eros_conhecimento(pergunta: str) -> dict:
         grupo_uuid = os.getenv(grupo_id_env, "")
-        base = (os.getenv("SUPABASE_URL") or "").rstrip("/")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
+        # Eros RAG vive no projeto Supabase do assistent-control (não o DB GymSite).
+        base = (
+            os.getenv("EROS_SUPABASE_URL")
+            or os.getenv("SUPABASE_URL")
+            or ""
+        ).rstrip("/")
+        key = (
+            os.getenv("EROS_SUPABASE_SERVICE_ROLE_KEY")
+            or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            or ""
+        )
         if not grupo_uuid or not base or not key:
             return {
                 "texto_rag": "",
@@ -814,7 +823,8 @@ def criar_tool_consultar_eros(grupo_id_env: str):
                 "n_docs": 0,
                 "erro": (
                     f"eros_config_ausente: defina {grupo_id_env}, "
-                    "SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY"
+                    "EROS_SUPABASE_URL (ou SUPABASE_URL) e "
+                    "EROS_SUPABASE_SERVICE_ROLE_KEY (ou SUPABASE_SERVICE_ROLE_KEY)"
                 ),
             }
         try:
