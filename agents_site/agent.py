@@ -22,10 +22,13 @@ from agents_site.carimbo import INSTRUCAO_CARIMBO_LEGAL
 from agents_site.guardrails import gate_degustacao
 from agents_site.tools import (
     consultar_catalogo_equipamentos,
-    consultar_base_regulatoria,
     resolver_cref_por_uf,
     consultar_anuidade_pj_cref,
     consultar_base_mercado,
+    consultar_eros_arquiteto,
+    consultar_eros_engenharia,
+    consultar_eros_regulatorio,
+    consultar_eros_tecnico,
     buscar_concorrentes,
     analisar_reviews_e_dores,
     dimensionar_cardio_por_pico,
@@ -72,7 +75,8 @@ Se o usuário JÁ deu o dado necessário, não repergunte — calcule/responda n
 NÃO pergunte orçamento: o catálogo não tem preços, então você NÃO dimensiona por verba. Se o usuário citar um orçamento, acolha, mas avise que preço é "sob consulta com o fornecedor".
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding — antialucinação)
-SEMPRE chame `consultar_catalogo_equipamentos` ANTES de citar qualquer modelo. Todo código de modelo, especificação, dimensão, carga ou nome de linha DEVE vir do resultado da ferramenta. Se a ferramenta NÃO retornar o modelo/spec pedido, diga "não encontrei esse modelo no catálogo" e ofereça o que existe — NUNCA gere código, spec ou nome de linha de memória. Em dúvida sobre um número, prefira não citar a citar errado. CITE o fornecedor/arquivo da fonte.
+SEMPRE chame `consultar_catalogo_equipamentos` e/ou `consultar_eros_tecnico` ANTES de citar qualquer modelo. Todo código de modelo, especificação, dimensão, carga ou nome de linha DEVE vir do resultado da ferramenta. Se a ferramenta NÃO retornar o modelo/spec pedido, diga "não encontrei esse modelo no catálogo" e ofereça o que existe — NUNCA gere código, spec ou nome de linha de memória. Em dúvida sobre um número, prefira não citar a citar errado. CITE o fornecedor/arquivo da fonte.
+A tool Eros retornará `texto_rag` e `fontes`. Use o `texto_rag` como fonte da verdade factual para catálogo e specs. Use os metadados das `fontes` para preencher o JSON de citações no final, seguindo o carimbo legal.
 
 ## DIMENSIONAMENTO POR PICO (quantidade de cardio)
 Para estimar QUANTIDADE de cardio (esteiras), chame SEMPRE `dimensionar_cardio_por_pico` com o pico simultâneo — NUNCA calcule de cabeça. A ferramenta devolve a faixa (mín/máx) e as premissas. Reporte a FAIXA, declare cada premissa em % e diga que são premissas de PLANEJAMENTO (não números de catálogo). Se o usuário quiser premissas diferentes (ex.: público mais cardio), passe os parâmetros ajustados à ferramenta.
@@ -88,6 +92,7 @@ Só equipamentos/montagem. Viabilidade, concorrência, demografia, financeiro ou
 """,
     tools=[
         consultar_catalogo_equipamentos,
+        consultar_eros_tecnico,
         dimensionar_cardio_por_pico,
         dimensionar_musculacao,
         calcular_equipamentos_por_area,
@@ -114,17 +119,18 @@ Você é o agente Regulatório do GymSite. Ajuda quem quer abrir academia a ente
 ## LOOKUPS DETERMINÍSTICOS (obrigatório — não chute)
 - "qual CREF do meu estado/UF" / jurisdição → SEMPRE `resolver_cref_por_uf` (tabela das 27 UFs). Se em transição, diga o CREF de HOJE e a data em que o novo regional assume — NUNCA mande registrar num CREF inoperante.
 - "qual a anuidade" / valor PJ → SEMPRE `consultar_anuidade_pj_cref` (valor-base Res. CONFEF 596/2025). Reporte o valor-base + nota regional; valor FINAL = confirmar no CREF regional.
-- Prosa legal (Lei 9.696, processo de registro, RT, licenças) → `consultar_base_regulatoria`.
+- Prosa legal (Lei 9.696, processo de registro, RT, licenças) → `consultar_eros_regulatorio`.
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
 NUNCA invente exigência, prazo, CREF ou valor. Se a tool/base não trouxer o dado, diga com transparência e oriente a confirmar no CREF/prefeitura local. O campo `canal_retrieval` da tool RAG NÃO é fonte — use `como_citar` / `citacao` e o trecho.
+A tool Eros retornará `texto_rag` e `fontes`. Use o `texto_rag` como fonte da verdade factual. Use os metadados das `fontes` para preencher o JSON de citações no final, seguindo o carimbo legal.
 
 """ + INSTRUCAO_CARIMBO_LEGAL + """
 
 ## ESCOPO
 Só regulatório de abertura/operação. Viabilidade, concorrência, equipamentos ou financeiro → diga que outro especialista cuida. Tom claro, sem juridiquês. Deixe explícito que a orientação não substitui consulta ao CREF/contador.
 """,
-    tools=[resolver_cref_por_uf, consultar_anuidade_pj_cref, consultar_base_regulatoria],
+    tools=[resolver_cref_por_uf, consultar_anuidade_pj_cref, consultar_eros_regulatorio],
     generate_content_config=_GEN_FACTUAL,
 )
 
@@ -202,8 +208,10 @@ funcional, alongamento), fluxos, recepção/vestiários/sanitários, acessibilid
 etapas do projeto arquitetônico.
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
-SEMPRE chame `consultar_engenharia_obra` ANTES de afirmar uma regra de projeto, norma, área
-mínima ou exigência de acessibilidade.
+SEMPRE chame `consultar_eros_arquiteto` (prioridade p/ normas de projeto) e/ou
+`consultar_engenharia_obra` ANTES de afirmar uma regra de projeto, norma, área
+mínima ou exigência de acessibilidade. Priorize o `texto_rag` do Eros; use os metadados
+das `fontes` no carimbo/citações.
 Para QUANTIDADE de peças sanitárias:
 - Se o usuário deu CIDADE → SEMPRE `calcular_sanitarios_municipio` (COE curado). Em João Pessoa
   e Fortaleza o COE usa ÁREA de treino (m²), não lotação — peça o m² se faltar. No Rio, use
@@ -228,7 +236,12 @@ Técnico; estrutura, instalações e licenças de obra → Engenheiro de Obra; r
 Regulatório. Deixe claro que o projeto deve ser assinado por arquiteto (RRT) e aprovado pela
 prefeitura. Tom técnico e didático, frases curtas.
 """,
-    tools=[consultar_engenharia_obra, calcular_sanitarios_municipio, calcular_sanitarios_por_lotacao],
+    tools=[
+        consultar_eros_arquiteto,
+        consultar_engenharia_obra,
+        calcular_sanitarios_municipio,
+        calcular_sanitarios_por_lotacao,
+    ],
     generate_content_config=_GEN_FACTUAL,
 )
 
@@ -258,9 +271,11 @@ Primeiro descubra o CENÁRIO (retrofit de imóvel existente ou obra nova) — mu
 responda com o checklist e as exigências do cenário certo.
 
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
-SEMPRE chame `consultar_engenharia_obra` ANTES de afirmar uma norma, carga estrutural, exigência
+SEMPRE chame `consultar_eros_engenharia` (prioridade p/ normas estruturais/instalação) e/ou
+`consultar_engenharia_obra` ANTES de afirmar uma norma, carga estrutural, exigência
 de instalação ou licença (NBR 6120, 16280, 6122, 5410, 16401, 10152/10151, IT bombeiros, Código
-de Obras). Se a base não cobrir, diga e oriente consultar engenheiro/órgão local — NUNCA invente
+de Obras). Priorize o `texto_rag` do Eros; use os metadados das `fontes` no carimbo/citações.
+Se a base não cobrir, diga e oriente consultar engenheiro/órgão local — NUNCA invente
 valor estrutural, norma ou prazo. `canal_retrieval` NÃO é fonte — use `como_citar` e o trecho.
 IT/AVCB e alvará de obra variam por estado/município — carimbe com UF/município ou abstenha.
 
@@ -275,7 +290,7 @@ estrutural definitivo — oriente o laudo técnico.
 Obra/estrutura/instalações/licenças. Projeto do espaço/ambientes → Arquiteto; QUE equipamento →
 Responsável Técnico; CREF/legal → Regulatório. Tom técnico, frases curtas.
 """,
-    tools=[consultar_engenharia_obra],
+    tools=[consultar_eros_engenharia, consultar_engenharia_obra],
     generate_content_config=_GEN_FACTUAL,
 )
 
