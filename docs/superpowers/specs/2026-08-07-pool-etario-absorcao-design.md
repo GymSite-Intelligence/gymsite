@@ -142,8 +142,8 @@ Campos novos / renomeados em `absorcao_margem_fresca`:
 ### W2a.2 — PDF + preview `gerar_html`
 - Tabela + nota; abrir browser.
 
-### Fora desta spec
-- `rotulo==roubo` derruba Oceano Azul (spec veredito — pedir se quiser na sequência).
+### Sequência (feito 2026-08-07)
+- `rotulo==roubo` derruba Oceano Azul → `TRANSICAO` (`aplicar_veto_oceano_por_roubo` no attach A9).
 
 ---
 

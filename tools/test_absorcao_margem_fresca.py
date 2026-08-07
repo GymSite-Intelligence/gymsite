@@ -201,3 +201,42 @@ def test_attach_writes_parsed():
     assert abs_["estoque_primario"] == 30520
     assert abs_["pool_primario"] == abs_["pool_demografico"]
     assert abs_["faixas_primario"] == ["25-39", "40-59"]
+
+
+def test_roubo_derruba_oceano_azul():
+    from tools.absorcao_margem_fresca import aplicar_veto_oceano_por_roubo
+
+    parsed = {
+        "veredito_posicionamento": "OCEANO_AZUL",
+        "fonte_veredito": "deterministico_headroom_renda",
+        "absorcao_margem_fresca": {"rotulo": "roubo"},
+    }
+    assert aplicar_veto_oceano_por_roubo(parsed) is True
+    assert parsed["veredito_posicionamento"] == "TRANSICAO"
+    assert parsed["veredito_antes_veto_absorcao"] == "OCEANO_AZUL"
+    assert parsed["veto_absorcao_roubo"] is True
+    assert "roubo" in str(parsed["fonte_veredito"]).lower()
+
+
+def test_fresco_nao_derruba_oceano():
+    from tools.absorcao_margem_fresca import aplicar_veto_oceano_por_roubo
+
+    parsed = {
+        "veredito_posicionamento": "OCEANO_AZUL",
+        "absorcao_margem_fresca": {"rotulo": "fresco"},
+    }
+    assert aplicar_veto_oceano_por_roubo(parsed) is False
+    assert parsed["veredito_posicionamento"] == "OCEANO_AZUL"
+    assert "veto_absorcao_roubo" not in parsed
+
+
+def test_roubo_nao_piora_vermelho_nem_transicao():
+    from tools.absorcao_margem_fresca import aplicar_veto_oceano_por_roubo
+
+    for v in ("VERMELHO", "TRANSICAO", "INDETERMINADO"):
+        parsed = {
+            "veredito_posicionamento": v,
+            "absorcao_margem_fresca": {"rotulo": "roubo"},
+        }
+        assert aplicar_veto_oceano_por_roubo(parsed) is False
+        assert parsed["veredito_posicionamento"] == v

@@ -139,7 +139,9 @@ GymSitePipeline (Sequential)
 - **Macro:** `_errc_deterministica(state)` + `attach_matriz_demo_saturacao` (`tools/matriz_demo_saturacao.py`) + `attach_absorcao_margem_fresca` (`tools/absorcao_margem_fresca.py`)
 - **Lê:** `market_context`, `candidatos_geoscout`, `analise_demografica`, `inteligencia_competitiva`, `oferta_concorrentes`, `analise_financeira`, `contato_decisor`, `relatorio_md`, `demografia_bairro`, `concorrentes_brutos` · **Escreve:** `relatorio_posicionamento_md`, `relatorio_posicionamento` (incl. `matriz_demo_saturacao`, `absorcao_margem_fresca`)
 - **Absorção (W2a/W2a.1):** teto (`área×matr/m²`) × capacidade parque (N×tier×área_proxy) × **pool etário** (estoque form/resto × interesse × pen academia) → rótulo `fresco|misto|roubo` no pool **primário**. Números = tool. Spec: `docs/superpowers/specs/2026-08-07-absorcao-margem-fresca-design.md` + `2026-08-07-pool-etario-absorcao-design.md`.
-- **Callback:** `after_agent` `_a9_after_agent_callback` → override de veredito (headroom renda IBGE 2022) + **matriz demografia×saturação** (quadrante → modelo) + síntese narrada opcional (Claude headless) + persiste Supabase
+- **Veto absorção:** `rotulo==roubo` derruba `OCEANO_AZUL` → `TRANSICAO` (`aplicar_veto_oceano_por_roubo`); não piora `VERMELHO`/`TRANSICAO`.
+- **Callback:** `after_agent` `_a9_after_agent_callback` → override de veredito (headroom renda IBGE 2022) + **matriz demografia×saturação** (quadrante → modelo) + absorção + veto roubo + síntese narrada opcional (Claude headless) + persiste Supabase
+
 - **Fonte:** IBGE Censo 2022 (headroom renda × ticket) + N/mix no polígono Spec C — determinístico
 - **Faz:** framework ERRC + GAPs + ticket recomendado + veredito (OCEANO_AZUL/TRANSICAO/VERMELHO) + quadrante (Oceano/Armadilha/Guerra/Deserto). **Armadilha vence** headroom Oceano se ≥2 Premium no polígono (`matriz_override`).
 - **Relatório:** §7 (Posicionamento Recomendado) + seção PDF **Modelo de Negócio Adequado**.

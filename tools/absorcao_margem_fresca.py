@@ -218,6 +218,26 @@ def _idades_from_state(state: dict[str, Any]) -> tuple[int | None, int | None]:
     return None, None
 
 
+def aplicar_veto_oceano_por_roubo(parsed: dict[str, Any]) -> bool:
+    """Se rótulo absorção = roubo, OCEANO_AZUL vira TRANSICAO (não piora VERMELHO)."""
+    abs_ = parsed.get("absorcao_margem_fresca")
+    if not isinstance(abs_, dict) or abs_.get("rotulo") != "roubo":
+        return False
+    vere = str(parsed.get("veredito_posicionamento") or "").upper()
+    if vere != "OCEANO_AZUL":
+        return False
+    parsed["veredito_antes_veto_absorcao"] = parsed.get("veredito_posicionamento")
+    parsed["veredito_posicionamento"] = "TRANSICAO"
+    parsed["veto_absorcao_roubo"] = True
+    prev = parsed.get("fonte_veredito") or ""
+    parsed["fonte_veredito"] = (
+        f"{prev} | veto_absorcao_roubo→TRANSICAO".strip(" |")
+        if prev
+        else "veto_absorcao_roubo→TRANSICAO"
+    )
+    return True
+
+
 def attach_absorcao_margem_fresca(
     state: dict[str, Any], parsed: dict[str, Any]
 ) -> dict[str, Any] | None:
@@ -262,4 +282,5 @@ def attach_absorcao_margem_fresca(
         idade_max=imax,
     )
     parsed["absorcao_margem_fresca"] = result
+    aplicar_veto_oceano_por_roubo(parsed)
     return result
