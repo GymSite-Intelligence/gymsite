@@ -778,6 +778,38 @@
         "Aprofundar a análise de custos e receita para buscar a viabilidade financeira do projeto, explorando alternativas de aluguel e modelos de negócio.",
         "Considerar um modelo premium-híbrido com foco em diferenciais (qualidade de equipamentos, atendimento, segurança, modalidades exclusivas) para se destacar da concorrência no Meireles."
       ]
+    },
+    "posicionamento_estrategico": {
+      "veredito_posicionamento": "TRANSICAO",
+      "veto_absorcao_roubo": true,
+      "veredito_antes_veto_absorcao": "OCEANO_AZUL",
+      "absorcao_margem_fresca": {
+        "teto_unidade": 2100,
+        "capacidade_parque_estimada": 14200,
+        "pool_demografico": 1221,
+        "pool_primario": 1221,
+        "pool_secundario": 642,
+        "pool_total_15mais": 1863,
+        "estoque_primario": 30520,
+        "estoque_secundario": 16050,
+        "faixas_primario": [
+          "25-39",
+          "40-59"
+        ],
+        "faixas_secundario": [
+          "15-24",
+          "60+"
+        ],
+        "margem_fresca": -12979,
+        "rotulo": "roubo",
+        "base_espacial": "poligono_ibge",
+        "carimbos": {
+          "teto_unidade": "2100 · área×densidade · ACAD",
+          "capacidade_parque_estimada": "14200 · proxy porte · franquia",
+          "pool_demografico": "1221 · estoque×interesse×pen · IBGE",
+          "margem_fresca": "-12979 · potencial−oferta · derivada"
+        }
+      }
     }
   },
   "metadata_execucao": {

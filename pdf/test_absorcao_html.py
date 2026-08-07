@@ -1,12 +1,13 @@
-"""PDF: Absorção — leitura executiva (vernáculo)."""
+"""PDF: Absorção — mesma estrutura do card React (badge + grid + conclusão)."""
 
 
 def test_html_has_absorcao_section():
     from pdf.html_builder import _TEMPLATE, _contexto, gerar_html
     from pdf.models import RelatorioPdfModel
 
-    assert "Absorção de alunos — leitura executiva" in _TEMPLATE
-    assert "Alunos (estimativa)" in _TEMPLATE
+    assert "Quem ainda pode matricular" in _TEMPLATE
+    assert "abs-grid" in _TEMPLATE
+    assert "Absorção de alunos — leitura executiva" not in _TEMPLATE
     assert "form ×" not in _TEMPLATE
     assert "Pool primário (form" not in _TEMPLATE
 
@@ -38,6 +39,7 @@ def test_html_has_absorcao_section():
                 "faixas_secundario": ["15-24", "60+"],
                 "margem_fresca": -12979,
                 "rotulo": "roubo",
+                "base_espacial": "poligono_ibge",
                 "carimbos": {
                     "teto_unidade": "2100 · área×densidade · ACAD",
                     "capacidade_parque_estimada": "14200 · proxy porte · franquia",
@@ -49,11 +51,19 @@ def test_html_has_absorcao_section():
     )
     ctx = _contexto(model)
     assert ctx.get("absorcao")
-    assert ctx["absorcao"]["blocos"]
-    assert any("formulário" in b["titulo"].lower() or "público" in b["titulo"].lower() for b in ctx["absorcao"]["blocos"])
+    assert ctx["absorcao"]["rotulo_label"] == "Disputa com o parque"
+    assert ctx["absorcao"]["rotulo_pill"] == "no"
+    assert "polígono" in ctx["absorcao"]["base_espacial_txt"].lower()
+    assert len(ctx["absorcao"]["blocos_topo"]) == 2
+    assert ctx["absorcao"]["bloco_conclusao"]
+    assert "Déficit" in (ctx["absorcao"]["bloco_conclusao"].get("numero") or "")
     html = gerar_html(model)
+    assert "Quem ainda pode matricular" in html
+    assert "Disputa com o parque" in html
     assert "alunos estimados" in html.lower()
     assert "25-39 · Core" in html or "Core" in html
     assert "Conclusão" in html
+    assert "Déficit" in html
     assert "form ×" not in html
-    assert "absorver" in html.lower() or "outra academia" in html.lower()
+    assert "O que medimos" not in html
+    assert "outra academia" in html.lower() or "disputa" in html.lower()

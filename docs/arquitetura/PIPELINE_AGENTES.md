@@ -140,6 +140,7 @@ GymSitePipeline (Sequential)
 - **Lê:** `market_context`, `candidatos_geoscout`, `analise_demografica`, `inteligencia_competitiva`, `oferta_concorrentes`, `analise_financeira`, `contato_decisor`, `relatorio_md`, `demografia_bairro`, `concorrentes_brutos` · **Escreve:** `relatorio_posicionamento_md`, `relatorio_posicionamento` (incl. `matriz_demo_saturacao`, `absorcao_margem_fresca`)
 - **Absorção (W2a/W2a.1):** teto (`área×matr/m²`) × capacidade parque (N×tier×área_proxy) × **pool etário** (estoque form/resto × interesse × pen academia) → rótulo `fresco|misto|roubo` no pool **primário**. Números = tool. Spec: `docs/superpowers/specs/2026-08-07-absorcao-margem-fresca-design.md` + `2026-08-07-pool-etario-absorcao-design.md`.
 - **Veto absorção:** `rotulo==roubo` derruba `OCEANO_AZUL` → `TRANSICAO` (`aplicar_veto_oceano_por_roubo`); não piora `VERMELHO`/`TRANSICAO`.
+- **UI app:** `AbsorcaoMargemFrescaCard` no viewer (`posicionamento_estrategico.absorcao_margem_fresca`) — leitura executiva, espelho PDF.
 - **Callback:** `after_agent` `_a9_after_agent_callback` → override de veredito (headroom renda IBGE 2022) + **matriz demografia×saturação** (quadrante → modelo) + absorção + veto roubo + síntese narrada opcional (Claude headless) + persiste Supabase
 
 - **Fonte:** IBGE Censo 2022 (headroom renda × ticket) + N/mix no polígono Spec C — determinístico

@@ -59,6 +59,7 @@ import { PicoLotacaoViz } from '@/components/domain/PicoLotacaoViz'
 import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
 import { NovasUnidadesCard } from '@/components/domain/NovasUnidadesCard'
 import { DemografiaBairroCard } from '@/components/domain/DemografiaBairroCard'
+import { AbsorcaoMargemFrescaCard } from '@/components/domain/AbsorcaoMargemFrescaCard'
 import { FluxoPedestreCard } from '@/components/domain/FluxoPedestreCard'
 import { MapaMunicipioMercado } from '@/components/maps/MapaMunicipioMercado'
 import { ObrasEmAndamentoTable } from '@/components/domain/ObrasEmAndamentoTable'
@@ -464,6 +465,14 @@ function RelatorioViewerContent({
         (out.demografia_bairro.renda_media != null || out.demografia_bairro.populacao != null) && (
         <Section title="Demografia do bairro">
           <DemografiaBairroCard block={out.demografia_bairro} />
+        </Section>
+      )}
+
+      {out.posicionamento_estrategico?.absorcao_margem_fresca?.rotulo && (
+        <Section title="Quem ainda pode matricular">
+          <AbsorcaoMargemFrescaCard
+            block={out.posicionamento_estrategico.absorcao_margem_fresca}
+          />
         </Section>
       )}
 

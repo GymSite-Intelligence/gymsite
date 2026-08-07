@@ -110,6 +110,19 @@ table.d thead { display:table-header-group; }
 .lex .blk p { margin:0; font-size:8.5pt; color:#334155; line-height:1.55; text-align:justify; }
 .lex .blk .stamp { margin-top:6px; font-size:7.5pt; color:#64748B; }
 .lex .blk .num { font-size:12pt; font-weight:bold; color:#0F172A; margin:0 0 6px; }
+.abs-head { margin:0 0 10px; }
+.abs-base { font-size:7.5pt; color:#64748B; margin-left:8px; }
+.abs-grid { width:100%; border-collapse:separate; border-spacing:8px; margin:0 -8px 4px; }
+.abs-grid td { width:50%; padding:12px 14px; background:#fff; border:1px solid #E2E8F0; vertical-align:top; page-break-inside:avoid; }
+.abs-grid h4 { margin:0 0 4px; font-size:9pt; color:#0E5C66; font-weight:bold; }
+.abs-grid .num { font-size:12pt; font-weight:bold; color:#0E5C66; margin:0 0 6px; }
+.abs-grid p { margin:0; font-size:8.5pt; color:#334155; line-height:1.55; text-align:justify; }
+.abs-grid .stamp { margin-top:6px; font-size:7.5pt; color:#64748B; }
+.abs-full { border:1px solid #E2E8F0; background:#fff; padding:12px 14px; margin:4px 0 14px; page-break-inside:avoid; }
+.abs-full h4 { margin:0 0 4px; font-size:9pt; color:#0E5C66; font-weight:bold; }
+.abs-full .num { font-size:12pt; font-weight:bold; color:#0E5C66; margin:0 0 6px; }
+.abs-full p { margin:0; font-size:8.5pt; color:#334155; line-height:1.55; text-align:justify; }
+.abs-full .stamp { margin-top:6px; font-size:7.5pt; color:#64748B; }
 </style></head><body>
 <table class="header"><tr>
   <td style="vertical-align:bottom; width:42%;">{% if logo_src %}<img class="logo-img" src="{{ logo_src }}" alt="GymSite Intelligence" />{% else %}<div class="logo"><span class="a">GYM</span>SITE</div><div class="logo-sub">Intelligence</div>{% endif %}</td>
@@ -193,26 +206,36 @@ table.d thead { display:table-header-group; }
 {% if narrativa.demografia %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.demografia }}</div>{% endif %}{% endif %}
 
 {% if absorcao %}
-<div class="sec">Absorção de alunos — leitura executiva</div>
-<p class="intro">Todos os valores da tabela estão em <strong>alunos estimados</strong> (matrículas potenciais), não em habitantes do Censo. Habitantes na faixa etária ≠ alunos de academia.</p>
-<table class="d"><tr><th>O que medimos</th><th>Alunos (estimativa)</th></tr>
-  <tr><td>Sua unidade comporta (cenário realista)</td><td><strong>{{ absorcao.teto }}</strong></td></tr>
-  <tr><td>Academias do bairro já comportam (estimativa)</td><td>{{ absorcao.cap_parque }}</td></tr>
-  <tr><td>Potencial no público do formulário{% if absorcao.faixas_primario_txt %} ({{ absorcao.faixas_primario_txt }}){% endif %}</td><td><strong>{{ absorcao.pool_primario }}</strong></td></tr>
-  <tr><td>Potencial nas outras idades 15+{% if absorcao.faixas_secundario_txt %} ({{ absorcao.faixas_secundario_txt }}){% endif %}</td><td>{{ absorcao.pool_secundario }}</td></tr>
-  <tr><td>Potencial total 15+</td><td>{{ absorcao.pool_total }}</td></tr>
-  <tr><td>Folga vs parque (potencial do formulário − oferta instalada)</td><td>{{ absorcao.margem }}</td></tr>
-</table>
-{% if absorcao.blocos %}
-<div class="lex" style="margin-top:12px;">
-{% for b in absorcao.blocos %}
-  <div class="blk">
+<div class="sec">Quem ainda pode matricular</div>
+<div class="abs-head">
+  <span class="pill {{ absorcao.rotulo_pill }}">{{ absorcao.rotulo_label }}</span>
+  {% if absorcao.base_espacial_txt %}<span class="abs-base">{{ absorcao.base_espacial_txt }}</span>{% endif %}
+</div>
+<p class="intro">Valores em <strong>alunos estimados</strong> (matrículas potenciais), não em habitantes do Censo. Habitantes na faixa etária ≠ alunos de academia.</p>
+{% if absorcao.blocos_topo %}
+<table class="abs-grid">
+{% for row in absorcao.blocos_topo %}
+<tr>
+{% for b in row %}
+  <td>
     <h4>{{ b.titulo }}</h4>
     {% if b.numero %}<div class="num">{{ b.numero }}</div>{% endif %}
     <p>{{ b.texto }}</p>
     {% if b.carimbo %}<div class="stamp">{{ b.carimbo }}</div>{% endif %}
-  </div>
+  </td>
 {% endfor %}
+{% if row|length == 1 %}<td></td>{% endif %}
+</tr>
+{% endfor %}
+</table>
+{% endif %}
+{% if absorcao.bloco_conclusao %}
+{% set b = absorcao.bloco_conclusao %}
+<div class="abs-full">
+  <h4>{{ b.titulo }}</h4>
+  {% if b.numero %}<div class="num">{{ b.numero }}</div>{% endif %}
+  <p>{{ b.texto }}</p>
+  {% if b.carimbo %}<div class="stamp">{{ b.carimbo }}</div>{% endif %}
 </div>
 {% endif %}
 {% endif %}
@@ -509,7 +532,7 @@ def _faixas_humanas(faixas: list | None) -> str:
 
 
 def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
-    """Prosa executiva por tópico — vernáculo, sem jargão de engenharia."""
+    """Prosa executiva por tópico — vernáculo, espelho AbsorcaoMargemFrescaCard."""
     teto = raw.get("teto_unidade")
     cap = raw.get("capacidade_parque_estimada")
     pool_p = raw.get("pool_primario") or raw.get("pool_demografico")
@@ -538,13 +561,25 @@ def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
         ),
     }.get(rotulo, "Cruzar potencial do público-alvo com a capacidade já instalada antes de decidir o modelo.")
 
+    margem_num = None
+    try:
+        margem_num = int(margem) if margem is not None else None
+    except (TypeError, ValueError):
+        margem_num = None
+    if margem_num is None:
+        conclusao_num = None
+    elif margem_num >= 0:
+        conclusao_num = f"Folga {_int(margem_num)} alunos"
+    else:
+        conclusao_num = f"Déficit {_int(abs(margem_num))} alunos"
+
     blocos = [
         {
             "titulo": "1. Capacidade da sua unidade",
             "numero": f"{_int(teto)} alunos" if teto is not None else None,
             "texto": (
                 "Quantas matrículas esta academia comporta no cenário realista "
-                "(área do imóvel × densidade típica do modelo Low/Mid/Premium). "
+                "(área do imóvel × densidade típica do modelo). "
                 "Não é a população do bairro — é o teto operacional da unidade."
             ),
             "carimbo": car.get("teto_unidade") or "",
@@ -554,22 +589,22 @@ def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
             "numero": f"{_int(cap)} alunos" if cap is not None else None,
             "texto": (
                 "Estimativa de quantos alunos o conjunto de academias mapeadas no polígono já comporta, "
-                "somando cada uma por porte típico da rede (Low/Mid/Premium). "
-                "É proxy de oferta instalada — não é contagem real de matrículas abertas."
+                "somando cada uma por porte típico da rede. "
+                "Proxy de oferta instalada — não é contagem real de matrículas."
             ),
             "carimbo": car.get("capacidade_parque_estimada") or "",
         },
         {
-            "titulo": "3. Potencial de alunos no público do formulário",
+            "titulo": "3. Potencial no público do formulário",
             "numero": f"{_int(pool_p)} alunos" if pool_p is not None else None,
             "texto": (
                 "Alunos potenciais entre as idades que você escolheu no formulário"
                 + (f" ({faixas_p})" if faixas_p else "")
-                + ". Parte dos habitantes dessas faixas tem interesse em fitness; "
-                "dessa parcela, só uma fração vira aluno de academia (benchmark setorial). "
+                + ". Parte dos habitantes tem interesse em fitness; "
+                "dessa parcela, só uma fração vira aluno de academia. "
                 "Os "
                 + (_int(est_p) if est_p is not None else "—")
-                + " habitantes na faixa NÃO são todos alunos — o número acima já aplica esse filtro."
+                + " habitantes na faixa não são todos alunos — o número acima já aplica esse filtro."
             ),
             "carimbo": car.get("pool_demografico") or "",
         },
@@ -579,9 +614,8 @@ def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
             "texto": (
                 "Alunos potenciais fora do gancho do formulário"
                 + (f" ({faixas_s})" if faixas_s else " (ex. Jovem · Silver)")
-                + ". Não decidem sozinhos se há 'aluno novo' ou disputa com o parque, "
-                "mas mostram se vale um braço de oferta para outra faixa "
-                "(Low para Jovem, nicho 40+/Silver, etc.). "
+                + ". Não decidem sozinhos se há aluno novo ou disputa com o parque, "
+                "mas mostram se vale um braço de oferta para outra faixa. "
                 "Habitantes nessas faixas: "
                 + (_int(est_s) if est_s is not None else "—")
                 + "."
@@ -590,16 +624,19 @@ def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
         },
         {
             "titulo": "5. Conclusão — aluno novo ou disputa com o parque?",
-            "numero": (
-                f"Folga {_int(margem)} alunos"
-                if margem is not None
-                else None
-            ),
+            "numero": conclusao_num,
             "texto": conclusao,
             "carimbo": car.get("margem_fresca") or "",
         },
     ]
     return [{k: v for k, v in b.items() if v is not None and v != ""} for b in blocos]
+
+
+_ABSORCAO_ROTULO_UI = {
+    "fresco": ("Aluno novo disponível", "ok"),
+    "misto": ("Crescimento misto", "mid"),
+    "roubo": ("Disputa com o parque", "no"),
+}
 
 
 # Espelho de _SERVICOS_CATALOGO (agents/a9) — rótulos legíveis das chaves canônicas
@@ -1608,6 +1645,22 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     _raw_abs = pos.get("absorcao_margem_fresca") or meta.get("absorcao_margem_fresca")
     absorcao = None
     if isinstance(_raw_abs, dict) and _raw_abs.get("rotulo"):
+        rotulo_id = str(_raw_abs.get("rotulo") or "")
+        rotulo_label, rotulo_pill = _ABSORCAO_ROTULO_UI.get(
+            rotulo_id, (rotulo_id or "—", "mid")
+        )
+        base_esp = str(_raw_abs.get("base_espacial") or "")
+        if base_esp in ("poligono_ibge", "poligono_ibge_bairro"):
+            base_txt = "Base: polígono do bairro (IBGE)"
+        elif base_esp == "raio_fallback":
+            base_txt = "Base: raio ao redor do ponto"
+        else:
+            base_txt = ""
+        blocos = _absorcao_leitura_blocos(_raw_abs)
+        topo = blocos[:4]
+        rows: list[list[dict[str, str]]] = []
+        for i in range(0, len(topo), 2):
+            rows.append(topo[i : i + 2])
         absorcao = {
             "teto": _int(_raw_abs.get("teto_unidade")),
             "cap_parque": _int(_raw_abs.get("capacidade_parque_estimada")),
@@ -1616,13 +1669,18 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "pool_secundario": _int(_raw_abs.get("pool_secundario")) if _raw_abs.get("pool_secundario") is not None else "—",
             "pool_total": _int(_raw_abs.get("pool_total_15mais")) if _raw_abs.get("pool_total_15mais") is not None else "—",
             "margem": _int(_raw_abs.get("margem_fresca")),
+            "rotulo_label": rotulo_label,
+            "rotulo_pill": rotulo_pill,
+            "base_espacial_txt": base_txt,
             "faixas_primario_txt": _faixas_humanas(
                 _raw_abs.get("faixas_primario") if isinstance(_raw_abs.get("faixas_primario"), list) else None
             ),
             "faixas_secundario_txt": _faixas_humanas(
                 _raw_abs.get("faixas_secundario") if isinstance(_raw_abs.get("faixas_secundario"), list) else None
             ),
-            "blocos": _absorcao_leitura_blocos(_raw_abs),
+            "blocos": blocos,
+            "blocos_topo": rows,
+            "bloco_conclusao": blocos[4] if len(blocos) > 4 else None,
         }
 
     return {

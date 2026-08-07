@@ -44,8 +44,8 @@ IDs internos ficam no state/JSON; PDF só vernáculo.
 
 ## Checklist do agente
 
-1. Tabela (se houver): labels humanos + coluna “Alunos (estimativa)” ou unidade clara  
-2. Blocos de leitura por tópico (não uma linha “Leitura” genérica no rodapé da tabela)  
+1. Cards (ou tabela): labels humanos + unidade clara (“alunos estimados”)  
+2. Blocos de leitura por tópico — mesma ordem/estrutura do card React no app  
 3. Faixas etárias detalhadas com nome  
 4. Preview `gerar_html` + abrir browser  
-5. Teste HTML asserta frases humanas, não só chaves técnicas
+5. Teste HTML asserta frases humanas + título “Quem ainda pode matricular”, não só chaves técnicas

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Preview — Card React Absorção (app logado)</title>
+  <style>
+    :root {
+      --bg: #13161b;
+      --card: #181c22;
+      --elevated: #1c212a;
+      --border: #2b323d;
+      --fg: #eef1f4;
+      --muted: #9aa4b0;
+      --lime: #84cc01;
+      --warn: #ffba52;
+      --crit: #ef4444;
+      --good: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 32px 24px 64px;
+      max-width: 920px;
+      margin-inline: auto;
+    }
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      color: var(--lime);
+    }
+    .note {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 28px;
+      border-left: 3px solid var(--lime);
+      padding-left: 12px;
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--crit);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+    .meta { font-size: 11px; color: var(--muted); margin-left: 10px; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 640px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .bloco {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .bloco h4 { margin: 0; font-size: 0.875rem; font-weight: 600; }
+    .bloco .num { margin: 6px 0 0; font-size: 1.15rem; font-weight: 700; color: var(--lime); }
+    .bloco p { margin: 10px 0 0; font-size: 0.875rem; line-height: 1.55; color: var(--muted); }
+    .bloco .carimbo { margin-top: 10px; font-size: 11px; font-family: ui-monospace, monospace; color: #6b7682; }
+    .conclusao { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <p class="eyebrow">GymSite · app logado · RelatorioViewerPage</p>
+  <h1>Quem ainda pode matricular</h1>
+  <p class="note">
+    Isto é o <strong>card React</strong> (não o PDF). O arquivo
+    <code>2026-08-07-absorcao-w2a.html</code> é layout Weasy/PDF — não inclui React.
+    No app, a seção só aparece se o relatório tiver
+    <code>posicionamento_estrategico.absorcao_margem_fresca</code> (pipeline A9 novo).
+  </p>
+
+  <p class="section-title">Seção no viewer</p>
+  <div class="row">
+    <span class="badge">Disputa com o parque</span>
+    <span class="meta">Base: polígono do bairro (IBGE) · Cocó</span>
+  </div>
+
+  <div class="grid">
+    <div class="bloco">
+      <h4>1. Capacidade da sua unidade</h4>
+      <p class="num">2.100 alunos</p>
+      <p>Quantas matrículas esta academia comporta no cenário realista (área do imóvel × densidade típica do modelo). Não é a população do bairro — é o teto operacional da unidade.</p>
+      <div class="carimbo">2100 · área×densidade · ACAD</div>
+    </div>
+    <div class="bloco">
+      <h4>2. Capacidade das academias já no bairro</h4>
+      <p class="num">14.200 alunos</p>
+      <p>Estimativa de quantos alunos o conjunto de academias mapeadas no polígono já comporta. Proxy de oferta instalada — não é contagem real de matrículas.</p>
+      <div class="carimbo">14200 · proxy porte · franquia</div>
+    </div>
+    <div class="bloco">
+      <h4>3. Potencial no público do formulário</h4>
+      <p class="num">1.221 alunos</p>
+      <p>Alunos potenciais entre as idades do formulário (25-39 · Core; 40-59 · Maduro). Os 30.520 habitantes na faixa não são todos alunos — o número acima já aplica o filtro.</p>
+      <div class="carimbo">1221 · estoque×interesse×pen · IBGE</div>
+    </div>
+    <div class="bloco">
+      <h4>4. Potencial nas outras idades (informa o modelo)</h4>
+      <p class="num">642 alunos</p>
+      <p>Fora do gancho do formulário (15-24 · Jovem; 60+ · Silver). Informa modelo, não decide sozinho fresco vs disputa. Habitantes: 16.050.</p>
+    </div>
+  </div>
+
+  <div class="bloco conclusao">
+    <h4>5. Conclusão — aluno novo ou disputa com o parque?</h4>
+    <p class="num">Déficit 12.979 alunos</p>
+    <p>No público do formulário, a oferta instalada já supera o potencial estimado. Crescer nesta unidade significa atrair quem hoje treina em outra academia do bairro — custo de aquisição mais alto e guerra de proposta de valor.</p>
+    <div class="carimbo">-12979 · potencial−oferta · derivada</div>
+  </div>
+</body>
+</html>

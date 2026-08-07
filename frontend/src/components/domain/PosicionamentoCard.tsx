@@ -73,6 +73,13 @@ export function PosicionamentoCard({ data, className }: PosicionamentoCardProps)
               sobrepõe o do LLM (<span className="line-through">{data.veredito_posicionamento_llm}</span>).
             </p>
           )}
+          {data.veto_absorcao_roubo && data.veredito_antes_veto_absorcao && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Absorção (disputa com o parque) derrubou{' '}
+              <span className="line-through">{data.veredito_antes_veto_absorcao}</span> →{' '}
+              <strong className="text-foreground">{data.veredito_posicionamento}</strong>.
+            </p>
+          )}
         </div>
       )}
 

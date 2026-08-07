@@ -152,6 +152,8 @@ export interface FluxoPedestreJSON {
 export interface DemografiaBairroJSON {
   cidade?: string
   bairro?: string | null
+  /** `bairro` | `distrito` | `ra` when known from renda_bairro / loader */
+  unidade_tipo?: string | null
   renda_media?: number | null
   idh_renda?: number | null
   ranking_idh?: string | null
@@ -271,6 +273,37 @@ export interface PosicionamentoEstrategicoJSON {
   cache_prompt?: string
   erro?: string
   raw_output?: string
+  /** Absorção / margem fresca (A9 tool — pool etário × parque) */
+  absorcao_margem_fresca?: AbsorcaoMargemFrescaJSON | null
+  veto_absorcao_roubo?: boolean
+  veredito_antes_veto_absorcao?: string
+}
+
+export interface AbsorcaoCarimboJSON {
+  valor?: number | string
+  base?: string
+  fonte?: string
+  janela?: string
+}
+
+export interface AbsorcaoMargemFrescaJSON {
+  teto_unidade?: number
+  modelo_teto?: string
+  area_candidato_m2?: number
+  capacidade_parque_estimada?: number
+  pool_demografico?: number
+  pool_primario?: number
+  pool_secundario?: number
+  pool_total_15mais?: number
+  estoque_primario?: number
+  estoque_secundario?: number
+  faixas_primario?: string[]
+  faixas_secundario?: string[]
+  margem_fresca?: number
+  rotulo?: 'fresco' | 'misto' | 'roubo' | string
+  nota_modelo_secundario?: string
+  carimbos?: Record<string, string | AbsorcaoCarimboJSON>
+  base_espacial?: string
 }
 
 export interface ComposicaoSegmentoJSON {
@@ -459,6 +492,16 @@ export interface MarketContextJSON {
   insights_estrategicos?: string[]
   /** Schema v1.7: novas unidades com abertura nos últimos ~90d (cidade/UF). */
   novos_cnpj_fitness_90d?: number
+  /** Schema v1.14: baixas situacao=08 (RFB) — 90d e trimestre civil fechado. */
+  baixas_cnpj_fitness_90d?: number
+  baixas_cnpj_fitness_q?: number
+  entrantes_cnpj_fitness_q?: number
+  saldo_oferta_q?: number
+  pressao_oferta_q?: 'retracao' | 'expansao' | 'neutro' | string
+  janela_q_label?: string
+  cnpj_as_of?: string
+  arvore_oferta?: Record<string, unknown>
+  redes?: Record<string, unknown>
   /** Schema v1.8: parque ativo no município (snapshot CNPJ RFB). */
   parque_ativo_total?: number | null
   /** Schema v1.9: composição do parque por segmento. */
