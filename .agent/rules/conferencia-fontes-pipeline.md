@@ -9,7 +9,7 @@
 
 | Tipo de dado | Fonte canônica | Proibido no caminho crítico |
 |---|---|---|
-| Concorrência Maps | SearchAPI `google_maps` | Scraping Maps; LLM inventando N |
+| Concorrência Maps | SearchAPI `google_maps` · **R=1000 m do centróide** + gate tipo/status (jul/2026) | Scraping Maps; LLM inventando N; **gate string de bairro** no caminho crítico |
 | Reviews | SearchAPI `google_maps_place.review_results` (1 call c/ pico); fallback `google_maps_reviews` | LLM como única classificação |
 | Imóveis candidato | `listing_cascata` (SearchAPI) | Listing como **fonte de aluguel** |
 | **Aluguel viabilidade (OPEX)** | **`aluguel_deterministico` → `mrlr_modelo`** (A4 Tier 0) | Preço de anúncio; SearchAPI `rent_sqm`; A7 grounding |
@@ -33,7 +33,7 @@
 | `tools/mrlr_modelo.py` | Equação IBAPE-GO (coeficientes em `catalogos_metodologia`) |
 | `tools/aluguel_mrlr.py` | `aluguel_deterministico()` — lê espelhos Supabase |
 | `tools/financial_tools.py` | A4 macro — **Tier 0 MRLR** sobrescreve tiers portal/grounding |
-| `tools/anchoring_tools.py` | `_anexar_aluguel_mrlr` — mesmo número no candidato A1 |
+| `tools/a1_listing_pipeline.py` | listing filtrado + `aluguel_deterministico` por área real do candidato A1 |
 
 ### 2.2 Inputs obrigatórios para `status=ok`
 
@@ -169,7 +169,63 @@ A7 = agente **lateral** (chat/grounding), **fora** do pipeline A0→A9.
 
 ---
 
-## 9. Testes de regressão MRLR
+## 9. Contagem de concorrentes — gate espacial (nacional)
+
+**Adotado jul/2026** (R=1000 m); **Spec C ago/2026** (polígono IBGE quando resolvido).
+
+| Camada | Papel | Canônico |
+|---|---|---|
+| Query Formato 1 (`academia no bairro X, cidade - UF`) | Recall SearchAPI | Hint |
+| Centróide (geocode do ponto do relatório) | Âncora | Sim |
+| **Polígono IBGE do bairro** (Censo 2022) — se `resolver_bairro_poligono` hit | Gate de inclusão | **Preferido** (Spec C) |
+| `dist(centroid, place) ≤ R` com **R = 1000 m** | Gate de inclusão | **Fallback** sem polígono |
+| Gate **tipo** (`_tipo_relevante` / exclude pilates·studio·luta·crossfit p/ `academia`) | Escopo do negócio | Sim |
+| Status operacional (descarta `CLOSED`) | Limpeza | Sim |
+| String “bairro no nome/endereço” | — | **Proibido** no caminho crítico |
+
+**Demografia (A2):** com polígono — setores com centróide **dentro** do polígono (pop + idade×sexo = mesma lista). Sem polígono — raio **1500 m** + fill `pop_alvo` (legado).
+
+**Número exibido** = `|places|` após gate espacial + tipo + status.  
+**Carimbo:** `N · polígono IBGE bairro · SearchAPI…` **ou** `N · raio 1000 m do centróide · SearchAPI…`.  
+**Smoke URL:** lista Maps **bruta** ≠ N; carimbar aviso ou listar só `place_id`s filtrados — nunca apresentar o link como prova do total.
+
+Constante código: `RAIO_CONCORRENCIA_CANONICO_M = 1000` em `tools/competitor_tools.py` (fallback). Resolver: `tools/bairro_poligono.py`. Spec: `docs/superpowers/specs/2026-08-06-spec-c-bairro-poligono-ibge-design.md`.
+
+---
+
+## 9.1 Matriz demografia × saturação → modelo
+
+| Peça | Fonte |
+|---|---|
+| Compute | `tools/matriz_demo_saturacao.py` — **não** A0/A2 |
+| Limiares | `param()` (`matriz_n_per_10k_*`, `matriz_premium_min_armadilha`, …) |
+| Quem anexa W1 | A9 `attach_matriz_demo_saturacao` → `relatorio_posicionamento.matriz_demo_saturacao` |
+| PDF | Seção **Modelo de Negócio Adequado** (`pdf/html_builder.py`) |
+| Veto A4 | `quadrante == Armadilha de Renda` → `modelo_recomendado` ≠ premium genérico |
+| Espacial | Preferir `gate_espacial=poligono_ibge_bairro` (Spec C); senão `raio_fallback` |
+| Aluguel | **Não muda** — continua MRLR Tier 0 |
+
+Precedência: **Armadilha vence** headroom `OCEANO_AZUL` se `mix.premium ≥ matriz_premium_min_armadilha` (`matriz_override=true`). W3: `baixas_24m` / `rede_ancora` = modifiers CNPJ (não substituem N/10k). Spec: `docs/superpowers/specs/2026-08-07-matriz-demo-saturacao-modelo-design.md`.
+
+---
+
+## 9.2 Absorção / margem fresca (W2a)
+
+| Peça | Regra |
+|---|---|
+| Compute | `tools/absorcao_margem_fresca.py` — **não** A0/A2; Matriz **não** embute a fórmula |
+| Área proxy | `area_proxy_low_m2=1000`, mid=1500, premium=2000, nicho/desc=1250 (`param()`) |
+| Capacidade parque | N×tier × área_proxy × `matr_m2_*_realista` |
+| Pool | estoque etário × `penetracao_potencial_fitness` × pen academia (`geral`\|`bairro_ab`) — **não** pop total crua; **não** 100% da faixa Core |
+| Três pools | primário (form) · secundário (resto 15+) · total; rótulo fresco/misto/roubo só no **primário** |
+| PDF | Seção **Absorção e margem de alunos** (`pdf/html_builder.py`) · preview = `gerar_html` |
+| Quem anexa | A9 `attach_absorcao_margem_fresca` → `relatorio_posicionamento.absorcao_margem_fresca` |
+| Spatial W2a | Spec C PIP / raio — **sem Voronoi** |
+| Spec | `docs/superpowers/specs/2026-08-07-absorcao-margem-fresca-design.md` |
+
+---
+
+## 10. Testes de regressão MRLR
 
 | Teste | O que valida |
 |---|---|

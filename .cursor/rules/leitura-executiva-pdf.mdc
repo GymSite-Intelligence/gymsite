@@ -1,0 +1,15 @@
+---
+description: PDF analítico = leitura executiva em português de negócio (não jargão pool/pen).
+globs: pdf/**/*,docs/superpowers/previews/**
+alwaysApply: false
+---
+
+# Leitura executiva no PDF
+
+Ao mudar seção analítica do relatório (`pdf/html_builder.py`):
+
+1. Ler [`.agent/rules/leitura-executiva-pdf.md`](../../.agent/rules/leitura-executiva-pdf.md)
+2. Cada número: **título humano** + **unidade** + **bloco de prosa** (o que é / o que não é / decisão)
+3. Proibido no texto ao cliente: `pool`, `pen.`, `form ×`, IDs de param
+4. Faixas etárias com nome (Jovem · Core · Maduro · Silver), não só `25-39`
+5. Preview = `gerar_html` + abrir browser

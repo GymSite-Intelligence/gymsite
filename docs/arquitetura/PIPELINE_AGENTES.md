@@ -15,7 +15,7 @@
 GymSitePipeline (Sequential)
 │
 ├─ A0  ContextBuilder          LLM      →market_context
-├─ A1  GeoScout                det.     →candidatos_geoscout(_pronto)
+├─ A1  GeoScout                det.     →candidatos_geoscout(_pronto) listing+MRLR
 │
 ├─ ParallelAnalysis (Parallel — rodam JUNTOS)
 │   ├─ A2  DemoAnalyst         det.     →analise_demografica
@@ -55,19 +55,17 @@ GymSitePipeline (Sequential)
 
 ### A1 — GeoScout · [`a1_geoscout.py`](../../agents/a1_geoscout.py)
 - **Classe / model:** `BaseAgent` (determinístico) · —
-- **Macro:** `analisar_pontos_comerciais_completo` (em thread)
-- **Lê:** `input_params`, `market_context` · **Escreve:** `candidatos_geoscout_pronto`, `candidatos_geoscout`
-- **Fonte (primário):** SearchAPI `engine=google_maps` (âncoras comerciais) + **SearchAPI cascata** (`listing_cascata.py`, imóveis por bairro) + Geocoding/zoneamento
-- **Fonte (legado, fora do caminho crítico):** Playwright OLX/ImovelWeb (`LISTINGS_PLAYWRIGHT`, default off)
-- **Fonte (fluxo pedestre — jul/2026, ⚠️ ver §8):** OSMnx + Overpass em `tools/space_syntax.py` — **não** SearchAPI; roda `enrich_candidato_fluxo` nos **top 3** dentro da macro (bloqueia A1)
-- **Faz:** zonas comerciais-âncora + top candidatos com score de localização + `fluxo_score` nos top 3.
-- **Relatório:** §2 (Scores), §3 (Top 3 Candidatos), §12 (Bairros Alternativos), badge `fluxo_score` no candidato.
+- **Pipeline:** `buscar_candidatos_listing_mrlr` → `listing_cascata` SearchAPI → gate bairro/cidade/UF + área do anúncio → score por distância → aluguel MRLR
+- **Macro POI morta:** `analisar_pontos_comerciais_completo` não roda no caminho A1 (evidência Pirapora: sinal indireto, área 600 por tipo, contaminação Diadema)
+- **Lê:** `input_params`, `market_context` · **Escreve:** `candidatos_geoscout_pronto`, `candidatos_geoscout` (`status=ok|ok_vazio`)
+- **Aluguel:** `price_raw` é display; decisão = MRLR por área real do listing, com carimbo
+- **Relatório:** Top3 no A6 usa 35% geo + 65% payback estimado; lista vazia permanece honesta
 
 ### A2 — DemoAnalyst · [`a2_demo_analyst.py`](../../agents/a2_demo_analyst.py)
 - **Classe / model:** `BaseAgent` (determinístico) · —
 - **Macro:** `analise_demografica_completa` + perfil sexo/idade + densidade setor
 - **Lê:** `input_params`, `market_context` · **Escreve:** `analise_demografica` (+ insights)
-- **Fonte:** IBGE Censo 2022 · BigQuery (perfil sexo×idade) · CKAN 2010 (renda legada) · nominatim (fallback)
+- **Fonte:** IBGE Censo 2022 por setor · **polígono IBGE bairro** quando `resolver_bairro_poligono` hit (`demografia_setor_poligono` + `perfil_sexo_idade_poligono`); senão raio 1,5 km + fill `pop_alvo` · CKAN/renda · nominatim (fallback)
 - **Faz:** renda, público 18-45, score demográfico, perfil sexo, densidade.
 - **Relatório:** §2 (Scores), §13 (Demanda Futura T+24).
 
@@ -76,6 +74,7 @@ GymSitePipeline (Sequential)
 - **Macro:** `analisar_concorrentes_a3a_completo`
 - **Lê:** `input_params`, `market_context` · **Escreve:** `concorrentes_brutos`
 - **Fonte:** **SearchAPI `engine=google_maps`** (primário, 4× barato; Places fallback) + **SearchAPI `engine=google_maps_reviews`** (`sort_by=lowest_rating`, cache 7d) → card determinístico `_processar_review_card` (`dores_detectadas`, `sentimento`, `servicos_mencionados`) + **refino opcional** Gemini Flash batch (`categoria_dor` taxonomia fechada; fallback substring se falha)
+- **Gate espacial (Spec C):** inclusão = **point-in-polygon** no polígono IBGE do bairro se resolvido; senão **R=1000 m** do centróide (`RAIO_CONCORRENCIA_CANONICO_M`). Bairro na query = só recall.
 - **Faz:** busca + gate `_eh_academia_tradicional` + reviews SearchAPI + enriquecimento.
 - **⚠️ Nosso fix:** o gate agora entende types PT do SearchAPI (era só EN → cortava academia real). Ver [`tools/competitor_tools.py`](../../tools/competitor_tools.py).
 - **Relatório:** §6.1 (por bairro), §11 (Distribuição Geográfica).
@@ -95,10 +94,11 @@ GymSitePipeline (Sequential)
 ### A4 — FinancialEstimator · [`a4_financial_estimator.py`](../../agents/a4_financial_estimator.py)
 - **Classe / model:** `BaseAgent` (determinístico) · —
 - **Macro:** `analise_financeira_a4_completo` (async)
-- **Lê:** `input_params` (area/tipo/tamanho/gênero), `market_context`, `candidatos_geoscout_pronto` (lat/lng top 1) · **Escreve:** `analise_financeira_pronto`, `analise_financeira`
-- **Fonte:** MRLR (aluguel Tier 0) — viabilidade determinística
+- **Lê:** `input_params` (area/tipo/tamanho/gênero), `market_context`, `candidatos_geoscout_pronto` (lat/lng top 1), `concorrentes_brutos` / inteligência (matriz veto) · **Escreve:** `analise_financeira_pronto`, `analise_financeira`
+- **Fonte:** MRLR (aluguel Tier 0) — viabilidade determinística; modelo recomendado pode ser **vetado** pela matriz (Armadilha → ≠ Premium genérico)
 - **Faz:** 3 cenários (low/mid/premium): CAPEX, OPEX, payback, margem, modelo recomendado, score.
 - **Relatório:** §10 (Viabilidade Financeira a/b/c/d).
+- **Aluguel:** continua **só MRLR** — matriz não troca fonte de aluguel.
 
 ### A5 — ContactHunter · [`a5_contact_hunter.py`](../../agents/a5_contact_hunter.py) — *fora do pipeline*
 - **Classe / model:** `BaseAgent` (determinístico) · —
@@ -112,10 +112,11 @@ GymSitePipeline (Sequential)
 - **Lê:** `market_context`, `analise_demografica`, `inteligencia_competitiva`, `oferta_concorrentes`, `analise_financeira_pronto`, `candidatos_geoscout_pronto`, `contato_decisor` · **Escreve:** `relatorio_md`
 - **Callbacks:**
   - `before_agent` `_a6_precompute_callback` → pré-computa `bairros_alternativos_pronto`, `entrantes_cnpj_pronto`, `obras_cno_pronto`, **`fluxo_pedestre`** (jul/2026 — ver §8) (seções **PRÉ-COMPUTADAS** = determinísticas, LLM usa literal)
+  - `before_model` injeta bairros alternativos, crowdsource estruturado (`input_params.bairros_indicados`), ofertas, entrantes e aluguel **MRLR**; não injeta preço de portal/Grounding
   - `after_agent` `_a6_after_agent_callback` → parseia markdown, persiste JSON local + Supabase, telemetria
 - **Fonte:** CNO (obras) + CNPJ entrantes 90d (precompute) + mapas hardcoded `BAIRROS_ALTERNATIVOS`/`REGIAO_METROPOLITANA` + OSMnx/Overpass (fluxo pedestre)
-- **Faz:** monta o relatório executivo de 5 agentes + narração (Claude headless + guardrail).
-- **Relatório:** §1 (Resumo Executivo), §16 (Decisão), bloco `fluxo_pedestre` no `output_consolidado`, + injeta as seções pré-computadas.
+- **Faz:** monta relatório + Top3 determinístico (`candidato_viabilidade_rank`: 35% geo + 65% payback A4 mid/MRLR). O LLM copia a ordem pronta e não aplica tie-breaker de POI.
+- **Relatório:** §1, Top3 enriched (carimbo MRLR + payback estimado), §16, `fluxo_pedestre`.
 
 ### A7 — MarketResearch · [`a7_market_research.py`](../../agents/a7_market_research.py) — *auxiliar (chat), NÃO pipeline*
 - **Classe / model:** `Agent` (LLM) · gemini-2.5-flash
@@ -135,12 +136,13 @@ GymSitePipeline (Sequential)
 
 ### A9 — PositioningStrategist · [`a9_positioning_strategist.py`](../../agents/a9_positioning_strategist.py)
 - **Classe / model:** `BaseAgent` (determinístico) · —
-- **Macro:** `_errc_deterministica(state)`
-- **Lê:** `market_context`, `candidatos_geoscout`, `analise_demografica`, `inteligencia_competitiva`, `oferta_concorrentes`, `analise_financeira`, `contato_decisor`, `relatorio_md` · **Escreve:** `relatorio_posicionamento_md`, `relatorio_posicionamento`
-- **Callback:** `after_agent` `_a9_after_agent_callback` → override de veredito (headroom renda IBGE 2022) + síntese narrada opcional (Claude headless) + persiste Supabase
-- **Fonte:** IBGE Censo 2022 (headroom renda × ticket) — determinístico
-- **Faz:** framework ERRC + GAPs + ticket recomendado + veredito (OCEANO_AZUL/TRANSICAO/VERMELHO).
-- **Relatório:** §7 (Posicionamento Recomendado).
+- **Macro:** `_errc_deterministica(state)` + `attach_matriz_demo_saturacao` (`tools/matriz_demo_saturacao.py`) + `attach_absorcao_margem_fresca` (`tools/absorcao_margem_fresca.py`)
+- **Lê:** `market_context`, `candidatos_geoscout`, `analise_demografica`, `inteligencia_competitiva`, `oferta_concorrentes`, `analise_financeira`, `contato_decisor`, `relatorio_md`, `demografia_bairro`, `concorrentes_brutos` · **Escreve:** `relatorio_posicionamento_md`, `relatorio_posicionamento` (incl. `matriz_demo_saturacao`, `absorcao_margem_fresca`)
+- **Absorção (W2a/W2a.1):** teto (`área×matr/m²`) × capacidade parque (N×tier×área_proxy) × **pool etário** (estoque form/resto × interesse × pen academia) → rótulo `fresco|misto|roubo` no pool **primário**. Números = tool. Spec: `docs/superpowers/specs/2026-08-07-absorcao-margem-fresca-design.md` + `2026-08-07-pool-etario-absorcao-design.md`.
+- **Callback:** `after_agent` `_a9_after_agent_callback` → override de veredito (headroom renda IBGE 2022) + **matriz demografia×saturação** (quadrante → modelo) + síntese narrada opcional (Claude headless) + persiste Supabase
+- **Fonte:** IBGE Censo 2022 (headroom renda × ticket) + N/mix no polígono Spec C — determinístico
+- **Faz:** framework ERRC + GAPs + ticket recomendado + veredito (OCEANO_AZUL/TRANSICAO/VERMELHO) + quadrante (Oceano/Armadilha/Guerra/Deserto). **Armadilha vence** headroom Oceano se ≥2 Premium no polígono (`matriz_override`).
+- **Relatório:** §7 (Posicionamento Recomendado) + seção PDF **Modelo de Negócio Adequado**.
 
 ### A3 — CompetitorIntel · [`a3_competitor_intel.py`](../../agents/a3_competitor_intel.py) — **LEGADO**
 - `Agent` (LLM) gemini-2.5-flash, 8 tools soltas. Monólito que estourava AFC=10 (`MALFORMED_FUNCTION_CALL`). **Substituído** por A3a/A3b/A3c. Mantido só p/ referência.
@@ -180,29 +182,35 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 
 ## 4. Fluxo de dados (state — quem escreve / quem lê)
 
+> Fonte travada: [`tools/pipeline_deps.py`](../../tools/pipeline_deps.py) · gate `tests/test_pipeline_deps.py` · cartões reverso [`.superpowers/sdd/pipeline-deps-reverse.md`](../.superpowers/sdd/pipeline-deps-reverse.md)
+
 | Chave de state | Escrito por | Lido por |
 |---|---|---|
-| `input_params` | entrypoint | A0, A1, A2, A4 |
-| `market_context` | A0 | A1, A2, A3a, A4, A6, A9 |
-| `candidatos_geoscout(_pronto)` | A1 | A4, A6, A9 |
-| `analise_demografica` | A2 | A6, A9 |
-| `concorrentes_brutos` | A3a | A3b |
+| `input_params` | entrypoint | A0, A1, A2, A3a, A3b, A4, A6, A9 |
+| `demanda_futura` | entrypoint (`api.py` enrichment) | A6, A9 |
+| `market_context` | A0 | A1, A2, A3a, A3b, A4, A6, A9 |
+| `candidatos_geoscout(_pronto)` | A1 | A4, A6 (ambas as chaves; `_pronto` preferido) |
+| `analise_demografica` | A2 | A6 |
+| `concorrentes_brutos` | A3a | A3b, A6, A9 |
 | `inteligencia_competitiva` | A3b | A6, A9 |
 | `oferta_concorrentes` | **A3b** (fundiu A3c) | A6, A9 |
-| `fluxo_pedestre` | A6 precompute (+ `fluxo_*` nos candidatos via A1) | API `GET /fluxo-pedestre`, front |
-| `analise_financeira(_pronto)` | A4 | A6, A9 |
-| `contato_decisor` | A5 [fora] | A6, A9 (tratam ausência) |
+| `flujo_pedestre` | A6 precompute (+ `fluxo_*` nos candidatos via A1) | API `GET /flujo-pedestre`, front |
+| `analise_financeira_pronto` | A4 | A6 (números) |
+| `analise_financeira` | A4 | A9 (alertas fiscais / piso) |
+| `demografia_bairro` | A6 (bridge after_agent) | A9 (Brilliant Basics público) |
+| `contato_decisor` | A5 [fora] | A6, A9 (opcional — tratam ausência) |
 | `relatorio_md` | A6 | A9, A8 |
-| `relatorio_posicionamento` | A9 | persistência |
+| `relatorio_posicionamento(_md)` | A9 | persistência / PDF |
 
-**Padrão:** cada A_n lê o output do A_(n-1); A0 (`market_context`) e `input_params` são lidos por quase todos. A6 e A9 são os **agregadores** (leem 6-8 chaves).
+**Padrão:** cada A_n lê o output do A_(n-1); A0 (`market_context`) e `input_params` são lidos por quase todos. A6 e A9 são os **agregadores**. Loop reverso (contrato→consumidor→entradas): A9→A6→A4→A3b→A3a→A2→A1→A0.
 
 ---
 
 ## 5. Acoplamento ao trabalho recente (jun/2026)
 
 - **Gate A3a (types PT SearchAPI):** consertado em `tools/competitor_tools.py` — alimenta §6/§11. Antes sub-contava concorrente.
-- **Árvore 2×2 CNPJ (joio/trigo, portão CNAE 931 + nome→tipo):** em `tools/cnpj_fitness_tools.py` / `tools/cnpj_segment_classifier.py` — alimenta A0 e §8 do relatório. Parque limpo gated.
+- **Raio canônico concorrência (jul/2026):** `RAIO_CONCORRENCIA_CANONICO_M=1000` — inclusão por distância ao centróide + tipo/status; bairro só na query de recall. Ver `conferencia-fontes-pipeline.md` §9.
+- **Árvore CNPJ oferta (joio/trigo + baixas):** `tools/cnpj_fitness_tools.py` + `tools/cnpj_oferta_janelas.py` / `cnpj_oferta_metricas.py` — parque limpo gated; **ativos + baixadas** (`situacao 02/08`); janelas 90d + Q civil fechado com `as_of`; redes por `cnpj_basico`. Ingest: `rfb_cnpj_fitness_loader.py --from-json` (JSON ativo+baixada) ou ZIP `--include-baixadas`. Spec: `docs/superpowers/specs/2026-08-05-cnpj-json-ingest-baixadas-design.md`. Aluguel viabilidade continua **só MRLR (A4)**.
 - **Narrador Claude headless + guardrail decimal:** `tools/narrador_claude.py` — usado por A6 (§1/§16) e A9 (§7). LLM só veste o dado determinístico.
 - **A6 vs A9 = UM PDF, não dois.** `gerar_pdf_weasy(model)` ([api.py](../../api.py)) monta um único PDF de um `model` ESTRUTURADO (saíram do markdown-do-LLM de propósito). A6 fornece as seções de viabilidade; A9 fornece a seção ERRC/posicionamento (`model.posicionamento_estrategico`) + veredito. Complementares, providers de seções diferentes. Os `*_md` (relatorio_md, relatorio_posicionamento_md) são secundários (preview/UI), NÃO a fonte do PDF.
 - **Fusão A3b+A3c (jun/2026):** A3b agora emite `oferta_concorrentes` + mescla serviços por concorrente → corrige gap falso da ERRC (A9). A3c morto.
@@ -231,7 +239,7 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 
 | Camada | Fonte primária | Fallback | Proibido no caminho crítico |
 |---|---|---|---|
-| Concorrentes Maps | SearchAPI `engine=google_maps` | Places API (`COMPETIDOR_MAPS_BACKEND=places`) | Scraping Maps |
+| Concorrentes Maps | SearchAPI `engine=google_maps` · **polígono IBGE bairro** (Spec C) ou **R=1000 m** fallback · gate tipo/status | Places API (`COMPETIDOR_MAPS_BACKEND=places`) | Scraping Maps; gate string bairro; LLM inventando N |
 | Reviews concorrente | SearchAPI `engine=google_maps_reviews` (`sort_by=lowest_rating`) → card `_processar_review_card` | Places Details reviews | LLM como única classificação |
 | Temas agregados reviews | SearchAPI `topics[]` → `temas_insatisfacao` + gap A3b | — | Gemini como classificação primária |
 | Oferta site/IG | httpx + BS4 + SearchAPI `instagram_profile` | — | Playwright, Outscraper |

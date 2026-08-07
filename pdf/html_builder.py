@@ -30,11 +30,13 @@ _TEMPLATE = """
   @bottom-left { content: "{{ rodape }}"; font-family: Helvetica; font-size: 8pt; font-style: italic; color:#64748B; } }
 body { margin:0; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; color:#1E293B; font-size:9pt; line-height:1.45; }
 .header { width:100%; border-collapse:collapse; border-bottom:2px solid #A3E635; padding-bottom:10px; margin-bottom:12px; }
+.header td { padding-top:4px; vertical-align:middle; }
 .logo { font-weight:900; font-size:20pt; letter-spacing:-0.5px; color:#1B2A4A; line-height:1; }
 .logo .a { color:#A3E635; }
 .logo-sub { display:block; font-weight:500; font-size:7.5pt; color:#64748B; letter-spacing:2.5px; text-transform:uppercase; margin-top:3px; }
-.doc-title { font-size:14pt; font-weight:bold; color:#0F172A; margin:0 0 3px; letter-spacing:0.3px; }
-.doc-sub { font-size:9pt; color:#64748B; margin:0; }
+.logo-img { height:32px; width:auto; display:block; margin-top:2px; }
+.doc-title { font-size:12pt; font-weight:bold; color:#0F172A; margin:0 0 2px; letter-spacing:0.3px; }
+.doc-sub { font-size:8pt; color:#64748B; margin:0; }
 .meta { font-size:8pt; color:#475569; margin-bottom:16px; text-align:right; }
 .tag { background:#F8FAFC; border:1px solid #E2E8F0; padding:3px 8px; border-radius:4px; margin-left:5px; color:#334155; }
 .veredito { background:#FAFAF9; border:1px solid #E5E7EB; border-left:4px solid {{ vc }}; padding:14px 18px; margin-bottom:8px; }
@@ -78,6 +80,11 @@ table.d thead { display:table-header-group; }
 .bar { height:100%; background:#0E5C66; opacity:.35; }
 .bar-row .num { width:60px; text-align:right; font-weight:bold; }
 .bar-row .sx { width:74px; text-align:right; color:#64748B; }
+.pir-head { display:flex; align-items:center; gap:8px; font-size:7.5pt; color:#64748B; font-weight:bold; margin-bottom:4px; }
+.pir-head .lab { width:115px; }
+.pir-head .bar-wrap { flex:1; visibility:hidden; height:0; }
+.pir-head .col { width:58px; text-align:right; }
+.pir-head .col-w { width:70px; }
 .pico { display:flex; align-items:flex-end; gap:3px; height:46px; margin:8px 0 4px; }
 .pico .col { flex:1; background:#0E5C66; opacity:.30; border-radius:2px 2px 0 0; min-height:2px; }
 .pico .col.hot { opacity:.7; background:#A3E635; }
@@ -96,9 +103,16 @@ table.d thead { display:table-header-group; }
 .timing-d { font-size:8.5pt; color:#475569; text-align:justify; padding:12px; border:1px solid #E2E8F0; border-top:none; }
 .alert { background:#FEF2F2; border:1px solid #FECACA; border-radius:5px; padding:12px 14px; }
 .alert ul { margin:0; padding-left:16px; font-size:9pt; color:#7F1D1D; } .alert li { margin-bottom:3px; }
+.lex { border:1px solid #E2E8F0; background:#fff; margin:10px 0 14px; }
+.lex .blk { padding:12px 14px; border-bottom:1px solid #F1F5F9; }
+.lex .blk:last-child { border-bottom:none; }
+.lex .blk h4 { margin:0 0 6px; font-size:9pt; color:#0E5C66; font-weight:bold; }
+.lex .blk p { margin:0; font-size:8.5pt; color:#334155; line-height:1.55; text-align:justify; }
+.lex .blk .stamp { margin-top:6px; font-size:7.5pt; color:#64748B; }
+.lex .blk .num { font-size:12pt; font-weight:bold; color:#0F172A; margin:0 0 6px; }
 </style></head><body>
 <table class="header"><tr>
-  <td style="vertical-align:bottom; width:42%;"><div class="logo"><span class="a">GYM</span>SITE</div><div class="logo-sub">Intelligence</div></td>
+  <td style="vertical-align:bottom; width:42%;">{% if logo_src %}<img class="logo-img" src="{{ logo_src }}" alt="GymSite Intelligence" />{% else %}<div class="logo"><span class="a">GYM</span>SITE</div><div class="logo-sub">Intelligence</div>{% endif %}</td>
   <td style="text-align:right; vertical-align:bottom; width:58%;"><div class="doc-title">Relatório de Viabilidade</div><div class="doc-sub">Inteligência de Mercado Fitness · Pipeline A0–A9</div></td>
 </tr></table>
 <div class="meta">
@@ -141,7 +155,12 @@ table.d thead { display:table-header-group; }
   {% if mercado and mercado.renda %}<tr><td>Renda do bairro</td><td>{{ mercado.renda }}</td></tr>{% endif %}
   {% if mercado and mercado.tendencia %}<tr><td>Tendência</td><td>{{ mercado.tendencia }}</td></tr>{% endif %}
   {% if mercado and mercado.parque %}<tr><td>Parque ativo (CNPJ)</td><td>{{ mercado.parque }}</td></tr>{% endif %}
-  {% if mercado and mercado.novos %}<tr><td>Novos CNPJ fitness (90d)</td><td>{{ mercado.novos }}</td></tr>{% endif %}
+  {% if mercado and mercado.novos is not none %}<tr><td>Aberturas CNPJ (90d)</td><td>{{ mercado.novos }}{% if mercado.carimbo_90d %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_90d }}</span>{% endif %}</td></tr>{% endif %}
+  {% if mercado and mercado.baixas_90d is not none %}<tr><td>Baixas CNPJ (90d)</td><td>{{ mercado.baixas_90d }}{% if mercado.carimbo_90d %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_90d }}</span>{% endif %}</td></tr>{% endif %}
+  {% if mercado and mercado.entrantes_q is not none %}<tr><td>Aberturas CNPJ ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.entrantes_q }}{% if mercado.carimbo_q %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_q }}</span>{% endif %}</td></tr>{% endif %}
+  {% if mercado and mercado.baixas_q is not none %}<tr><td>Baixas CNPJ ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.baixas_q }}{% if mercado.carimbo_q %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_q }}</span>{% endif %}</td></tr>{% endif %}
+  {% if mercado and mercado.saldo_q is not none %}<tr><td>Saldo oferta ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.saldo_q }}{% if mercado.pressao %} · {{ mercado.pressao }}{% endif %}</td></tr>{% endif %}
+  {% if mercado and mercado.baixas_bairro_q is not none %}<tr><td>Baixas no bairro ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.baixas_bairro_q }}</td></tr>{% endif %}
   {% if panorama and panorama.saturacao %}<tr><td>Nível de saturação</td><td>{{ panorama.saturacao }}</td></tr>{% endif %}
   {% if panorama and panorama.rating_medio %}<tr><td>Rating médio dos concorrentes</td><td>{{ panorama.rating_medio }} ★</td></tr>{% endif %}
   {% if panorama and panorama.total %}<tr><td>Concorrentes analisados</td><td>{{ panorama.total }}{% if panorama.raio %} (de {{ panorama.raio }} no raio){% endif %}</td></tr>{% endif %}
@@ -149,23 +168,68 @@ table.d thead { display:table-header-group; }
 
 {% if demografia %}
 <div class="sec">Demografia do Bairro</div>
-{% if demografia.renda or demografia.populacao %}<table class="d"><tr><th>Dimensão</th><th>Valor (fonte real do bairro)</th></tr>
-  {% if demografia.renda %}<tr><td>Renda per capita <span style="font-size:8px;color:#667">(proxy: rend. do responsável ÷ moradores/dom. · IBGE Censo 2022)</span></td><td>{{ demografia.renda }}</td></tr>{% endif %}
-  {% if demografia.populacao %}<tr><td>População (bairro)</td><td>{{ demografia.populacao }}</td></tr>{% endif %}
+{% if demografia.renda or demografia.populacao %}<table class="d"><tr><th>Dimensão</th><th>Valor (base rotulada)</th></tr>
+  {% if demografia.renda %}<tr><td>Renda média por morador <span style="font-size:8px;color:#667">(estimativa IBGE Censo 2022 · renda do domicílio ÷ moradores)</span></td><td>{{ demografia.renda }}</td></tr>{% endif %}
+  {% if demografia.populacao %}<tr><td>População (setores no raio do centróide)</td><td>{{ demografia.populacao }}</td></tr>{% endif %}
   {% if demografia.dom %}<tr><td>Domicílios</td><td>{{ demografia.dom }}</td></tr>{% endif %}
-</table>{% endif %}
+</table>
+{% if demografia.nota_setores %}<div class="note" style="margin-top:6px;">{{ demografia.nota_setores }}</div>{% endif %}
+{% endif %}
 {% if demografia.piramide %}
-<div style="margin-top:10px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Público por idade × sexo (bairro real, Censo 2022 por setor)</div>
-<div style="margin-top:6px;">
+<div style="margin-top:10px; font-size:8pt; color:#64748B; font-weight:bold; letter-spacing:0.3px;">Público por idade × sexo (Censo 2022 por setor · raio do centróide)</div>
+<table class="d" style="margin-top:6px;">
+  <tr><th>Faixa etária</th><th>Total</th><th>Mulheres</th><th>Homens</th></tr>
 {% for p in demografia.piramide %}
-  <div class="bar-row"><span class="lab">{{ p.faixa }} · {{ p.nome }}</span>
-    <div class="bar-wrap"><div class="bar" style="width:{{ p.pct }}%;"></div></div>
-    <span class="num">{{ p.total }}</span><span class="sx">{{ p.m }}♀/{{ p.h }}♂</span></div>
+  <tr>
+    <td>{{ p.faixa }} · {{ p.nome }}</td>
+    <td>{{ p.total }}</td>
+    <td>{{ p.mulheres }} <span style="color:#64748B;font-size:7.5pt;">({{ p.pct_m }}%)</span></td>
+    <td>{{ p.homens }} <span style="color:#64748B;font-size:7.5pt;">({{ p.pct_h }}%)</span></td>
+  </tr>
 {% endfor %}
-</div>
-<div class="note">Público predominante: <strong>{{ demografia.dominante }}</strong> · perfil <strong>{{ demografia.tendencia }}</strong>. Idade REAL do bairro — {{ demografia.n_setores }} setores IBGE agregados em torno do centróide até cobrir a população do bairro (base distinta da contagem de população) — não herdada do município.</div>
+</table>
+<div class="note">Público predominante: <strong>{{ demografia.dominante }}</strong> · perfil <strong>{{ demografia.tendencia }}</strong>.{% if demografia.n_setores_piramide and demografia.n_setores_pop and demografia.n_setores_piramide != demografia.n_setores_pop %} Este quadro usou <strong>{{ demografia.n_setores_piramide }}</strong> setores (perfil idade×sexo); a população acima usou <strong>{{ demografia.n_setores_pop }}</strong> — bases diferentes, ambos IBGE no entorno do ponto.{% elif demografia.censo_base == 'poligono_ibge_bairro' %} Mesma regra espacial: setores no polígono IBGE do bairro (Censo 2022){% if demografia.n_setores_pop and demografia.n_setores_piramide %} · {{ demografia.n_setores_pop }} = {{ demografia.n_setores_piramide }} setores{% endif %}.{% else %} Quantidades = habitantes na faixa (IBGE no entorno do ponto).{% endif %}{% if demografia.soma_faixas_15mais %} Soma das faixas 15+ = <strong>{{ demografia.soma_faixas_15mais }}</strong>{% if demografia.residual_0_14 %} · residual 0–14 ≈ <strong>{{ demografia.residual_0_14 }}</strong> (pop total − soma 15+){% endif %} — o quadro de idade <strong>não inclui crianças</strong>; por isso a soma das linhas não fecha em {{ demografia.populacao or 'população total' }}.{% endif %}</div>
 {% endif %}
 {% if narrativa.demografia %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.demografia }}</div>{% endif %}{% endif %}
+
+{% if absorcao %}
+<div class="sec">Absorção de alunos — leitura executiva</div>
+<p class="intro">Todos os valores da tabela estão em <strong>alunos estimados</strong> (matrículas potenciais), não em habitantes do Censo. Habitantes na faixa etária ≠ alunos de academia.</p>
+<table class="d"><tr><th>O que medimos</th><th>Alunos (estimativa)</th></tr>
+  <tr><td>Sua unidade comporta (cenário realista)</td><td><strong>{{ absorcao.teto }}</strong></td></tr>
+  <tr><td>Academias do bairro já comportam (estimativa)</td><td>{{ absorcao.cap_parque }}</td></tr>
+  <tr><td>Potencial no público do formulário{% if absorcao.faixas_primario_txt %} ({{ absorcao.faixas_primario_txt }}){% endif %}</td><td><strong>{{ absorcao.pool_primario }}</strong></td></tr>
+  <tr><td>Potencial nas outras idades 15+{% if absorcao.faixas_secundario_txt %} ({{ absorcao.faixas_secundario_txt }}){% endif %}</td><td>{{ absorcao.pool_secundario }}</td></tr>
+  <tr><td>Potencial total 15+</td><td>{{ absorcao.pool_total }}</td></tr>
+  <tr><td>Folga vs parque (potencial do formulário − oferta instalada)</td><td>{{ absorcao.margem }}</td></tr>
+</table>
+{% if absorcao.blocos %}
+<div class="lex" style="margin-top:12px;">
+{% for b in absorcao.blocos %}
+  <div class="blk">
+    <h4>{{ b.titulo }}</h4>
+    {% if b.numero %}<div class="num">{{ b.numero }}</div>{% endif %}
+    <p>{{ b.texto }}</p>
+    {% if b.carimbo %}<div class="stamp">{{ b.carimbo }}</div>{% endif %}
+  </div>
+{% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
+{% if matriz %}
+<div class="sec">Modelo de Negócio Adequado</div>
+<table class="d"><tr><th>Dimensão</th><th>Valor</th></tr>
+  <tr><td>Quadrante</td><td><strong>{{ matriz.quadrante }}</strong></td></tr>
+  <tr><td>Modelo sugerido</td><td>{{ matriz.modelo }}</td></tr>
+  <tr><td>N no polígono</td><td>{{ matriz.n }}</td></tr>
+  <tr><td>N / 10k hab</td><td>{{ matriz.n_per_10k }}</td></tr>
+  <tr><td>Mix (L / M / P)</td><td>{{ matriz.mix }}</td></tr>
+  <tr><td>Rating médio</td><td>{{ matriz.rating }}</td></tr>
+  <tr><td>Ação</td><td>{{ matriz.acao }}</td></tr>
+</table>
+{% if matriz.carimbo %}<div class="note" style="margin-top:6px;">{{ matriz.carimbo }}</div>{% endif %}
+{% endif %}
 
 {% if competidores %}
 <div class="sec">Inteligência Competitiva</div>
@@ -310,14 +374,17 @@ table.d thead { display:table-header-group; }
 </div>{% endif %}
 
 {% if novas_unidades %}
-<div class="sec">Novas Unidades (90 dias)</div>
+<div class="sec">Oferta CNPJ — aberturas e baixas</div>
 <div class="timing">
-  <div class="c"><div class="kpi-t">Aberturas no município</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.total }}</div></div>
-  <div class="c"><div class="kpi-t">Janela</div><div class="kpi-n" style="font-size:13pt; padding-top:2px;">{{ novas_unidades.dias }} dias</div></div>
+  <div class="c"><div class="kpi-t">Aberturas (90d)</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.total }}</div></div>
+  {% if novas_unidades.baixas_90d is not none %}<div class="c"><div class="kpi-t">Baixas (90d)</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.baixas_90d }}</div></div>{% endif %}
+  {% if novas_unidades.baixas_q is not none %}<div class="c"><div class="kpi-t">Baixas ({{ novas_unidades.janela_q or 'Q' }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.baixas_q }}</div></div>{% endif %}
+  {% if novas_unidades.saldo_q is not none %}<div class="c"><div class="kpi-t">Saldo ({{ novas_unidades.janela_q or 'Q' }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.saldo_q }}</div></div>{% endif %}
   <div class="c"><div class="kpi-t">Cidade</div><div class="kpi-n" style="font-size:12pt; padding-top:3px;">{{ novas_unidades.cidade }}</div></div>
-  {% if novas_unidades.bairro_nome %}<div class="c"><div class="kpi-t">No bairro-alvo ({{ novas_unidades.bairro_nome }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.bairro_total }}</div></div>{% endif %}
+  {% if novas_unidades.bairro_nome %}<div class="c"><div class="kpi-t">Aberturas bairro ({{ novas_unidades.bairro_nome }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.bairro_total }}</div></div>{% endif %}
+  {% if novas_unidades.baixas_bairro_q is not none and novas_unidades.bairro_nome %}<div class="c"><div class="kpi-t">Baixas bairro ({{ novas_unidades.janela_q or 'Q' }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.baixas_bairro_q }}</div></div>{% endif %}
 </div>
-<div class="timing-d">Aberturas de CNPJ fitness (RFB) nos últimos {{ novas_unidades.dias }} dias — sinal de aquecimento/entrada de concorrência no município. <em>Fonte: RFB CNPJ Aberto.</em></div>{% endif %}
+<div class="timing-d">Aberturas e baixas de CNPJ fitness (RFB, situacao 02/08). {% if novas_unidades.pressao %}Pressão {{ novas_unidades.janela_q or 'Q' }}: <strong>{{ novas_unidades.pressao }}</strong>. {% endif %}{% if novas_unidades.carimbo %}<em>{{ novas_unidades.carimbo }}</em>{% else %}<em>Fonte: RFB CNPJ Aberto.</em>{% endif %}</div>{% endif %}
 
 {% if obras %}
 <div class="sec">Obras Fitness em Andamento (CNO)</div>
@@ -429,6 +496,110 @@ def _int(v) -> str:
         return f"{int(v):,}".replace(",", ".")
     except (TypeError, ValueError):
         return "—"
+
+
+def _faixas_humanas(faixas: list | None) -> str:
+    if not faixas:
+        return ""
+    parts = []
+    for f in faixas:
+        nome = _NOME_FAIXA.get(str(f), str(f))
+        parts.append(f"{f} · {nome}")
+    return "; ".join(parts)
+
+
+def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
+    """Prosa executiva por tópico — vernáculo, sem jargão de engenharia."""
+    teto = raw.get("teto_unidade")
+    cap = raw.get("capacidade_parque_estimada")
+    pool_p = raw.get("pool_primario") or raw.get("pool_demografico")
+    pool_s = raw.get("pool_secundario")
+    margem = raw.get("margem_fresca")
+    rotulo = str(raw.get("rotulo") or "")
+    faixas_p = _faixas_humanas(raw.get("faixas_primario") if isinstance(raw.get("faixas_primario"), list) else None)
+    faixas_s = _faixas_humanas(raw.get("faixas_secundario") if isinstance(raw.get("faixas_secundario"), list) else None)
+    est_p = raw.get("estoque_primario")
+    est_s = raw.get("estoque_secundario")
+    car = raw.get("carimbos") if isinstance(raw.get("carimbos"), dict) else {}
+
+    conclusao = {
+        "fresco": (
+            "Ainda há espaço para matricular alunos que hoje não estão no parque de academias do bairro. "
+            "O potencial do público do formulário cobre a capacidade da sua unidade sem depender só de tirar aluno do concorrente."
+        ),
+        "misto": (
+            "Parte do crescimento pode vir de alunos novos; outra parte exige disputar quem já treina no bairro. "
+            "Planeje aquisição mista (lançamento + migração) e não conte só com 'mercado virgem'."
+        ),
+        "roubo": (
+            "No público do formulário, a oferta instalada já supera o potencial estimado de alunos. "
+            "Crescer nesta unidade significa, na prática, atrair quem hoje treina em outra academia do bairro — "
+            "custo de aquisição mais alto e guerra de proposta de valor."
+        ),
+    }.get(rotulo, "Cruzar potencial do público-alvo com a capacidade já instalada antes de decidir o modelo.")
+
+    blocos = [
+        {
+            "titulo": "1. Capacidade da sua unidade",
+            "numero": f"{_int(teto)} alunos" if teto is not None else None,
+            "texto": (
+                "Quantas matrículas esta academia comporta no cenário realista "
+                "(área do imóvel × densidade típica do modelo Low/Mid/Premium). "
+                "Não é a população do bairro — é o teto operacional da unidade."
+            ),
+            "carimbo": car.get("teto_unidade") or "",
+        },
+        {
+            "titulo": "2. Capacidade das academias já no bairro",
+            "numero": f"{_int(cap)} alunos" if cap is not None else None,
+            "texto": (
+                "Estimativa de quantos alunos o conjunto de academias mapeadas no polígono já comporta, "
+                "somando cada uma por porte típico da rede (Low/Mid/Premium). "
+                "É proxy de oferta instalada — não é contagem real de matrículas abertas."
+            ),
+            "carimbo": car.get("capacidade_parque_estimada") or "",
+        },
+        {
+            "titulo": "3. Potencial de alunos no público do formulário",
+            "numero": f"{_int(pool_p)} alunos" if pool_p is not None else None,
+            "texto": (
+                "Alunos potenciais entre as idades que você escolheu no formulário"
+                + (f" ({faixas_p})" if faixas_p else "")
+                + ". Parte dos habitantes dessas faixas tem interesse em fitness; "
+                "dessa parcela, só uma fração vira aluno de academia (benchmark setorial). "
+                "Os "
+                + (_int(est_p) if est_p is not None else "—")
+                + " habitantes na faixa NÃO são todos alunos — o número acima já aplica esse filtro."
+            ),
+            "carimbo": car.get("pool_demografico") or "",
+        },
+        {
+            "titulo": "4. Potencial nas outras idades (informa o modelo)",
+            "numero": f"{_int(pool_s)} alunos" if pool_s is not None else None,
+            "texto": (
+                "Alunos potenciais fora do gancho do formulário"
+                + (f" ({faixas_s})" if faixas_s else " (ex. Jovem · Silver)")
+                + ". Não decidem sozinhos se há 'aluno novo' ou disputa com o parque, "
+                "mas mostram se vale um braço de oferta para outra faixa "
+                "(Low para Jovem, nicho 40+/Silver, etc.). "
+                "Habitantes nessas faixas: "
+                + (_int(est_s) if est_s is not None else "—")
+                + "."
+            ),
+            "carimbo": "",
+        },
+        {
+            "titulo": "5. Conclusão — aluno novo ou disputa com o parque?",
+            "numero": (
+                f"Folga {_int(margem)} alunos"
+                if margem is not None
+                else None
+            ),
+            "texto": conclusao,
+            "carimbo": car.get("margem_fresca") or "",
+        },
+    ]
+    return [{k: v for k, v in b.items() if v is not None and v != ""} for b in blocos]
 
 
 # Espelho de _SERVICOS_CATALOGO (agents/a9) — rótulos legíveis das chaves canônicas
@@ -589,12 +760,28 @@ def _piramide(demo_bairro: dict) -> dict | None:
     dom = max(rows, key=lambda r: int(r[1]["total"]))
     pctm = dom[1].get("pct_mulheres") or 50
     tend = "majoritariamente feminino" if pctm >= 55 else "majoritariamente masculino" if pctm <= 45 else "equilibrado"
+    pir_rows = []
+    for f, s in rows:
+        total = int(s["total"])
+        pct_m = float(s.get("pct_mulheres") if s.get("pct_mulheres") is not None else 50)
+        pct_h = float(s.get("pct_homens") if s.get("pct_homens") is not None else max(0.0, 100.0 - pct_m))
+        n_m = int(round(total * pct_m / 100.0))
+        n_h = max(0, total - n_m)
+        pir_rows.append({
+            "faixa": f,
+            "nome": _NOME_FAIXA.get(f, ""),
+            "total": _int(total),
+            "pct": round(100 * total / maxt) if maxt else 0,
+            "mulheres": _int(n_m),
+            "homens": _int(n_h),
+            "pct_m": round(pct_m),
+            "pct_h": round(pct_h),
+            # legado (se algum template antigo): %
+            "m": round(pct_m),
+            "h": round(pct_h),
+        })
     return {
-        "piramide": [{
-            "faixa": f, "nome": _NOME_FAIXA.get(f, ""), "total": _int(s["total"]),
-            "pct": round(100 * int(s["total"]) / maxt), "m": round(s.get("pct_mulheres") or 0),
-            "h": round(s.get("pct_homens") or 0),
-        } for f, s in rows],
+        "piramide": pir_rows,
         "dominante": f"{dom[0]} ({_NOME_FAIXA.get(dom[0], '')})",
         "tendencia": tend, "n_setores": (perfil or {}).get("n_setores") or "—",
     }
@@ -827,6 +1014,23 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     mkt = model.market
     mercado = None
     if mkt is not None:
+        carimbo_90d = None
+        carimbo_q = None
+        if mkt.cnpj_as_of or mkt.ref_month_cnpj:
+            bits = ["RFB CNPJ"]
+            if mkt.cnpj_as_of:
+                bits.append(f"as_of {mkt.cnpj_as_of}")
+            if mkt.ref_month_cnpj:
+                bits.append(f"ref {mkt.ref_month_cnpj[:7]}")
+            carimbo_90d = " · ".join(bits)
+            carimbo_q = carimbo_90d
+            if mkt.janela_q_label:
+                carimbo_q = f"{mkt.janela_q_label} · {carimbo_90d}"
+        pressao_label = {
+            "retracao": "retração",
+            "expansao": "expansão",
+            "neutro": "neutro",
+        }.get((mkt.pressao_oferta_q or "").lower(), mkt.pressao_oferta_q)
         mercado = {
             "ticket": _mc_money(mkt.ticket_mercado),
             # Carimbo do aluguel: fonte USADA na viabilidade (A4), não a pesquisa do
@@ -842,6 +1046,15 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "renda": _mc_money(mkt.renda), "tendencia": mkt.tendencia,
             "parque": _int(mkt.parque_ativo) if mkt.parque_ativo else None,
             "novos": mkt.novos_cnpj_90d,
+            "baixas_90d": mkt.baixas_cnpj_90d,
+            "baixas_q": mkt.baixas_cnpj_q,
+            "entrantes_q": mkt.entrantes_cnpj_q,
+            "saldo_q": mkt.saldo_oferta_q,
+            "pressao": pressao_label,
+            "janela_q": mkt.janela_q_label,
+            "baixas_bairro_q": mkt.baixas_bairro_q,
+            "carimbo_90d": carimbo_90d,
+            "carimbo_q": carimbo_q,
         }
 
     pano = meta.get("panorama") if isinstance(meta.get("panorama"), dict) else None
@@ -853,22 +1066,85 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "total": pano.get("total"), "raio": pano.get("raio"),
         }
 
-    demo_b = meta.get("demografia_bairro") if isinstance(meta.get("demografia_bairro"), dict) else {}
+    _raw_demo = meta.get("demografia_bairro")
+    demo_b: dict = _raw_demo if isinstance(_raw_demo, dict) else {}
     pir = _piramide(demo_b)
     demografia = None
     renda_b = demo_b.get("renda_media")
     pop_b = _coerce_int(demo_b.get("populacao"))
     dom_b = _coerce_int(demo_b.get("domicilios"))
     nset_b = _coerce_int(demo_b.get("censo_n_setores"))
+    perfil = demo_b.get("perfil_idade_sexo_bairro") if isinstance(demo_b.get("perfil_idade_sexo_bairro"), dict) else {}
+    nset_pir = _coerce_int(perfil.get("n_setores")) if perfil else None
+    raio_m = _coerce_int(demo_b.get("censo_raio_m") or demo_b.get("raio_m")) or 1500
+    censo_base = (demo_b.get("censo_base") or "").strip() or (
+        "poligono_ibge_bairro" if demo_b.get("censo_cd_bairro") and not demo_b.get("censo_raio_m")
+        else "raio_fallback"
+    )
     if pir or renda_b or pop_b:
+        raio_km = round(raio_m / 1000, 1)
+        nota_setores = None
+        if nset_b or pop_b:
+            if censo_base == "poligono_ibge_bairro":
+                nota_setores = (
+                    "O que são os setores? O IBGE parte a cidade em pedaços pequenos (setores censitários). "
+                    "A população acima soma os pedaços cujo centro cai "
+                    "dentro do polígono IBGE do bairro (Censo 2022)"
+                    + (f" ({nset_b} setores neste relatório)" if nset_b else "")
+                    + " — aproximação censitária, não necessariamente o limite da prefeitura. "
+                    "Quando pop e idade×sexo usam o mesmo polígono, o total de setores coincide."
+                )
+            else:
+                nota_setores = (
+                    f"O que são os setores? O IBGE parte a cidade em pedaços pequenos (setores censitários). "
+                    f"A população acima soma os pedaços cujo centro cai num círculo de ~{raio_km} km "
+                    f"a partir do ponto do bairro no mapa"
+                    + (f" ({nset_b} setores neste relatório)" if nset_b else "")
+                    + " — não é o limite oficial da prefeitura. "
+                    f"Se o quadro de idade×sexo mostrar outro total de setores "
+                    f"(ex. mais setores para cobrir o perfil etário), são duas contagens IBGE no entorno, "
+                    f"não erro de digitação. A soma das faixas 15+ também não precisa igualar a população "
+                    f"total: faltam 0–14 anos e o conjunto de setores pode ser outro."
+                )
+        if pop_b:
+            if censo_base == "poligono_ibge_bairro" and nset_b:
+                pop_label = f"{_int(pop_b)} hab · {nset_b} setores · polígono IBGE bairro (Censo 2022)"
+            elif nset_b:
+                pop_label = f"{_int(pop_b)} hab · {nset_b} setores (raio do centróide)"
+            else:
+                pop_label = f"{_int(pop_b)} hab"
+        else:
+            pop_label = None
         demografia = {
             "renda": f"R$ {_brl(renda_b)}" if renda_b else None,
             # NUNCA usar chave "pop": Jinja resolve demografia.pop como o MÉTODO dict.pop
             # e o WeasyPrint engole o repr como tag — era a célula vazia do bug 4b211a02.
-            "populacao": (f"{_int(pop_b)} hab" + (f" · {nset_b} setores (raio do centróide)" if nset_b else "")) if pop_b else None,
+            "populacao": pop_label,
             "dom": _int(dom_b) if dom_b else None,
+            "nota_setores": nota_setores,
+            "censo_base": censo_base,
+            "n_setores_pop": nset_b,
+            "n_setores_piramide": nset_pir,
             **(pir or {}),
         }
+        # Conciliação pop total × soma faixas 15+ (quadro não inclui 0–14).
+        pir_rows = (pir or {}).get("piramide") if isinstance(pir, dict) else None
+        if pir_rows and pop_b:
+            soma_15 = 0
+            for row in pir_rows:
+                raw = str(row.get("total") or "0").replace(".", "").replace(",", "")
+                try:
+                    soma_15 += int(raw)
+                except ValueError:
+                    pass
+            residual = max(0, int(pop_b) - soma_15)
+            demografia["soma_faixas_15mais"] = _int(soma_15)
+            demografia["residual_0_14"] = _int(residual)
+            demografia["setores_alinhados"] = (
+                nset_b is not None
+                and nset_pir is not None
+                and int(nset_b) == int(nset_pir)
+            )
 
     # Scores 3-dim (model.scores: Demográfico/Competitivo/Viabilidade)
     sc_map = {s.label.lower(): s.value for s in (model.scores or []) if s.value is not None}
@@ -992,7 +1268,10 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "nome": c.nome[:34],
             "tier": _tier_txt(c.tier_agregador),
             "modalidades": ", ".join(
-                _SERVICO_LABEL.get(m, m) for m in mods[:10]) or "—",
+                str(_SERVICO_LABEL.get(m, m) or m)
+                for m in mods[:10]
+                if m
+            ) or "—",
             "comodidades": ", ".join((c.oferta_comodidades or [])[:6]) or "—",
             "fontes": ", ".join(c.oferta_fontes or []) or "—",
         })
@@ -1091,9 +1370,11 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         for ob in (df.get("obras") or []):
             if not isinstance(ob, dict) or not ob.get("provavel_residencial"):
                 continue
-            _pb = ob.get("preco_base") if isinstance(ob.get("preco_base"), dict) else {}
+            _pb_raw = ob.get("preco_base")
+            _pb: dict = _pb_raw if isinstance(_pb_raw, dict) else {}
             aderencia, aderencia_cls = _aderencia_modelo(
                 ob.get("area_privativa_media"), _pb.get("max"))
+            _cap = ob.get("captura_est")
             obras_ficha.append({
                 "nome": str(ob.get("empreendimento") or ob.get("construtora") or "—")[:28],
                 "unidades": _int(ob.get("unidades_est")),
@@ -1104,7 +1385,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
                 "aderencia": aderencia,
                 "aderencia_cls": aderencia_cls,
                 "moradores": _int(ob.get("moradores_est")) if ob.get("moradores_est") else "—",
-                "captura": (round(float(ob.get("captura_est"))) if ob.get("captura_est") else "—"),
+                "captura": (round(float(_cap)) if _cap is not None else "—"),
                 "receita": _brl(ob.get("receita_mensal_est")) if ob.get("receita_mensal_est") else "—",
                 "quente": bool(ob.get("janela_quente")),
             })
@@ -1126,14 +1407,16 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         for r in (df.get("radar_pre_lancamentos") or [])[:4]:
             if not isinstance(r, dict):
                 continue
-            _rp = r.get("preco_base") if isinstance(r.get("preco_base"), dict) else {}
+            _rp_raw = r.get("preco_base")
+            _rp: dict = _rp_raw if isinstance(_rp_raw, dict) else {}
             _pl = r.get("areas_plantas") or []
+            _rp_min = _rp.get("min")
             radar_ficha.append({
                 "nome": str(r.get("empreendimento") or "—")[:34],
                 "unidades": _int(r.get("unidades_est")) if r.get("unidades_est") else "—",
                 "planta": (f"{_pl[0]:.0f}–{_pl[-1]:.0f} m²" if len(_pl) > 1
                            else (f"{_pl[0]:.0f} m²" if _pl else "—")),
-                "preco": f"R$ {_brl(_rp.get('min'))}" if _rp.get("min") else "—",
+                "preco": f"R$ {_brl(_rp_min)}" if _rp_min else "—",
                 "entrega": str(r.get("previsao_entrega") or "—"),
             })
         demanda = {
@@ -1147,15 +1430,59 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "janelas": janelas[:4],
         }
 
-    # Novas unidades 90d
+    # Oferta CNPJ: aberturas + baixas (market_context / arvore_oferta)
     ent = meta.get("entrantes_cnpj_90d")
+    mkt = model.market
     novas_unidades = None
-    if isinstance(ent, dict) and (ent.get("total") or 0) > 0:
+    has_ent = isinstance(ent, dict) and (ent.get("total") or 0) > 0
+    has_baixas = mkt is not None and (
+        mkt.baixas_cnpj_90d is not None or mkt.baixas_cnpj_q is not None
+    )
+    if has_ent or has_baixas:
+        pressao_label = None
+        carimbo = "Fonte: RFB CNPJ Aberto"
+        if mkt is not None:
+            pressao_label = {
+                "retracao": "retração",
+                "expansao": "expansão",
+                "neutro": "neutro",
+            }.get((mkt.pressao_oferta_q or "").lower(), mkt.pressao_oferta_q)
+            bits = ["Fonte: RFB CNPJ Aberto"]
+            if mkt.janela_q_label:
+                bits.append(mkt.janela_q_label)
+            if mkt.cnpj_as_of:
+                bits.append(f"as_of {mkt.cnpj_as_of}")
+            carimbo = " · ".join(bits)
+        total_aberturas = (
+            _int(ent.get("total")) if isinstance(ent, dict) else None
+        )
+        if total_aberturas is None and mkt is not None:
+            total_aberturas = mkt.novos_cnpj_90d
         novas_unidades = {
-            "total": _int(ent.get("total")), "dias": ent.get("dias") or 90,
-            "cidade": str(ent.get("cidade") or "—")[:20],
-            "bairro_total": _int(ent.get("total_bairro")) if ent.get("total_bairro") is not None else None,
-            "bairro_nome": str(ent.get("bairro_alvo") or "")[:20] or None,
+            "total": total_aberturas if total_aberturas is not None else 0,
+            "dias": (ent.get("dias") if isinstance(ent, dict) else None) or 90,
+            "cidade": str(
+                (ent.get("cidade") if isinstance(ent, dict) else None)
+                or model.cidade
+                or "—"
+            )[:20],
+            "bairro_total": (
+                _int(ent.get("total_bairro"))
+                if isinstance(ent, dict) and ent.get("total_bairro") is not None
+                else None
+            ),
+            "bairro_nome": (
+                str(ent.get("bairro_alvo") or "")[:20] or None
+                if isinstance(ent, dict)
+                else (model.bairro[:20] if model.bairro else None)
+            ),
+            "baixas_90d": mkt.baixas_cnpj_90d if mkt else None,
+            "baixas_q": mkt.baixas_cnpj_q if mkt else None,
+            "saldo_q": mkt.saldo_oferta_q if mkt else None,
+            "pressao": pressao_label,
+            "janela_q": mkt.janela_q_label if mkt else None,
+            "baixas_bairro_q": mkt.baixas_bairro_q if mkt else None,
+            "carimbo": carimbo,
         }
 
     # V3 — flag de fiscal (mostra a sub-tabela "Tributos & Ocupação") + box de ocupação
@@ -1201,11 +1528,16 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             _pir_dom = demografia.get("dominante") or "não disponível"
             _tend = demografia.get("tendencia") or ""
             narrativa["demografia"] = (
-                f"Leitura executiva: o bairro concentra {demografia.get('populacao') or 'população não disponível'}"
-                f" em {demografia.get('dom') or '—'} domicílios, com renda per capita (proxy do responsável) de "
-                f"{demografia.get('renda') or '—'}. O público dominante é a faixa {_pir_dom}"
-                f"{', perfil ' + _tend if _tend else ''} — é para esse perfil que posicionamento, grade e "
-                f"conforto devem ser dimensionados. Base: IBGE Censo 2022 por setor censitário."
+                f"Leitura executiva: no entorno do ponto analisado vivem cerca de "
+                f"{demografia.get('populacao') or 'população não disponível'}"
+                f" em {demografia.get('dom') or '—'} domicílios "
+                f"(contagem IBGE por setores num raio a partir do mapa). "
+                f"A renda média estimada por morador é {demografia.get('renda') or '—'}. "
+                f"A faixa etária mais presente é {_pir_dom}"
+                f"{' (' + _tend + ')' if _tend else ''}. "
+                f"É esse o público prioritário para definir o tipo de academia, "
+                f"a grade de aulas e o padrão de acabamento. "
+                f"Fonte: IBGE Censo 2022."
             )
         if competidores:
             _n_comp = len(competidores)
@@ -1251,6 +1583,48 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         # narrativa é acessório: falha silenciosa preserva o relatório tabular.
         narrativa = {}
 
+    _cob = meta.get("cobertura_redes_a0")
+    _obr = meta.get("obras_cno_em_curso")
+
+    _raw_matriz = pos.get("matriz_demo_saturacao") or meta.get("matriz_demo_saturacao")
+    matriz = None
+    if isinstance(_raw_matriz, dict) and _raw_matriz.get("quadrante"):
+        mix = _raw_matriz.get("mix") if isinstance(_raw_matriz.get("mix"), dict) else {}
+        n10 = _raw_matriz.get("n_per_10k")
+        rating = _raw_matriz.get("rating_medio")
+        matriz = {
+            "quadrante": _raw_matriz.get("quadrante"),
+            "modelo": str(_raw_matriz.get("modelo_sugerido") or "").replace("_", " "),
+            "n": _raw_matriz.get("n_poligono"),
+            "n_per_10k": f"{float(n10):.2f}" if n10 is not None else "n/d",
+            "mix": (
+                f"{mix.get('low', 0)} / {mix.get('mid', 0)} / {mix.get('premium', 0)}"
+            ),
+            "rating": f"{float(rating):.1f} ★" if rating is not None else "—",
+            "acao": _raw_matriz.get("acao_estrategica") or "—",
+            "carimbo": _raw_matriz.get("carimbo"),
+        }
+
+    _raw_abs = pos.get("absorcao_margem_fresca") or meta.get("absorcao_margem_fresca")
+    absorcao = None
+    if isinstance(_raw_abs, dict) and _raw_abs.get("rotulo"):
+        absorcao = {
+            "teto": _int(_raw_abs.get("teto_unidade")),
+            "cap_parque": _int(_raw_abs.get("capacidade_parque_estimada")),
+            "pool": _int(_raw_abs.get("pool_primario") or _raw_abs.get("pool_demografico")),
+            "pool_primario": _int(_raw_abs.get("pool_primario") or _raw_abs.get("pool_demografico")),
+            "pool_secundario": _int(_raw_abs.get("pool_secundario")) if _raw_abs.get("pool_secundario") is not None else "—",
+            "pool_total": _int(_raw_abs.get("pool_total_15mais")) if _raw_abs.get("pool_total_15mais") is not None else "—",
+            "margem": _int(_raw_abs.get("margem_fresca")),
+            "faixas_primario_txt": _faixas_humanas(
+                _raw_abs.get("faixas_primario") if isinstance(_raw_abs.get("faixas_primario"), list) else None
+            ),
+            "faixas_secundario_txt": _faixas_humanas(
+                _raw_abs.get("faixas_secundario") if isinstance(_raw_abs.get("faixas_secundario"), list) else None
+            ),
+            "blocos": _absorcao_leitura_blocos(_raw_abs),
+        }
+
     return {
         "narrativa": narrativa,
         "bairro": model.bairro, "cidade": model.cidade, "uf": model.uf,
@@ -1258,6 +1632,19 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "area": f"{model.area_m2_min}–{model.area_m2_max} m²",
         "data": model.data_execucao or "—", "ref": (model.relatorio_id or "")[:8],
         "rodape": "Confidencial · GymSite Intelligence · valores estimados (validar em due diligence)",
+        "logo_src": (
+            "logo-gymsite-lockup.png"
+            if os.path.isfile(os.path.join(_ASSETS, "logo-gymsite-lockup.png"))
+            else (
+                "logo-gymsite-lime.png"
+                if os.path.isfile(os.path.join(_ASSETS, "logo-gymsite-lime.png"))
+                else (
+                    "logo-gymsite.png"
+                    if os.path.isfile(os.path.join(_ASSETS, "logo-gymsite.png"))
+                    else None
+                )
+            )
+        ),
         "veredito": str(veredito).upper() if veredito else None,
         "veredito_oceano": str(veredito_oceano).upper().replace("_", " ") if veredito_oceano else None,
         "justificativa": pos.get("justificativa_recomendacao") or pos.get("justificativa"),
@@ -1275,6 +1662,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "concorrentes": model.total_concorrentes if model.total_concorrentes is not None else "—",
         },
         "mercado": mercado, "panorama": panorama, "demografia": demografia,
+        "matriz": matriz,
+        "absorcao": absorcao,
         "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
         "cenarios_tem_fiscal": cenarios_tem_fiscal, "ocupacao_alertas": ocupacao_alertas,
         "zona": zona, "alertas_ff": alertas_ff,
@@ -1284,8 +1673,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "ticket_segmentos": _ticket_segmentos(model.competidores),
         "dores_quadro": _dores_quadro(meta.get("dores_consolidadas")), "pico": meta.get("pico"),
         "aneis": _aneis(meta.get("aneis_competitivos") or {}),
-        "cobertura": _cobertura(meta.get("cobertura_redes_a0")) if meta.get("cobertura_redes_a0") is not None else None,
-        "obras": _obras(meta.get("obras_cno_em_curso")) if meta.get("obras_cno_em_curso") is not None else None,
+        "cobertura": _cobertura(_cob) if isinstance(_cob, dict) else None,
+        "obras": _obras(_obr) if isinstance(_obr, dict) else None,
         "novas_unidades": novas_unidades,
         "candidatos": candidatos, "candidatos_descartados": _descartados_fora,
         "zoneamento": zoneamento,
@@ -1322,4 +1711,7 @@ def gerar_pdf_weasy(model: RelatorioPdfModel) -> bytes:
     """HTML → PDF via WeasyPrint. Precisa libs de sistema (Dockerfile)."""
     from weasyprint import HTML
 
-    return HTML(string=gerar_html(model), base_url=_ASSETS).write_pdf()
+    out = HTML(string=gerar_html(model), base_url=_ASSETS).write_pdf()
+    if out is None:
+        raise RuntimeError("WeasyPrint write_pdf returned None")
+    return out

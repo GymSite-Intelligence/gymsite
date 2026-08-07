@@ -5,19 +5,17 @@ Consome os outputs de A0–A6 (via contexto ADK) e gera relatório estratégico
 de posicionamento: Framework ERRC, mapa de serviços, GAPs, ticket recomendado
 e veredito OCEANO_AZUL / TRANSICAO / VERMELHO.
 
-ENTRADAS (state keys reais do pipeline):
-  - market_context           → A0
-  - candidatos_geoscout      → A1
-  - analise_demografica      → A2
-  - inteligencia_competitiva → A3b
-  - oferta_concorrentes      → A3b (oferta fundida do ex-A3c)
-  - analise_financeira       → A4
-  - contato_decisor          → A5
-  - relatorio_md             → A6
+ENTRADAS (state keys reais do pipeline — ver tools/pipeline_deps.py):
+  - input_params / market_context → entrypoint / A0
+  - inteligencia_competitiva + oferta_concorrentes → A3b
+  - concorrentes_brutos → A3a (praça inteira p/ gaps)
+  - analise_financeira → A4
+  - relatorio_md → A6 (A8 pós-A9)
+  - demanda_futura → entrypoint (api enrichment)
+  - demografia_bairro → A6 (bridge after_agent; opcional p/ Brilliant Basics)
 
 SAÍDAS:
-  - relatorio_posicionamento_md  → texto bruto (output_key)
-  - relatorio_posicionamento     → dict JSON parseado (after_agent_callback)
+  - relatorio_posicionamento_md / relatorio_posicionamento → persistência/PDF
 """
 
 from __future__ import annotations
@@ -1070,6 +1068,18 @@ def _a9_after_agent_callback(callback_context):
         state["relatorio_posicionamento"] = parsed
         # Veredito DETERMINÍSTICO (headroom de renda) sobrepõe o do LLM — sourced/auditável.
         _a9_override_veredito_deterministico(state, parsed)
+        try:
+            from tools.matriz_demo_saturacao import attach_matriz_demo_saturacao
+
+            attach_matriz_demo_saturacao(state, parsed)
+        except Exception:
+            logger.warning("A9 matriz_demo_saturacao falhou", exc_info=True, extra={"agent": "A9"})
+        try:
+            from tools.absorcao_margem_fresca import attach_absorcao_margem_fresca
+
+            attach_absorcao_margem_fresca(state, parsed)
+        except Exception:
+            logger.warning("A9 absorcao_margem_fresca falhou", exc_info=True, extra={"agent": "A9"})
         # Síntese de posicionamento narrada (Claude headless quando ligado; fallback
         # determinístico). Pós-override → usa o veredito determinístico. Default OFF.
         try:

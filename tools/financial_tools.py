@@ -422,6 +422,7 @@ def calcular_viabilidade_3_cenarios(
     renda_percentil: float | None = None,
     tipo_obra: str = "adaptacao",
     necessita_reforco_estrutural: bool = False,
+    matriz_demo_saturacao: dict | None = None,
 ) -> dict:
     _capex_ctx = _resolve_capex_indices(uf, capex_indices)
     from tools.obra_capex import normalize_tipo_obra
@@ -775,7 +776,10 @@ def calcular_viabilidade_3_cenarios(
             "capex_estimado": capex_detalhado["total"],
         }
 
-    melhor = _escolher_cenario_recomendado(cenarios, renda_media_bairro, renda_percentil)
+    melhor = _escolher_cenario_recomendado(
+        cenarios, renda_media_bairro, renda_percentil,
+        matriz_demo_saturacao=matriz_demo_saturacao,
+    )
     alertas_benchmark = _alertas_vs_sector_listed(cenarios)
     # 1.6 Reconciliação OPEX (alerta bidirecional): além do alerta de margem BAIXA
     # (já em _alertas_vs_sector_listed), sinaliza margem OTIMISTA — acima do
@@ -962,6 +966,7 @@ def _escolher_cenario_recomendado(
     cenarios: dict[str, Any],
     renda_media_bairro: float | None,
     renda_percentil: float | None = None,
+    matriz_demo_saturacao: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Escolhe cenário alinhado ao tier de renda local — não só max(lucro) com ticket irreal.
@@ -972,6 +977,8 @@ def _escolher_cenario_recomendado(
     2) gate físico: só eleva se o pico simultâneo no teto ≤ capacidade do espaço.
     Assim, premium INVIÁVEL no realista vira recomendável num bairro rico SE fecha no teto
     captável E o prédio comporta — e num bairro pobre o fator é 0, premium nunca é elevado.
+
+    Matriz (Spec 2026-08-07): Armadilha de Renda veta Premium genérico.
     """
     preferido = _tier_mercado_por_renda(renda_media_bairro)
     ordem = {"low": 0, "mid": 1, "premium": 2}
@@ -1033,6 +1040,26 @@ def _escolher_cenario_recomendado(
 
     escolhido = max(pool, key=_rank)
 
+    # Matriz Armadilha: veta Premium genérico — reescolhe melhor non-premium do pool.
+    _matriz = matriz_demo_saturacao if isinstance(matriz_demo_saturacao, dict) else {}
+    if (
+        _matriz.get("quadrante") == "Armadilha de Renda"
+        and _faixa_key_de_modelo(escolhido.get("modelo", "")) == "premium"
+    ):
+        alt = [
+            c for c in pool
+            if _faixa_key_de_modelo(c.get("modelo", "")) != "premium"
+        ]
+        if alt:
+            escolhido = max(alt, key=_rank)
+            msg = (
+                "Armadilha de Renda: ≥2 Premium no polígono — Premium genérico "
+                "vetado pela matriz."
+            )
+            escolhido["justificativa_matriz"] = msg
+            escolhido["justificativa_recomendacao"] = msg
+            escolhido["justificativa"] = msg
+
     # Nota de transparência se o tier preferido pela renda ficou de FORA — por inviabilidade
     # OU por payback acima do teto.
     pref_c2 = cenarios.get(preferido)
@@ -1045,7 +1072,7 @@ def _escolher_cenario_recomendado(
             motivo = f"tem payback de {int(pb)} meses (> {int(_CEIL_PB)}m — risco elevado)"
         else:
             motivo = None
-        if motivo:
+        if motivo and not escolhido.get("justificativa_matriz"):
             escolhido.setdefault("nota_recomendacao",
                 f"Renda do bairro suportaria o tier {preferido.upper()}, mas ele {motivo} — "
                 f"recomendado o melhor modelo viável dentro do teto de payback.")
@@ -1534,6 +1561,7 @@ async def analise_financeira_a4_completo(
     fornecedor_principal: str = "default",
     tipo_obra: str = "adaptacao",
     necessita_reforco_estrutural: bool = False,
+    matriz_demo_saturacao: dict | None = None,
 ) -> dict:
     """Macro-tool A4 — viabilidade 3 cenários + aluguel (MRLR Tier 0 primeiro, P-000)."""
     import os
@@ -1620,6 +1648,7 @@ async def analise_financeira_a4_completo(
         fornecedor_principal=fornecedor_principal,
         tipo_obra=tipo_obra,
         necessita_reforco_estrutural=necessita_reforco_estrutural,
+        matriz_demo_saturacao=matriz_demo_saturacao,
     )
 
     fin.setdefault("alertas", [])
@@ -1779,6 +1808,7 @@ def analise_financeira_completa(
     fornecedor_principal: str = "default",
     tipo_obra: str = "adaptacao",
     necessita_reforco_estrutural: bool = False,
+    matriz_demo_saturacao: dict | None = None,
 ) -> dict:
     """
     Macro-tool: resolve aluguel + viabilidade em 3 cenários em UMA chamada.
@@ -1838,6 +1868,7 @@ def analise_financeira_completa(
         renda_percentil=_renda_percentil_bairro(cidade, bairro, uf),
         tipo_obra=tipo_obra,
         necessita_reforco_estrutural=necessita_reforco_estrutural,
+        matriz_demo_saturacao=matriz_demo_saturacao,
     )
 
     viabilidade["renda_fonte"] = _renda_fonte  # (c) transparência: qual fonte de renda foi usada

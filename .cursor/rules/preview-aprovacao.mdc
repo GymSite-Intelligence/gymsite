@@ -1,0 +1,17 @@
+---
+description: Preview PDF = gerar_html (layout relatório). Sempre abrir no browser antes de pedir ok.
+globs: pdf/**/*,frontend/src/components/**/*,docs/superpowers/previews/**
+alwaysApply: false
+---
+
+# Preview para aprovação
+
+Ao mudar PDF (`pdf/html_builder.py`, templates) ou UI visível ao usuário:
+
+1. Ler [`.agent/rules/preview-aprovacao.md`](../../.agent/rules/preview-aprovacao.md)
+2. **PDF:** gravar HTML de `gerar_html(RelatorioPdfModel(...))` em `docs/superpowers/previews/YYYY-MM-DD-<tema>.html` — **proibido** stub micro-tabela fora do builder
+3. **Abrir o preview no browser** (aprovação = versão final do relatório, não path no chat)
+4. Path + antes/depois curto ao Marcelo
+5. **Só então** pedir ok / commit
+
+Sem preview aberto → wave visual incompleta.

@@ -45,6 +45,15 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "saturacao_bairro_medio_min":    _p(3, "≥3 academias no bairro = saturação MEDIO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
     "saturacao_bairro_alto_min":     _p(6, "≥6 academias no bairro = saturação ALTO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
     "saturacao_bairro_saturado_min": _p(10, "≥10 academias no bairro = SATURADO", "limiar_saturacao_bairro", "concorrentes", "calibracao", "2026-06-18"),
+    # Matriz demografia × saturação → modelo (spec 2026-08-07)
+    "matriz_n_per_10k_baixo":        _p(2.0, "N/10k < limiar = densidade competitiva baixa", "matriz_demo_saturacao", "acad/10k_hab", "calibracao", "2026-08-07"),
+    "matriz_n_per_10k_alto":         _p(4.0, "N/10k ≥ limiar = saturação geral / guerra", "matriz_demo_saturacao", "acad/10k_hab", "calibracao", "2026-08-07"),
+    "matriz_premium_min_armadilha":  _p(2, "≥2 Premium no polígono + alta renda = Armadilha", "matriz_demo_saturacao", "concorrentes", "calibracao", "2026-08-07"),
+    "matriz_rating_fraco_max":       _p(4.0, "rating médio < limiar = oferta fraca (Oceano com N>0)", "matriz_demo_saturacao", "estrelas", "calibracao", "2026-08-07"),
+    "matriz_ticket_low_max":         _p(150.0, "ticket ≤ limiar → tier low", "matriz_demo_saturacao", "BRL/mês", "calibracao", "2026-08-07"),
+    "matriz_ticket_premium_min":     _p(250.0, "ticket ≥ limiar → tier premium (se não rede known)", "matriz_demo_saturacao", "BRL/mês", "calibracao", "2026-08-07"),
+    "matriz_renda_alta_percentil":   _p(0.75, "percentil renda ≥ limiar = alta renda (matriz)", "matriz_demo_saturacao", "fração", "calibracao", "2026-08-07"),
+    "matriz_renda_pc_alta_min":      _p(3500.0, "renda_pc ≥ limiar = alta renda (fallback sem percentil)", "matriz_demo_saturacao", "BRL/pessoa", "calibracao", "2026-08-07"),
     "nominatim_intervalo_seg":       _p(1.1, "intervalo mínimo entre chamadas Nominatim (ToS 1 req/s)", "rate_limit", "segundos", "calibracao", "2026-06-18"),
     "cascata_raio_bairro_km":        _p(2.0, "raio máx (km) do centroide do bairro p/ aceitar listing da cascata — fora disso = vazamento de bairro vizinho", "filtro_bairro_listing", "km", "calibracao", "2026-06-18"),
     "janela_demanda_min_concorrentes": _p(2, "mín de concorrentes COM popular_times p/ a janela de demanda agregada ser confiável — abaixo disso, amostra insuficiente (não inventa pico)", "janela_demanda", "concorrentes", "calibracao", "2026-06-18"),
@@ -163,6 +172,11 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "matr_m2_premium_conservador": _p(0.4, "ACAD 2024 + Bio Ritmo amostras", "matriculas_m2", "matr/m2", "benchmark"),
     "matr_m2_premium_realista":    _p(0.6, "ACAD 2024 + Bio Ritmo amostras", "matriculas_m2", "matr/m2", "benchmark"),
     "matr_m2_premium_agressivo":   _p(0.9, "ACAD 2024 + Bio Ritmo amostras", "matriculas_m2", "matr/m2", "benchmark"),
+    # Absorção / margem fresca — área proxy por tier (franquia; não m² Maps)
+    "area_proxy_low_m2": _p(1000.0, "Smart Fit mín franquia ≥950 + Panobianco Padrão 900-1000", "absorcao_area_proxy", "m2", "benchmark", "2026-08-07"),
+    "area_proxy_mid_m2": _p(1500.0, "Ultra média ~1500 + Bluefit tip.", "absorcao_area_proxy", "m2", "benchmark", "2026-08-07"),
+    "area_proxy_premium_m2": _p(2000.0, "placeholder Bodytech/Cia — calibrável W2c", "absorcao_area_proxy", "m2", "calibracao", "2026-08-07"),
+    "area_proxy_nicho_desconhecido_m2": _p(1250.0, "meio-termo low↔mid", "absorcao_area_proxy", "m2", "calibracao", "2026-08-07"),
     # Capacidade física simultânea no pico (pessoas/m²)
     "capacidade_simultanea_low":     _p(0.55, "ACAD/Sebrae 2024", "capacidade_pico", "pessoas/m2", "benchmark"),
     "capacidade_simultanea_mid":     _p(0.40, "ACAD/Sebrae 2024", "capacidade_pico", "pessoas/m2", "benchmark"),
