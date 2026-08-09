@@ -40,7 +40,7 @@ export function ExplorarResultPanel({
     >
       <header className="flex shrink-0 items-start justify-between gap-2 border-b border-border px-3.5 py-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-foreground">Quem ainda pode matricular</h2>
+          <h2 className="text-sm font-semibold text-foreground">Quem ainda pode matricular neste recorte</h2>
           <p className="mt-0.5 text-[11px] leading-snug wrap-break-word text-muted-foreground">
             {baseLabel}
           </p>
@@ -77,6 +77,33 @@ export function ExplorarResultPanel({
             )}
           </ul>
         </section>
+        {rivals.some((r) => (r.reclamacoes?.length ?? 0) > 0) && (
+          <section className="mt-3 min-w-0 rounded-xl border border-border bg-secondary/40 p-3">
+            <h3 className="explorar-label mb-2">Reclamações no Google Maps (nota ≤ 3)</h3>
+            <ul className="space-y-3">
+              {rivals
+                .filter((r) => (r.reclamacoes?.length ?? 0) > 0)
+                .map((r) => (
+                  <li key={`${r.nome}-recs`} className="min-w-0">
+                    <p className="text-[11px] font-semibold text-foreground">{r.nome}</p>
+                    <ul className="mt-1 space-y-1.5">
+                      {(r.reclamacoes ?? []).slice(0, 5).map((c, i) => (
+                        <li
+                          key={`${r.nome}-${i}`}
+                          className="rounded-md border border-border/70 bg-card/40 px-2 py-1.5 text-[11px] leading-snug text-muted-foreground"
+                        >
+                          <span className="font-semibold tabular-nums text-destructive">{c.rating}★</span>
+                          {' — '}
+                          {c.texto}
+                          {c.autor ? <span className="opacity-70"> · {c.autor}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        )}
       </div>
 
       <footer className="shrink-0 border-t border-border p-3">
@@ -93,7 +120,7 @@ export function ExplorarResultPanel({
         ) : (
           <p className="text-xs leading-snug text-muted-foreground">
             {emailCapturado
-              ? 'Mandamos um resumo para o seu e-mail. Sem compromisso de compra.'
+              ? 'Enviamos o resumo deste recorte para o seu e-mail. Sem compromisso de compra.'
               : 'Leitura grátis no mapa.'}
           </p>
         )}

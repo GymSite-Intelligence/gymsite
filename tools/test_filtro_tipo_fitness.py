@@ -29,6 +29,15 @@ def test_parque_esportes_legitimo_sem_tipos():
     assert _tipo_relevante(_c("Parque Esportes"), "academia")
 
 
+def test_krav_maga_fora():
+    assert not _tipo_relevante(_c("Centro de Krav Maga FSAKM", ["gym"]), "academia")
+
+
+def test_academia_ao_ar_livre_fora():
+    assert not _tipo_relevante(_c("Academia ao ar livre Unimed", ["gym"]), "academia")
+    assert not _tipo_relevante(_c("Academia ao ar livre Unimed"), "academia")
+
+
 def test_especializada_continua_fora():
     assert not _tipo_relevante(_c("Eikō Artes Marciais", ["gym"]), "academia")
     assert not _tipo_relevante(_c("Academia de Boxe Cocó"), "academia")

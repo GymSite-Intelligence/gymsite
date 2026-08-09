@@ -9,6 +9,8 @@ from tools.listing_candidato_normalize import _haversine_m
 from tools.voronoi_atratividade import extract_place_xy
 
 Lente = Literal["500m", "1km", "bairro"]
+_MAX_RIVALS_REVIEWS = 5
+_MAX_RECLAMACOES = 5
 
 _LENTE_M = {"500m": 500, "1km": 1000}
 _AREA_M = {
@@ -70,6 +72,14 @@ def _normalize_rival(raw: dict[str, Any], pin_lat: float, pin_lng: float) -> dic
     tipos = raw.get("tipos") or raw.get("types") or []
     if not isinstance(tipos, list):
         tipos = []
+    end = (
+        raw.get("endereco")
+        or raw.get("formattedAddress")
+        or raw.get("address")
+        or ""
+    )
+    pid = str(raw.get("place_id") or raw.get("id") or "").strip()
+    data_id = str(raw.get("data_id") or "").strip()
     return {
         "nome": str(nome).strip() or "Academia",
         "lat": la,
@@ -78,6 +88,10 @@ def _normalize_rival(raw: dict[str, Any], pin_lat: float, pin_lng: float) -> dic
         "rating": raw.get("rating"),
         "reviews": int(reviews or 0),
         "tipos": tipos,
+        "endereco": str(end).strip(),
+        "place_id": pid,
+        "data_id": data_id,
+        "reclamacoes": [],
     }
 
 
@@ -85,11 +99,11 @@ def _base_label(*, lente: str, bairro: str | None, ring: list | None) -> str:
     if lente == "bairro":
         nome = (bairro or "bairro").strip() or "bairro"
         if ring and len(ring) >= 3:
-            return f"polígono {nome} · IBGE Censo 2022"
-        return f"polígono {nome} indisponível · fallback raio 1 km · IBGE Censo 2022"
+            return f"Recorte do bairro {nome} · IBGE Censo 2022"
+        return f"Recorte do bairro {nome} indisponível · raio 1 km · IBGE Censo 2022"
     if lente == "500m":
-        return "raio 500 m · centróide pin · IBGE Censo 2022"
-    return "raio 1 km · centróide pin · IBGE Censo 2022"
+        return "Raio 500 m a partir do centro do bairro · IBGE Censo 2022"
+    return "Raio 1 km a partir do centro do bairro · IBGE Censo 2022"
 
 
 def _id_municipio(cidade: str | None, uf: str | None) -> str | None:
@@ -248,6 +262,55 @@ def _maybe_voronoi(
         }
 
 
+def _reclamacoes_baixa_nota(place_id: str, data_id: str | None = None) -> list[dict[str, Any]]:
+    if not place_id:
+        return []
+    try:
+        from tools.explorar_reviews import fetch_explorar_reviews
+
+        raw = fetch_explorar_reviews(place_id=place_id, data_id=data_id)
+    except Exception:
+        return []
+    out: list[dict[str, Any]] = []
+    for rev in raw:
+        try:
+            rating = int(float(rev.get("rating") or 5))
+        except (TypeError, ValueError):
+            continue
+        if rating > 3:
+            continue
+        texto = (
+            rev.get("text")
+            or rev.get("snippet")
+            or rev.get("quote_curta")
+            or rev.get("description")
+            or ""
+        ).strip()
+        if not texto:
+            continue
+        user_raw = rev.get("user")
+        if isinstance(user_raw, dict):
+            autor = str(user_raw.get("name") or "Anônimo")
+        else:
+            autor = str(rev.get("autor") or "Anônimo")
+        out.append({"texto": texto[:180], "rating": rating, "autor": autor[:60]})
+        if len(out) >= _MAX_RECLAMACOES:
+            break
+    return out
+
+
+def _enrich_rivals_reclamacoes(rivals: list[dict[str, Any]]) -> None:
+    n = 0
+    for r in rivals:
+        if n >= _MAX_RIVALS_REVIEWS:
+            break
+        pid = str(r.get("place_id") or "").strip()
+        if not pid:
+            continue
+        r["reclamacoes"] = _reclamacoes_baixa_nota(pid, str(r.get("data_id") or "") or None)
+        n += 1
+
+
 def _fetch_maps_rivals(
     *,
     tipo_negocio: str,
@@ -361,6 +424,7 @@ def run_explorar_analise(
     except Exception:
         pass
     rivals.sort(key=lambda r: r["dist_m"])
+    _enrich_rivals_reclamacoes(rivals)
 
     setores = _load_setores(
         injected=_setores,
@@ -388,6 +452,10 @@ def run_explorar_analise(
         idade_min=idade_min,
         idade_max=idade_max,
     )
+    from tools.explorar_leitura import carimbos_explorar, leituras_absorcao
+
+    absorcao["leituras"] = leituras_absorcao(absorcao)
+    absorcao["fontes"] = carimbos_explorar(label=label)
     absorcao["voronoi_smoke"] = _maybe_voronoi(
         pin_lat=pin_lat,
         pin_lng=pin_lng,

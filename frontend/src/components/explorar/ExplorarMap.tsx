@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { GeoJson, Map, Overlay } from 'pigeon-maps'
 import { GYMSITE_PALETTE } from '@/config/gymsite-design-system'
 import { cn } from '@/lib/utils'
+import { explorarChrome } from './explorar-chrome'
 import type { Camada, Lente, MapStyle } from './explorarIso'
 import type { ExplorarIsoRings } from '@/hooks/useExplorarIsocronas'
 import {
@@ -21,14 +22,31 @@ function CenterPin() {
   )
 }
 
-function RivalPin() {
+function RivalPin({ selected, onClick }: { selected: boolean; onClick: () => void }) {
   return (
-    <div
+    <button
+      type="button"
       aria-label="Academia no recorte"
-      className="size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-white"
-      style={{ background: '#ef4444', boxShadow: '0 2px 6px rgba(0,0,0,.4)' }}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className={cn(
+        'size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border-2 border-white',
+        selected && 'scale-125',
+      )}
+      style={{
+        background: selected ? '#84cc01' : '#ef4444',
+        boxShadow: '0 2px 6px rgba(0,0,0,.4)',
+      }}
     />
   )
+}
+
+export type ExplorarReclamacao = {
+  texto: string
+  rating: number
+  autor?: string
 }
 
 export type ExplorarRival = {
@@ -38,6 +56,9 @@ export type ExplorarRival = {
   dist_m?: number
   rating?: number | null
   reviews?: number
+  endereco?: string
+  place_id?: string
+  reclamacoes?: ExplorarReclamacao[]
 }
 
 export function ExplorarMap({
@@ -65,6 +86,7 @@ export function ExplorarMap({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
+  const [activeRival, setActiveRival] = useState<ExplorarRival | null>(null)
   const iso = Boolean(pin && camada === 'influencia')
   const heat = Boolean(pin && camada === 'calor')
   const [layerOn, setLayerOn] = useState(false)
@@ -117,7 +139,10 @@ export function ExplorarMap({
           provider={tileProvider(mapStyle)}
           attribution={<span>{CARTO_ATTRIBUTION}</span>}
           attributionPrefix={false}
-          onClick={({ latLng }) => onClickMap(latLng[0], latLng[1])}
+          onClick={({ latLng }) => {
+            setActiveRival(null)
+            onClickMap(latLng[0], latLng[1])
+          }}
           onBoundsChanged={({ zoom: z }) => {
             if (typeof z === 'number' && z !== zoom) onZoom(z)
           }}
@@ -167,9 +192,32 @@ export function ExplorarMap({
           )}
           {rivals.map((r) => (
             <Overlay key={`${r.lat},${r.lng},${r.nome}`} anchor={[r.lat, r.lng]}>
-              <RivalPin />
+              <RivalPin
+                selected={
+                  activeRival?.lat === r.lat &&
+                  activeRival?.lng === r.lng &&
+                  activeRival?.nome === r.nome
+                }
+                onClick={() => setActiveRival(r)}
+              />
             </Overlay>
           ))}
+          {activeRival && (
+            <Overlay anchor={[activeRival.lat, activeRival.lng]}>
+              <div
+                className={cn(
+                  explorarChrome(),
+                  'pointer-events-auto min-w-44 max-w-56 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-lg border px-2.5 py-2 text-left shadow-lg',
+                )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="text-xs font-semibold leading-snug text-foreground">{activeRival.nome}</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                  {activeRival.endereco?.trim() || 'Endereço não informado no Maps'}
+                </p>
+              </div>
+            </Overlay>
+          )}
           {pin && (
             <Overlay anchor={[pin.lat, pin.lng]}>
               <CenterPin />

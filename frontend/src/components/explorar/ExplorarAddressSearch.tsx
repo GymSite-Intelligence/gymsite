@@ -78,10 +78,7 @@ export function ExplorarAddressSearch({
         onSubmitFree()
         setOpen(false)
       }}
-      className={cn(
-        'pointer-events-auto absolute left-3.5 right-3.5 top-3.5 z-50',
-        className,
-      )}
+      className={cn('pointer-events-auto w-full', className)}
     >
       <div className="flex gap-2">
         <div className="relative min-w-0 flex-1">

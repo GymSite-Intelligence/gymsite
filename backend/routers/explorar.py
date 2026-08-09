@@ -162,11 +162,32 @@ def _liberar_entitlement(email: str) -> None:
         logger.warning("liberar explorar_gratuita falhou", exc_info=True)
 
 
-def _enroll_resend_bg(email: str, cidade: str | None, bairro: str | None) -> None:
+def _resumo_email_explorar(out: dict[str, Any], cidade: str | None, bairro: str | None) -> dict[str, Any]:
+    absb = out.get("absorcao_margem_fresca") if isinstance(out.get("absorcao_margem_fresca"), dict) else {}
+    rivais = out.get("concorrentes") if isinstance(out.get("concorrentes"), list) else []
+    return {
+        "cidade": cidade or out.get("cidade"),
+        "bairro": bairro or out.get("bairro"),
+        "label": out.get("base_espacial_label"),
+        "leituras": absb.get("leituras") if isinstance(absb, dict) else {},
+        "rivais": [
+            {"nome": r.get("nome"), "dist_m": r.get("dist_m")}
+            for r in rivais[:8]
+            if isinstance(r, dict)
+        ],
+    }
+
+
+def _enroll_resend_bg(
+    email: str,
+    cidade: str | None,
+    bairro: str | None,
+    resumo: dict[str, Any] | None = None,
+) -> None:
     try:
         from tools.resend_client import enroll_explorar_lead
 
-        enroll_explorar_lead(email, cidade, bairro)
+        enroll_explorar_lead(email, cidade, bairro, resumo=resumo)
     except Exception:
         logger.warning("resend explorar falhou (segue)", exc_info=True)
 
@@ -176,6 +197,7 @@ def _capturar_lead_explorar(
     cidade: str | None,
     bairro: str | None,
     background: BackgroundTasks | None = None,
+    resumo: dict[str, Any] | None = None,
 ) -> None:
     try:
         from backend.routers.leads import LeadInput, _persistir_lead
@@ -193,9 +215,9 @@ def _capturar_lead_explorar(
     except Exception:
         logger.warning("lead explorar não gravou (segue)", exc_info=True)
     if background is not None:
-        background.add_task(_enroll_resend_bg, email, cidade, bairro)
+        background.add_task(_enroll_resend_bg, email, cidade, bairro, resumo)
     else:
-        _enroll_resend_bg(email, cidade, bairro)
+        _enroll_resend_bg(email, cidade, bairro, resumo)
 
 
 @router.post("/analisar")
@@ -263,7 +285,13 @@ async def explorar_analisar(
             _liberar_entitlement(email)
         raise
     if reserved and email:
-        _capturar_lead_explorar(email, data.cidade, data.bairro, background)
+        _capturar_lead_explorar(
+            email,
+            data.cidade,
+            data.bairro,
+            background,
+            resumo=_resumo_email_explorar(out, data.cidade, data.bairro),
+        )
     out["status"] = "ok"
     return out
 

@@ -40,7 +40,9 @@ def test_capturar_lead_explorar_agenda_resend(monkeypatch):
     )
     monkeypatch.setattr(
         "tools.resend_client.enroll_explorar_lead",
-        lambda email, cidade, bairro: enrolled.update(email=email, cidade=cidade, bairro=bairro),
+        lambda email, cidade, bairro, resumo=None: enrolled.update(
+            email=email, cidade=cidade, bairro=bairro, resumo=resumo
+        ),
     )
     exp._capturar_lead_explorar("teste@gymsite.com.br", "João Pessoa", "Bessa")
     assert enrolled["email"] == "teste@gymsite.com.br"

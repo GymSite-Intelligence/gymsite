@@ -1,4 +1,4 @@
-import type { AbsorcaoCarimboJSON, AbsorcaoMargemFrescaJSON } from '@/hooks/useRelatorioDetail'
+import type { AbsorcaoMargemFrescaJSON } from '@/hooks/useRelatorioDetail'
 import { cn } from '@/lib/utils'
 import { explorarBarPercents, explorarIntPt } from './explorarAbsorcaoBars'
 
@@ -8,33 +8,20 @@ const ROTULO: Record<string, { label: string; cls: string }> = {
   roubo: { label: 'Disputa com o parque', cls: 'explorar-badge-roubo' },
 }
 
-function carimboText(raw: unknown): string {
-  if (raw == null) return ''
-  if (typeof raw === 'string') return raw
-  if (typeof raw === 'object') {
-    const o = raw as AbsorcaoCarimboJSON
-    return [o.valor, o.base, o.fonte, o.janela]
-      .filter((x) => x != null && x !== '')
-      .map(String)
-      .join(' · ')
-  }
-  return String(raw)
-}
-
 function BlocoBarra({
   n,
   titulo,
   valor,
   pct,
   fill,
-  carimbo,
+  leitura,
 }: {
   n: number
   titulo: string
   valor: string
   pct: number
   fill: 'lime' | 'muted' | 'amber' | 'good' | 'bad'
-  carimbo?: string
+  leitura?: string
 }) {
   return (
     <div className="min-w-0 rounded-lg border border-border bg-secondary/40 p-2.5">
@@ -50,8 +37,8 @@ function BlocoBarra({
           style={{ width: `${pct}%`, minWidth: pct > 0 ? 6 : 0 }}
         />
       </div>
-      {carimbo ? (
-        <p className="mt-1 text-[10px] leading-snug text-muted-foreground">{carimbo}</p>
+      {leitura ? (
+        <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{leitura}</p>
       ) : null}
     </div>
   )
@@ -71,7 +58,7 @@ export function ExplorarAbsorcaoVisual({ absorcao }: { absorcao: AbsorcaoMargemF
       ? 0
       : Math.min(100, Math.round((Math.abs(Number(margem)) / Math.max(teto, 1)) * 100))
   const folga = margem != null && Number(margem) >= 0
-  const car = absorcao.carimbos ?? {}
+  const leit = absorcao.leituras ?? {}
 
   return (
     <div className="min-w-0 space-y-2">
@@ -82,7 +69,7 @@ export function ExplorarAbsorcaoVisual({ absorcao }: { absorcao: AbsorcaoMargemF
         valor={`${explorarIntPt(teto)} alunos`}
         pct={pTeto}
         fill="lime"
-        carimbo={carimboText(car.teto_unidade)}
+        leitura={leit.teto_unidade}
       />
       <BlocoBarra
         n={2}
@@ -90,7 +77,7 @@ export function ExplorarAbsorcaoVisual({ absorcao }: { absorcao: AbsorcaoMargemF
         valor={`${explorarIntPt(parque)} alunos`}
         pct={pParque}
         fill="muted"
-        carimbo={carimboText(car.capacidade_parque_estimada)}
+        leitura={leit.capacidade_parque}
       />
       <BlocoBarra
         n={3}
@@ -98,7 +85,7 @@ export function ExplorarAbsorcaoVisual({ absorcao }: { absorcao: AbsorcaoMargemF
         valor={`${explorarIntPt(pool)} alunos`}
         pct={pPool}
         fill="amber"
-        carimbo={carimboText(car.pool_demografico)}
+        leitura={leit.pool_primario}
       />
       <BlocoBarra
         n={4}
@@ -106,6 +93,7 @@ export function ExplorarAbsorcaoVisual({ absorcao }: { absorcao: AbsorcaoMargemF
         valor={`${explorarIntPt(secundario)} alunos`}
         pct={pSec}
         fill="muted"
+        leitura={leit.pool_secundario}
       />
       <div className="min-w-0 rounded-lg border border-border bg-secondary/40 p-2.5">
         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
@@ -128,14 +116,22 @@ export function ExplorarAbsorcaoVisual({ absorcao }: { absorcao: AbsorcaoMargemF
                 style={{ width: `${pMargem}%`, minWidth: pMargem > 0 ? 6 : 0 }}
               />
             </div>
-            {carimboText(car.margem_fresca) ? (
-              <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                {carimboText(car.margem_fresca)}
-              </p>
+            {leit.conclusao ? (
+              <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{leit.conclusao}</p>
             ) : null}
           </>
         )}
       </div>
+      {(absorcao.fontes ?? []).length > 0 && (
+        <div className="min-w-0 rounded-lg border border-border bg-secondary/40 p-2.5">
+          <p className="mb-1.5 text-[11px] font-semibold text-foreground">Fontes desta leitura</p>
+          <ul className="space-y-1 text-[11px] leading-snug text-muted-foreground">
+            {(absorcao.fontes ?? []).map((f) => (
+              <li key={f}>· {f}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

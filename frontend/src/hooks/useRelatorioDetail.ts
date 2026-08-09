@@ -303,6 +303,14 @@ export interface AbsorcaoMargemFrescaJSON {
   rotulo?: 'fresco' | 'misto' | 'roubo' | string
   nota_modelo_secundario?: string
   carimbos?: Record<string, string | AbsorcaoCarimboJSON>
+  leituras?: {
+    teto_unidade?: string
+    capacidade_parque?: string
+    pool_primario?: string
+    pool_secundario?: string
+    conclusao?: string
+  }
+  fontes?: string[]
   base_espacial?: string
   voronoi_smoke?: AbsorcaoVoronoiSmokeJSON | null
 }

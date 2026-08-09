@@ -683,7 +683,9 @@ def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
                      "ballet", "dojo", "luta livre", "escola de danca",
                      "studio", "estudio", "funcional", "personal training", "personalizado",
                      "checkmat", "gracie", "cordel", "doctorfit", "doctor fit",
-                     "boxdelas", "fisiot", "clinica", "beach tennis")
+                     "boxdelas", "fisiot", "clinica", "beach tennis",
+                     "ao ar livre", "ar livre", "outdoor gym", "outdoor fitness",
+                     "krav", "krav maga")
         return not any(_norm_txt(k) in nome_blob for k in _OFF_NOME)
     on = _TIPO_ON_KW.get(tn)
     if not on:  # 'outro' ou tipo sem regra → sem filtro
@@ -839,6 +841,7 @@ def _searchapi_maps_textsearch(
         pid = p.get("place_id") or ""
         out.append({
             "id": pid,
+            "data_id": p.get("data_id") or "",
             "displayName": {"text": p.get("title") or ""},
             "formattedAddress": p.get("address") or "",
             "location": {"latitude": gps.get("latitude") or 0.0, "longitude": gps.get("longitude") or 0.0},

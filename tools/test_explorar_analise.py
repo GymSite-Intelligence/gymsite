@@ -1,3 +1,16 @@
+def test_base_label_sem_centroide():
+    from tools.explorar_analise import _base_label
+
+    um = _base_label(lente="1km", bairro="Cocó", ring=None)
+    assert "centróide" not in um.lower()
+    assert "centroide" not in um.lower()
+    assert "Raio 1 km a partir do centro do bairro" in um
+    assert "IBGE Censo 2022" in um
+    bairro = _base_label(lente="bairro", bairro="Cocó", ring=[(0, 0), (1, 0), (0, 1)])
+    assert "centróide" not in bairro.lower()
+    assert "Recorte do bairro Cocó" in bairro
+
+
 def test_parse_publico_alvo_idades():
     from tools.explorar_analise import parse_publico_alvo_idades
 
@@ -162,6 +175,105 @@ def test_explorar_descarta_luta_clinica_mesmo_com_poucas_academias():
     assert "Checkmat Bessa" not in nomes
     assert "Academia de Cordel do Vale" not in nomes
     assert "DoctorFit João Pessoa – Bessa" not in nomes
+
+
+def test_explorar_descarta_academia_ao_ar_livre():
+    from tools.explorar_analise import run_explorar_analise
+
+    out = run_explorar_analise(
+        lat=-3.745,
+        lng=-38.485,
+        lente="1km",
+        tipo_negocio="academia",
+        _concorrentes=[
+            {
+                "nome": "Academia ao ar livre Unimed",
+                "lat": -3.746,
+                "lng": -38.486,
+                "tipos": ["gym"],
+                "rating": 5,
+            },
+            {
+                "nome": "Academia Athletic Fortal",
+                "lat": -3.7462,
+                "lng": -38.4862,
+                "tipos": ["gym"],
+                "rating": 4.3,
+            },
+        ],
+        _setores=[],
+    )
+    nomes = {c["nome"] for c in out["concorrentes"]}
+    assert "Academia Athletic Fortal" in nomes
+    assert "Academia ao ar livre Unimed" not in nomes
+    assert "centróide" not in out["base_espacial_label"].lower()
+    blob = " ".join(
+        str(v) for v in (out["absorcao_margem_fresca"].get("leituras") or {}).values()
+    ).lower()
+    assert "cap_parque" not in blob
+    assert "matr_m2" not in blob
+
+
+def test_explorar_reclamacoes_so_nota_baixa(monkeypatch):
+    from tools import explorar_analise as ea
+
+    def fake_fetch(*, place_id, data_id=None):
+        return [
+            {"text": "Lotada no pico", "rating": 2, "user": {"name": "Ana"}},
+            {"text": "Excelente", "rating": 5, "user": {"name": "Bia"}},
+            {"text": "Ar-condicionado ruim", "rating": 3, "user": {"name": "Caio"}},
+        ]
+
+    monkeypatch.setattr("tools.explorar_reviews.fetch_explorar_reviews", fake_fetch)
+    out = ea.run_explorar_analise(
+        lat=-3.745,
+        lng=-38.485,
+        lente="1km",
+        _concorrentes=[
+            {
+                "nome": "Academia Athletic Fortal",
+                "lat": -3.746,
+                "lng": -38.486,
+                "tipos": ["gym"],
+                "id": "ChIJ_test",
+                "formattedAddress": "Av. Santos Dumont, 1000",
+                "rating": 4.3,
+            }
+        ],
+        _setores=[],
+    )
+    riv = out["concorrentes"][0]
+    assert riv["endereco"] == "Av. Santos Dumont, 1000"
+    recs = riv["reclamacoes"]
+    assert len(recs) == 2
+    assert all(r["rating"] <= 3 for r in recs)
+    assert "Lotada" in recs[0]["texto"]
+
+
+def test_explorar_reclamacoes_error_searchapi_vira_vazio(monkeypatch):
+    from tools import explorar_analise as ea
+
+    monkeypatch.setattr(
+        "tools.explorar_reviews.fetch_explorar_reviews",
+        lambda **k: [],
+    )
+    out = ea.run_explorar_analise(
+        lat=-3.745,
+        lng=-38.485,
+        lente="1km",
+        _concorrentes=[
+            {
+                "nome": "Academia Uniq Club Cocó",
+                "lat": -3.746,
+                "lng": -38.486,
+                "tipos": ["gym"],
+                "id": "ChIJCb3yfcJHxwcR0CZUhe1hc9E",
+                "rating": 4.5,
+            }
+        ],
+        _setores=[],
+    )
+    assert out["concorrentes"][0]["reclamacoes"] == []
 
 
 def test_tipo_pilates_aplica_gate():
