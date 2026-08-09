@@ -9,8 +9,10 @@ import { PlantaLayoutCard } from "./site/PlantaLayoutCard";
 import { SiteWelcomePanel } from "./site/SiteWelcomePanel";
 import { JornadaContent, SiteJornadaAside } from "./site/SiteJornadaAside";
 import { AgentesRail } from "./site/AgentesRail";
+import { DegustacaoCapBanner } from "./site/DegustacaoCapBanner";
 import { TurnstileWidget } from "./site/TurnstileWidget";
 import { AGENTES_LANDING, agentePadrao, crachaDoAgente } from "./site/agentesLanding";
+import { isDegustacaoCapTexto } from "@/lib/degustacaoCopy";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./ui/sheet";
 import { CHAT_PRODUCTION_URL, isDeploymentPreviewHost } from "@/lib/chatOrigin";
 import { extrairConcorrentes, extrairPlantaLayout, type AgenteChat } from "@/lib/siteAgent";
@@ -295,15 +297,22 @@ export function SiteChat({
                       </>
                     );
                   })()}
-                <div
-                  className={`inline-block wrap-break-word rounded-2xl px-3 py-2 text-sm leading-relaxed sm:px-4 ${
-                    m.role === "user"
-                      ? "bg-lime font-medium text-primary-foreground"
-                      : "bg-secondary text-foreground"
-                  }`}
-                >
-                  {m.role === "assistant" ? renderRich(m.texto) : m.texto}
-                </div>
+                {m.role === "assistant" && isDegustacaoCapTexto(m.texto) ? (
+                  <DegustacaoCapBanner
+                    texto={m.texto}
+                    onCta={() => setMostrarForm(true)}
+                  />
+                ) : (
+                  <div
+                    className={`inline-block wrap-break-word rounded-2xl px-3 py-2 text-sm leading-relaxed sm:px-4 ${
+                      m.role === "user"
+                        ? "bg-lime font-medium text-primary-foreground"
+                        : "bg-secondary text-foreground"
+                    }`}
+                  >
+                    {m.role === "assistant" ? renderRich(m.texto) : m.texto}
+                  </div>
+                )}
                 {m.role === "assistant" &&
                   (() => {
                     const conc = extrairConcorrentes([{ tool_calls: m.tool_calls }]);

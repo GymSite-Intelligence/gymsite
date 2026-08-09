@@ -55,3 +55,15 @@ export const MERCADO_CONTEXTO_PESQUISAS = [
   "Pontos comerciais",
   "Viabilidade financeira",
 ] as const;
+
+/** 429 cap do chat — backend `site_agent._cap_chat_estourado`. */
+const CAP_DEGUSTACAO_MARKERS = [
+  "já usou a degustação de hoje",
+  "chegou ao limite da degustação",
+  "já fez sua pergunta pra esse especialista hoje",
+] as const;
+
+export function isDegustacaoCapTexto(texto: string): boolean {
+  const t = texto.toLowerCase();
+  return CAP_DEGUSTACAO_MARKERS.some((m) => t.includes(m));
+}

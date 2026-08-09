@@ -8,8 +8,8 @@ import { explorarHref } from "@/lib/degustacaoUrls";
  * Layout canônico de `/degustacao` e `/teste` (desbloqueado).
  * Alterações de header/main/chat vão aqui — não duplicar nas rotas.
  *
- * @see src/routes/degustacao.tsx
- * @see src/routes/teste.tsx
+ * @see src/routes/DegustacaoPage.tsx
+ * @see src/routes/TestePage.tsx
  * @see src/lib/degustacaoUrls.ts — validateSearch compartilhado
  */
 

@@ -43,6 +43,7 @@ import { PlanosListPage } from '@/routes/PlanosListPage'
 import { ThemeLabPage } from '@/routes/ThemeLabPage'
 import { LandingPage } from '@/routes/LandingPage'
 import { DegustacaoPage } from '@/routes/DegustacaoPage'
+import { TestePage } from '@/routes/TestePage'
 import { AgentesPage } from '@/routes/AgentesPage'
 import { BlogIndexPage } from '@/routes/BlogIndexPage'
 import { BlogSlugPage } from '@/routes/BlogSlugPage'
@@ -413,6 +414,13 @@ const degustacaoRoute = createRoute({
   component: DegustacaoPage,
 })
 
+const testeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/teste',
+  validateSearch: parseDegustacaoSearch,
+  component: TestePage,
+})
+
 const agentesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/agentes',
@@ -495,6 +503,7 @@ const routeTree = rootRoute.addChildren([
   explorarRoute,
   degustacaoExplorarRoute,
   degustacaoRoute,
+  testeRoute,
   agentesRoute,
   blogIndexRoute,
   blogSlugRoute,
