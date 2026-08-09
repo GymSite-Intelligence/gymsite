@@ -1,0 +1,49 @@
+{
+  "municipio": "Rio de Janeiro",
+  "uf": "RJ",
+  "aliases": ["rio", "rio de janeiro", "rj capital", "cidade maravilhosa"],
+  "lei": "Lei Complementar nº 198/2019 (Código de Obras e Edificações Simplificado)",
+  "fonte_url": "https://e.camara.rj.gov.br/Arquivo/Documents/legislacao/html/C1982019.html",
+  "verificado_em": "2026-07-23",
+  "janela": "2019",
+  "uso_academia": {
+    "enquadramento": "salas_comerciais_mais_obrigacoes_sanitarias",
+    "nota": "O COE do Rio NÃO traz tabela por lotação de alunos como SP. Para academia em uso comercial/salas aplica-se art. 24 §1 (1 sanitário / 250 m² de área útil). Locais de reunião (art. 24 §2) usam área de público ou espectadores. Banheiro de funcionários é obrigatório (art. 25). Vestiários/chuveiros para clientela são exigência do licenciamento sanitário (capacidade conforme demanda) — sem proporção numérica no COE.",
+    "artigos": ["15", "24", "25"]
+  },
+  "regras": {
+    "salas_comerciais_por_area": {
+      "artigo": "24 §1",
+      "base_m2": 250,
+      "sanitarios_por_bloco": 1,
+      "descricao": "Edifícios de salas comerciais: sanitários coletivos na proporção de um para cada 250 m² de área útil de salas."
+    },
+    "locais_reuniao": {
+      "artigo": "24 §2",
+      "por_m2_publico": 100,
+      "por_espectadores": 500,
+      "lavatorios": 1,
+      "bacias": 1,
+      "mictorio_facultativo": true,
+      "descricao": "Locais de reunião: 1 lavatório + 1 vaso (mictório facultativo) por 100 m² de área de público ou por 500 espectadores."
+    },
+    "banheiro_funcionarios": {
+      "artigo": "25 I",
+      "bacias": 1,
+      "lavatorios": 1,
+      "chuveiros": 1,
+      "descricao": "Banheiro para funcionários: ao menos vaso, lavatório e chuveiro, sem superposição de peças."
+    },
+    "vestiarios_chuveiros_clientela": {
+      "fonte": "Licenciamento sanitário municipal (SMS) — capacidade conforme demanda",
+      "obrigatorio": true,
+      "cota_numerica_no_coe": false,
+      "descricao": "Vestiários separados por sexo com sanitários e chuveiros; capacidade instalada deve atender à demanda dos frequentadores. Sem cota numérica no COE (LC 198)."
+    }
+  },
+  "entrada_preferida": "area_util_ou_espectadores",
+  "sem_area_treino": {
+    "status": "precisa_area_util",
+    "mensagem": "No Rio o COE (LC 198/2019 art. 24 §1) cotiza sanitários de salas comerciais pela ÁREA ÚTIL (m²), não pela lotação. Informe a área útil da academia/salas em m² (ou espectadores / área de público para art. 24 §2)."
+  }
+}

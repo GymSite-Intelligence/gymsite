@@ -312,6 +312,49 @@ def calcular_sanitarios_por_lotacao(
     }
 
 
+def calcular_sanitarios_municipio(
+    cidade: str,
+    uf: str = "",
+    lotacao: int = 0,
+    area_treino_m2: float = 0.0,
+    espectadores: int = 0,
+) -> dict:
+    """Dimensiona sanitários pelo Código de Obras MUNICIPAL (tabela curada)."""
+    from tools.coe_sanitarios import calcular_sanitarios_municipio as _calc
+
+    return _calc(
+        cidade=cidade,
+        uf=uf or "",
+        lotacao=int(lotacao) if lotacao else None,
+        area_treino_m2=float(area_treino_m2) if area_treino_m2 else None,
+        espectadores=int(espectadores) if espectadores else None,
+    )
+
+
+def resolver_cref_por_uf(uf: str, data_ref: str = "") -> dict:
+    """Resolve CREF de registro na UF (tabela 27 UFs)."""
+    from tools.regulatorio_lookup import resolver_cref_por_uf as _resolver
+
+    return _resolver(uf, data_ref=data_ref or None)
+
+
+def consultar_anuidade_pj_cref(
+    uf: str = "",
+    cref: str = "",
+    exercicio: int = 2026,
+    data_ref: str = "",
+) -> dict:
+    """Anuidade PJ determinística (Res. CONFEF 596/2025 + nota regional)."""
+    from tools.regulatorio_lookup import consultar_anuidade_pj_cref as _anu
+
+    return _anu(
+        uf=uf or None,
+        cref=cref or None,
+        exercicio=exercicio,
+        data_ref=data_ref or None,
+    )
+
+
 def buscar_concorrentes(
     cidade: str,
     bairro: str,

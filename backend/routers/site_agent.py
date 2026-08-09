@@ -510,6 +510,21 @@ async def conversar_mensagens(projeto_id: str, desde: Optional[str] = None):
         if fontes_eros:
             m["sources"] = fontes_eros
 
+        # RAG Eros: injeta fontes recuperadas via tools consultar_eros_* no polling.
+        # O frontend (siteAgent.ts → PollMsg.sources) renderiza no chat público.
+        fontes_eros = []
+        for tc in (m.get("tool_calls") or []):
+            nome = tc.get("ferramenta") or tc.get("name") or ""
+            if nome.startswith("consultar_eros_"):
+                resultado = tc.get("resultado") or tc.get("result") or {}
+                if isinstance(resultado, dict):
+                    fontes = resultado.get("fontes") or resultado.get("sources") or []
+                    if isinstance(fontes, list) and fontes:
+                        # Pega apenas as fontes da tool mais recente (última chamada)
+                        fontes_eros = fontes
+        if fontes_eros:
+            m["sources"] = fontes_eros
+
     mn = dict(proj.get("modelo_negocio") or {})
     mn.pop("_site", None)
     loc = proj.get("localizacao") or {}

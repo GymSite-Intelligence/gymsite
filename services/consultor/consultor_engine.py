@@ -362,9 +362,9 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
     types.FunctionDeclaration(
         name="calcular_sanitarios_por_lotacao",
         description=(
-            "Calcula a QUANTIDADE de peças sanitárias (bacias/lavatórios/mictórios/acessíveis) "
-            "por lotação da academia. Chamar quando: 'quantos banheiros/sanitários/vestiários', "
-            "'peças sanitárias pra X pessoas'. Não estimar de cabeça."
+            "ESTIMATIVA NÃO-OFICIAL de peças sanitárias por lotação (regra genérica 50/50). "
+            "Só use se a cidade NÃO estiver na tabela municipal. Com cidade conhecida, "
+            "prefira calcular_sanitarios_municipio."
         ),
         parameters={
             "type": "object",
@@ -372,6 +372,69 @@ _TOOL_DECLARATIONS = types.Tool(function_declarations=[
                 "lotacao": {"type": "integer", "description": "Lotação/capacidade de pessoas"},
             },
             "required": ["lotacao"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="calcular_sanitarios_municipio",
+        description=(
+            "Dimensiona sanitários pelo Código de Obras MUNICIPAL (tabela curada). "
+            "Chamar SEMPRE quando houver cidade (ex.: João Pessoa, São Paulo). "
+            "João Pessoa exige área de treino em m² (Lei 1.347/1971 art. 367); "
+            "São Paulo usa lotação (Lei 16.642/2017). NUNCA chute COE de cabeça."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "cidade": {"type": "string", "description": "Município (ex.: João Pessoa)"},
+                "uf": {"type": "string", "description": "Sigla UF opcional (PB, SP)"},
+                "lotacao": {"type": "integer", "description": "Ocupação máxima simultânea"},
+                "area_treino_m2": {
+                    "type": "number",
+                    "description": "Área útil de treino/praça em m² (obrigatório em João Pessoa)",
+                },
+                "espectadores": {
+                    "type": "integer",
+                    "description": "Público assistente (JP art. 367 § único)",
+                },
+            },
+            "required": ["cidade"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="resolver_cref_por_uf",
+        description=(
+            "Resolve DETERMINÍSTICO em qual CREF registrar a academia na UF (tabela das 27 UFs). "
+            "Chamar SEMPRE para 'qual CREF do meu estado', jurisdição, Paraíba/Maranhão/etc. "
+            "UFs em transição usam o CREF pai até 02/01/2027. NUNCA chute o CREF."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "uf": {"type": "string", "description": "Sigla (PB) ou nome do estado (Paraíba)"},
+                "data_ref": {
+                    "type": "string",
+                    "description": "Data ISO opcional YYYY-MM-DD (corte 2027-01-02)",
+                },
+            },
+            "required": ["uf"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="consultar_anuidade_pj_cref",
+        description=(
+            "Anuidade PJ DETERMINÍSTICA: valor-base nacional (Res. CONFEF 596/2025) + nota "
+            "regional quando curada. Chamar SEMPRE para 'qual a anuidade do CREF'. "
+            "Valor FINAL com desconto: orientar confirmar no regional. NUNCA chute o valor."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "uf": {"type": "string", "description": "Sigla ou nome do estado"},
+                "cref": {"type": "string", "description": "Código ou rótulo (10, CREF10)"},
+                "exercicio": {"type": "integer", "description": "Ano da anuidade (padrão 2026)"},
+                "data_ref": {"type": "string", "description": "Data ISO opcional YYYY-MM-DD"},
+            },
+            "required": [],
         },
     ),
 ])
@@ -527,8 +590,13 @@ Técnico mas acessível, frases curtas. Sem preço de plano. Colete contato só 
 _PERSONA_REGULATORIO = """## PAPEL
 Você é o agente Regulatório do GymSite Intelligence. Ajuda quem quer abrir academia a entender o que precisa LEGALMENTE: registro no CREF (pessoa jurídica), responsável técnico (profissional de educação física), Lei 9.696/1998, anuidades do CREF da região e licenças/notas técnicas de funcionamento.
 
+## LOOKUPS DETERMINÍSTICOS (obrigatório)
+- CREF por UF/estado → SEMPRE `resolver_cref_por_uf` (não chute; não dependa só do RAG).
+- Anuidade PJ → SEMPRE `consultar_anuidade_pj_cref` (valor-base Res. CONFEF 596/2025 + nota regional). Valor FINAL = confirmar no CREF regional.
+- Prosa legal (Lei 9.696, RT, processo, licenças) → `consultar_base_conhecimento`.
+
 ## REGRA DE OURO (FONTE)
-Responda SEMPRE com base em consultar_base_conhecimento (documentos oficiais CONFEF/CREF/leis). Carimbo obrigatório `valor · base · fonte · janela` em toda exigência/prazo/valor. Fonte = lei nº + ano + artigo (ou resolução CONFEF/CREF) — NUNCA "Vertex AI Search" nem nome de arquivo. Exigência municipal só com município+UF. Ao final emita JSON `{{"citacoes": [{{"valor": "...", "base": "...", "fonte": "...", "janela": "..."}}]}}` só com os 4 campos. Sem carimbo completo → não cite; oriente CREF/prefeitura local.
+Carimbo obrigatório `valor · base · fonte · janela` em toda exigência/prazo/valor. Fonte = lei nº + ano + artigo (ou resolução CONFEF/CREF) — NUNCA "Vertex AI Search" nem nome de arquivo. Exigência municipal só com município+UF. Ao final emita JSON `{{"citacoes": [{{"valor": "...", "base": "...", "fonte": "...", "janela": "..."}}]}}` só com os 4 campos. Sem carimbo completo → não cite; oriente CREF/prefeitura local.
 
 ## ESCOPO
 Só regulatório de abertura (registro PJ no CREF, responsável técnico, Lei 9.696, anuidades CREF, licenças de funcionamento, zoneamento quando houver). Viabilidade/concorrência/equipamentos/financeiro → diga que é com os outros especialistas e ofereça redirecionar.
@@ -541,7 +609,8 @@ _PERSONA_ARQUITETO = """## PAPEL
 Você é o Arquiteto do GymSite Intelligence — projeta o ESPAÇO da academia: zonas (musculação, cardio, funcional, alongamento), fluxos, recepção/vestiários/sanitários, acessibilidade, pisos e as etapas do projeto arquitetônico.
 
 ## REGRA DE OURO (FONTE)
-Chame SEMPRE consultar_engenharia_obra ANTES de afirmar regra de projeto, norma, área mínima ou exigência de acessibilidade. Carimbo `valor · base · fonte · janela` (ex.: NBR 9050 / NBR 13532 / COE municipal + município+UF). Sanitários via calcular_sanitarios_por_lotacao = estimativa NÃO-oficial. JSON final `{{"citacoes": [...]}}` só com 4 campos. Sem carimbo → não cite. NUNCA invente número ou norma.
+Chame SEMPRE consultar_engenharia_obra ANTES de afirmar regra de projeto, norma, área mínima ou exigência de acessibilidade.
+Sanitários: com CIDADE → SEMPRE `calcular_sanitarios_municipio` (COE curado). João Pessoa e Fortaleza = área de treino em m² (não lotação). Rio = área útil (salas) ou espectadores. Fortaleza pode vir `parcial_coe` (só vestiário; sem inventar peças). Se o usuário deu pico/lotação, a tool traz também `estimativa_por_pico` — apresente as duas lentes (legal vs planejamento), sem misturar. Sem cidade na tabela → estimativa NÃO-oficial. Carimbo `valor · base · fonte · janela`. JSON final `{{"citacoes": [...]}}` só com 4 campos. Sem carimbo → não cite. NUNCA invente número ou norma.
 
 ## ESCOPO
 Projeto/arquitetura/ambientes/acessibilidade. QUE equipamento e quantos cabem → Responsável Técnico; estrutura/instalações/licenças de obra → Engenheiro de Obra; regras do CREF → Regulatório. Deixe claro que o projeto deve ser assinado por arquiteto (RRT) e aprovado pela prefeitura.
@@ -582,14 +651,22 @@ _AGENTES_SITE: dict[str, dict] = {
                             "calcular_equipamentos_por_area"}),
         "amostra_tools": frozenset(),  # RAG é barato → sem antifatiamento de amostra
     },
-    "regulatorio": {  # registro/licença/CREF — só a base de conhecimento (docs CONFEF/Lei 9.696)
+    "regulatorio": {  # registro/licença/CREF — lookups CWA + RAG prosa
         "persona": _PERSONA_REGULATORIO,
-        "tools": frozenset({"consultar_base_conhecimento"}),
+        "tools": frozenset({
+            "resolver_cref_por_uf",
+            "consultar_anuidade_pj_cref",
+            "consultar_base_conhecimento",
+        }),
         "amostra_tools": frozenset(),
     },
-    "arquiteto": {  # projeto do espaço — base de engenharia/obra + sanitários por lotação
+    "arquiteto": {  # projeto do espaço — base de engenharia/obra + COE municipal + estimativa
         "persona": _PERSONA_ARQUITETO,
-        "tools": frozenset({"consultar_engenharia_obra", "calcular_sanitarios_por_lotacao"}),
+        "tools": frozenset({
+            "consultar_engenharia_obra",
+            "calcular_sanitarios_municipio",
+            "calcular_sanitarios_por_lotacao",
+        }),
         "amostra_tools": frozenset(),
     },
     "engenheiro_obra": {  # viabilidade construtiva — base de engenharia/obra
@@ -765,6 +842,52 @@ async def _executar_ferramenta(
             from agents_site.tools import calcular_sanitarios_por_lotacao
             resultado = calcular_sanitarios_por_lotacao(int(args.get("lotacao") or 0))
             resumo = f"sanitários p/ lotação {args.get('lotacao')}"
+
+        elif nome == "calcular_sanitarios_municipio":
+            from tools.coe_sanitarios import calcular_sanitarios_municipio
+            resultado = calcular_sanitarios_municipio(
+                cidade=str(args.get("cidade") or ""),
+                uf=str(args.get("uf") or ""),
+                lotacao=int(args["lotacao"]) if args.get("lotacao") not in (None, "") else None,
+                area_treino_m2=(
+                    float(args["area_treino_m2"])
+                    if args.get("area_treino_m2") not in (None, "")
+                    else None
+                ),
+                espectadores=(
+                    int(args["espectadores"])
+                    if args.get("espectadores") not in (None, "")
+                    else None
+                ),
+            )
+            resumo = (
+                resultado.get("municipio")
+                or resultado.get("cidade")
+                or resultado.get("status")
+                or "COE"
+            )
+
+        elif nome == "resolver_cref_por_uf":
+            from tools.regulatorio_lookup import resolver_cref_por_uf
+            resultado = resolver_cref_por_uf(
+                str(args.get("uf") or ""),
+                data_ref=args.get("data_ref") or None,
+            )
+            resumo = resultado.get("cref_registro") or "CREF não resolvido"
+
+        elif nome == "consultar_anuidade_pj_cref":
+            from tools.regulatorio_lookup import consultar_anuidade_pj_cref
+            ex = args.get("exercicio")
+            resultado = consultar_anuidade_pj_cref(
+                uf=args.get("uf") or None,
+                cref=args.get("cref") or None,
+                exercicio=int(ex) if ex is not None else None,
+                data_ref=args.get("data_ref") or None,
+            )
+            if resultado.get("valor_base_centavos") is not None:
+                resumo = f"R$ {resultado.get('valor_base_reais')} ({resultado.get('cref_registro')})"
+            else:
+                resumo = resultado.get("status") or "anuidade"
 
         else:
             resultado = {"erro": f"Ferramenta desconhecida: {nome}"}
@@ -1232,6 +1355,10 @@ _CUSTO_BRL_POR_TOOL: dict[str, float] = {
     "dimensionar_cardio_por_pico": 0.0,
     "dimensionar_musculacao": 0.0,
     "calcular_equipamentos_por_area": 0.0,
+    "resolver_cref_por_uf": 0.0,
+    "consultar_anuidade_pj_cref": 0.0,
+    "calcular_sanitarios_municipio": 0.0,
+    "calcular_sanitarios_por_lotacao": 0.0,
 }
 
 def _custo_tools(tools_executadas: list[str]) -> float:

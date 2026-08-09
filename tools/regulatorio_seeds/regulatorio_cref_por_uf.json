@@ -1,0 +1,69 @@
+{
+  "meta": {
+    "verificado_em": "2026-07-08",
+    "fonte": "mapa oficial confef.org.br/crefs + Resoluções CONFEF nº 623 a 627/2026",
+    "corte_novos_regionais": "2027-01-02",
+    "reverificar_apos": "2027-01-02"
+  },
+  "ufs": {
+    "AC": {
+      "cref_hoje": "CREF8/AM-AC-RO-RR",
+      "cref_futuro": "CREF26/AC",
+      "resolucao_criacao": "Res. CONFEF nº 626/2026",
+      "em_transicao": true
+    },
+    "AL": {"cref_hoje": "CREF19/AL", "em_transicao": false},
+    "AP": {
+      "cref_hoje": "CREF18/PA-AP",
+      "cref_futuro": "CREF25/AP",
+      "resolucao_criacao": "Res. CONFEF nº 625/2026",
+      "em_transicao": true
+    },
+    "AM": {"cref_hoje": "CREF8/AM-AC-RO-RR", "em_transicao": false},
+    "BA": {"cref_hoje": "CREF13/BA", "em_transicao": false},
+    "CE": {"cref_hoje": "CREF5/CE", "em_transicao": false},
+    "DF": {"cref_hoje": "CREF7/DF", "em_transicao": false},
+    "ES": {"cref_hoje": "CREF22/ES", "em_transicao": false},
+    "GO": {"cref_hoje": "CREF14/GO-TO", "em_transicao": false},
+    "MA": {"cref_hoje": "CREF21/MA", "em_transicao": false},
+    "MT": {"cref_hoje": "CREF17/MT", "em_transicao": false},
+    "MS": {"cref_hoje": "CREF11/MS", "em_transicao": false},
+    "MG": {"cref_hoje": "CREF6/MG", "em_transicao": false},
+    "PA": {"cref_hoje": "CREF18/PA-AP", "em_transicao": false},
+    "PB": {"cref_hoje": "CREF10/PB", "em_transicao": false},
+    "PR": {"cref_hoje": "CREF9/PR", "em_transicao": false},
+    "PE": {"cref_hoje": "CREF12/PE", "em_transicao": false},
+    "PI": {"cref_hoje": "CREF15/PI", "em_transicao": false},
+    "RJ": {"cref_hoje": "CREF1/RJ", "em_transicao": false},
+    "RN": {"cref_hoje": "CREF16/RN", "em_transicao": false},
+    "RS": {"cref_hoje": "CREF2/RS", "em_transicao": false},
+    "RO": {
+      "cref_hoje": "CREF8/AM-AC-RO-RR",
+      "cref_futuro": "CREF23/RO",
+      "resolucao_criacao": "Res. CONFEF nº 623/2026",
+      "em_transicao": true
+    },
+    "RR": {
+      "cref_hoje": "CREF8/AM-AC-RO-RR",
+      "cref_futuro": "CREF27/RR",
+      "resolucao_criacao": "Res. CONFEF nº 627/2026",
+      "em_transicao": true
+    },
+    "SC": {"cref_hoje": "CREF3/SC", "em_transicao": false},
+    "SP": {"cref_hoje": "CREF4/SP", "em_transicao": false},
+    "SE": {"cref_hoje": "CREF20/SE", "em_transicao": false},
+    "TO": {
+      "cref_hoje": "CREF14/GO-TO",
+      "cref_futuro": "CREF24/TO",
+      "resolucao_criacao": "Res. CONFEF nº 624/2026",
+      "em_transicao": true
+    }
+  },
+  "cref_inoperantes_ate_corte": {
+    "23": {"label": "CREF23/RO", "pai": "CREF8/AM-AC-RO-RR", "uf": "RO"},
+    "24": {"label": "CREF24/TO", "pai": "CREF14/GO-TO", "uf": "TO"},
+    "25": {"label": "CREF25/AP", "pai": "CREF18/PA-AP", "uf": "AP"},
+    "26": {"label": "CREF26/AC", "pai": "CREF8/AM-AC-RO-RR", "uf": "AC"},
+    "27": {"label": "CREF27/RR", "pai": "CREF8/AM-AC-RO-RR", "uf": "RR"}
+  }
+}

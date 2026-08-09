@@ -15,12 +15,15 @@ from agents_site.tools_l1_dados import (
     buscar_concorrentes,
     buscar_pontos_comerciais,
     calcular_equipamentos_por_area,
+    calcular_sanitarios_municipio,
     calcular_sanitarios_por_lotacao,
+    consultar_anuidade_pj_cref,
     dimensionar_cardio_por_pico,
     dimensionar_musculacao,
     estimar_investimento,
     gerar_planta_layout_zonas,
     pesquisar_contexto_mercado,
+    resolver_cref_por_uf,
 )
 from agents_site.tools_l2_rag import (
     _pack_eros_as_resultados,
@@ -37,7 +40,9 @@ __all__ = [
     "buscar_concorrentes",
     "buscar_pontos_comerciais",
     "calcular_equipamentos_por_area",
+    "calcular_sanitarios_municipio",
     "calcular_sanitarios_por_lotacao",
+    "consultar_anuidade_pj_cref",
     "consultar_base_mercado",
     "consultar_base_regulatoria",
     "consultar_catalogo_equipamentos",
@@ -53,6 +58,7 @@ __all__ = [
     "estimar_investimento",
     "gerar_planta_layout_zonas",
     "pesquisar_contexto_mercado",
+    "resolver_cref_por_uf",
     "_pack_eros_as_resultados",
     "_rag_cascade",
 ]

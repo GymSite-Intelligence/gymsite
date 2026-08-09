@@ -1,30 +1,13 @@
 """
 GymSite — Agentes do Site (degustação na landing), versão ADK.
 
-Root roteador → especialistas com grounding L1 (tools determinísticas) + L2 (Eros RAG /
-corpus local). LLM = L3 só lê saídas de tools — não inventa número/norma/modelo.
-
-  • Responsável Técnico  → catálogo (Eros TECNICO / corpus tecnico_*.txt) + fórmulas
-  • Regulatório          → Eros REGULATORIO / corpus regulatorio_*.txt
-  • Mercado              → Maps/IBGE/MRLR + Eros MERCADO / corpus
-  • Arquiteto / Engenheiro → Eros ENGENHARIA / corpus engenharia_*.txt + sanitários/planta
+Root roteador → 3 especialistas com RAG/ferramenta forçada (grounding na arquitetura):
+  • Responsável Técnico  → catálogo de equipamentos (Vertex AI Search)
+  • Regulatório          → base CONFEF/CREF/Lei 9.696 (Vertex AI Search)
+  • Mercado              → concorrência ao vivo (Google Maps) + base de mercado
 
 Rode local com:  adk web   (a partir da raiz do projeto)  → escolha "GymSiteSite".
 `root_agent` é o ponto de entrada exigido pelo ADK.
-
-Blueprint LLM genérico → este módulo (passo 2 do turno):
-
-```text
-openai "Você é um assistente da GymSite..."
-  + history flat
-     ↓
-ADK Agent tree (este arquivo): system prompts por ESPECIALISTA,
-tools obrigatórias, modelo = resolve_site_model()
-  (Gemini prod | Ollama sandbox via LLM_PROVIDER=ollama)
-```
-
-Histórico e persistência NÃO ficam aqui — `agents_site/runner.py`
-(`run_site_agent_adk` / `run_consultor_adk`). Entrega WhatsApp = Eros, não ADK.
 """
 import os
 import sys
@@ -37,18 +20,15 @@ from google.genai import types as _genai_types
 
 from agents_site.carimbo import INSTRUCAO_CARIMBO_LEGAL
 from agents_site.guardrails import gate_degustacao
-
-_REGRA_L3 = (
-    "## REGRA L3\n"
-    "Você só LÊ saídas de tools. Número/norma/modelo sem tool = proibido. "
-    "Se tool status=vazio/indisponivel, diga que a base não cobre — não complete de memória.\n\n"
-)
+from agents_site.model_provider import resolve_site_model
 from agents_site.tools import (
     consultar_catalogo_equipamentos,
+    resolver_cref_por_uf,
+    consultar_anuidade_pj_cref,
     consultar_base_mercado,
     consultar_eros_arquiteto,
     consultar_eros_engenharia,
-    consultar_eros_regulatorio,
+    consultar_base_regulatoria,
     consultar_eros_tecnico,
     buscar_concorrentes,
     analisar_reviews_e_dores,
@@ -57,14 +37,13 @@ from agents_site.tools import (
     calcular_equipamentos_por_area,
     consultar_engenharia_obra,
     calcular_sanitarios_por_lotacao,
+    calcular_sanitarios_municipio,
     gerar_planta_layout_zonas,
     pesquisar_contexto_mercado,
     buscar_pontos_comerciais,
     analisar_demografia,
     estimar_investimento,
 )
-
-from agents_site.model_provider import resolve_site_model
 
 _MODELO = resolve_site_model()
 
@@ -85,7 +64,7 @@ responsavel_tecnico = Agent(
         "escolha de fornecedor (Matrix, Life Fitness, Total Health)."
     ),
     instruction="""
-""" + _REGRA_L3 + """## PAPEL
+## PAPEL
 Você é o Responsável Técnico do GymSite — especialista em EQUIPAMENTOS de academia. Ajuda a montar a sala: que máquinas comprar, especificações, quantidade e layout, com base nos catálogos dos fornecedores.
 
 ## COMO AGIR (econômico — pergunte só o que muda a resposta)
@@ -136,19 +115,24 @@ regulatorio = Agent(
         "de registro?', 'qual a anuidade', 'que licenças preciso', 'quem pode dar aula'."
     ),
     instruction="""
-""" + _REGRA_L3 + """## PAPEL
+## PAPEL
 Você é o agente Regulatório do GymSite. Ajuda quem quer abrir academia a entender o que precisa LEGALMENTE: registro no CREF (PJ), responsável técnico (profissional de educação física), Lei 9.696/1998, anuidades do CREF da região e licenças de funcionamento (alvará, bombeiros, vigilância sanitária).
 
+## LOOKUPS DETERMINÍSTICOS (obrigatório — não chute)
+- "qual CREF do meu estado/UF" / jurisdição → SEMPRE `resolver_cref_por_uf` (tabela das 27 UFs). Se em transição, diga o CREF de HOJE e a data em que o novo regional assume — NUNCA mande registrar num CREF inoperante.
+- "qual a anuidade" / valor PJ → SEMPRE `consultar_anuidade_pj_cref` (valor-base Res. CONFEF 596/2025). Reporte o valor-base + nota regional; valor FINAL = confirmar no CREF regional.
+- Prosa legal (Lei 9.696, processo de registro, RT, licenças) → `consultar_eros_regulatorio`.
+
 ## ATERRISSAGEM OBRIGATÓRIA (grounding)
-SEMPRE chame `consultar_eros_regulatorio` ANTES de afirmar uma exigência, valor de anuidade, prazo ou regra. Responda com base no que a ferramenta retornar. NUNCA invente exigência, prazo ou valor. Se a base não trouxer o dado, diga com transparência e oriente a confirmar no CREF/prefeitura local.
-A tool retornará `texto_rag` e `fontes`. Use o `texto_rag` como fonte da verdade factual. Use os metadados das `fontes` para preencher o JSON de citações no final, seguindo o carimbo legal.
+NUNCA invente exigência, prazo, CREF ou valor. Se a tool/base não trouxer o dado, diga com transparência e oriente a confirmar no CREF/prefeitura local. O campo `canal_retrieval` da tool RAG NÃO é fonte — use `como_citar` / `citacao` e o trecho.
+A tool Eros retornará `texto_rag` e `fontes`. Use o `texto_rag` como fonte da verdade factual. Use os metadados das `fontes` para preencher o JSON de citações no final, seguindo o carimbo legal.
 
 """ + INSTRUCAO_CARIMBO_LEGAL + """
 
 ## ESCOPO
 Só regulatório de abertura/operação. Viabilidade, concorrência, equipamentos ou financeiro → diga que outro especialista cuida. Tom claro, sem juridiquês. Deixe explícito que a orientação não substitui consulta ao CREF/contador.
 """,
-    tools=[consultar_eros_regulatorio],
+    tools=[resolver_cref_por_uf, consultar_anuidade_pj_cref, consultar_base_regulatoria],
     generate_content_config=_GEN_FACTUAL,
 )
 
@@ -164,7 +148,7 @@ mercado = Agent(
         "saturação do bairro, e 'vale a pena abrir aqui' / 'como vocês calculam viabilidade'."
     ),
     instruction="""
-""" + _REGRA_L3 + """## PAPEL
+## PAPEL
 Você é o agente de Mercado do GymSite — dá uma degustação da análise de viabilidade. Mostra a concorrência REAL do entorno e orienta sobre saturação, citando dados de verdade.
 
 ## LOCALIZAÇÃO (não reperguntar)
@@ -174,9 +158,8 @@ Se a pergunta já disser academia/crossfit/pilates, INFIRA o tipo_negocio; só p
 Matching accent-insensitive: Parangaba ≡ Parangabá; Cocó ≡ Coco.
 
 ## COMO AGIR
-Para concorrência/saturação: chame `buscar_concorrentes` com cidade+bairro (+uf/tipo se souber). Reporte `total_concorrentes` e `nivel_saturacao` REAIS do retorno da tool — NUNCA estime de cabeça. Cite nomes **somente** de `concorrentes[]` (pode resumir 2–3 na prosa; a UI mostra a lista completa). Se citar `maps_smoke_url`, diga que é a busca bruta do Maps — o total filtrado é `total_concorrentes` (raio do centróide + tipo).
-Para "por quê a saturação é baixa/média/alta": NÃO chame `consultar_base_mercado`. Explique a regra da própria tool: ≤5 = baixo, ≤12 = médio, senão alto — usando o `total_concorrentes` já obtido (ou chame `buscar_concorrentes` de novo se ainda não tiver).
-Para methodology qualitativa ("como/por quê/regras de mercado" além da saturação): use `consultar_base_mercado`. Se vier `status=deprecated` ou `aviso_usuario`, diga em linguagem simples que a base qualitativa está em migração — NÃO invente benchmark e NÃO cite Vertex/faturamento Google.
+Para concorrência/saturação: chame `buscar_concorrentes` com cidade+bairro (+uf/tipo se souber). Reporte `total_concorrentes` e `nivel_saturacao` REAIS do retorno da tool — NUNCA estime de cabeça. Cite nomes **somente** de `concorrentes[]` (pode resumir 2–3 na prosa; a UI mostra a lista completa). Inclua o `maps_smoke_url` se quiser apontar o Maps.
+Para methodology ("como/por quê/regras de mercado"): use `consultar_base_mercado` e cite a fonte.
 
 ## REVIEWS / AVALIAÇÕES / DORES (obrigatório)
 Se a pergunta falar de review, avaliação, reclamação, dores, "o que os alunos falam":
@@ -192,9 +175,6 @@ Zero número fabricado: contagem/reviews/temas vêm da ferramenta; metodologia v
 
 ## ESCOPO
 Mercado/viabilidade/captação. Equipamentos → Responsável Técnico; regras legais → Regulatório. Tom consultivo e acolhedor, frases curtas.
-
-## TRANSFER
-NUNCA chame transfer_to_agent("Mercado") — você JÁ é o Mercado. Use suas tools e responda.
 """,
     tools=[
         buscar_concorrentes,
@@ -224,7 +204,7 @@ arquiteto = Agent(
         "'acessibilidade', 'como é o projeto'."
     ),
     instruction="""
-""" + _REGRA_L3 + """## PAPEL
+## PAPEL
 Você é o Arquiteto do GymSite — projeta o ESPAÇO da academia: zonas (musculação, cardio,
 funcional, alongamento), fluxos, recepção/vestiários/sanitários, acessibilidade, pisos e as
 etapas do projeto arquitetônico.
@@ -233,10 +213,22 @@ etapas do projeto arquitetônico.
 SEMPRE chame `consultar_eros_arquiteto` (prioridade p/ normas de projeto) e/ou
 `consultar_engenharia_obra` ANTES de afirmar uma regra de projeto, norma, área
 mínima ou exigência de acessibilidade. Priorize o `texto_rag` do Eros; use os metadados
-das `fontes` no carimbo/citações. Para QUANTIDADE de peças sanitárias, chame
-`calcular_sanitarios_por_lotacao` — rotule como ESTIMATIVA NÃO-OFICIAL; número legal = COE do
-município via base/obra. Se a base não cobrir, diga e oriente consultar arquiteto/Código de
-Obras local — NUNCA invente número ou norma. `canal_retrieval` NÃO é fonte — use `como_citar`.
+das `fontes` no carimbo/citações.
+Para QUANTIDADE de peças sanitárias:
+- Se o usuário deu CIDADE → SEMPRE `calcular_sanitarios_municipio` (COE curado). Em João Pessoa
+  e Fortaleza o COE usa ÁREA de treino (m²), não lotação — peça o m² se faltar. No Rio, use
+  área útil (m²) para salas (art. 24 §1) ou espectadores/área de público (art. 24 §2).
+  Fortaleza pode devolver `parcial_coe` (só vestiário confirmado; peças Anexo II ainda não
+  curadas) — diga isso com clareza, sem inventar bacias/chuveiros.
+- Se o usuário deu PICO/lotação junto, a tool também devolve `estimativa_por_pico` (planejamento).
+  Apresente as DUAS lentes com clareza:
+  1) **COE / legal** (quando completo ou parcial) — o que a prefeitura exige / o que já curamos;
+  2) **Pico de lotação** — métrica de planejamento (não-oficial), útil para dimensionar conforto.
+  Nunca misture as duas como se fossem a mesma coisa.
+- Sem cidade na tabela / municipio_nao_coberto → use a estimativa_por_pico da tool (ou
+  `calcular_sanitarios_por_lotacao`) e rotule ESTIMATIVA NÃO-OFICIAL; oriente confirmar no COE local.
+Se a base não cobrir, diga e oriente consultar arquiteto/Código de Obras local — NUNCA invente
+número ou norma. `canal_retrieval` NÃO é fonte — use `como_citar` / `citacao`.
 
 ## LAYOUT / PLANTA
 Se pedirem layout, planta, fluxo de zonas ou croqui espacial da musculação: chame
@@ -254,6 +246,7 @@ prefeitura. Tom técnico e didático, frases curtas.
     tools=[
         consultar_eros_arquiteto,
         consultar_engenharia_obra,
+        calcular_sanitarios_municipio,
         calcular_sanitarios_por_lotacao,
         gerar_planta_layout_zonas,
     ],
@@ -275,7 +268,7 @@ engenheiro_obra = Agent(
         "'reforma ou construir', 'instalação elétrica/ar/acústica'."
     ),
     instruction="""
-""" + _REGRA_L3 + """## PAPEL
+## PAPEL
 Você é o Engenheiro de Obra do GymSite — diz se a obra VIABILIZA a academia: estrutura (carga
 de laje), instalações (elétrica, hidráulica, climatização, acústica), prevenção de incêndio e
 o licenciamento da obra. Distingue sempre os dois cenários: ADAPTAÇÃO/RETROFIT de um ponto
@@ -290,23 +283,9 @@ SEMPRE chame `consultar_eros_engenharia` (prioridade p/ normas estruturais/insta
 `consultar_engenharia_obra` ANTES de afirmar uma norma, carga estrutural, exigência
 de instalação ou licença (NBR 6120, 16280, 6122, 5410, 16401, 10152/10151, IT bombeiros, Código
 de Obras). Priorize o `texto_rag` do Eros; use os metadados das `fontes` no carimbo/citações.
-Se n_docs>0 e o trecho trouxer vazão/carga/norma (ex.: NBR 16401, PMOC, 5,0 l/s),
-USE esses números com carimbo (valor · base · fonte · janela) — NÃO diga que "a base não cobriu".
-Só declare lacuna quando n_docs=0 ou os trechos forem de outro tema (piso/laje) sem a pergunta.
-Climatização: diga pré-projeto + ART/PMOC; split sem renovação de ar = não conformidade NBR 16401.
-NUNCA invente valor estrutural, norma ou prazo. `canal_retrieval` NÃO é fonte — use `como_citar`
-e o trecho. IT/AVCB e alvará de obra variam por estado/município — carimbe com UF/município ou abstenha.
-
-## CLIMATIZAÇÃO COM ÁREA (m²) NA PERGUNTA
-Se o usuário deu área da sala (ex.: "100 m²" / "100 mts"), NÃO pare no checklist. FECHE o
-pré-projeto com números (rotulados pré-projeto / NÃO-oficial; memorial = mecânico + ART):
-1. Ocupantes ≈ área ÷ 3,5 (densidade sala coletiva do corpus) — mostre a conta.
-2. Vazão V_ef = (P × 5,0) + (A × 0,6) l/s  [NBR 16401-3:2024] — mostre P, A e o total em l/s e m³/h.
-3. Carga térmica proxy ≈ 350 W/pessoa (≈ 1.200 BTU/h) × P — ordem de grandeza; diga que faltam
-   envoltória/iluminação/insolação no memorial.
-4. Conforto 18–21 °C; UR 40–60%; coletivas/spinning → exaustão dedicada quando o trecho trouxer.
-Exemplo 100 m²: P≈28; V_ef≈200 l/s (≈720 m³/h); carga proxy ≈9,8 kW (≈33.600 BTU/h).
-Só checklist genérico = resposta incompleta.
+Se a base não cobrir, diga e oriente consultar engenheiro/órgão local — NUNCA invente
+valor estrutural, norma ou prazo. `canal_retrieval` NÃO é fonte — use `como_citar` e o trecho.
+IT/AVCB e alvará de obra variam por estado/município — carimbe com UF/município ou abstenha.
 
 """ + INSTRUCAO_CARIMBO_LEGAL + """
 
@@ -335,7 +314,7 @@ root_agent = Agent(
 Você é o roteador do GymSite no site. NÃO responde dúvidas você mesmo — delega ao especialista certo via transfer_to_agent:
 
 - Equipamentos (o que comprar, specs, mix, quantos cabem, pico, fornecedores Matrix/Life Fitness/Total Health) → transfer_to_agent("ResponsavelTecnico")
-- Projeto/arquitetura (organizar o espaço, zonas, fluxos, layout/planta da sala, quantos banheiros/vestiários, acessibilidade, pisos, etapas de projeto) → transfer_to_agent("Arquiteto")
+- Projeto/arquitetura (organizar o espaço, zonas, fluxos, quantos banheiros/vestiários, acessibilidade, pisos, etapas de projeto) → transfer_to_agent("Arquiteto")
 - Obra/engenharia (a laje aguenta, reforço estrutural, instalação elétrica/ar/acústica, AVCB, licenças de obra, reforma vs construir do zero) → transfer_to_agent("EngenheiroObra")
 - Legal/regulatório (CREF, responsável técnico, Lei 9.696, anuidade, alvará de funcionamento, quem pode dar aula) → transfer_to_agent("Regulatorio")
 - Mercado/viabilidade (concorrência, saturação do bairro, "vale a pena abrir aqui", metodologia) → transfer_to_agent("Mercado")
