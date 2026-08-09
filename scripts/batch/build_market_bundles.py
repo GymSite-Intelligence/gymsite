@@ -17,6 +17,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+class GeocodeBairroError(RuntimeError):
+    """Bundle must not publish without centroid when bairro is set."""
+
+
 def _build_demografia(cidade: str, bairro: str, uf: str) -> dict:
     from tools.ibge_tools import analise_demografica_completa
     from tools.bairro_renda_loader import enrich_demografia_bairro
@@ -44,17 +48,21 @@ def _build_demografia(cidade: str, bairro: str, uf: str) -> dict:
         },
     }
     enriched = enrich_demografia_bairro(base, cidade, bairro, uf)
-    # População/ocupação do BAIRRO: IBGE Censo 2022 por setor (fonte real, granularidade
-    # de bairro, não município). Renda já veio do CKAN (enrich acima). Best-effort.
+    # População por setor no raio do centróide — exige geocode. Sem lat = hard gate.
     if (bairro or "").strip():
-        try:
-            from tools.censo_setor_tools import demografia_setor_censo
-            from tools.maps_tools import geocode_endereco
+        from tools.censo_setor_tools import demografia_setor_censo
+        from tools.maps_tools import geocode_endereco
 
-            geo = geocode_endereco(f"{bairro}, {cidade}, Brasil")
-            lat, lng = geo.get("lat"), geo.get("lng")
+        geo = geocode_endereco(f"{bairro}, {cidade}, Brasil")
+        lat, lng = geo.get("lat"), geo.get("lng")
+        if lat is None or lng is None:
+            err = geo.get("erro") or geo.get("status") or "sem lat/lng"
+            raise GeocodeBairroError(
+                f"geocode_bairro failed for {bairro!r}, {cidade}/{uf}: {err}"
+            )
+        try:
             idm = str(municipio.get("codigo_ibge") or "") or None
-            censo = demografia_setor_censo(lat, lng, id_municipio=idm) if lat is not None else None
+            censo = demografia_setor_censo(lat, lng, id_municipio=idm)
             if censo:
                 b = enriched.setdefault("bairro", {})
                 b["populacao"] = censo["populacao"]
@@ -202,15 +210,20 @@ def main() -> int:
     p.add_argument("--skip-ckan", action="store_true")
     args = p.parse_args()
 
-    bundle = build_bundle(
-        args.cidade,
-        args.bairro,
-        args.uf,
-        area_min=args.area_min,
-        area_max=args.area_max,
-        refresh_enrichment=args.refresh_enrichment,
-        skip_ckan=args.skip_ckan,
-    )
+    try:
+        bundle = build_bundle(
+            args.cidade,
+            args.bairro,
+            args.uf,
+            area_min=args.area_min,
+            area_max=args.area_max,
+            refresh_enrichment=args.refresh_enrichment,
+            skip_ckan=args.skip_ckan,
+        )
+    except GeocodeBairroError as e:
+        print(f"FATAL: {e}", file=sys.stderr)
+        return 2
+
     from tools.market_bundle import save_market_bundle
 
     path = save_market_bundle(args.cidade, args.bairro, args.uf, bundle)

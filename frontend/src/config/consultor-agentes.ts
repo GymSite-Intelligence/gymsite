@@ -21,9 +21,21 @@ export interface Especialista {
   nome: string
   especialidade: string
   exemploPergunta: string
+  /** SVG legado (pipeline). Preferir `img` no UI do consultor. */
   Icone: Icon
+  /** Mascote PNG canônico — mesma arte do site (`public/agentes`). */
+  img: string
   saudacao: string
   placeholder: string
+}
+
+/** Paths servidos em `frontend/public/agentes` (= hub site / brand). */
+export const ESPECIALISTA_IMG: Record<EspecialistaId, string> = {
+  mercado: '/agentes/mercado.png',
+  tecnico: '/agentes/tecnico.png',
+  regulatorio: '/agentes/regulatorio.png',
+  arquiteto: '/agentes/arquiteto.png',
+  engenheiro: '/agentes/engenheiro.png',
 }
 
 const ICONES: Record<EspecialistaId, Icon> = {
@@ -49,6 +61,7 @@ export const ESPECIALISTAS: Especialista[] = AGENTES_CONSULTOR_META.map((meta) =
   especialidade: meta.especialidade,
   exemploPergunta: meta.exemploPergunta,
   Icone: ICONES[meta.id],
+  img: ESPECIALISTA_IMG[meta.id],
   saudacao: SAUDACOES[meta.id],
   placeholder: `Ex.: ${meta.exemploPergunta}`,
 }))

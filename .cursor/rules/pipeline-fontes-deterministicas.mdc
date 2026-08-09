@@ -13,6 +13,7 @@ Antes de alterar `agents/*.py`, `tools/*_tools.py` ou contratos de relatório:
 2. Ler [`.agent/rules/pipeline-fontes-deterministicas.md`](../../.agent/rules/pipeline-fontes-deterministicas.md)
 
 **Regras curtas:**
+# Contagem = R=1000m centróide + tipo/status (sem gate string bairro) — ver conferencia-fontes §9
 - SearchAPI = primário Maps/reviews/listings/IG; Places fallback; Playwright legado off prod; reviews: fetch+card det., Gemini só refina `categoria_dor`
 - Número no relatório = tool/banco, não LLM (A6/A9 narram; A0 override CNPJ)
 - Não bloquear A1 com passo osmnx cold — fluxo pedestre preferir 1× no A6

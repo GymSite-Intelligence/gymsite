@@ -39,14 +39,24 @@ import { ProspeccaoPage } from '@/routes/ProspeccaoPage'
 import { ProspectPage } from '@/routes/ProspectPage'
 import { LeadAccessPage } from '@/routes/LeadAccessPage'
 import { ConsultorPage } from '@/routes/ConsultorPage'
+import { ExplorarPage } from '@/routes/ExplorarPage'
 import AdminParceirosPage from '@/routes/AdminParceirosPage'
+import AdminLlmPage from '@/routes/AdminLlmPage'
 import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
 import { PlanosListPage } from '@/routes/PlanosListPage'
 import { ThemeLabPage } from '@/routes/ThemeLabPage'
 import type { Veredito } from '@/types/domain'
 
 // Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
-const PUBLIC_PATHS = new Set(['/login', '/auth/callback', '/privacidade', '/pdf-smoke', '/acesso', '/theme-lab'])
+const PUBLIC_PATHS = new Set([
+  '/login',
+  '/auth/callback',
+  '/privacidade',
+  '/pdf-smoke',
+  '/acesso',
+  '/theme-lab',
+  '/degustacao/explorar',
+])
 
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -314,10 +324,44 @@ const consultorRoute = createRoute({
   component: ConsultorPage,
 })
 
+interface ExplorarSearch {
+  novo?: boolean
+}
+
+const explorarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/explorar',
+  validateSearch: (search: Record<string, unknown>): ExplorarSearch => ({
+    novo:
+      search.novo === true || search.novo === '1' || search.novo === 'true'
+        ? true
+        : undefined,
+  }),
+  component: ExplorarPage,
+})
+
+const degustacaoExplorarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/degustacao/explorar',
+  validateSearch: (search: Record<string, unknown>): ExplorarSearch => ({
+    novo:
+      search.novo === true || search.novo === '1' || search.novo === 'true'
+        ? true
+        : undefined,
+  }),
+  component: ExplorarPage,
+})
+
 const adminParceirosRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/parceiros',
   component: AdminParceirosPage,
+})
+
+const adminLlmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/llm',
+  component: AdminLlmPage,
 })
 
 const planosListRoute = createRoute({
@@ -369,7 +413,10 @@ const routeTree = rootRoute.addChildren([
   leadAccessRoute,
   assistenteRoute,
   consultorRoute,
+  explorarRoute,
+  degustacaoExplorarRoute,
   adminParceirosRoute,
+  adminLlmRoute,
   planosListRoute,
   execucaoRoute,
 ])

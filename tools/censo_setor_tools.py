@@ -157,3 +157,155 @@ def demografia_setor_censo(
     }
     _CACHE[chave] = out
     return out
+
+
+def _bbox_from_ring(
+    ring: list[tuple[float, float]],
+    *,
+    pad_deg: float = 0.003,
+) -> tuple[float, float, float, float]:
+    """(lat_min, lat_max, lng_min, lng_max) com padding pequeno."""
+    lons = [float(p[0]) for p in ring]
+    lats = [float(p[1]) for p in ring]
+    return (
+        min(lats) - pad_deg,
+        max(lats) + pad_deg,
+        min(lons) - pad_deg,
+        max(lons) + pad_deg,
+    )
+
+
+def _carregar_setores_paged(
+    table: str,
+    select: str,
+    id_municipio: str,
+    *,
+    ring: list[tuple[float, float]] | None = None,
+    page_size: int = 1000,
+    max_pages: int = 20,
+) -> list[dict[str, Any]]:
+    key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
+           or os.environ.get("SUPABASE_KEY"))
+    if not (os.environ.get("SUPABASE_URL") and key):
+        return []
+    try:
+        from tools.supabase_client import load_create_client
+
+        sb = load_create_client()(os.environ["SUPABASE_URL"], key)
+        lat_min = lat_max = lng_min = lng_max = None
+        if ring and len(ring) >= 3:
+            lat_min, lat_max, lng_min, lng_max = _bbox_from_ring(ring)
+
+        out: list[dict[str, Any]] = []
+        for page in range(max_pages):
+            start = page * page_size
+            end = start + page_size - 1
+            q = (sb.table(table)
+                 .select(select)
+                 .eq("id_municipio", str(id_municipio)))
+            if lat_min is not None:
+                q = (q.gte("lat", lat_min).lte("lat", lat_max)
+                      .gte("lng", lng_min).lte("lng", lng_max))
+            res = q.range(start, end).execute()
+            chunk = list(getattr(res, "data", None) or [])
+            out.extend(chunk)
+            if len(chunk) < page_size:
+                break
+        return out
+    except Exception as exc:
+        logger.warning("carregar %s Supabase: %s: %s", table, type(exc).__name__, exc)
+        return []
+
+
+def carregar_setores_censo(
+    id_municipio: str | None,
+    *,
+    ring: list[tuple[float, float]] | None = None,
+    _rows: list[dict] | None = None,
+    page_size: int = 1000,
+    max_pages: int = 20,
+) -> list[dict[str, Any]]:
+    """Linhas `{lat, lng, pessoas, ...}` do espelho `censo_setor` (bbox+páginas)."""
+    if _rows is not None:
+        return [r for r in _rows if isinstance(r, dict)]
+    if not id_municipio:
+        return []
+    return _carregar_setores_paged(
+        "censo_setor",
+        "pessoas,domicilios,media_moradores,lat,lng",
+        str(id_municipio),
+        ring=ring,
+        page_size=page_size,
+        max_pages=max_pages,
+    )
+
+
+_SELECT_IDADE_SEXO = (
+    "lat,lng,pessoas,h_total,m_total,h_15_24,m_15_24,h_25_39,m_25_39,"
+    "h_40_59,m_40_59,h_60_mais,m_60_mais"
+)
+
+
+def carregar_setores_idade_sexo(
+    id_municipio: str | None,
+    *,
+    ring: list[tuple[float, float]] | None = None,
+    _rows: list[dict] | None = None,
+    page_size: int = 1000,
+    max_pages: int = 20,
+) -> list[dict[str, Any]]:
+    """Espelho `censo_setor_idade_sexo` — bbox + páginas (pirâmide por setor)."""
+    if _rows is not None:
+        return [r for r in _rows if isinstance(r, dict)]
+    if not id_municipio:
+        return []
+    return _carregar_setores_paged(
+        "censo_setor_idade_sexo",
+        _SELECT_IDADE_SEXO,
+        str(id_municipio),
+        ring=ring,
+        page_size=page_size,
+        max_pages=max_pages,
+    )
+
+
+def demografia_setor_poligono(
+    id_municipio: str | None,
+    ring: list[tuple[float, float]],
+    *,
+    _rows: list[dict] | None = None,
+) -> dict[str, Any] | None:
+    """Agrega setores cujo centróide cai dentro do polígono do bairro (Spec C)."""
+    from tools.bairro_poligono import point_in_ring
+
+    if not ring or len(ring) < 3:
+        return None
+    rows = _rows if _rows is not None else carregar_setores_censo(id_municipio, ring=ring)
+    if not rows and _rows is None:
+        if not id_municipio:
+            return None
+    acc = []
+    for r in rows or []:
+        rl, rg = r.get("lat"), r.get("lng")
+        if rl is None or rg is None:
+            continue
+        if point_in_ring(float(rg), float(rl), ring):
+            acc.append(r)
+    if not acc:
+        return None
+    pop = sum(int(r.get("pessoas") or 0) for r in acc)
+    dom = sum(int(r.get("domicilios") or 0) for r in acc)
+    if pop <= 0:
+        return None
+    return {
+        "populacao": pop,
+        "domicilios": dom,
+        "media_moradores": round(pop / dom, 2) if dom else 0.0,
+        "n_setores": len(acc),
+        "raio_m": None,
+        "base": "poligono_ibge_bairro",
+        "fonte": "IBGE Censo 2022 por setor · polígono IBGE bairro",
+        "fonte_consulta": "test" if _rows is not None else "supabase_espelho",
+        "ano": 2022,
+        "granularidade": "agregado de setores no polígono IBGE do bairro",
+    }

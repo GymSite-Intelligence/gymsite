@@ -20,6 +20,10 @@ from google.adk.events import Event, EventActions
 
 from tools.competitor_tools import _parse_market_context
 from tools.financial_tools import analise_financeira_a4_completo
+from tools.matriz_demo_saturacao import (
+    _concorrentes_from_state,
+    matriz_demo_saturacao,
+)
 
 # área-âncora (ponto médio "M") por tipo de negócio — quando area_min/max não vêm.
 _AREA_M_DEFAULT = {"academia": 1150.0, "crossfit_box": 650.0, "studio_pilates": 215.0,
@@ -120,6 +124,27 @@ class FinancialEstimatorAgent(BaseAgent):
             reforco = mci.get("necessita_reforco_estrutural")
 
         try:
+            # Matriz W2: veto Premium se Armadilha (mesma função do A9; pop opcional).
+            matriz = None
+            try:
+                cs, fonte = _concorrentes_from_state(dict(state))
+                from tools.posicionamento_renda import avaliar_posicionamento
+
+                hr = avaliar_posicionamento(
+                    cidade, uf, bairro, concorrentes=cs,
+                    densidade_premium_baixa=True, tem_gaps=False,
+                ) if (cidade and bairro) else {}
+                if hr.get("status") == "ok" or cs:
+                    matriz = matriz_demo_saturacao(
+                        populacao=None,
+                        renda_pc=hr.get("renda_pc") if isinstance(hr, dict) else None,
+                        renda_percentil=hr.get("renda_percentil") if isinstance(hr, dict) else None,
+                        concorrentes=cs,
+                        fonte_espacial=fonte,
+                    )
+            except Exception:
+                matriz = None
+
             # macro é async (faz aluguel + viabilidade); MRLR é Tier 0 primário lá dentro
             r = await analise_financeira_a4_completo(
                 bairro, cidade, uf, area_m2,
@@ -129,11 +154,22 @@ class FinancialEstimatorAgent(BaseAgent):
                 destino_lat=lat, destino_lng=lng,
                 tipo_obra=str(tipo_obra or "adaptacao"),
                 necessita_reforco_estrutural=bool(reforco),
+                matriz_demo_saturacao=matriz,
             )
             if not isinstance(r, dict):
                 r = {"erro": "macro retornou não-dict", "score_viabilidade": None}
             else:
+                if matriz:
+                    r["matriz_demo_saturacao"] = matriz
                 r["justificativa"] = _justificativa_det(r, bairro, genero)
+                if isinstance(matriz, dict) and matriz.get("quadrante") == "Armadilha de Renda":
+                    jm = None
+                    for c in (r.get("cenarios") or {}).values():
+                        if isinstance(c, dict) and c.get("justificativa_matriz"):
+                            jm = c["justificativa_matriz"]
+                            break
+                    if jm:
+                        r["justificativa"] = f"{jm} {r.get('justificativa') or ''}".strip()
         except Exception as e:  # nunca derruba o pipeline
             r = {"erro": f"{type(e).__name__}: {e}", "score_viabilidade": None}
 

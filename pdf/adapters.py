@@ -22,6 +22,21 @@ from pdf.theme import MODELO_LABEL
 
 _NUM_RE = re.compile(r"[^\d.,\-]")
 
+# Literais do schema de referência no prompt do A0 (a0_context_builder.py). Quando o
+# LLM devolve o esqueleto sem preencher, viravam "dado" no PDF do cliente
+# (Pirapora imprimiu "fato+fonte 1" e "crescimento|estavel|retracao").
+_PLACEHOLDER_A0_RE = re.compile(
+    r"^(?:fato\+fonte\s*\d*|YYYY-MM-DD|[a-z]+(?:\|[a-z]+)+)$",
+    re.IGNORECASE,
+)
+
+
+def _sem_placeholder(v: Any) -> str | None:
+    s = str(v or "").strip()
+    if not s or _PLACEHOLDER_A0_RE.match(s):
+        return None
+    return s
+
 
 def _num(v: Any) -> float | None:
     if v is None:
@@ -158,17 +173,66 @@ def _map_market(mc: dict[str, Any] | None) -> MarketContextPdf | None:
         return None
     redes = mc.get("principais_redes_concorrentes")
     insights = mc.get("insights_estrategicos")
+    arv = mc.get("arvore_oferta") if isinstance(mc.get("arvore_oferta"), dict) else {}
+    janela_q = arv.get("janela_q") if isinstance(arv.get("janela_q"), dict) else {}
     return MarketContextPdf(
-        ticket_mercado=str(mc.get("ticket_medio_mercado") or "") or None,
-        aluguel_m2=str(mc.get("aluguel_medio_m2") or "") or None,
-        renda=str(mc.get("renda_media_bairro") or "") or None,
-        tendencia=str(mc.get("tendencia_mercado") or "") or None,
+        ticket_mercado=_sem_placeholder(mc.get("ticket_medio_mercado")),
+        aluguel_m2=_sem_placeholder(mc.get("aluguel_medio_m2")),
+        renda=_sem_placeholder(mc.get("renda_media_bairro")),
+        tendencia=_sem_placeholder(mc.get("tendencia_mercado")),
         redes=[str(r) for r in redes] if isinstance(redes, list) else [],
-        insights=[str(i) for i in insights[:5]] if isinstance(insights, list) else [],
+        insights=(
+            [s for i in insights[:5] if (s := _sem_placeholder(i))]
+            if isinstance(insights, list)
+            else []
+        ),
         parque_ativo=_int(
             mc.get("parque_ativo_total") or mc.get("academias_ativas_cidade_cnpj"),
         ),
-        novos_cnpj_90d=_int(mc.get("novos_cnpj_fitness_90d")),
+        novos_cnpj_90d=_int(
+            mc.get("novos_cnpj_fitness_90d")
+            if mc.get("novos_cnpj_fitness_90d") is not None
+            else arv.get("entrantes_municipio_90d")
+        ),
+        baixas_cnpj_90d=_int(
+            mc.get("baixas_cnpj_fitness_90d")
+            if mc.get("baixas_cnpj_fitness_90d") is not None
+            else arv.get("baixas_municipio_90d")
+        ),
+        baixas_cnpj_q=_int(
+            mc.get("baixas_cnpj_fitness_q")
+            if mc.get("baixas_cnpj_fitness_q") is not None
+            else arv.get("baixas_municipio_q")
+        ),
+        entrantes_cnpj_q=_int(
+            mc.get("entrantes_cnpj_fitness_q")
+            if mc.get("entrantes_cnpj_fitness_q") is not None
+            else arv.get("entrantes_municipio_q")
+        ),
+        saldo_oferta_q=_int(
+            mc.get("saldo_oferta_q")
+            if mc.get("saldo_oferta_q") is not None
+            else arv.get("saldo_oferta_municipio_q")
+        ),
+        pressao_oferta_q=(
+            str(
+                mc.get("pressao_oferta_q")
+                or arv.get("pressao_oferta_municipio_q")
+                or ""
+            ).strip()
+            or None
+        ),
+        janela_q_label=(
+            str(mc.get("janela_q_label") or janela_q.get("label") or "").strip() or None
+        ),
+        cnpj_as_of=(
+            str(mc.get("cnpj_as_of") or arv.get("as_of") or "").strip() or None
+        ),
+        baixas_bairro_90d=_int(arv.get("baixas_bairro_90d")),
+        baixas_bairro_q=_int(arv.get("baixas_bairro_q")),
+        entrantes_bairro_q=_int(arv.get("entrantes_bairro_q")),
+        saldo_bairro_q=_int(arv.get("saldo_oferta_bairro_q")),
+        ref_month_cnpj=str(arv.get("ref_month") or "").strip() or None,
     )
 
 

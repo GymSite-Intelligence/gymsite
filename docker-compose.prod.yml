@@ -1,0 +1,87 @@
+# =============================================================================
+# GymSite Intelligence — Produção (Hetzner VPS + Cloudflare Tunnel)
+# =============================================================================
+# Sobe API + worker (mesma imagem) + Redis + cloudflared numa VPS, SEM expor
+# portas 80/443 (o túnel entrega o tráfego). Ver docs/PLAN_HETZNER_VPS_TUNNEL.md.
+#
+# Bring-up inicial:   docker compose -f docker-compose.prod.yml up -d
+# Deploy rolling API: ./scripts/deploy.sh [tag]   (usa GHCR_IMAGE)
+#
+# .env.production e cloudflared/credentials.json NÃO são versionados (.gitignore).
+# =============================================================================
+
+services:
+  # ── API: só ENFILEIRA (RUN_QUEUE_WORKER=0). Sem portas públicas — o cloudflared
+  #    alcança via alias de rede `gymsite-api` (batendo com cloudflared/config.yml).
+  api:
+    image: ${GHCR_IMAGE:-ghcr.io/marcelo-rosas/gymsite:latest}
+    build:
+      context: .
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    env_file: .env.production
+    environment:
+      RUN_QUEUE_WORKER: "0"
+    volumes:
+      - ./cno_data:/data/cno
+    networks:
+      default:
+        aliases:
+          - gymsite-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://127.0.0.1:8000/health',timeout=5).status_code==200 else 1)"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      - redis
+
+  # ── Worker: CONSOME a fila e roda o pipeline A0–A9 (RUN_QUEUE_WORKER=1).
+  #    Mesma imagem da API; não expõe porta.
+  worker:
+    image: ${GHCR_IMAGE:-ghcr.io/marcelo-rosas/gymsite:latest}
+    build:
+      context: .
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    env_file: .env.production
+    environment:
+      RUN_QUEUE_WORKER: "1"
+    volumes:
+      - ./cno_data:/data/cno
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  # ── Redis: fila local na VPS (sem 2º billing). Persistência AOF.
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  # ── Cloudflare Tunnel: única porta de entrada. Lê ./cloudflared/config.yml +
+  #    credentials.json. Não abre porta no host.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: ["tunnel", "--config", "/etc/cloudflared/config.yml", "run"]
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    restart: unless-stopped
+    depends_on:
+      - api
+
+volumes:
+  redis-data:
+
+networks:
+  default:
+    name: gymsite

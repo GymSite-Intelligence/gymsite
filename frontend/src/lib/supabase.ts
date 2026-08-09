@@ -37,5 +37,4 @@ export const supabase = new Proxy({} as SupabaseClient, {
 /** URL base da API HTTP do backend (FastAPI). Default localhost:8000 em dev. */
 export const API_BASE =
   (import.meta.env.VITE_API_BASE as string | undefined)?.trim() ||
-  // Produção: se o env não vier do Pages, tentamos o domínio público padrão.
-  'https://gymsite-api.vectracargo.com.br'
+  'https://api.getgymsite.com.br'

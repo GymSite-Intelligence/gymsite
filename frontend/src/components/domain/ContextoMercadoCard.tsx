@@ -143,6 +143,33 @@ export function ContextoMercadoCard({
       ? mc.novos_cnpj_fitness_90d
       : null
 
+  const baixasCnpj90d =
+    typeof mc.baixas_cnpj_fitness_90d === 'number' && mc.baixas_cnpj_fitness_90d >= 0
+      ? mc.baixas_cnpj_fitness_90d
+      : null
+  const baixasCnpjQ =
+    typeof mc.baixas_cnpj_fitness_q === 'number' && mc.baixas_cnpj_fitness_q >= 0
+      ? mc.baixas_cnpj_fitness_q
+      : null
+  const entrantesCnpjQ =
+    typeof mc.entrantes_cnpj_fitness_q === 'number' && mc.entrantes_cnpj_fitness_q >= 0
+      ? mc.entrantes_cnpj_fitness_q
+      : null
+  const saldoOfertaQ =
+    typeof mc.saldo_oferta_q === 'number' ? mc.saldo_oferta_q : null
+  const pressaoOfertaQ = mc.pressao_oferta_q || null
+  const janelaQLabel = mc.janela_q_label || null
+  const cnpjAsOf = mc.cnpj_as_of || null
+
+  const pressaoLabel =
+    pressaoOfertaQ === 'retracao'
+      ? 'Retração'
+      : pressaoOfertaQ === 'expansao'
+        ? 'Expansão'
+        : pressaoOfertaQ === 'neutro'
+          ? 'Neutro'
+          : pressaoOfertaQ
+
   const serieAberturas = mc.serie_aberturas_anual
     ? Object.entries(mc.serie_aberturas_anual)
         .filter(([, n]) => typeof n === 'number')
@@ -159,6 +186,12 @@ export function ContextoMercadoCard({
       ? mc.fonte_entrantes
       : null
 
+  const fonteCnpjBase = fonteEntrantes || 'RFB/Supabase'
+  const carimboCnpj = (janela: string) =>
+    [fonteCnpjBase, janela, cnpjAsOf ? `as_of ${cnpjAsOf}` : null]
+      .filter(Boolean)
+      .join(' · ')
+
   const parqueAtivo =
     typeof mc.parque_ativo_total === 'number'
       ? mc.parque_ativo_total
@@ -170,6 +203,8 @@ export function ContextoMercadoCard({
 
   const temDadosCnpj =
     novosCnpj90d != null ||
+    baixasCnpj90d != null ||
+    baixasCnpjQ != null ||
     parqueAtivo != null ||
     !!composicaoParqueLabel ||
     !!serieAberturasLabel
@@ -287,7 +322,12 @@ export function ContextoMercadoCard({
                   <IndicatorRow
                     label="Parque ativo (município)"
                     value={
-                      <span className="font-semibold tabular-nums">{parqueAtivo}</span>
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="font-semibold tabular-nums">{parqueAtivo}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj('parque ativo')}
+                        </span>
+                      </span>
                     }
                   />
                 )}
@@ -295,20 +335,89 @@ export function ContextoMercadoCard({
                   <IndicatorRow
                     label="Composição do parque"
                     value={
-                      <span className="text-xs leading-snug">{composicaoParqueLabel}</span>
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="text-xs leading-snug">{composicaoParqueLabel}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj('parque ativo')}
+                        </span>
+                      </span>
                     }
                   />
                 )}
                 {novosCnpj90d != null && (
                   <IndicatorRow
-                    label="Novas unidades (90 dias)"
+                    label="Aberturas CNPJ (90 dias)"
                     value={
-                      <span className="inline-flex items-center gap-1.5">
-                        <Building2 size={12} className="text-veredito-investigar shrink-0" />
-                        <span className="font-semibold tabular-nums">{novosCnpj90d}</span>
-                        <span className="text-[10px] text-muted-foreground font-normal">
-                          {mc.cidade ? `em ${mc.cidade}` : 'na cidade'}
-                          {mc.uf ? ` (${mc.uf})` : ''}
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Building2 size={12} className="text-veredito-investigar shrink-0" />
+                          <span className="font-semibold tabular-nums">{novosCnpj90d}</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            {mc.cidade ? `em ${mc.cidade}` : 'na cidade'}
+                            {mc.uf ? ` (${mc.uf})` : ''}
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj('90d')}
+                        </span>
+                      </span>
+                    }
+                  />
+                )}
+                {baixasCnpj90d != null && (
+                  <IndicatorRow
+                    label="Baixas CNPJ (90 dias)"
+                    value={
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="font-semibold tabular-nums">{baixasCnpj90d}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj('90d')}
+                        </span>
+                      </span>
+                    }
+                  />
+                )}
+                {entrantesCnpjQ != null && (
+                  <IndicatorRow
+                    label={`Aberturas CNPJ (${janelaQLabel || 'Q'})`}
+                    value={
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="font-semibold tabular-nums">{entrantesCnpjQ}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj(janelaQLabel || 'Q')}
+                        </span>
+                      </span>
+                    }
+                  />
+                )}
+                {baixasCnpjQ != null && (
+                  <IndicatorRow
+                    label={`Baixas CNPJ (${janelaQLabel || 'Q'})`}
+                    value={
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="font-semibold tabular-nums">{baixasCnpjQ}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj(janelaQLabel || 'Q')}
+                        </span>
+                      </span>
+                    }
+                  />
+                )}
+                {saldoOfertaQ != null && (
+                  <IndicatorRow
+                    label={`Saldo oferta (${janelaQLabel || 'Q'})`}
+                    value={
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-semibold tabular-nums">{saldoOfertaQ}</span>
+                          {pressaoLabel && (
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {pressaoLabel}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj(janelaQLabel || 'Q')}
                         </span>
                       </span>
                     }
@@ -318,7 +427,12 @@ export function ContextoMercadoCard({
                   <IndicatorRow
                     label="Aberturas por ano (CNPJ)"
                     value={
-                      <span className="font-mono text-xs">{serieAberturasLabel}</span>
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="font-mono text-xs">{serieAberturasLabel}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono font-normal">
+                          {carimboCnpj('série anual')}
+                        </span>
+                      </span>
                     }
                   />
                 )}
@@ -329,7 +443,9 @@ export function ContextoMercadoCard({
 
         {temDadosCnpj && fonteEntrantes && (
           <p className="text-[10px] font-mono text-muted-foreground -mt-3">
-            Entrantes: {fonteEntrantes}
+            Fonte CNPJ: {fonteEntrantes}
+            {cnpjAsOf ? ` · as_of ${cnpjAsOf}` : ''}
+            {janelaQLabel ? ` · ${janelaQLabel}` : ''}
           </p>
         )}
 

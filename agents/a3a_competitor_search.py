@@ -50,9 +50,14 @@ class _StateShim:
 
 
 def _extrair_bairro_cidade(state) -> tuple[str, str]:
-    """bairro/cidade do market_context (output do A0), com fallback de topo do state."""
-    bairro = (state.get("bairro") or "").strip()
-    cidade = (state.get("cidade") or "").strip()
+    """bairro/cidade: input_params (api) → topo do state → market_context (A0).
+
+    Mesmo padrão de A1/A2/A4. Sem input_params, A3a ficava cego se A0 não
+    tivesse escrito bairro/cidade no market_context (loop deps-reverse 2026-08-05).
+    """
+    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    bairro = (state.get("bairro") or ip.get("bairro") or "").strip()
+    cidade = (state.get("cidade") or ip.get("cidade") or "").strip()
     ctx = _parse_market_context(state.get("market_context"))
     if isinstance(ctx, dict):
         inner = ctx.get("market_context")

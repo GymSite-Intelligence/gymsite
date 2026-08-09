@@ -238,6 +238,15 @@ table.d thead { display:table-header-group; }
   {% if b.carimbo %}<div class="stamp">{{ b.carimbo }}</div>{% endif %}
 </div>
 {% endif %}
+{% if absorcao.bloco_voronoi %}
+{% set bv = absorcao.bloco_voronoi %}
+<div class="abs-full" style="border-left:4px solid #94A3B8; background:#F8FAFC;">
+  <h4>{{ bv.titulo }}</h4>
+  {% if bv.numero %}<div class="num">{{ bv.numero }}</div>{% endif %}
+  <p>{{ bv.texto }}</p>
+  {% if bv.carimbo %}<div class="stamp">{{ bv.carimbo }}</div>{% endif %}
+</div>
+{% endif %}
 {% endif %}
 
 {% if matriz %}
@@ -543,19 +552,20 @@ def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
     faixas_s = _faixas_humanas(raw.get("faixas_secundario") if isinstance(raw.get("faixas_secundario"), list) else None)
     est_p = raw.get("estoque_primario")
     est_s = raw.get("estoque_secundario")
-    car = raw.get("carimbos") if isinstance(raw.get("carimbos"), dict) else {}
+    _carimbos = raw.get("carimbos")
+    car: dict[str, Any] = _carimbos if isinstance(_carimbos, dict) else {}
 
     conclusao = {
         "fresco": (
             "Ainda há espaço para matricular alunos que hoje não estão no parque de academias do bairro. "
-            "O potencial do público do formulário cobre a capacidade da sua unidade sem depender só de tirar aluno do concorrente."
+            "O potencial do público escolhido cobre a capacidade da sua unidade sem depender só de tirar aluno do concorrente."
         ),
         "misto": (
             "Parte do crescimento pode vir de alunos novos; outra parte exige disputar quem já treina no bairro. "
             "Planeje aquisição mista (lançamento + migração) e não conte só com 'mercado virgem'."
         ),
         "roubo": (
-            "No público do formulário, a oferta instalada já supera o potencial estimado de alunos. "
+            "No público escolhido, a oferta instalada já supera o potencial estimado de alunos. "
             "Crescer nesta unidade significa, na prática, atrair quem hoje treina em outra academia do bairro — "
             "custo de aquisição mais alto e guerra de proposta de valor."
         ),
@@ -595,11 +605,14 @@ def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
             "carimbo": car.get("capacidade_parque_estimada") or "",
         },
         {
-            "titulo": "3. Potencial no público do formulário",
+            "titulo": "3. Potencial no público escolhido",
             "numero": f"{_int(pool_p)} alunos" if pool_p is not None else None,
             "texto": (
-                "Alunos potenciais entre as idades que você escolheu no formulário"
-                + (f" ({faixas_p})" if faixas_p else "")
+                (
+                    f"Alunos potenciais nas idades {faixas_p}"
+                    if faixas_p
+                    else "Alunos potenciais na faixa etária desta análise"
+                )
                 + ". Parte dos habitantes tem interesse em fitness; "
                 "dessa parcela, só uma fração vira aluno de academia. "
                 "Os "
@@ -612,8 +625,8 @@ def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
             "titulo": "4. Potencial nas outras idades (informa o modelo)",
             "numero": f"{_int(pool_s)} alunos" if pool_s is not None else None,
             "texto": (
-                "Alunos potenciais fora do gancho do formulário"
-                + (f" ({faixas_s})" if faixas_s else " (ex. Jovem · Silver)")
+                "Alunos potenciais fora do público escolhido"
+                + (f" ({faixas_s})" if faixas_s else "")
                 + ". Não decidem sozinhos se há aluno novo ou disputa com o parque, "
                 "mas mostram se vale um braço de oferta para outra faixa. "
                 "Habitantes nessas faixas: "
@@ -637,6 +650,61 @@ _ABSORCAO_ROTULO_UI = {
     "misto": ("Crescimento misto", "mid"),
     "roubo": ("Disputa com o parque", "no"),
 }
+
+
+def _nota_voronoi_smoke(smoke: dict[str, Any] | None) -> str | None:
+    if not isinstance(smoke, dict) or smoke.get("status") != "ok":
+        return None
+    pv = smoke.get("pool_voronoi")
+    d = smoke.get("delta_pct")
+    if pv is None or d is None:
+        return None
+    try:
+        d_f = float(d)
+    except (TypeError, ValueError):
+        return None
+    pct = f"{abs(d_f) * 100:.0f}%"
+    sentido = "menor" if d_f < 0 else "maior"
+    metodo = smoke.get("metodo_pool")
+    pin = smoke.get("pin_fonte")
+    if metodo == "piramide_celula":
+        como = "recontando a faixa etária só nessa área"
+    else:
+        como = "proporcional à população nessa área"
+    onde = (
+        "se a unidade ficasse no centro do bairro"
+        if pin == "centroide_bairro"
+        else "na área de influência entre academias"
+    )
+    return (
+        f"Se usássemos {onde} (Voronoi clássico), "
+        f"{como}, o potencial no público escolhido seria cerca de {_int(pv)} alunos "
+        f"({pct} {sentido} que o bairro inteiro). "
+        "O veredito fresco/roubo desta versão usa o bairro. "
+        "Medição interna — não muda a decisão nesta versão."
+    )
+
+
+def _bloco_voronoi_smoke(smoke: dict[str, Any] | None) -> dict[str, str] | None:
+    """Card 6 — mesmo peso visual dos blocos 1–5 (não nota de rodapé)."""
+    texto = _nota_voronoi_smoke(smoke)
+    if not texto or not isinstance(smoke, dict):
+        return None
+    pv = smoke.get("pool_voronoi")
+    d = smoke.get("delta_pct")
+    try:
+        d_f = float(d) if d is not None else None
+    except (TypeError, ValueError):
+        d_f = None
+    if pv is None or d_f is None:
+        return None
+    sentido = "menor" if d_f < 0 else "maior"
+    return {
+        "titulo": "6. Leitura espacial (experimental) — área de influência",
+        "numero": f"{_int(pv)} alunos · {abs(d_f) * 100:.0f}% {sentido} vs bairro",
+        "texto": texto,
+        "carimbo": str(smoke.get("carimbo") or "Voronoi clássico · smoke · não decide rótulo"),
+    }
 
 
 # Espelho de _SERVICOS_CATALOGO (agents/a9) — rótulos legíveis das chaves canônicas
@@ -1626,7 +1694,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     _raw_matriz = pos.get("matriz_demo_saturacao") or meta.get("matriz_demo_saturacao")
     matriz = None
     if isinstance(_raw_matriz, dict) and _raw_matriz.get("quadrante"):
-        mix = _raw_matriz.get("mix") if isinstance(_raw_matriz.get("mix"), dict) else {}
+        _mix_raw = _raw_matriz.get("mix")
+        mix: dict[str, Any] = _mix_raw if isinstance(_mix_raw, dict) else {}
         n10 = _raw_matriz.get("n_per_10k")
         rating = _raw_matriz.get("rating_medio")
         matriz = {
@@ -1681,6 +1750,12 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "blocos": blocos,
             "blocos_topo": rows,
             "bloco_conclusao": blocos[4] if len(blocos) > 4 else None,
+            "bloco_voronoi": _bloco_voronoi_smoke(
+                _raw_abs.get("voronoi_smoke") if isinstance(_raw_abs.get("voronoi_smoke"), dict) else None
+            ),
+            "nota_voronoi": _nota_voronoi_smoke(
+                _raw_abs.get("voronoi_smoke") if isinstance(_raw_abs.get("voronoi_smoke"), dict) else None
+            ),
         }
 
     return {

@@ -179,7 +179,31 @@ def test_filtrar_candidato_geocode_bairro_errado_dropado(monkeypatch):
     assert cand.get("descarte_motivo") is not None
 
 
-def test_filtrar_candidato_geocode_falha_mantido(monkeypatch):
+def test_filtrar_sem_endereco_nem_bairro_nao_geocoda_no_centroide(monkeypatch):
+    chamadas = {"n": 0}
+
+    def _geocode(consulta: str):
+        chamadas["n"] += 1
+        return _geocode_fake_coco(consulta)
+
+    monkeypatch.setattr(
+        "tools.nominatim_geocoder.nominatim_geocode",
+        _geocode,
+    )
+    monkeypatch.setattr(
+        "tools.parametros_metodologia.param",
+        lambda _k: 2.0,
+    )
+    candidate = _make_candidato("Imóvel comercial amplo")
+
+    result = filtrar_por_bairro([candidate], "Fortaleza", "Coco", "CE")
+
+    assert result == []
+    assert chamadas["n"] == 1
+    assert "endereço" in candidate["descarte_motivo"]
+
+
+def test_filtrar_candidato_sem_endereco_e_geocode_falha_dropado(monkeypatch):
     """Quando geocode retorna None, candidato e mantido (benefit of doubt)."""
     call_count = {"n": 0}
 
@@ -203,8 +227,8 @@ def test_filtrar_candidato_geocode_falha_mantido(monkeypatch):
     cand = _make_candidato("Imovel comercial disponivel")
     resultado = filtrar_por_bairro([cand], "Fortaleza", "Coco", "CE")
 
-    # Sem geocode, mantem o candidato (nao derruba sem evidencia)
-    assert len(resultado) == 1
+    assert resultado == []
+    assert cand.get("descarte_motivo")
 
 
 def test_filtrar_lista_vazia_retorna_vazia(monkeypatch):

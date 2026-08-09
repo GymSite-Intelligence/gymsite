@@ -35,6 +35,15 @@ load_dotenv(_ROOT / "frontend" / ".env", override=False)
 load_dotenv(_ROOT / "gymsite_intelligence" / ".env", override=False)
 
 
+def _as_positive_int(value: Any, *, default: int = 90) -> int:
+    """ADK/LLM pode mandar int como str ('90') — max()/timedelta exigem int."""
+    try:
+        n = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+    return n if n >= 1 else default
+
+
 def nome_exibicao_cnpj(
     nome_fantasia: str | None,
     razao_social: str | None,
@@ -420,14 +429,16 @@ def listar_entrantes_cnpj_fitness(
     """
     sb = _supabase_client()
     hoje = date.today()
-    cutoff = hoje - timedelta(days=max(dias, 1))
+    dias_i = _as_positive_int(dias, default=90)
+    limit_i = _as_positive_int(limit, default=50)
+    cutoff = hoje - timedelta(days=dias_i)
     if sb is None:
         return {
             "status": "indisponivel",
             "motivo": "supabase_nao_configurado",
             "cidade": cidade,
             "uf": uf,
-            "dias": dias,
+            "dias": dias_i,
             "cutoff": cutoff.isoformat(),
             "total": 0,
             "entrantes": [],
@@ -444,7 +455,7 @@ def listar_entrantes_cnpj_fitness(
         .select(fields_base)
         .gte("data_inicio_atividade", cutoff.isoformat())
         .order("data_inicio_atividade", desc=True)
-        .limit(max(1, min(limit, 200)))
+        .limit(max(1, min(limit_i, 200)))
     )
     if cidade:
         q = q.eq("cidade", cidade)
@@ -463,7 +474,7 @@ def listar_entrantes_cnpj_fitness(
                 )
                 .gte("data_inicio_atividade", cutoff.isoformat())
                 .order("data_inicio_atividade", desc=True)
-                .limit(max(1, min(limit, 200)))
+                .limit(max(1, min(limit_i, 200)))
             )
             if cidade:
                 q = q.eq("cidade", cidade)
@@ -508,7 +519,7 @@ def listar_entrantes_cnpj_fitness(
         "status": "ok",
         "cidade": cidade,
         "uf": uf[:2].upper() if uf else "",
-        "dias": dias,
+        "dias": dias_i,
         "cutoff": cutoff.isoformat(),
         "total": len(entrantes),
         "entrantes": entrantes,
@@ -543,7 +554,11 @@ def _count_cnpj_fitness_ativas_impl(cidade: str, uf: str = "") -> int | None:
         return None
     try:
         cidade = _cidade_canonica(sb, cidade, uf)
-        q = sb.table("cnpj_fitness_estabelecimentos").select("cnpj", count="exact")
+        q = (
+            sb.table("cnpj_fitness_estabelecimentos")
+            .select("cnpj", count="exact")
+            .eq("situacao_cadastral", 2)
+        )
         if cidade:
             q = q.eq("cidade", cidade)
         if uf:
@@ -610,17 +625,18 @@ def resumo_cnpj_fitness(cidade: str, uf: str = "", dias: int = 90) -> dict[str, 
     um loader mensal.
     """
     sb = _supabase_client()
+    dias_i = _as_positive_int(dias, default=90)
     if sb is None:
         return {
             "status": "indisponivel",
             "motivo": "supabase_nao_configurado",
             "cidade": cidade,
             "uf": uf,
-            "dias": dias,
+            "dias": dias_i,
         }
 
-    lista = listar_entrantes_cnpj_fitness(cidade, uf, dias, limit=200)
-    return _resumo_cnpj_from_lista(lista, cidade, uf, dias)
+    lista = listar_entrantes_cnpj_fitness(cidade, uf, dias_i, limit=200)
+    return _resumo_cnpj_from_lista(lista, cidade, uf, dias_i)
 
 
 def _segmento_lider(contagens: dict[str, int]) -> tuple[str | None, int]:
@@ -628,6 +644,169 @@ def _segmento_lider(contagens: dict[str, int]) -> tuple[str | None, int]:
         return None, 0
     seg, n = max(contagens.items(), key=lambda kv: kv[1])
     return seg, n
+
+
+def _ref_month_as_date(value: Any) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return date(value.year, value.month, 1)
+    s = str(value)[:10]
+    try:
+        y, m, _d = s.split("-")
+        return date(int(y), int(m), 1)
+    except (ValueError, TypeError):
+        return None
+
+
+def _raizes_multiunidade_br(sb, basicos: list[str]) -> set[str]:
+    """Basicos com ≥2 ativos (situacao=2) no Brasil no espelho."""
+    from collections import Counter
+
+    from tools.cnpj_oferta_metricas import classificar_raizes_multiunidade
+
+    uniq = sorted({(b or "").strip().zfill(8)[:8] for b in basicos if b})
+    if not uniq:
+        return set()
+    counts: Counter[str] = Counter()
+    # PostgREST in_ capped — batch
+    for i in range(0, len(uniq), 80):
+        chunk = uniq[i : i + 80]
+        try:
+            res = (
+                sb.table("cnpj_fitness_estabelecimentos")
+                .select("cnpj, cnpj_basico, situacao_cadastral")
+                .in_("cnpj_basico", chunk)
+                .eq("situacao_cadastral", 2)
+                .execute()
+            )
+        except Exception:
+            # coluna cnpj_basico ausente → deriva left(cnpj,8) client-side sem filtro in_
+            return set()
+        for r in res.data or []:
+            if not isinstance(r, dict):
+                continue
+            b = str(r.get("cnpj_basico") or (r.get("cnpj") or "")[:8]).zfill(8)[:8]
+            counts[b] += 1
+    fake_rows = [
+        {"cnpj_basico": b, "situacao_cadastral": 2, "cnpj": b + "000100"}
+        for b, n in counts.items()
+        for _ in range(n)
+    ]
+    return classificar_raizes_multiunidade(fake_rows)
+
+
+def _montar_arvore_oferta_e_redes(
+    sb,
+    *,
+    cidade: str,
+    uf: str,
+    bairro: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Árvore oferta (90d+Q) + bloco redes — números gated parque limpo."""
+    from tools.cnpj_oferta_janelas import as_of_ref, normalize_bairro
+    from tools.cnpj_oferta_metricas import (
+        bloco_redes,
+        contar_eventos_oferta,
+        pressao_oferta,
+    )
+
+    fields = (
+        "cnpj, cnpj_basico, nome_fantasia, razao_social, bairro, "
+        "situacao_cadastral, data_inicio_atividade, data_situacao_cadastral, "
+        "cnae_fiscal_principal, cnaes_secundarios, ref_month"
+    )
+    try:
+        rows = _fetch_estabelecimentos_paginado(
+            sb, cidade=cidade, uf=uf, fields=fields, page_size=800
+        )
+    except Exception as exc:
+        # fallback sem cnpj_basico
+        fields_fb = (
+            "cnpj, nome_fantasia, razao_social, bairro, "
+            "situacao_cadastral, data_inicio_atividade, data_situacao_cadastral, "
+            "cnae_fiscal_principal, cnaes_secundarios, ref_month"
+        )
+        try:
+            rows = _fetch_estabelecimentos_paginado(
+                sb, cidade=cidade, uf=uf, fields=fields_fb, page_size=800
+            )
+        except Exception:
+            empty_arvore = {
+                "status": "erro",
+                "motivo": str(exc),
+                "fonte": "RFB CNPJ Aberto · cnpj_fitness_estabelecimentos",
+            }
+            return empty_arvore, {"status": "erro", "motivo": str(exc)}
+
+    ref_dates = [_ref_month_as_date(r.get("ref_month")) for r in rows]
+    ref_dates = [d for d in ref_dates if d is not None]
+    ref_month = max(ref_dates) if ref_dates else date.today().replace(day=1)
+    as_of = as_of_ref(date.today(), ref_month)
+
+    def gate_fn(r: dict) -> bool:
+        return bool(_classificar_row(r).get("incluir_no_parque", True))
+
+    bnorm = normalize_bairro(bairro) if (bairro or "").strip() else None
+    ev = contar_eventos_oferta(rows, as_of=as_of, bairro_norm=bnorm, gate_fn=gate_fn)
+
+    from tools.cnpj_oferta_janelas import parse_rfb_date, ultimo_trimestre_fechado
+    from tools.cnpj_oferta_metricas import _is_ativo, _is_baixada
+
+    q_start, q_end, _ql = ultimo_trimestre_fechado(as_of)
+    ativos_gated = [r for r in rows if gate_fn(r) and _is_ativo(r.get("situacao_cadastral"))]
+    baixas_q_rows = []
+    for r in rows:
+        if not gate_fn(r) or not _is_baixada(r.get("situacao_cadastral")):
+            continue
+        ds = r.get("data_situacao_cadastral")
+        if isinstance(ds, date):
+            dsv = ds
+        else:
+            dsv = parse_rfb_date(ds)
+        if dsv is not None and q_start <= dsv <= q_end:
+            baixas_q_rows.append(r)
+    basicos = [
+        str(r.get("cnpj_basico") or (r.get("cnpj") or "")[:8])
+        for r in ativos_gated
+    ]
+    raizes_multi = _raizes_multiunidade_br(sb, basicos)
+    redes = bloco_redes(
+        ativos_gated, raizes_multi, baixas_q_rows, bairro_norm=bnorm
+    )
+
+    estoque_mun = ev["estoque"]
+    arvore = {
+        "estoque_municipio": estoque_mun,
+        "estoque_bairro": ev["estoque_bairro"],
+        "entrantes_municipio_90d": ev["entrantes_90d"],
+        "entrantes_bairro_90d": ev["entrantes_bairro_90d"],
+        "entrantes_municipio_q": ev["entrantes_q"],
+        "entrantes_bairro_q": ev["entrantes_bairro_q"],
+        "baixas_municipio_90d": ev["baixas_90d"],
+        "baixas_bairro_90d": ev["baixas_bairro_90d"],
+        "baixas_municipio_q": ev["baixas_q"],
+        "baixas_bairro_q": ev["baixas_bairro_q"],
+        "saldo_oferta_municipio_q": ev["saldo_oferta_q"],
+        "saldo_oferta_bairro_q": ev["saldo_oferta_bairro_q"],
+        "churn_municipio_q_pct": ev["churn_q_pct"],
+        "churn_bairro_q_pct": ev["churn_bairro_q_pct"],
+        "pressao_oferta_municipio_q": pressao_oferta(ev["saldo_oferta_q"]),
+        "janela_90d": {
+            "inicio": ev["janela_90d_inicio"],
+            "fim": ev["janela_90d_fim"],
+        },
+        "janela_q": {
+            "inicio": ev["janela_q_inicio"],
+            "fim": ev["janela_q_fim"],
+            "label": ev["janela_q_label"],
+        },
+        "as_of": ev["as_of"],
+        "ref_month": ref_month.isoformat(),
+        "fonte": "RFB CNPJ Aberto · cnpj_fitness_estabelecimentos",
+        "nota": "parque LIMPO (gated): família CNAE 931 + nome→tipo. Baixas = situacao 08.",
+    }
+    return arvore, redes
 
 
 def dados_parque_cnpj_para_a0(
@@ -643,11 +822,12 @@ def dados_parque_cnpj_para_a0(
 
     O A0 só deve reportar o que está aqui e no Deep Research; não inventar.
     """
+    dias_i = _as_positive_int(dias, default=90)
     # Uma única consulta: sem Places validate (A0 usa CNAE/nome) e sem ReceitaWS.
     entrantes_block = listar_entrantes_cnpj_fitness(
         cidade,
         uf,
-        dias,
+        dias_i,
         limit=200,
         validar_places=False,
         enriquecer=False,
@@ -655,7 +835,7 @@ def dados_parque_cnpj_para_a0(
     if entrantes_block.get("status") != "ok":
         return entrantes_block
 
-    resumo = _resumo_cnpj_from_lista(entrantes_block, cidade, uf, dias)
+    resumo = _resumo_cnpj_from_lista(entrantes_block, cidade, uf, dias_i)
     if resumo.get("status") != "ok":
         return resumo
 
@@ -713,6 +893,38 @@ def dados_parque_cnpj_para_a0(
         "nota": "parque LIMPO (gated): família CNAE 931 + nome→tipo. Bairro None se não pesquisado.",
     }
 
+    arvore_oferta: dict[str, Any] = {}
+    redes: dict[str, Any] = {}
+    sb = _supabase_client()
+    if sb is not None:
+        try:
+            arvore_oferta, redes = _montar_arvore_oferta_e_redes(
+                sb, cidade=cidade, uf=uf, bairro=bairro or ""
+            )
+            # Espelha baixas na árvore 2x2 (back-compat estendido)
+            if arvore_oferta.get("baixas_municipio_90d") is not None:
+                arvore_2x2_parque["baixas_municipio_90d"] = arvore_oferta[
+                    "baixas_municipio_90d"
+                ]
+                arvore_2x2_parque["baixas_bairro_90d"] = arvore_oferta.get(
+                    "baixas_bairro_90d"
+                )
+                arvore_2x2_parque["baixas_municipio_q"] = arvore_oferta.get(
+                    "baixas_municipio_q"
+                )
+                arvore_2x2_parque["entrantes_municipio_q"] = arvore_oferta.get(
+                    "entrantes_municipio_q"
+                )
+                arvore_2x2_parque["saldo_oferta_municipio_q"] = arvore_oferta.get(
+                    "saldo_oferta_municipio_q"
+                )
+                arvore_2x2_parque["pressao_oferta_municipio_q"] = arvore_oferta.get(
+                    "pressao_oferta_municipio_q"
+                )
+        except Exception as exc:
+            arvore_oferta = {"status": "erro", "motivo": str(exc)}
+            redes = {"status": "erro", "motivo": str(exc)}
+
     import os
     from pathlib import Path
 
@@ -731,7 +943,7 @@ def dados_parque_cnpj_para_a0(
                 cidade=cidade,
                 uf=uf,
                 bairro=bairro.strip() or None,
-                dias=dias,
+                dias=dias_i,
                 limit=200,
             )
         except Exception as exc:
@@ -742,14 +954,23 @@ def dados_parque_cnpj_para_a0(
         "cidade": cidade,
         "uf": resumo.get("uf") or uf[:2].upper(),
         "bairro_alvo": bairro or None,
-        "dias_janela": dias,
+        "dias_janela": dias_i,
         "arvore_2x2_parque": arvore_2x2_parque,
+        "arvore_oferta": arvore_oferta,
+        "redes": redes,
         "metricas_objetivas": {
             "parque_ativo_total": resumo.get("parque_ativo_total"),
             "parque_comercial_total": parque_com,
             "excluidos_saude_clinica": resumo.get("excluidos_saude_clinica"),
             "pendentes_validacao": resumo.get("pendentes_validacao"),
             "novos_cnpj_fitness_90d": novos,
+            "baixas_cnpj_fitness_90d": arvore_oferta.get("baixas_municipio_90d"),
+            "baixas_cnpj_fitness_q": arvore_oferta.get("baixas_municipio_q"),
+            "entrantes_cnpj_fitness_q": arvore_oferta.get("entrantes_municipio_q"),
+            "saldo_oferta_q": arvore_oferta.get("saldo_oferta_municipio_q"),
+            "pressao_oferta_q": arvore_oferta.get("pressao_oferta_municipio_q"),
+            "janela_q_label": (arvore_oferta.get("janela_q") or {}).get("label"),
+            "as_of": arvore_oferta.get("as_of"),
             "composicao_parque": comp,
             "novas_unidades_90d_por_segmento": novas_seg,
             "serie_aberturas_anual": resumo.get("serie_aberturas_anual"),

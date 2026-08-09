@@ -15,7 +15,13 @@ export function ConsultorWelcomePanel({ especialista, onSend }: ConsultorWelcome
 
   return (
     <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center px-2 py-8 text-center">
-      <ConsultorAgentAvatar Icone={especialista.Icone} isActive size="hero" className="mb-4" />
+      <ConsultorAgentAvatar
+        Icone={especialista.Icone}
+        imgSrc={especialista.img}
+        isActive
+        size="hero"
+        className="mb-4"
+      />
 
       <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
         {CONSULTOR_COPY.tagline}

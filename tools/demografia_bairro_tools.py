@@ -97,25 +97,58 @@ def demografia_bairro(
             except Exception:
                 pass
         if lat is not None and lng is not None:
-            censo = demografia_setor_censo(lat, lng, id_municipio=id_municipio)
-            if censo:
-                out["populacao"] = censo.get("populacao")
-                out["domicilios"] = censo.get("domicilios")
-                out["media_moradores"] = censo.get("media_moradores")
-                out["populacao_fonte"] = censo.get("fonte")
-                out["censo_n_setores"] = censo.get("n_setores")
-            # Pirâmide idade×sexo REAL do bairro (setor censitário) — sem o viés do rateio
-            # %município (validado: Cocó rico subnotificava 60+ em -37%). Agrega setores
-            # próximos do centróide até a pop do bairro. Granularidade bairro, dado real.
-            try:
-                from tools.perfil_sexo_idade_tools import perfil_sexo_idade_bairro
+            from tools.bairro_poligono import resolver_bairro_poligono
+            from tools.censo_setor_tools import demografia_setor_censo, demografia_setor_poligono
+            from tools.perfil_sexo_idade_tools import (
+                perfil_sexo_idade_bairro,
+                perfil_sexo_idade_poligono,
+            )
 
-                _pop = out.get("populacao") or (censo or {}).get("populacao")
-                perfil_bairro = perfil_sexo_idade_bairro(id_municipio, lat, lng, _pop)
-                if perfil_bairro:
-                    out["perfil_idade_sexo_bairro"] = perfil_bairro
-            except Exception as exc:
-                logger.warning("demografia_bairro perfil idade×sexo falhou: %s: %s", type(exc).__name__, exc)
+            poly = resolver_bairro_poligono(
+                id_municipio=id_municipio, bairro=bairro or "", cidade=cidade, uf=uf,
+            )
+            ring = poly.get("ring") if poly else None
+            if ring:
+                censo = demografia_setor_poligono(id_municipio, ring)
+                if censo:
+                    out["populacao"] = censo.get("populacao")
+                    out["domicilios"] = censo.get("domicilios")
+                    out["media_moradores"] = censo.get("media_moradores")
+                    out["populacao_fonte"] = censo.get("fonte")
+                    out["censo_n_setores"] = censo.get("n_setores")
+                    out["censo_base"] = "poligono_ibge_bairro"
+                    out["censo_cd_bairro"] = poly.get("cd_bairro") if poly else None
+                    out["censo_raio_m"] = None
+                try:
+                    perfil_bairro = perfil_sexo_idade_poligono(id_municipio, ring)
+                    if perfil_bairro:
+                        out["perfil_idade_sexo_bairro"] = perfil_bairro
+                except Exception as exc:
+                    logger.warning(
+                        "demografia_bairro perfil polígono falhou: %s: %s",
+                        type(exc).__name__, exc,
+                    )
+            else:
+                censo = demografia_setor_censo(lat, lng, id_municipio=id_municipio)
+                if censo:
+                    out["populacao"] = censo.get("populacao")
+                    out["domicilios"] = censo.get("domicilios")
+                    out["media_moradores"] = censo.get("media_moradores")
+                    out["populacao_fonte"] = censo.get("fonte")
+                    out["censo_n_setores"] = censo.get("n_setores")
+                    out["censo_raio_m"] = censo.get("raio_m")
+                    out["censo_base"] = "raio_fallback"
+                try:
+                    _pop = out.get("populacao") or (censo or {}).get("populacao")
+                    perfil_bairro = perfil_sexo_idade_bairro(id_municipio, lat, lng, _pop)
+                    if perfil_bairro:
+                        out["perfil_idade_sexo_bairro"] = perfil_bairro
+                except Exception as exc:
+                    logger.warning(
+                        "demografia_bairro perfil idade×sexo falhou: %s: %s",
+                        type(exc).__name__, exc,
+                    )
+
     except Exception as exc:
         logger.warning("demografia_bairro Censo falhou: %s: %s", type(exc).__name__, exc)
 

@@ -1,4 +1,6 @@
 .env
+.env.production
+.env.local
 __pycache__
 .git
 *.pyc
@@ -31,6 +33,9 @@ debug/
 metrics/
 prints/
 data/
+!data/ibge_bairros/
+!data/ibge_bairros/fixtures/
+!data/ibge_bairros/fixtures/*.geojson
 eval/
 scratch/
 tools/__pycache__/

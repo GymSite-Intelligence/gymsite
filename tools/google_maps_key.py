@@ -21,7 +21,6 @@ def warn_if_missing_maps_key() -> None:
     if get_google_maps_api_key():
         return
     logger.warning(
-        "GOOGLE_MAPS_API_KEY ausente — geocoding, Places autocomplete e "
-        "competidores falharão. Defina no .env da raiz ou em frontend/.env; "
-        "habilite Places API (New), Geocoding API e billing no Cloud Console."
+        "GOOGLE_MAPS_API_KEY ausente — Places/Geocoding Google off. "
+        "Explorar usa Nominatim/OSM; concorrentes = SearchAPI."
     )

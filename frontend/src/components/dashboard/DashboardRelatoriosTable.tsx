@@ -105,7 +105,8 @@ export function DashboardRelatoriosTable({
         <p className="rounded-lg border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
           Nenhum relatório na org.{' '}
           <Link
-            to="/relatorios/new"
+            to="/explorar"
+            search={{ novo: true }}
             className="text-primary underline-offset-2 hover:underline"
           >
             Criar primeiro

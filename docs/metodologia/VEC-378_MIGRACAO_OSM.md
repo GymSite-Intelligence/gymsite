@@ -14,7 +14,7 @@
 | POIs/âncoras/infra no raio (A1/A3) | Places Nearby | Overpass | não |
 | Distâncias ponto para polo (A1) | Distance Matrix | ORS Matrix | fallback |
 | Área de influência (isócrona) | inexistente / raio circular | ORS Isochrones | não |
-| Concorrentes: nome/rating/review (A3a/b) | Places + SearchAPI | inalterado | SIM (core) |
+| Concorrentes: nome/rating/review (A3a/b) | SearchAPI `google_maps` | inalterado | **não** (SearchAPI; Places só fallback) |
 | Street View do imóvel (A1) | Google | inalterado | SIM |
 
 ## 2. Arquitetura proposta

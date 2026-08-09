@@ -1,0 +1,71 @@
+{
+  "search_parameters": {
+    "engine": "google_maps",
+    "q": "academia Edson Queiroz Fortaleza CE"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "MC FIT Academia",
+      "address": "R. Cidade Ecológica, 939 - Edson Queiroz, Fortaleza - CE, 60812-450",
+      "gps_coordinates": {"latitude": -3.7663, "longitude": -38.4735},
+      "type": "Academia",
+      "rating": 4.4,
+      "reviews": 10
+    },
+    {
+      "position": 2,
+      "title": "Jerry Academia",
+      "address": "R. Ten-Cel. Ésio Lima Verde, 144 - Edson Queiroz, Fortaleza - CE, 60812-320",
+      "gps_coordinates": {"latitude": -3.7645, "longitude": -38.4721},
+      "type": "Academia",
+      "rating": 4.8,
+      "reviews": 35
+    },
+    {
+      "position": 3,
+      "title": "Academia Unifor",
+      "address": "Av. Washington Soares, 1321 - Edson Queiroz, Fortaleza - CE, 60811-905",
+      "gps_coordinates": {"latitude": -3.7694, "longitude": -38.4776},
+      "type": "Sala de fitness",
+      "rating": 4.8,
+      "reviews": 202
+    },
+    {
+      "position": 4,
+      "title": "AYO Gym - Unidade Guararapes",
+      "address": "Av. Chanceler Edson Queiroz, 100 - Guararapes, Fortaleza - CE, 60810-145",
+      "gps_coordinates": {"latitude": -3.7592, "longitude": -38.4831},
+      "type": "Academia",
+      "rating": 4.6,
+      "reviews": 406
+    },
+    {
+      "position": 5,
+      "title": "Bodytech",
+      "address": "Av. Washington Soares, 85 - Edson Queiroz, Fortaleza - CE, 60811-900",
+      "gps_coordinates": {"latitude": -3.7578, "longitude": -38.4891},
+      "type": "Academia",
+      "rating": 4.2,
+      "reviews": 40
+    },
+    {
+      "position": 6,
+      "title": "Academia Smart Fit - Edilson Brasil Soares",
+      "address": "Av. Edilson Brasil Soares, 1167 - Edson Queiroz, Fortaleza - CE, 60834-005",
+      "gps_coordinates": {"latitude": -3.7801, "longitude": -38.4764},
+      "type": "Academia",
+      "rating": 4.7,
+      "reviews": 321
+    },
+    {
+      "position": 7,
+      "title": "IRONBERG FORTALEZA ACADEMIA",
+      "address": "Av. Washington Soares, 909 - Edson Queiroz, Fortaleza - CE, 60810-165",
+      "gps_coordinates": {"latitude": -3.7648, "longitude": -38.4836},
+      "type": "Centro de treinamento",
+      "rating": 4.0,
+      "reviews": 92
+    }
+  ]
+}

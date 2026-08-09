@@ -125,10 +125,11 @@ Copy UI/PDF: linguagem de estudo (“margem de alunos frescos” / “absorção
 - Revisar penetração só se auditoria mostrar bias sistemático.
 
 ### W2.1 / W3 — Voronoi (evolução espacial — **não** bloqueia W2a)
-- Módulo futuro `tools/voronoi_atratividade.py` (`scipy.spatial.Voronoi` / shapely / geopandas).
-- Fluxo: pontos academias → Voronoi (opcional **ponderado** por `area_proxy_*` do tier) → interseção × setores IBGE → `pool` refinado na célula da unidade proposta.
-- Smoke **só nesta wave**: polígono IBGE vs `voronoi` / `voronoi_ponderado` — **melhor score fica** (métrica a fechar na abertura da wave: estabilidade N/10k+mix e/ou coerência rótulo absorção).
-- Estende `base_espacial` (ver §5). W2a **não** implementa nem importa Voronoi.
+
+**Smoke (aprovado 2026-08-07):** ver `docs/superpowers/specs/2026-08-07-voronoi-smoke-design.md` — medir clássico+ponderado no JSON; nota PDF/app só clássico; **não** muda rótulo/veredito/`base_espacial`.
+
+- Módulo `tools/voronoi_atratividade.py` (`scipy.spatial.Voronoi` / shapely).
+- Ligar Voronoi no veredito / “melhor score fica” = wave **depois** do smoke.
 
 ---
 

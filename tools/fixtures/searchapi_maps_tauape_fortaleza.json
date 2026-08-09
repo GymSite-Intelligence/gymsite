@@ -1,0 +1,62 @@
+{
+  "search_parameters": {
+    "engine": "google_maps",
+    "q": "academia São João do Tauape Fortaleza CE"
+  },
+  "local_results": [
+    {
+      "position": 1,
+      "title": "Academia Atitude Fitness - Tauape",
+      "address": "Rua João Paulino Barros Leal, 2551 - São João do Tauape, Fortaleza - CE",
+      "gps_coordinates": {"latitude": -3.7503882, "longitude": -38.5133649},
+      "type": "Academia",
+      "rating": 5.0,
+      "reviews": 2
+    },
+    {
+      "position": 2,
+      "title": "Forma Atlética Wellness Life",
+      "address": "Rua Monsenhor Salazar, 888 - São João do Tauape, Fortaleza - CE",
+      "gps_coordinates": {"latitude": -3.7533036, "longitude": -38.5118742},
+      "type": "Academia",
+      "rating": 4.7,
+      "reviews": 255
+    },
+    {
+      "position": 3,
+      "title": "Life Academia",
+      "address": "R. Cap. Gustavo, 3852 - São João do Tauape, Fortaleza - CE",
+      "gps_coordinates": {"latitude": -3.7511453, "longitude": -38.5138128},
+      "type": "Academia",
+      "rating": 4.7,
+      "reviews": 10
+    },
+    {
+      "position": 4,
+      "title": "Vert Academia",
+      "address": "Av. Sabino Monte, 4172 - São João do Tauape, Fortaleza - CE",
+      "gps_coordinates": {"latitude": -3.7554522, "longitude": -38.512699},
+      "type": "Academia",
+      "rating": 4.8,
+      "reviews": 92
+    },
+    {
+      "position": 5,
+      "title": "Academia Trainer Core",
+      "address": "R. Cap. Melo - São João do Tauape, Fortaleza - CE",
+      "gps_coordinates": {"latitude": -3.7538961, "longitude": -38.514339},
+      "type": "Academia",
+      "rating": 4.8,
+      "reviews": 117
+    },
+    {
+      "position": 6,
+      "title": "Academia Mais Saúde",
+      "address": "R. Carvalho Júnior, 580a - São João do Tauape, Fortaleza - CE",
+      "gps_coordinates": {"latitude": -3.7547631, "longitude": -38.5108422},
+      "type": "Academia",
+      "rating": 4.5,
+      "reviews": 4
+    }
+  ]
+}

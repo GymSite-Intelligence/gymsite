@@ -1,7 +1,7 @@
 import { useConsultorChat } from '@/hooks/useConsultorChat'
-import { DegustacaoChatShell } from '@/components/chat/DegustacaoChatShell'
+import { ConsultorAppShell } from '@/components/chat/ConsultorAppShell'
 
 export function ConsultorPage() {
   const chat = useConsultorChat()
-  return <DegustacaoChatShell mode="app" chat={chat} />
+  return <ConsultorAppShell chat={chat} />
 }

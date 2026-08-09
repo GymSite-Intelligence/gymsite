@@ -1,18 +1,22 @@
-"""A1 GeoScout determinizado (BaseAgent, sem LLM) — roda a macro + grava as 2 chaves."""
+"""A1 GeoScout determinístico — listing filtrado + MRLR."""
 import asyncio
+
+from google.adk.agents import BaseAgent
+
 from agents.a1_geoscout import GeoScoutAgent, geoscout_agent, _loc_do_state
 import agents.a1_geoscout as a1
 
 
 def test_a1_e_baseagent_sem_llm():
-    from google.adk.agents import BaseAgent
     assert isinstance(geoscout_agent, BaseAgent)
     assert isinstance(geoscout_agent, GeoScoutAgent)
-    assert getattr(geoscout_agent, "model", None) is None  # sem LLM
+    assert getattr(geoscout_agent, "model", None) is None
 
 
 def test_loc_do_state_input_params():
-    c, u, b = _loc_do_state({"input_params": {"cidade": "Fortaleza", "uf": "CE", "bairro": "Cocó"}})
+    c, u, b = _loc_do_state(
+        {"input_params": {"cidade": "Fortaleza", "uf": "CE", "bairro": "Cocó"}}
+    )
     assert (c, u, b) == ("Fortaleza", "CE", "Cocó")
 
 
@@ -33,23 +37,35 @@ def _run(state):
         async for e in geoscout_agent._run_async_impl(_Ctx(state)):
             ev = e
         return ev
+
     return asyncio.run(_go())
 
 
-def test_macro_grava_duas_chaves(monkeypatch):
-    monkeypatch.setattr(a1, "analisar_pontos_comerciais_completo",
-                        lambda b, c, u: {"total_candidatos": 3, "candidatos": [{"nome": "X"}]})
-    ev = _run({"input_params": {"cidade": "Fortaleza", "uf": "CE", "bairro": "Cocó"}})
+def test_listing_mrlr_duas_chaves(monkeypatch):
+    fake = {
+        "status": "ok",
+        "total_candidatos": 1,
+        "candidatos": [{"qualidade_sinal": "direto-listing-bairro"}],
+    }
+    monkeypatch.setattr(
+        a1,
+        "buscar_candidatos_listing_mrlr",
+        lambda **kwargs: fake,
+    )
+    ev = _run({"input_params": {"cidade": "Pirapora", "uf": "MG", "bairro": "Centro"}})
     d = ev.actions.state_delta
-    assert d["candidatos_geoscout_pronto"]["total_candidatos"] == 3
-    assert d["candidatos_geoscout"]["total_candidatos"] == 3  # ambas
+    assert d["candidatos_geoscout_pronto"]["status"] == "ok"
+    assert d["candidatos_geoscout"]["total_candidatos"] == 1
+    assert d["candidatos_geoscout_pronto"] is d["candidatos_geoscout"]
 
 
-def test_macro_erro_degrada(monkeypatch):
-    def _boom(*a):
-        raise RuntimeError("macro caiu")
-    monkeypatch.setattr(a1, "analisar_pontos_comerciais_completo", _boom)
-    ev = _run({"input_params": {"cidade": "X", "bairro": "Y"}})
+def test_listing_falha_degrada_vazio(monkeypatch):
+    monkeypatch.setattr(
+        a1,
+        "buscar_candidatos_listing_mrlr",
+        lambda **kwargs: (_ for _ in ()).throw(RuntimeError("indisponível")),
+    )
+    ev = _run({})
     d = ev.actions.state_delta
-    assert d["candidatos_geoscout"]["total_candidatos"] == 0
-    assert "erro" in d["candidatos_geoscout"]
+    assert d["candidatos_geoscout"]["candidatos"] == []
+    assert d["candidatos_geoscout"]["status"] == "ok_vazio"

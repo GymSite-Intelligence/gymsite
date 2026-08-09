@@ -1,0 +1,259 @@
+/**
+ * Chrome flutuante /explorar = paleta canônica do site (GYMSITE_PALETTE).
+ * Opaco. Independente de data-theme claro/escuro/geo e do tile OSM.
+ *
+ * Também redefine --color-* : no :root eles já resolvem var(--token) e
+ * os filhos herdam a cor computada — sem isto, text-foreground/bg-card
+ * continuam no tema do app e o contraste some sobre o mapa claro.
+ */
+.explorar-page {
+  background-color: #13161b;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 16px;
+  font-feature-settings: normal;
+}
+
+/* Tailwind preflight (img max-width:100%) quebra a malha 256px do pigeon-maps. */
+.explorar-page .pigeon-tiles img {
+  max-width: none;
+  width: 256px;
+  height: 256px;
+}
+
+.explorar-chrome {
+  --background: #13161b;
+  --foreground: #eef1f4;
+  --card: #181c22;
+  --card-foreground: #eef1f4;
+  --popover: #1c212a;
+  --popover-foreground: #eef1f4;
+  --primary: #84cc01;
+  --primary-foreground: #13161b;
+  --secondary: #1c212a;
+  --secondary-foreground: #eef1f4;
+  --muted: #1c212a;
+  --muted-foreground: #9aa4b0;
+  --accent: #1c212a;
+  --accent-foreground: #eef1f4;
+  --destructive: #ef4444;
+  --border: #2b323d;
+  --input: #2b323d;
+  --ring: #84cc01;
+
+  --color-background: #13161b;
+  --color-foreground: #eef1f4;
+  --color-card: #181c22;
+  --color-card-foreground: #eef1f4;
+  --color-popover: #1c212a;
+  --color-popover-foreground: #eef1f4;
+  --color-primary: #84cc01;
+  --color-primary-foreground: #13161b;
+  --color-secondary: #1c212a;
+  --color-secondary-foreground: #eef1f4;
+  --color-muted: #1c212a;
+  --color-muted-foreground: #9aa4b0;
+  --color-accent: #1c212a;
+  --color-accent-foreground: #eef1f4;
+  --color-destructive: #ef4444;
+  --color-border: #2b323d;
+  --color-input: #2b323d;
+  --color-ring: #84cc01;
+
+  color: #eef1f4;
+  background-color: #181c22;
+  border-color: #2b323d;
+  color-scheme: dark;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-feature-settings: normal;
+}
+
+.explorar-chrome button,
+.explorar-chrome input,
+.explorar-chrome select,
+.explorar-chrome [data-slot] {
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+.explorar-chrome [data-slot="input"] {
+  background-color: #1c212a;
+  color: #eef1f4;
+  border-color: #2b323d;
+}
+
+/* Controles da barra: mesma caixa 40×14/600 (OndeAbrir). Hex pinado — bg-primary
+   do app claro some no chrome e o Analisar vira texto branco. */
+.explorar-chrome .explorar-ctrl {
+  box-sizing: border-box;
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  border-radius: 8px;
+  border: 1px solid #2b323d;
+  background-color: #1c212a;
+  padding: 0 12px;
+  color: #eef1f4;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.explorar-chrome .explorar-ctrl-on {
+  border-color: #84cc01;
+  background-color: #84cc01;
+  color: #13161b;
+}
+
+.explorar-chrome .explorar-cta {
+  box-sizing: border-box;
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 8px;
+  background-color: #84cc01;
+  padding: 0 16px;
+  color: #13161b;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.explorar-chrome .explorar-cta:hover:not(:disabled) {
+  background-color: #5c9400;
+}
+
+.explorar-chrome .explorar-cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.explorar-chrome .explorar-label {
+  margin: 0 0 4px;
+  color: #9aa4b0;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.explorar-chrome .explorar-bar-track {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid #2b323d;
+  border-radius: 999px;
+  background: #13161b;
+}
+
+.explorar-chrome .explorar-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.45s ease;
+}
+
+.explorar-chrome .explorar-bar-lime { background: #84cc01; }
+.explorar-chrome .explorar-bar-muted { background: #9aa4b0; }
+.explorar-chrome .explorar-bar-amber { background: #ffba52; }
+.explorar-chrome .explorar-bar-good { background: #22c55e; }
+.explorar-chrome .explorar-bar-bad { background: #ef4444; }
+
+.explorar-chrome .explorar-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.explorar-chrome .explorar-badge-fresco {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.explorar-chrome .explorar-badge-misto {
+  background: rgba(255, 186, 82, 0.18);
+  color: #ffba52;
+  border: 1px solid rgba(255, 186, 82, 0.4);
+}
+
+.explorar-chrome .explorar-badge-roubo {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.explorar-page .explorar-layer {
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.explorar-page .explorar-layer-on {
+  opacity: 1;
+}
+
+/* Público: mesmo header da degustação (hub /degustacao) — carvão + logo branca. */
+.explorar-page--site {
+  background-color: #13161b;
+}
+
+.explorar-site-header {
+  display: flex;
+  height: 3.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  border-bottom: 1px solid #2b323d;
+  background: #13161b;
+  padding: 0 12px;
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+@media (min-width: 640px) {
+  .explorar-site-header {
+    height: 78px;
+    padding: 0 24px;
+  }
+}
+
+.explorar-site-header img {
+  height: 40px;
+  width: auto;
+}
+
+@media (min-width: 640px) {
+  .explorar-site-header img {
+    height: 56px;
+  }
+}
+
+.explorar-site-header nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #9aa4b0;
+  font-size: 14px;
+}
+
+.explorar-site-header a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.explorar-site-header a:hover {
+  color: #eef1f4;
+}
+
+.explorar-site-header .is-current {
+  color: #eef1f4;
+  font-weight: 600;
+}

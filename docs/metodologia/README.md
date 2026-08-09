@@ -11,6 +11,7 @@
 | `cvm-smartfit-bluefit-2025.md` | Evidência CVM/IR Smart Fit FY25 + Bluefit 9M25 (seed congelado) | ✅ 2026-07-13 — link P-000 §3 |
 | `gymsite_schema.md` | Schema GymSite no Supabase compartilhado | ⚠️ nota schemas `gymsite`/`shared` — atualizar antes de pg_dump grande |
 | `posicionamento_headroom_premium.md` | Spec headroom de renda | ✅ A9 |
+| `ipm_mortalidade_migracao.md` | Matriz A–D + IPM (mortalidade × abertura × migração) | ✅ 2026-08-04 — Brasília parcial; migração RA = gap |
 | `fontes_renda_bairro_capitais.md` | Curadoria renda por capital | ok — adicionar "verificado em" ao usar |
 | `roadmap_dados_bq_sinergia.md` | 3 apontamentos ADOTAR (BQ) | ok — PNGs em `analise_melhorias_bq/` podem estar ausentes (só `.md` no repo) |
 | `prompts/guia_prompts_pipeline.md` | Craft de prompt + Regra ZERO | ✅ canônico — espelhado P-000 §6 |
@@ -20,7 +21,7 @@
 ## HISTÓRICO / a decidir
 
 - Patch A9 aplicado → `docs/handoffs/agent_py_patch_A9_APLICADO.md` (não `agent_py_patch.md` aqui).
-- `VEC-378_MIGRACAO_OSM.md` — Maps→OSM **concorrentes** possivelmente superado por SearchAPI; OSMnx **fluxo pedestre** ainda ativo — decidir arquivar ou nota "parcial".
+- `VEC-378_MIGRACAO_OSM.md` — **parcial:** concorrentes = SearchAPI (não OSM/Places). Geo do Explorar = Nominatim + Valhalla/ORS. OSMnx fluxo pedestre ainda ativo.
 - ~~`a9_positioning_strategist.py`~~ — cópia em docs removida; fonte `agents/a9_positioning_strategist.py`.
 
 ## ESTUDO

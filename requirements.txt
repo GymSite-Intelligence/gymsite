@@ -27,6 +27,12 @@ opentelemetry-api>=1.25.0
 opentelemetry-sdk>=1.25.0
 # Google GenAI (usado por agents/ e tools/)
 google-genai>=0.3.0
+# LiteLLM — backend das rotas NVIDIA NIM e Ollama (model_provider.resolve_site_model,
+# pipeline_model.resolve_pipeline_model). agents_site/agent.py resolve o modelo em
+# tempo de IMPORT, e api.py importa esse módulo via routers/llm_admin: sem litellm o
+# boot da API quebra com LLM_PROVIDER=nvidia. Não usar google-adk[extensions] — o
+# extra arrasta crewai/langgraph/kubernetes/anthropic/openai sem necessidade.
+litellm>=1.84
 # BigQuery — rota basedosdados de dados públicos nacionais (Trilha 6 / CNO)
 google-cloud-bigquery>=3.0.0
 # Vertex AI Search (Discovery Engine) — RAG do Consultor/Site Agent
@@ -41,6 +47,8 @@ osmnx>=1.9.0
 networkx>=3.2.1
 geopandas>=0.14.0
 shapely>=2.0.2
+# Planta baixa zonas (agents_site gerar_planta_layout_zonas)
+archit-app[io]>=0.7.0
 scipy>=1.11.0
 # Starlette (explicitar - usado por middlewares)
 starlette>=0.36.0

@@ -83,7 +83,18 @@ def site_chat_developer_api(agente_obj) -> Iterator[bool]:
     """Ativa Developer API no processo só durante o turno do chat.
 
     Retorna True se a rota Developer ficou ativa; False se ficou no env atual.
+    Com LiteLlm (ollama|nvidia), não mexe — modelo já não é Gemini nativo.
     """
+    from agents_site.model_provider import using_litellm_chat, using_nvidia, using_ollama
+
+    if using_litellm_chat():
+        if using_nvidia():
+            logger.info("site_chat: rota NVIDIA ativa — skip Developer API")
+        elif using_ollama():
+            logger.info("site_chat: rota Ollama ativa — skip Developer API")
+        yield False
+        return
+
     key = _fallback_api_key()
     if not _developer_api_enabled() or not key:
         yield False

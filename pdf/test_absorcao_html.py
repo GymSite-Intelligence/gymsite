@@ -65,5 +65,57 @@ def test_html_has_absorcao_section():
     assert "Conclusão" in html
     assert "Déficit" in html
     assert "form ×" not in html
+    assert "escolheu no formulário" not in html.lower()
+    assert "público do formulário" not in html.lower()
     assert "O que medimos" not in html
     assert "outra academia" in html.lower() or "disputa" in html.lower()
+
+
+def test_html_voronoi_note_classic_only():
+    from pdf.html_builder import gerar_html
+    from pdf.models import RelatorioPdfModel
+
+    model = RelatorioPdfModel(
+        relatorio_id="t-voronoi",
+        data_execucao="2026-08-07",
+        cidade="Fortaleza",
+        bairro="Cocó",
+        uf="CE",
+        tipo_negocio="academia",
+        area_m2_min=800,
+        area_m2_max=1500,
+        publico_alvo=None,
+        veredito="TRANSICAO",
+        score_bairro=None,
+        score_top1=None,
+        posicionamento_estrategico={
+            "veredito_posicionamento": "TRANSICAO",
+            "absorcao_margem_fresca": {
+                "teto_unidade": 2100,
+                "capacidade_parque_estimada": 14200,
+                "pool_primario": 1221,
+                "pool_secundario": 642,
+                "margem_fresca": -12979,
+                "rotulo": "roubo",
+                "base_espacial": "poligono_ibge",
+                "faixas_primario": ["25-39", "40-59"],
+                "faixas_secundario": ["15-24", "60+"],
+                "estoque_primario": 30520,
+                "estoque_secundario": 16050,
+                "carimbos": {},
+                "voronoi_smoke": {
+                    "status": "ok",
+                    "pool_voronoi": 500,
+                    "pool_voronoi_ponderado": 420,
+                    "delta_pct": -0.59,
+                },
+            },
+        },
+    )
+    html = gerar_html(model)
+    assert "Leitura espacial (experimental)" in html
+    assert "500" in html
+    assert "6." in html or "área de influência" in html.lower()
+    assert "ainda" in html.lower()
+    assert "scipy" not in html.lower()
+    assert "420" not in html  # ponderado não na nota

@@ -44,16 +44,19 @@ class TestFiltrarEnvelope:
         m._filtrar_envelope(env, state)
         return env
 
-    def test_remove_concorrente_fora_do_bairro(self):
+    def test_nao_filtra_por_string_de_bairro(self):
+        # Canônico §9 (conferencia-fontes): inclusão geográfica = R=1000m do centróide
+        # em buscar_academias, NUNCA gate de string de bairro no caminho crítico. O
+        # filtro do envelope só aplica tipo/status — bairro nunca dropa concorrente.
         env = self._run(
             [
-                {"nome": "Academia Cocó Fit", "endereco": "Rua X, Cocó, Fortaleza"},
-                {"nome": "Smart Fit Aldeota", "endereco": "Av Y, Aldeota, Fortaleza"},
+                {"nome": "Academia Cocó Fit", "endereco": "Rua X, Cocó, Fortaleza", "tipos": ["gym"]},
+                {"nome": "Smart Fit Aldeota", "endereco": "Av Y, Aldeota, Fortaleza", "tipos": ["gym"]},
             ],
             {"bairro": "Cocó"},
         )
         nomes = [c["nome"] for c in _detalhados(env)]
-        assert "Academia Cocó Fit" in nomes and "Smart Fit Aldeota" not in nomes
+        assert "Academia Cocó Fit" in nomes and "Smart Fit Aldeota" in nomes
 
     def test_mantem_todos_quando_nenhum_no_bairro(self):
         env = self._run(
@@ -90,16 +93,20 @@ class TestFiltrarEnvelope:
         nomes = [c["nome"] for c in _detalhados(env)]
         assert "Academia Fechada" not in nomes and "Smart Fit Cocó" in nomes
 
-    def test_bairro_lido_de_input_params(self):
+    def test_tipo_lido_de_input_params_governa_o_gate(self):
+        # O que governa o envelope é tipo/status (tipo lido de input_params), não bairro.
+        # bairro divergente NÃO dropa; especialidade fora-de-escopo (crossfit) sim.
         env = self._run(
             [
-                {"nome": "Gym no Bairro Alvo", "endereco": "Rua X, Meireles, Fortaleza"},
-                {"nome": "Gym Fora", "endereco": "Av Y, Aldeota, Fortaleza"},
+                {"nome": "Smart Fit Cocó", "endereco": "Rua X, Cocó, Fortaleza", "tipos": ["gym"]},
+                {"nome": "Body Tech Meireles", "endereco": "Av Y, Meireles, Fortaleza", "tipos": ["gym"]},
+                {"nome": "CrossFit Box", "endereco": "Av Z, Cocó, Fortaleza", "tipos": ["gym"]},
             ],
             {"input_params": {"bairro": "Meireles", "tipo_negocio": "academia"}},
         )
         nomes = [c["nome"] for c in _detalhados(env)]
-        assert "Gym no Bairro Alvo" in nomes and "Gym Fora" not in nomes
+        assert "Smart Fit Cocó" in nomes and "Body Tech Meireles" in nomes
+        assert "CrossFit Box" not in nomes
 
     # tolerância (best-effort, nunca derruba)
 

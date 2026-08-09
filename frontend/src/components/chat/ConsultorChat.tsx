@@ -119,7 +119,12 @@ export function ConsultorChat({
                     : 'border-border/50 bg-background/40 hover:border-border hover:bg-card',
                 )}
               >
-                <ConsultorAgentAvatar Icone={e.Icone} isActive={destacado} size="rail" />
+                <ConsultorAgentAvatar
+                  Icone={e.Icone}
+                  imgSrc={e.img}
+                  isActive={destacado}
+                  size="rail"
+                />
                 <div className="min-w-0 flex-1">
                   <span
                     className={cn(
@@ -206,7 +211,7 @@ export function ConsultorChat({
 
         <div className="space-y-1.5 border-t border-border p-2">
           <Button variant="outline" size="sm" className="h-8 w-full gap-2 text-xs" asChild>
-            <Link to="/relatorios/new">
+            <Link to="/explorar" search={{ novo: true }}>
               <IconeRelatorio className="h-4 w-4 shrink-0" />
               Novo relatório
             </Link>
@@ -227,7 +232,12 @@ export function ConsultorChat({
       <div className="flex min-w-0 flex-1 flex-col bg-background">
         {!isWelcomeState && (
           <div className="flex items-center gap-2.5 border-b border-border bg-card/50 px-4 py-2.5 sm:px-6">
-            <ConsultorAgentAvatar Icone={especialistaAtivo.Icone} isActive size="inline" />
+            <ConsultorAgentAvatar
+              Icone={especialistaAtivo.Icone}
+              imgSrc={especialistaAtivo.img}
+              isActive
+              size="inline"
+            />
             <div className="min-w-0">
               <p className="text-xs font-semibold text-foreground">{especialistaAtivo.nome}</p>
               <p className="truncate text-[10px] text-muted-foreground">{especialistaAtivo.especialidade}</p>
@@ -248,7 +258,12 @@ export function ConsultorChat({
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
                 <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                  <ConsultorAgentAvatar Icone={focado.Icone} isActive size="inline" />
+                  <ConsultorAgentAvatar
+                    Icone={focado.Icone}
+                    imgSrc={focado.img}
+                    isActive
+                    size="inline"
+                  />
                   <span className="flex items-center gap-2">
                     <span className="flex gap-1">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />

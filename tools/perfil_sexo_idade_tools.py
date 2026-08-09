@@ -115,6 +115,74 @@ def perfil_sexo_idade_bairro(
     }
 
 
+def perfil_sexo_idade_poligono(
+    id_municipio: str | int | None,
+    ring: list[tuple[float, float]],
+    *,
+    _rows: list[dict] | None = None,
+) -> Optional[dict]:
+    """Pirâmide idade×sexo: setores com centróide dentro do polígono (sem fill pop_alvo)."""
+    from tools.bairro_poligono import point_in_ring
+    from tools.censo_setor_tools import carregar_setores_idade_sexo
+
+    if not id_municipio or not ring or len(ring) < 3:
+        return None
+    cod = str(id_municipio).strip()
+    if not cod.isdigit():
+        return None
+    setores = _rows if _rows is not None else carregar_setores_idade_sexo(cod, ring=ring)
+    acc = []
+    for s in setores or []:
+        rl, rg = s.get("lat"), s.get("lng")
+        if rl is None or rg is None:
+            continue
+        if point_in_ring(float(rg), float(rl), ring):
+            acc.append(s)
+    if not acc:
+        return None
+
+    def _soma(c: str) -> int:
+        return sum(int(s.get(c) or 0) for s in acc)
+
+    segmentos = {}
+    for label, hc, mc in _SEGMENTOS_BAIRRO:
+        h, m = _soma(hc), _soma(mc)
+        t = h + m
+        if t <= 0:
+            continue
+        segmentos[label] = {
+            "homens": h, "mulheres": m, "total": t,
+            "pct_homens": round(100 * h / t, 1), "pct_mulheres": round(100 * m / t, 1),
+        }
+    h_tot, m_tot = _soma("h_total"), _soma("m_total")
+    tot = h_tot + m_tot
+    if tot <= 0:
+        return None
+    alvo = segmentos.get("25-39") or {}
+    pop = sum(int(s.get("pessoas") or 0) for s in acc)
+    return {
+        "id_municipio": cod,
+        "granularidade": "bairro (polígono IBGE · setor)",
+        "n_setores": len(acc),
+        "pop_agregada": pop,
+        "pop_alvo": pop,
+        "base": "poligono_ibge_bairro",
+        "faixa_idade": "25-39",
+        "homens": alvo.get("homens"),
+        "mulheres": alvo.get("mulheres"),
+        "total": alvo.get("total"),
+        "pct_homens": alvo.get("pct_homens"),
+        "pct_mulheres": alvo.get("pct_mulheres"),
+        "maioria": ("feminino" if (alvo.get("pct_mulheres") or 0) > (alvo.get("pct_homens") or 0)
+                    else "masculino"),
+        "segmentos": segmentos,
+        "sexo_total": {"homens": h_tot, "mulheres": m_tot,
+                       "pct_homens": round(100 * h_tot / tot, 1),
+                       "pct_mulheres": round(100 * m_tot / tot, 1)},
+        "fonte": "IBGE Censo 2022 — setores no polígono IBGE do bairro",
+    }
+
+
 def _perfil_do_espelho_supabase(cod: str, faixa: str) -> Optional[dict]:
     """Lê o split sexo×idade do espelho Supabase municipio_publico_sexo (mirror do BQ,
     populado offline) p/ a FAIXA pedida. Funciona em prod (Supabase) sem BQ-runtime.

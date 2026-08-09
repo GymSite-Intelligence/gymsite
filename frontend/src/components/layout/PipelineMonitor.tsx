@@ -7,6 +7,7 @@ import { Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { isSupabaseConfigured } from '@/lib/mock-auth'
 import { notify } from '@/lib/notify'
 import {
   getTrackedPipelines,
@@ -34,7 +35,7 @@ export function PipelineMonitor() {
 
   const statusQuery = useQuery({
     queryKey: ['pipeline-monitor', ids],
-    enabled: ids.length > 0,
+    enabled: ids.length > 0 && isSupabaseConfigured(),
     meta: { silent: true },
     refetchInterval: 5000,
     refetchIntervalInBackground: true,

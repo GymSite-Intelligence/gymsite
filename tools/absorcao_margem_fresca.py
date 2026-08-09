@@ -141,7 +141,7 @@ def absorcao_margem_fresca(
     )
 
     nota = (
-        "Faixas fora do formulário (ex. Jovem/Silver) têm pool secundário — "
+        "Faixas fora do público escolhido (ex. Jovem/Silver) têm pool secundário — "
         "informam modelo, não o rótulo fresco/roubo."
     )
 
@@ -282,5 +282,31 @@ def attach_absorcao_margem_fresca(
         idade_max=imax,
     )
     parsed["absorcao_margem_fresca"] = result
+    try:
+        from tools.voronoi_atratividade import compute_voronoi_smoke, sites_from_state
+
+        smoke = compute_voronoi_smoke(**sites_from_state(state, result))
+        result["voronoi_smoke"] = smoke
+        parsed["absorcao_margem_fresca"] = result
+    except Exception:
+        result["voronoi_smoke"] = {
+            "status": "indisponivel",
+            "motivo": "erro_interno",
+            "pop_bairro": None,
+            "pop_celula": None,
+            "pop_celula_ponderada": None,
+            "pool_ref": result.get("pool_primario"),
+            "pool_voronoi": None,
+            "pool_voronoi_ponderado": None,
+            "delta_pct": None,
+            "n_sites": 0,
+            "n_setores_celula": None,
+            "peso_candidato": None,
+            "metodo_pool": None,
+            "estoque_primario_celula": None,
+            "pin_fonte": None,
+            "carimbo": "indisponivel · erro_interno · voronoi_smoke · n/a",
+        }
+        parsed["absorcao_margem_fresca"] = result
     aplicar_veto_oceano_por_roubo(parsed)
     return result

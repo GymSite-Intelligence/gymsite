@@ -88,6 +88,35 @@ Arquivo alterado:
 7. Fazer deploy do backend (Cloud Run) para que `api.getgymsite.com.br`
    tenha origem.
 
+## Degustação pública 100% Cloudflare (jul/2026)
+
+A landing `gymsite.com.br/degustacao` (repo `gym-insight-hub`) pode rodar **sem
+Cloud Run** no caminho crítico:
+
+| Componente | Onde |
+|------------|------|
+| Front | Cloudflare Pages (`gym-insight-hub`) |
+| API `/api/site-agent/*` | Worker `gymsite-degustacao` |
+| Chat LLM | Sakana Fugu |
+| Concorrentes | SearchAPI |
+| Mini-relatório | CF Queue + Gemini (narrativa) + Supabase |
+| Caps chat | CF KV (fail-closed) |
+| Caps análise | Supabase `analise_gratuita` |
+
+Cutover:
+
+1. Deploy Worker (`gym-insight-hub/workers/degustacao`) com secrets Supabase/SearchAPI/Fugu/Turnstile/Gemini.
+2. Criar KV namespace e atualizar `wrangler.jsonc`.
+3. Routes: `gymsite.com.br/api/site-agent/*` → Worker.
+4. Pages `public/_routes.json` exclui `/api/site-agent/*`.
+5. `VITE_DEGUSTACAO_PROVIDER=cloudflare` + `VITE_API_BASE=` (same-origin).
+
+O pipeline ADK A0–A9 Python permanece no produto pago; o mini-relatório free usa
+**DegustacaoEngine** TS (subset determinístico + narrativa Gemini).
+
+**Rotação:** `SAKANA_API_KEY` vazou no histórico git — rotacionar no Sakana Console
+e atualizar secrets Pages + Worker.
+
 ## Histórico de commits relacionados
 
 - `backend/routers/leads.py` (00f2e17)

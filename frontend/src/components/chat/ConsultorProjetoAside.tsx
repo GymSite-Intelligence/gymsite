@@ -34,10 +34,10 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
   const locLabel = loc?.cidade ? [loc.bairro, loc.cidade, loc.uf].filter(Boolean).join(', ') : null
 
   return (
-    <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l bg-muted/20 p-4 lg:flex">
+    <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-card/40 p-4 lg:flex">
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projeto</h2>
-        <div className="mt-2 rounded-xl border bg-card p-3">
+        <div className="mt-2 rounded-xl border border-border bg-card p-3">
           {locLabel ? (
             <div className="flex items-center gap-1.5 text-sm font-medium">
               <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />
@@ -78,6 +78,7 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
                 {Icone ? (
                   <AgentAvatar
                     Icone={Icone}
+                    imgSrc={ag?.img}
                     size="sm"
                     active={done}
                     className={cn(!done && 'opacity-70 ring-1 ring-border')}

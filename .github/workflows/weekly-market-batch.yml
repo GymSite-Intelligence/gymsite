@@ -1,14 +1,12 @@
-# Batch semanal de dados de mercado — canal 1 (CVM/SINAPI) + canal 2 (benchmarks)
-# + market_bundles → grava em Supabase (public.market_bundles / market_snapshots).
-# Substitui o cron de VM. Custo: GitHub Actions free tier.
-# Storage: Supabase (API lê de lá em prod, sem rebuild de imagem).
+# Batch semanal — SUBSTITUÍDO por Supabase pg_cron + pg_net → Cloud Run worker.
+# Mantido só para rerun manual de emergência (workflow_dispatch).
+#
+# Canônico: db/migrations/20260727_market_batch_supabase_cron.sql
+#             POST /api/internal/cron/weekly-market-batch (gymsite-worker)
 
-name: Weekly Market Batch
+name: Weekly Market Batch (manual fallback)
 
 on:
-  schedule:
-    # Domingo 06:00 UTC (~03:00 BRT)
-    - cron: "0 6 * * 0"
   workflow_dispatch:
     inputs:
       only_cvm:
@@ -18,7 +16,7 @@ on:
 
 jobs:
   weekly-batch:
-    name: Build market bundles + snapshots → Supabase
+    name: Manual weekly batch (legacy GHA)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -47,16 +45,12 @@ jobs:
           MARKET_BUNDLE_SUPABASE: "1"
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # Separação de schema (jun/2026): escrita direto no schema real (upsert via
-          # view de compat quebra). market_bundles/snapshots = gymsite.
           GYMSITE_SCHEMA_SEP: "1"
           SHARED_SCHEMA_SEP: "1"
-          # Gemini via Vertex AI (ADC / service account) — NÃO API key.
           GOOGLE_GENAI_USE_VERTEXAI: "true"
           GOOGLE_CLOUD_PROJECT: gen-lang-client-0106729343
           GOOGLE_CLOUD_LOCATION: global
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-sa.json
-          # Opcionais com --skip-enrichment (competição/aluguel não são buscados):
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           SEARCHAPI_KEY: ${{ secrets.SEARCHAPI_KEY }}
         run: |
@@ -65,14 +59,3 @@ jobs:
             ARGS="$ARGS --only-cvm"
           fi
           python scripts/batch/run_weekly_market_batch.py $ARGS
-
-      - name: Upload bundles artifact (debug)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: market-bundles
-          path: |
-            data/market_bundles/*.json
-            metrics/cache/benchmark_snapshots.json
-          retention-days: 7
-          if-no-files-found: ignore

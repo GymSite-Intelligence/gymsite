@@ -55,7 +55,16 @@ O valor é um JSON com chave de envelope `"market_context"` contendo os seguinte
 | `insights_estrategicos` | `list[str]` | Ao menos 3 insights com fonte rotulada |
 | `parque_ativo_total` | `int` | Total de CNPJs fitness ativos |
 | `parque_comercial_total` | `int` | Total CNPJs comerciais |
-| `novos_cnpj_fitness_90d` | `int` | Aberturas fitness nos últimos 90 dias |
+| `novos_cnpj_fitness_90d` | `int` | Aberturas fitness nos últimos 90 dias (`as_of`) |
+| `baixas_cnpj_fitness_90d` | `int` | Baixas (`situacao=08`) na janela 90d |
+| `baixas_cnpj_fitness_q` | `int` | Baixas no último trimestre civil fechado |
+| `entrantes_cnpj_fitness_q` | `int` | Aberturas no último Q fechado |
+| `saldo_oferta_q` | `int` | entrantes_q − baixas_q |
+| `pressao_oferta_q` | `str` | `retracao` \| `expansao` \| `neutro` (sinal por saldo_q) |
+| `janela_q_label` | `str` | Ex. `2026-Q1` |
+| `cnpj_as_of` | `str` | Âncora temporal (`min(hoje, fim ref_month)`) |
+| `arvore_oferta` | `dict` | Estoque/entrantes/baixas × mun/bairro × 90d/Q + carimbo |
+| `redes` | `dict` | Multunidade vs solo por `cnpj_basico` (≥2 ativos BR) |
 | `excluidos_saude_clinica` | `int` | CNPJs excluídos (saúde/clínica) |
 | `pendentes_validacao` | `int` | CNPJs pendentes de validação |
 | `composicao_parque` | `dict` | Distribuição por segmento |

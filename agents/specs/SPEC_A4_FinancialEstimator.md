@@ -101,7 +101,7 @@ Os parâmetros numéricos do prompt (ticket, matr/m², capacidade simultânea, i
 O A4 usa Flash por ser aritmética estruturada (tools fazem a conta). O Pro foi revertido para Flash em 12/06 após estabilização do pipeline. Flash APENAS para o A4; A6 (síntese final) permanece Pro. Re-testar Flash com prompt anti-code-execution antes de qualquer rollback para Pro.
 
 **RN-A4-09 — Campos obrigatórios para A6 (`_renderizar_secao_referencia_aluguel`)**
-O gate do A6 `_renderizar_secao_referencia_aluguel` retorna string vazia se `aluguel_pesquisa_detalhes` ou `aviso_metodologia_aluguel` estiverem ausentes. Por isso o LLM deve copiar esses campos literalmente do retorno da macro (RN-A4-03 via `analise_financeira_pronto` é a salvaguarda).
+O A6 `_renderizar_secao_referencia_aluguel` lê `fonte_aluguel`, `aluguel_mensal`, `aluguel_mediana_m2`, `aluguel_mrlr_inputs` e `aviso_metodologia_aluguel` do snapshot `analise_financeira_pronto`. Só valores com fonte MRLR são narrados como aluguel de decisão. Se MRLR estiver indisponível, o relatório pede cotação local e não promove portal, anúncio ou Grounding a fonte decisória.
 
 ---
 
@@ -130,7 +130,7 @@ O gate do A6 `_renderizar_secao_referencia_aluguel` retorna string vazia se `alu
 | `analise_financeira_a4_completo` lança exceção | ADK captura; A4 emite `OUT=0`; A6 lê `analise_financeira_pronto` (se callback rodou antes da exceção) ou falha gracefully no gate do A6 |
 | LLM tenta chamar `pesquisar_aluguel_mediana` separadamente | ADK não encontra a tool (não está registrada diretamente no A4); function_call falha; LLM deve usar apenas `analise_financeira_a4_completo` |
 | LLM alucina tool inexistente (ex: `run_code`) | Pipeline morre naquele run — padrão histórico do Flash (run 7, 2026-06-12). Prevenido pelo prompt `regra_execucao: autonoma` e instrução `NÃO tente chamar ... separadamente` |
-| LLM dropa `aluguel_pesquisa_detalhes` ao ecoar | A6 lê `analise_financeira_pronto` (snapshot da tool) para campos críticos; `_renderizar_secao_referencia_aluguel` usa o snapshot |
+| Narrativa recebe aluguel sem fonte MRLR | A6 lê `analise_financeira_pronto`, omite o valor alternativo como decisão e exige validação por cotação local |
 
 ---
 

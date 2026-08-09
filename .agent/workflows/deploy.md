@@ -1,5 +1,5 @@
 ---
-description: Deploy API+worker (Cloud Run) and frontend (Cloudflare Pages/Wrangler). Sync worker image after API rebuild.
+description: Deploy API+worker (Hetzner VPS + Tunnel) and frontend (Cloudflare Pages/Wrangler). Cloud Run deprecado.
 ---
 
 # Workflow: /deploy
@@ -14,13 +14,13 @@ Deploy produção GymSite (monorepo app logado). Ambiente shell: **PowerShell** 
 
 | Item | Valor |
 |---|---|
-| GCP projeto | `gen-lang-client-0106729343` |
-| Região | `us-central1` |
-| API | `gymsite-api` |
-| Worker | `gymsite-worker` (mesma imagem da API; **não** auto-deploya) |
+| API + worker | **Hetzner** `/opt/gymsite` · `docker-compose.prod.yml` · túnel CF |
+| Staging API | `https://api-hetzner.getgymsite.com.br` |
 | Front CF | projeto `gymsite` → `getgymsite.com.br` |
-| API URL | `https://api.getgymsite.com.br` |
-| Órfão (ignorar) | `gen-lang-client-0662901510` |
+| Landing CF | projeto `gym-insight-hub` → `gymsite.com.br` |
+| API URL (após cutover) | `https://api.getgymsite.com.br` |
+| Cloud Run | **DEPRECADO** — billing off; não `gcloud run deploy` |
+| Órfão GCP | `gen-lang-client-0662901510` (ignorar) |
 
 ## Steps
 
@@ -33,30 +33,17 @@ Deploy produção GymSite (monorepo app logado). Ambiente shell: **PowerShell** 
 
 2. **Migrations pendentes**
    - Se há SQL novo → seguir `/migrate` (arquivo único).
-   - Só seed `parametros_metodologia` no banco **não** substitui Cloud Run se código Python mudou.
+   - Só seed `parametros_metodologia` no banco **não** substitui deploy Hetzner se código Python mudou.
 
-3. **API — Cloud Run**
-   - Preferência: push/`merge` `main` dispara Cloud Build `gymsite-api`, **ou**
-   ```powershell
-   gcloud run deploy gymsite-api `
-     --region=us-central1 `
-     --project=gen-lang-client-0106729343 `
-     --source .
+3. **API + worker — Hetzner** (mesma VPS, compose). Na caixa:
+   ```bash
+   cd /opt/gymsite
+   git pull   # ou rsync do working tree
+   ./scripts/deploy.sh          # pull GHCR + rolling api
+   # ou primeira vez / sem GHCR:
+   docker compose -f docker-compose.prod.yml up -d --build
    ```
-   (ou o fluxo de imagem já usado no repo — não inventar Dockerfile “local prod”).
-
-4. **Worker — sync imagem (obrigatório após API)**
-   ```powershell
-   $IMG = gcloud run services describe gymsite-api `
-     --region=us-central1 `
-     --project=gen-lang-client-0106729343 `
-     --format="value(spec.template.spec.containers[0].image)"
-   gcloud run services update gymsite-worker `
-     --region=us-central1 `
-     --project=gen-lang-client-0106729343 `
-     --image $IMG
-   ```
-   Confirmar `GIT_SHA` / revisão em ambos se setado via env.
+   Worker sobe no compose (`RUN_QUEUE_WORKER=1`). **Não** Cloud Run.
 
 5. **Frontend — Cloudflare Pages**
    ```powershell
@@ -69,18 +56,20 @@ Deploy produção GymSite (monorepo app logado). Ambiente shell: **PowerShell** 
 
 6. **Health**
    ```powershell
-   Invoke-RestMethod https://api.getgymsite.com.br/api/version
+   Invoke-RestMethod https://api-hetzner.getgymsite.com.br/health
+   # após cutover DNS:
    Invoke-RestMethod https://api.getgymsite.com.br/api/health
    ```
-   Front: abrir `https://getgymsite.com.br` (não localhost).
+   Front app: `https://getgymsite.com.br` · landing: `https://www.gymsite.com.br/explorar`
 
 ## Rollback
 
-- **API/worker:** Cloud Run → revisão anterior (`gcloud run services update … --image <digest-anterior>` ou UI Revisions).
+- **API/worker:** na VPS, `docker compose -f docker-compose.prod.yml rollback` / imagem anterior no `deploy.sh`; Cloud Run **não**.
 - **Front:** redeploy deploy Pages anterior (histórico CF) — **não** `docker rename`.
 
 ## Checklist rápido
 
-- [ ] Mudou `agents/` / `tools/` / `api.py`? → Cloud Run **sim** + worker sync
-- [ ] Só SQL/seed? → `/migrate` ou seed; Cloud Run só se runtime Python também mudou
+- [ ] Mudou `agents/` / `tools/` / `api.py`? → **Hetzner** compose api+worker
+- [ ] Só SQL/seed? → `/migrate`; VPS só se runtime Python também mudou
+- [ ] **Nunca** `gcloud run deploy`
 - [ ] Domínio certo: app = `getgymsite.com.br` ≠ landing `gymsite.com.br`

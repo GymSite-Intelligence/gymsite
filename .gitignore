@@ -110,6 +110,16 @@ skills-lock.json
 
 # Artefatos estranhos
 =5.0.0
+$null
+
+# Relatórios PDF gerados na raiz (não versionar)
+/*_relatorio.pdf
+
+# Scratch Superpowers SDD (progresso local do agente)
+.superpowers/
+
+# POC Cloudflare Containers — não é produção
+workers/
 
 # PIDs de processos locais
 *.pid
@@ -120,6 +130,12 @@ eval/runs/
 
 # Dados gerados por pipelines (pesados, reproduzíveis)
 data/
+# Spec C: malha bairros — README + fixtures versionados; gpkg local ignorado
+!data/ibge_bairros/
+!data/ibge_bairros/README.md
+!data/ibge_bairros/fixtures/
+!data/ibge_bairros/fixtures/**
+data/ibge_bairros/*.gpkg
 
 # Scripts de debug/patch descartáveis
 scripts/_debug_*.py

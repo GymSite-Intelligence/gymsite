@@ -1,11 +1,10 @@
-"""Formato 1: query tipada = link Maps; gates tipo+bairro; fold acento."""
+"""Formato 1: query tipada = link Maps; gates tipo+raio; fold acento."""
 from __future__ import annotations
 
 import tools.competitor_tools as ct
 from agents_site.tools import buscar_concorrentes
 
-# Use escapes so Windows/editor encoding cannot corrupt ? ? ?
-_COCO = "Coc\u00f3"  # Coc?
+_COCO = "Coc\u00f3"
 _QUERY_FOLD = "academia no bairro Coco, Fortaleza - CE"
 
 
@@ -28,7 +27,7 @@ def test_query_formato1_fold_acento_unifica_coco():
     assert q_accent == q_plain == _QUERY_FOLD
     url = ct._maps_search_url_from_query(q_accent)
     assert "Coco" in url or "coco" in url.lower()
-    assert "Coc%C3%B3" not in url  # acento nao fragmenta cache/URL
+    assert "Coc%C3%B3" not in url
 
 
 def test_query_formato1_e_url_1_a_1():
@@ -82,14 +81,16 @@ def test_buscar_concorrentes_formato1_query_gates_e_url(monkeypatch):
     assert captured["query"] == _QUERY_FOLD
     assert out["query"] == _QUERY_FOLD
     assert out["maps_smoke_url"] == ct._maps_search_url_from_query(out["query"])
+    assert out["raio_metros"] == ct.RAIO_CONCORRENCIA_CANONICO_M == 1000
+    assert out["maps_smoke_aviso"] == "lista_bruta_maps_diferente_do_total_filtrado"
     nomes = {c["nome"] for c in out["concorrentes"]}
     assert f"Academia Uniq Club {_COCO}" in nomes
     assert "Keep in shape Academia" in nomes
     assert "Parque Esportes" in nomes
     assert "CT Greenlife" in nomes
+    assert "Max Forma" in nomes
     assert f"REK CrossFit {_COCO}" not in nomes
     assert "S3 - Treinamento Personalizado" not in nomes
-    assert "Max Forma" not in nomes
-    assert out["total_concorrentes"] == 4
+    assert out["total_concorrentes"] == 5
     assert "crossfit" in out["exclude_aplicado"]
     assert "personalizado" in out["exclude_aplicado"]

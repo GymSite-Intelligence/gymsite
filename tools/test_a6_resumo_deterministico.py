@@ -81,7 +81,7 @@ def test_candidato_fora_bairro_nao_e_nomeado():
 
 # ── (c) Saturação sempre do bairro (n concorrentes), nunca "raio 3km" ─────
 
-def test_saturacao_menciona_bairro_nao_raio():
+def test_saturacao_menciona_praca_canonica():
     texto = _resumo_executivo_deterministico(
         cidade="Fortaleza",
         bairro="Maraponga",
@@ -93,13 +93,10 @@ def test_saturacao_menciona_bairro_nao_raio():
         top_3=[],
         zoneamento=None,
     )
-    # Deve citar o n de concorrentes no bairro
     assert "7 concorrentes" in texto
-    # NUNCA deve citar "raio 3km" nem "3 km" como fonte da saturação
-    assert "raio" not in texto.lower()
+    assert "raio 1 km" in texto.lower()
     assert "3km" not in texto.lower()
     assert "3 km" not in texto.lower()
-    # Deve conter o nível de saturação
     assert "SATURADO" in texto
 
 
@@ -115,8 +112,7 @@ def test_saturacao_singular_quando_um_concorrente():
         top_3=[],
         zoneamento=None,
     )
-    # 1 concorrente → singular
-    assert "1 concorrente analisado no bairro" in texto
+    assert "1 concorrente analisado na praça" in texto
 
 
 # ── (d) Modelo + payback + margem aparecem no texto ───────────────────────

@@ -1,0 +1,16 @@
+---
+description: Toda design spec termina com self-review canônico (checklist + seção no arquivo) antes de plano/código.
+globs: docs/superpowers/specs/**/*-design.md,agents/specs/SPEC_*.md
+alwaysApply: false
+---
+
+# Spec self-review
+
+Ao **criar** ou **revisar materialmente** uma design spec:
+
+1. Ler [`.agent/rules/spec-self-review.md`](../../.agent/rules/spec-self-review.md)
+2. Rodar checklist (placeholder, consistência, escopo, ambiguidade, aceite, fora)
+3. Corrigir inline
+4. Gravar seção final `## Self-review` (data + ok / correções)
+
+Sem `## Self-review` → spec incompleta. Só então pedir review humano / `writing-plans`.

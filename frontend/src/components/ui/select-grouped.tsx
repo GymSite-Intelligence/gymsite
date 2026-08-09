@@ -48,7 +48,10 @@ export interface SelectGroupedProps {
   placeholder?: string
   disabled?: boolean
   ariaInvalid?: boolean
+  ariaLabel?: string
   className?: string
+  /** Classes do popup (portal). Use p.ex. explorar-chrome pra tema opaco no mapa. */
+  contentClassName?: string
   /** Altura máxima do popup antes de scrollar. Default 320px. */
   maxHeight?: number | string
 }
@@ -61,7 +64,9 @@ export function SelectGrouped({
   placeholder = 'Selecione…',
   disabled,
   ariaInvalid,
+  ariaLabel,
   className,
+  contentClassName,
   maxHeight = 320,
 }: SelectGroupedProps) {
   const finalGroups: SelectGroup[] = useMemo(() => {
@@ -82,9 +87,10 @@ export function SelectGrouped({
     <DropdownMenu>
       <DropdownMenuTrigger
         disabled={disabled}
+        aria-label={ariaLabel}
         aria-invalid={ariaInvalid || undefined}
         className={cn(
-          'h-9 w-full rounded-md border border-border bg-transparent px-3 text-sm',
+          'h-9 w-full rounded-md border border-border bg-secondary px-3 text-sm text-foreground',
           'flex items-center justify-between gap-2',
           'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
           'disabled:cursor-not-allowed disabled:opacity-50',
@@ -101,12 +107,15 @@ export function SelectGrouped({
         >
           {labelDoSelecionado ?? placeholder}
         </span>
-        <ChevronDown size={14} className="text-muted-foreground flex-shrink-0" />
+        <ChevronDown size={14} className="text-muted-foreground shrink-0" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
         sideOffset={4}
-        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px]"
+        className={cn(
+          'w-(--radix-dropdown-menu-trigger-width) min-w-50 border border-border bg-popover text-popover-foreground',
+          contentClassName,
+        )}
         style={{ maxHeight, overflowY: 'auto' }}
       >
         {finalGroups.map((g, gi) => (
@@ -140,7 +149,7 @@ export function SelectGrouped({
                     )}
                   </div>
                   {selecionado && (
-                    <Check size={12} className="text-primary flex-shrink-0" />
+                    <Check size={12} className="text-primary shrink-0" />
                   )}
                 </DropdownMenuItem>
               )

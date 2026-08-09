@@ -4,6 +4,8 @@ import {
   BotIcon,
   ClipboardListIcon,
   Building2Icon,
+  CompassIcon,
+  CpuIcon,
   FileTextIcon,
   GitCompareIcon,
   Globe2Icon,
@@ -35,6 +37,11 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Planos de abertura',
     to: '/execucao',
     icon: ClipboardListIcon,
+  },
+  {
+    title: 'Explorar',
+    to: '/explorar',
+    icon: CompassIcon,
   },
   {
     title: 'Mapa',
@@ -84,7 +91,13 @@ export const custosNavItem: SidebarNavItem = {
   icon: BarChart3Icon,
 }
 
+export const llmAdminNavItem: SidebarNavItem = {
+  title: 'Provedor de IA',
+  to: '/admin/llm',
+  icon: CpuIcon,
+}
+
 export function getSidebarNavItems(isOwnerOrAdmin: boolean): SidebarNavItem[] {
   if (!isOwnerOrAdmin) return appNavItems
-  return [...appNavItems, custosNavItem]
+  return [...appNavItems, custosNavItem, llmAdminNavItem]
 }

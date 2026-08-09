@@ -2,9 +2,9 @@
 Renda e população por bairro — Fase B.
 
 Ordem de fontes (regra de ouro: dado real com fonte/metodologia, não hardcode):
-1. CKAN municipal (dado oficial por bairro) — ex.: Fortaleza, dataset
-   "Desenvolvimento Humano por Bairro" (IDH-Renda → renda per capita via fórmula Atlas).
-2. Piloto curado em data/bairro_renda_pilot/{cidade}_{uf}.json (fallback rotulado).
+1. Tabela nacional `renda_bairro` (IBGE Censo 2022; DF = PDAD Ampliada 2024 por RA).
+2. CKAN municipal (dado oficial por bairro) — ex.: Fortaleza IDH-Renda.
+3. Piloto curado em data/bairro_renda_pilot/{cidade}_{uf}.json (fallback rotulado).
 """
 from __future__ import annotations
 
@@ -137,8 +137,21 @@ def load_pilot_catalog(cidade: str, uf: str) -> dict[str, Any] | None:
         return None
 
 
+def _resolve_pilot_entry(pilot: dict[str, Any], bairro: str) -> dict[str, Any] | None:
+    """Lookup piloto com aliases (ex.: asa norte → plano piloto)."""
+    bn = _norm(bairro)
+    bairros = pilot.get("bairros") or {}
+    if bn in bairros:
+        return bairros[bn]
+    aliases = pilot.get("aliases") or {}
+    target = aliases.get(bn)
+    if target and _norm(target) in bairros:
+        return bairros[_norm(target)]
+    return None
+
+
 def _renda_bairro_ibge(cidade: str, uf: str, bairro: str) -> dict | None:
-    """Renda do bairro da tabela NACIONAL `renda_bairro` (IBGE Censo 2022). best-effort."""
+    """Renda do bairro da tabela NACIONAL `renda_bairro` (IBGE/PDAD). best-effort."""
     import os
     key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
            or os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_KEY"))
@@ -148,14 +161,32 @@ def _renda_bairro_ibge(cidade: str, uf: str, bairro: str) -> dict | None:
         from tools.supabase_client import load_create_client
 
         cli = load_create_client()(os.environ["SUPABASE_URL"], key)
-        q = cli.table("renda_bairro").select("*").eq("bairro_norm", _norm(bairro))
+        bn = _norm(bairro)
+        # aliases DF (Asa Norte → Plano Piloto) — mesma mapa do posicionamento
+        try:
+            from tools.posicionamento_renda import _ALIAS_BAIRRO
+
+            alias = _ALIAS_BAIRRO.get(((uf or "").strip().upper(), bn))
+            if alias:
+                bn = _norm(alias)
+        except Exception:
+            pass
+        q = cli.table("renda_bairro").select("*").eq("bairro_norm", bn)
         if (uf or "").strip():
             q = q.eq("uf", uf.strip().upper())
         rows = getattr(q.limit(5).execute(), "data", None) or []
         if not rows:
             return None
         cnorm = _norm(cidade)
-        return next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), rows[0])
+        pick = next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), rows[0])
+        # DF: rejeita linha municipal artificial (bairro == cidade) se pediu RA/bairro real
+        if (
+            (uf or "").strip().upper() == "DF"
+            and _norm(pick.get("bairro") or "") == cnorm
+            and bn != cnorm
+        ):
+            return None
+        return pick
     except Exception as exc:
         print(f"[bairro_renda] renda_bairro IBGE indisponível: {type(exc).__name__}: {exc}")
         return None
@@ -168,7 +199,7 @@ def enrich_demografia_bairro(
     uf: str,
 ) -> dict[str, Any]:
     """
-    Preenche demografia['bairro']. Ordem: IBGE Censo 2022 (renda_bairro nacional) >
+    Preenche demografia['bairro']. Ordem: renda_bairro nacional (IBGE/PDAD) >
     CKAN 2010 (Atlas IDH-Renda) > piloto curado.
     """
     out = dict(demografia)
@@ -179,20 +210,29 @@ def enrich_demografia_bairro(
         out["bairro"] = bairro_block
         return out
 
-    # 0. IBGE Censo 2022 por bairro (renda_bairro nacional) — PRIMÁRIO, fresco.
+    # 0. Tabela nacional renda_bairro (IBGE 2022 ou PDAD DF 2024) — PRIMÁRIO.
     ibge = _renda_bairro_ibge(cidade, uf, bairro)
     if ibge and ibge.get("renda_pc"):
+        fonte = ibge.get("fonte") or ""
+        is_pdad = "PDAD" in fonte
         bairro_block["renda_media"] = ibge.get("renda_pc")  # per capita (compat cutoffs A2)
         bairro_block["renda_media_per_capita"] = ibge.get("renda_pc")
         bairro_block["renda_resp_domicilio"] = ibge.get("renda_media")
         bairro_block["renda_percentil"] = ibge.get("percentil_municipio")
         bairro_block["ranking_municipio"] = ibge.get("ranking_municipio")
-        bairro_block["fonte"] = ibge.get("fonte")
-        bairro_block["data_referencia"] = "2022"
-        bairro_block["nota"] = (
-            "Renda do responsável pelo domicílio por bairro (IBGE Censo 2022); "
-            "per capita = renda / (pessoas/domicílios). Fonte nacional."
-        )
+        bairro_block["fonte"] = fonte
+        bairro_block["data_referencia"] = str(ibge.get("ano") or ("2024" if is_pdad else "2022"))
+        if is_pdad:
+            bairro_block["nota"] = (
+                "Renda per capita domiciliar (mediana ponderada) por RA — PDAD Ampliada 2024 "
+                "(IPEDF CODEPLAN). Aliases Receita (Asa Norte etc.) mapeiam para RA."
+            )
+            bairro_block["granularidade"] = "ra"
+        else:
+            bairro_block["nota"] = (
+                "Renda do responsável pelo domicílio por bairro (IBGE Censo 2022); "
+                "per capita = renda / (pessoas/domicílios). Fonte nacional."
+            )
         out["bairro"] = bairro_block
         return out
 
@@ -218,22 +258,25 @@ def enrich_demografia_bairro(
             out["bairro"] = bairro_block
             return out
 
-    # 2. Piloto curado (fallback rotulado).
+    # 2. Piloto curado (fallback rotulado; DF = PDAD RAs).
     pilot = load_pilot_catalog(cidade, uf)
     if not pilot:
         out["bairro"] = bairro_block
         return out
 
-    entry = (pilot.get("bairros") or {}).get(_norm(bairro))
+    entry = _resolve_pilot_entry(pilot, bairro)
     if not entry:
         out["bairro"] = bairro_block
         return out
 
-    bairro_block["renda_media"] = entry.get("renda_media")
+    bairro_block["renda_media"] = entry.get("renda_media") or entry.get("renda_pc")
+    bairro_block["renda_media_per_capita"] = entry.get("renda_pc") or entry.get("renda_media")
     bairro_block["populacao"] = entry.get("populacao")
     bairro_block["fonte"] = pilot.get("fonte", "bairro_renda_pilot")
     bairro_block["dataset_id"] = entry.get("dataset_id")
     bairro_block["data_referencia"] = pilot.get("data_referencia")
     bairro_block["nota"] = pilot.get("nota")
+    if "PDAD" in (pilot.get("fonte") or ""):
+        bairro_block["granularidade"] = "ra"
     out["bairro"] = bairro_block
     return out

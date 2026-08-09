@@ -240,3 +240,81 @@ def test_roubo_nao_piora_vermelho_nem_transicao():
         }
         assert aplicar_veto_oceano_por_roubo(parsed) is False
         assert parsed["veredito_posicionamento"] == v
+
+
+def test_attach_adds_voronoi_smoke_without_changing_rotulo(monkeypatch):
+    from tools import absorcao_margem_fresca as m
+
+    def fake_smoke(**kwargs):
+        return {
+            "status": "ok",
+            "motivo": None,
+            "pop_bairro": 1000,
+            "pop_celula": 400,
+            "pop_celula_ponderada": 350,
+            "pool_ref": kwargs["pool_ref"],
+            "pool_voronoi": int(round(kwargs["pool_ref"] * 0.4)),
+            "pool_voronoi_ponderado": int(round(kwargs["pool_ref"] * 0.35)),
+            "delta_pct": -0.6,
+            "n_sites": 2,
+            "n_setores_celula": 1,
+            "peso_candidato": 1500.0,
+            "carimbo": "ok · smoke · IBGE · n/a",
+        }
+
+    monkeypatch.setattr(
+        "tools.voronoi_atratividade.compute_voronoi_smoke",
+        fake_smoke,
+    )
+
+    state = {
+        "demografia_bairro": {
+            "populacao": 60165,
+            "renda_media_per_capita": 4812,
+            "perfil_idade_sexo_bairro": {
+                "segmentos": {
+                    "15-24": {"total": 7850},
+                    "25-39": {"total": 18420},
+                    "40-59": {"total": 12100},
+                    "60+": {"total": 8200},
+                },
+            },
+        },
+        "input_params": {"idade_min": 25, "idade_max": 40},
+        "concorrentes_brutos": [
+            {
+                "nome": "A",
+                "lat": -3.75,
+                "lng": -38.48,
+                "gate_espacial": "poligono_ibge_bairro",
+            },
+            {
+                "nome": "B",
+                "lat": -3.76,
+                "lng": -38.47,
+                "gate_espacial": "poligono_ibge_bairro",
+            },
+        ],
+        "area_m2": 1500,
+        "candidato_lat": -3.755,
+        "candidato_lng": -38.475,
+        "bairro_poligono": {
+            "ring": [
+                (-38.50, -3.78),
+                (-38.45, -3.78),
+                (-38.45, -3.73),
+                (-38.50, -3.73),
+                (-38.50, -3.78),
+            ]
+        },
+        "modelo_recomendado": "mid",
+    }
+    parsed: dict = {"veredito_posicionamento": "TRANSICAO"}
+    out = m.attach_absorcao_margem_fresca(state, parsed)
+    assert out is not None
+    abs_ = parsed["absorcao_margem_fresca"]
+    assert abs_["rotulo"] in ("fresco", "misto", "roubo")
+    assert "voronoi_smoke" in abs_
+    assert abs_["voronoi_smoke"]["status"] == "ok"
+    assert abs_["base_espacial"] in ("poligono_ibge", "raio_fallback")
+    assert abs_["base_espacial"] != "voronoi"

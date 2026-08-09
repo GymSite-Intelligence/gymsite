@@ -87,4 +87,4 @@ async def carregar_historico_completo(projeto_id: str) -> list[dict]:
             .order("created_at", desc=False)
             .execute()
     )
-    return result.data or []
+    return [m for m in (result.data or []) if isinstance(m, dict)]

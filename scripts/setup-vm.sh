@@ -16,7 +16,8 @@ log "Iniciando setup da VM..."
 
 # ─── Docker já deve estar instalado pelo startup-script ─────────────────────
 if ! command -v docker &>/dev/null; then
-    log "Docker não encontrado. Rode o bootstrap-gce.sh primeiro."
+    log "Docker não encontrado. Em Hetzner: sudo bash scripts/hetzner/bootstrap.sh"
+    log "Legado GCE: scripts/bootstrap-gce.sh"
     exit 1
 fi
 

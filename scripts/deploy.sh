@@ -11,7 +11,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$PROJECT_DIR/docker-compose.prod.yml"
 ENV_FILE="$PROJECT_DIR/.env.production"
 TAG="${1:-latest}"
-GHCR_IMAGE="${GHCR_IMAGE:-ghcr.io/marce/gymsite_intelligence}"
+GHCR_IMAGE="${GHCR_IMAGE:-ghcr.io/marcelo-rosas/gymsite}"
 HEALTH_RETRIES=12
 HEALTH_INTERVAL=5
 

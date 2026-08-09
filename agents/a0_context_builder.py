@@ -6,6 +6,8 @@ Act-on A0 bundle-only (2026-07-16): Deep Research / Kimi FORA das tools.
 Qualitativo = market_bundle; quantitativo = CNPJ/CNO + fatos_competicao_local.
 Sem interpretação além dos dados retornados pelas tools.
 """
+import re
+
 from google.genai import types
 from tools.cnpj_fitness_tools import dados_parque_cnpj_para_a0
 from tools.local_market_facts import fatos_competicao_local
@@ -14,6 +16,37 @@ from tools.market_bundle import carregar_market_bundle
 _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=1024),
 )
+
+# Literais de REFERÊNCIA do schema no prompt (## SAÍDA). Sem market_bundle, o LLM às
+# vezes ecoa o esqueleto verbatim em vez de escrever "dados_nao_disponiveis"
+# (§DEGRADAÇÃO). Bug Pirapora: "crescimento|estavel|retracao" e "fato+fonte N"
+# vazaram até o PDF do cliente. Guardrail determinístico, mesmo espírito do override
+# CNPJ: texto exibido não nasce da boca do LLM.
+_ESQUELETO_TENDENCIA = "crescimento|estavel|retracao"
+_ESQUELETO_DATA_COLETA = "YYYY-MM-DD"
+_ESQUELETO_INSIGHT_RE = re.compile(r"^\s*fato\+fonte\s*\d*\s*$", re.IGNORECASE)
+
+
+def _sanear_esqueleto_a0(inner: dict) -> bool:
+    """Troca literais do schema por vazio/dados_nao_disponiveis. Retorna True se mudou.
+
+    Só casa o literal EXATO do esqueleto — nunca um valor real ('estavel', um insight
+    com fonte). Não inventa dado: o oposto, remove o placeholder que fingia ser dado.
+    """
+    mudou = False
+    if str(inner.get("tendencia_mercado") or "").strip() == _ESQUELETO_TENDENCIA:
+        inner["tendencia_mercado"] = "dados_nao_disponiveis"
+        mudou = True
+    if str(inner.get("data_coleta") or "").strip() == _ESQUELETO_DATA_COLETA:
+        inner["data_coleta"] = ""
+        mudou = True
+    ins = inner.get("insights_estrategicos")
+    if isinstance(ins, list):
+        limpos = [i for i in ins if not _ESQUELETO_INSIGHT_RE.match(str(i))]
+        if len(limpos) != len(ins):
+            inner["insights_estrategicos"] = limpos
+            mudou = True
+    return mudou
 
 
 def _a0_override_cnpj_numeros(callback_context):
@@ -40,43 +73,56 @@ def _a0_override_cnpj_numeros(callback_context):
         if not isinstance(inner, dict):
             return None
 
+        # Saneamento do esqueleto: roda ANTES e INDEPENDENTE do CNPJ — é o caminho do
+        # Pirapora (bundle ausente). Persiste mesmo se a tool CNPJ falhar depois.
+        mudou = _sanear_esqueleto_a0(inner)
+
         ip = st.get("input_params") if isinstance(st.get("input_params"), dict) else {}
         cidade = (ip.get("cidade") or inner.get("cidade") or "").strip()
         uf = (ip.get("uf") or inner.get("uf") or "").strip()
         bairro = (ip.get("bairro") or inner.get("bairro") or "").strip()
-        if not cidade:
-            return None
 
-        tool = dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)
-        if not isinstance(tool, dict) or tool.get("status") != "ok":
-            return None
-        m = tool.get("metricas_objetivas") or {}
-        ind = tool.get("indicadores_derivados") or {}
+        if cidade:
+            tool = dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)
+            if isinstance(tool, dict) and tool.get("status") == "ok":
+                m = tool.get("metricas_objetivas") or {}
+                ind = tool.get("indicadores_derivados") or {}
 
-        inner["parque_ativo_total"] = m.get("parque_ativo_total")
-        inner["parque_comercial_total"] = m.get("parque_comercial_total")
-        inner["academias_ativas_cidade_cnpj"] = m.get("parque_ativo_total")
-        inner["novos_cnpj_fitness_90d"] = m.get("novos_cnpj_fitness_90d")
-        inner["excluidos_saude_clinica"] = m.get("excluidos_saude_clinica")
-        inner["pendentes_validacao"] = m.get("pendentes_validacao")
-        inner["composicao_parque"] = m.get("composicao_parque") or {}
-        inner["novas_unidades_90d_por_segmento"] = m.get("novas_unidades_90d_por_segmento") or {}
-        inner["serie_aberturas_anual"] = m.get("serie_aberturas_anual") or {}
-        inner["arvore_2x2_parque"] = tool.get("arvore_2x2_parque")  # plug: o LLM dropava
-        inner["fatos_parque_cnpj"] = {
-            "fonte": "RFB CNPJ Aberto",
-            "metricas": m,
-            "indicadores_derivados": ind,
-            "cruzamento_cno": tool.get("cruzamento_cno") or {},
-            "lacunas": tool.get("lacunas_conhecidas") or [],
-        }
-        inner["_cnpj_override"] = "deterministico_tool"
+                inner["parque_ativo_total"] = m.get("parque_ativo_total")
+                inner["parque_comercial_total"] = m.get("parque_comercial_total")
+                inner["academias_ativas_cidade_cnpj"] = m.get("parque_ativo_total")
+                inner["novos_cnpj_fitness_90d"] = m.get("novos_cnpj_fitness_90d")
+                inner["excluidos_saude_clinica"] = m.get("excluidos_saude_clinica")
+                inner["pendentes_validacao"] = m.get("pendentes_validacao")
+                inner["composicao_parque"] = m.get("composicao_parque") or {}
+                inner["novas_unidades_90d_por_segmento"] = m.get("novas_unidades_90d_por_segmento") or {}
+                inner["serie_aberturas_anual"] = m.get("serie_aberturas_anual") or {}
+                inner["arvore_2x2_parque"] = tool.get("arvore_2x2_parque")  # plug: o LLM dropava
+                inner["arvore_oferta"] = tool.get("arvore_oferta")
+                inner["redes"] = tool.get("redes")
+                inner["baixas_cnpj_fitness_90d"] = m.get("baixas_cnpj_fitness_90d")
+                inner["baixas_cnpj_fitness_q"] = m.get("baixas_cnpj_fitness_q")
+                inner["entrantes_cnpj_fitness_q"] = m.get("entrantes_cnpj_fitness_q")
+                inner["saldo_oferta_q"] = m.get("saldo_oferta_q")
+                inner["pressao_oferta_q"] = m.get("pressao_oferta_q")
+                inner["janela_q_label"] = m.get("janela_q_label")
+                inner["cnpj_as_of"] = m.get("as_of")
+                inner["fatos_parque_cnpj"] = {
+                    "fonte": "RFB CNPJ Aberto",
+                    "metricas": m,
+                    "indicadores_derivados": ind,
+                    "cruzamento_cno": tool.get("cruzamento_cno") or {},
+                    "lacunas": tool.get("lacunas_conhecidas") or [],
+                }
+                inner["_cnpj_override"] = "deterministico_tool"
+                mudou = True
 
-        if tem_envelope:
-            mc["market_context"] = inner
-            st["market_context"] = mc
-        else:
-            st["market_context"] = inner
+        if mudou:
+            if tem_envelope:
+                mc["market_context"] = inner
+                st["market_context"] = mc
+            else:
+                st["market_context"] = inner
     except Exception:
         pass
     return None

@@ -1,0 +1,48 @@
+---
+config:
+  layout: elk
+  theme: mc
+  flowchart:
+    defaultRenderer: elk
+---
+%% Anteprojeto — sala musculação 300 m² · Icaraí, Niterói/RJ
+%% Fonte: degustação chat (layout de fluxo) · NÃO substitui planta assinada (RRT)
+%% Perfil: intermediário/premium · só salão de musculação (sem vestiário/recepção)
+flowchart TB
+
+  Ent@{ shape: lean-l, label: "ENTRADA<br/>visão ampla · sem bloqueio" }
+
+  subgraph FRENTE["Frente — próximo à entrada"]
+    direction LR
+    Mob@{ shape: rounded, label: "Mobilidade · core · aquecimento<br/>~20–25 m²<br/>avaliação rápida" }
+    MaqSup@{ shape: rect, label: "Máquinas guiadas<br/>membros superiores<br/>~32–38 m²" }
+  end
+
+  subgraph CENTRO["Centro — ilhas e polias"]
+    direction LR
+    MaqInf@{ shape: rect, label: "Máquinas guiadas<br/>pernas · glúteos<br/>~33–37 m²" }
+    Pol@{ shape: rect, label: "Polias · crossover<br/>multifuncional<br/>~30–40 m²" }
+  end
+
+  Hal@{ shape: rect, label: "Halteres · bancos · espelhos<br/>faixa contínua · ~75–90 m²<br/>corredor sec. ≥1,20 m" }
+
+  Rack@{ shape: trap-b, label: "Racks · agachamento · peso pesado<br/>~25–30 m²<br/>fundo · laje resistente" }
+
+  Circ@{ shape: delay, label: "Circulação + segurança<br/>~55–65 m² distribuídos<br/>corredor principal ≥1,50 m" }
+
+  Note@{ shape: comment, label: "Anteprojeto conceitual · pilares/janelas/entrada real pendem · conferir NBR 9050 · Bombeiros · COE · ART arquiteto" }
+
+  Ent ==> Mob
+  Ent ==> MaqSup
+  Mob --> MaqInf
+  MaqSup --> Pol
+  MaqInf --> Hal
+  Pol --> Hal
+  Hal ==> Rack
+
+  Ent ~~~ Circ
+  Circ -.->|transversal| MaqInf
+  Circ -.->|transversal| Pol
+  Circ -.->|não usar atrás dos bancos| Hal
+
+  Note ~~~ Rack

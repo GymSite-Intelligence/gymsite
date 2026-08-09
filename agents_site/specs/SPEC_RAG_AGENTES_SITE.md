@@ -1,10 +1,24 @@
 # SPEC — RAG dos 5 agentes do site (auditoria + plano de preenchimento)
 
-> Registrada 2026-07-08. Auditoria dos data stores que aterram os 5 agentes de degustação
-> (`agents_site/agent.py`), lacunas de material por especialidade, e plano de Deep Research
-> pra tapar os buracos. **Parte 1 (wiring) FEITA hoje; Parte 2 (ingest) = amanhã.**
+> Registrada 2026-07-08. **Atualizado 2026-08-04:** Vertex Discovery **DEPRECATED** no happy path
+> dos facades `agents_site`. L2 = Eros → corpus local `docs/agente/agentes_site/rag/` → stub.
+> Design: `docs/superpowers/specs/2026-08-04-rag-deterministico-llm-leitura-design.md`
+> Plan: `docs/superpowers/plans/2026-08-04-rag-deterministico-llm-leitura.md`
 
-## Mapa: agente → tool RAG → engine/store (estado após o fix de hoje)
+## Mapa canônico 2026-08-04 (L2)
+
+| Agente | Tool L2 | Eros env | Corpus glob |
+|---|---|---|---|
+| Mercado | `consultar_base_mercado` (+ L1 Maps/IBGE) | `EROS_GROUP_ID_MERCADO` | `mercado_*.txt` (pode vazio) |
+| Técnico | `consultar_catalogo_equipamentos` | `EROS_GROUP_ID_TECNICO` (**ingest pendente**) | `tecnico_*.txt` |
+| Regulatório | `consultar_base_regulatoria` | `EROS_GROUP_ID_REGULATORIO` | `regulatorio_*.txt`, `mapa_uf_cref_*.txt` |
+| Arquiteto | `consultar_engenharia_obra` + sanitários | `EROS_GROUP_ID_ARQUITETO` → fallback ENGENHARIA | `engenharia_*.txt` |
+| Engenheiro | `consultar_engenharia_obra` | `EROS_GROUP_ID_ENGENHARIA` | `engenharia_*.txt` |
+
+`VERTEX_RAG_ENABLED=0` em prod. Facades **não** importam `tools/discovery_engine_tools.py`.
+Exceção legado: `services/consultor/consultor_engine.py` ainda pode chamar Discovery (fora degustação).
+
+## Mapa histórico Vertex (legado — NÃO usar em facades site)
 
 | Agente | Tool RAG | Engine | Store | Docs |
 |---|---|---|---|---|

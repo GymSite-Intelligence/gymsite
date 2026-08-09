@@ -20,6 +20,9 @@ export function TurnstileWidget({
         if (cancelado || !ref.current || !ts || widgetId.current) return
         widgetId.current = ts.render(ref.current, {
           sitekey: TURNSTILE_SITEKEY,
+          appearance: 'always',
+          theme: 'dark',
+          action: 'turnstile-spin-v2',
           callback: (t: string) => onToken(t),
           'expired-callback': () => {
             try {

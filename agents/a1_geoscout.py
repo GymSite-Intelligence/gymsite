@@ -1,31 +1,24 @@
-# agents/a1_geoscout.py
-"""A1 GeoScout — DETERMINÍSTICO (sem LLM).
+"""A1 GeoScout — listings filtrados + aluguel MRLR.
 
-Antes era LlmAgent com thinking=0 que SÓ copiava o JSON da macro
-`analisar_pontos_comerciais_completo` (100% determinística) pro output_key. Era
-passthrough caro + risco de truncar o array de candidatos (incidente b5b0e627:
-14 candidatos → 0 no A6 porque o LLM truncou ao copiar).
+Antes: BaseAgent rodava `analisar_pontos_comerciais_completo` (SearchAPI âncoras
+supermercado/concessionária + área por tipo). Evidência Pirapora-MG Centro
+(2026-08-05): ≥90% `indireto-heuristico`, área 600 repetida, contaminação
+Diadema-SP. Output não é ponto decidível.
 
-Vira BaseAgent (igual A2/A3a): roda a macro direto e grava o resultado. Elimina:
-- variância (mesma praça = mesmo resultado)
-- custo LLM (uma chamada Gemini Flash a menos por run)
-- a truncagem do array (o LLM não toca mais o JSON)
-- exposição ao dunning/Vertex (A1 sobrevive mesmo com billing travado)
-
-Mapa de determinização VEC: "o LLM raciocina sobre dado, não PRODUZ dado". A1 só
-produzia (copiava) → determinizado.
+Agora: busca anúncios individuais via SearchAPI, filtra geografia/área e anexa
+aluguel MRLR. Lista vazia permanece vazia e explícita.
 """
 from __future__ import annotations
 
 import asyncio
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 
 from google.adk.agents import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
 
-from tools.anchoring_tools import analisar_pontos_comerciais_completo
 from tools.competitor_tools import _parse_market_context
+from tools.a1_listing_pipeline import buscar_candidatos_listing_mrlr
 
 
 def _loc_do_state(state) -> tuple[str, str, str]:
@@ -44,30 +37,55 @@ def _loc_do_state(state) -> tuple[str, str, str]:
     return cidade, uf, bairro
 
 
+def _positive_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
 class GeoScoutAgent(BaseAgent):
-    """A1 determinístico: roda a macro de pontos comerciais e grava o resultado."""
+    """A1 determinístico: listing SearchAPI filtrado + MRLR."""
 
     async def _run_async_impl(
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
         state = ctx.session.state
         cidade, uf, bairro = _loc_do_state(state)
+        raw_params = state.get("input_params")
+        params: dict = raw_params if isinstance(raw_params, dict) else {}
+        area_min = _positive_int(params.get("area_m2_min"), 500)
+        area_max = _positive_int(params.get("area_m2_max"), 5000)
         try:
-            # macro é síncrona — roda em thread pra não travar o loop
-            r = await asyncio.to_thread(
-                analisar_pontos_comerciais_completo, bairro, cidade, uf
+            result = await asyncio.to_thread(
+                buscar_candidatos_listing_mrlr,
+                cidade=cidade,
+                uf=uf,
+                bairro=bairro,
+                area_m2_min=area_min,
+                area_m2_max=area_max,
             )
-            if not isinstance(r, dict):
-                r = {"erro": "macro retornou não-dict", "total_candidatos": 0, "candidatos": []}
-        except Exception as e:  # nunca derruba o pipeline
-            r = {"erro": f"{type(e).__name__}: {e}", "total_candidatos": 0, "candidatos": []}
-
+            r = result if isinstance(result, dict) else {
+                "status": "ok_vazio",
+                "total_candidatos": 0,
+                "candidatos": [],
+                "aviso": "Busca de listings retornou formato inválido.",
+            }
+        except Exception as exc:
+            r = {
+                "status": "ok_vazio",
+                "total_candidatos": 0,
+                "candidatos": [],
+                "aviso": f"Listings indisponíveis: {type(exc).__name__}: {exc}",
+                "fonte": "listing_cascata_searchapi+mrlr",
+                "cidade": cidade,
+                "uf": uf,
+                "bairro": bairro,
+            }
         yield Event(
             author=self.name,
             invocation_id=ctx.invocation_id,
-            # candidatos_geoscout_pronto = snapshot que o A6 lê PRIMEIRO (bypassa o LLM,
-            # como o _persistir_macro_no_state fazia). candidatos_geoscout = output_key
-            # legado p/ consumidores que leem essa chave.
             actions=EventActions(state_delta={
                 "candidatos_geoscout_pronto": r,
                 "candidatos_geoscout": r,
@@ -78,8 +96,7 @@ class GeoScoutAgent(BaseAgent):
 geoscout_agent = GeoScoutAgent(
     name="GeoScout",
     description=(
-        "A1 determinístico (sem LLM): identifica zonas comerciais-âncora p/ academias "
-        "via macro Google Maps (geocode + nearby + text + score + polos + listings). "
-        "Retorna endereços-âncora para field research, não imóveis vagos."
+        "A1 determinístico: encontra anúncios individuais no bairro via SearchAPI, "
+        "filtra geografia e área, e anexa aluguel MRLR."
     ),
 )

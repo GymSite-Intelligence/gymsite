@@ -79,6 +79,7 @@ Antes de qualquer ação, identifique qual skill é mais relevante:
 | Gerar/modificar PDF, gráfico, relatório | `gymsite-reporting` |
 | Pipeline de prospecção, webhooks, status de oportunidade | `gymsite-prospecting` |
 | Cloud Run, Wrangler/Pages, env, worker sync | `gymsite-devops` (+ workflows `/deploy` canônicos; skill pode estar stale) |
+| E-mail transacional / drip degustação (Resend) | `gymsite-email` + MCP `resend` |
 | Auditoria de conformidade (políticas → gaps) | workflow `/audit` + `auditoria-conformidade.md` |
 
 ### 3.2 Carregamento Sob Demanda
@@ -359,6 +360,8 @@ gymsite_intelligence/
 | Checklist diário | `.agent/rules/REGRAS_USO_GLOBAL.md` |
 | Conformidade | `.agent/rules/auditoria-conformidade.md` · `/audit` |
 | Fontes pipeline | `.agent/rules/conferencia-fontes-pipeline.md` |
+| Spec self-review | `.agent/rules/spec-self-review.md` — toda `*-design.md` termina com `## Self-review` |
+| Preview aprovação | `.agent/rules/preview-aprovacao.md` — PDF/UI → artefato em `docs/superpowers/previews/` antes do ok |
 | Documento do módulo de prospecção | `docs/MODULO_PROSPECCAO.md` |
 | Migrations | `db/migrations/` (aplicar via `/migrate`) |
 | Schema do backend | `models/schemas.py` |

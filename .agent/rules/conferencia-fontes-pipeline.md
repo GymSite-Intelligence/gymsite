@@ -220,7 +220,8 @@ Precedência: **Armadilha vence** headroom `OCEANO_AZUL` se `mix.premium ≥ mat
 | Três pools | primário (form) · secundário (resto 15+) · total; rótulo fresco/misto/roubo só no **primário** |
 | PDF | Seção **Absorção e margem de alunos** (`pdf/html_builder.py`) · preview = `gerar_html` |
 | Quem anexa | A9 `attach_absorcao_margem_fresca` → `relatorio_posicionamento.absorcao_margem_fresca` |
-| Spatial W2a | Spec C PIP / raio — **sem Voronoi** |
+| Spatial W2a | Spec C PIP / raio — rótulo Absorção **não** usa Voronoi |
+| Voronoi smoke (W2.1) | `carregar_setores_censo(..., ring=)` = **bbox do polígono** + paginação (não `limit` cego do município) → `voronoi_smoke`; nota experimental; **não** muda rótulo/`base_espacial` · spec `2026-08-07-voronoi-smoke-design.md` |
 | Spec | `docs/superpowers/specs/2026-08-07-absorcao-margem-fresca-design.md` |
 
 ---

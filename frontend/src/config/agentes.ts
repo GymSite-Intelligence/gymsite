@@ -32,20 +32,70 @@ export interface AgenteMeta {
   label: string
   setor: SetorId
   icone: Icon
+  /** Mascote PNG (marca) quando for um dos 5 especialistas. */
+  img?: string
 }
 
 /** Nome da ferramenta (consultor_engine) → agente. */
 export const TOOL_TO_AGENTE: Record<string, AgenteMeta> = {
-  pesquisar_contexto_mercado: { label: 'Contexto de Mercado', setor: 'dados', icone: AGENT_ICONS.dados_context_builder },
-  buscar_pontos_comerciais: { label: 'Pontos Comerciais', setor: 'dados', icone: AGENT_ICONS.dados_geoscout },
-  analisar_demografia: { label: 'Demografia', setor: 'dados', icone: AGENT_ICONS.dados_demo_analyst },
-  pesquisar_concorrentes: { label: 'Concorrentes', setor: 'dados', icone: AGENT_ICONS.dados_competitor_search },
-  analisar_reviews_e_dores: { label: 'Reviews & Dores', setor: 'dados', icone: AGENT_ICONS.dados_competitor_analysis },
-  mapear_oferta_e_servicos: { label: 'Oferta & Serviços', setor: 'dados', icone: AGENT_ICONS.dados_market_research },
-  estimar_investimento: { label: 'Investimento', setor: 'financeiro', icone: AGENT_ICONS.financeiro_estimator },
-  gerar_relatorio_formal: { label: 'Relatório Formal', setor: 'marketing', icone: AGENT_ICONS.marketing_report_writer },
-  consultar_base_conhecimento: { label: 'Base de Conhecimento', setor: 'conhecimento', icone: AGENT_ICONS.conhecimento_rag_retriever },
-  consultar_catalogos_equipamentos: { label: 'Equipamentos', setor: 'tecnico', icone: IconeTecnico },
+  pesquisar_contexto_mercado: {
+    label: 'Contexto de Mercado',
+    setor: 'dados',
+    icone: AGENT_ICONS.dados_context_builder,
+    img: '/agentes/mercado.png',
+  },
+  buscar_pontos_comerciais: {
+    label: 'Pontos Comerciais',
+    setor: 'dados',
+    icone: AGENT_ICONS.dados_geoscout,
+    img: '/agentes/mercado.png',
+  },
+  analisar_demografia: {
+    label: 'Demografia',
+    setor: 'dados',
+    icone: AGENT_ICONS.dados_demo_analyst,
+    img: '/agentes/mercado.png',
+  },
+  pesquisar_concorrentes: {
+    label: 'Concorrentes',
+    setor: 'dados',
+    icone: AGENT_ICONS.dados_competitor_search,
+    img: '/agentes/mercado.png',
+  },
+  analisar_reviews_e_dores: {
+    label: 'Reviews & Dores',
+    setor: 'dados',
+    icone: AGENT_ICONS.dados_competitor_analysis,
+    img: '/agentes/mercado.png',
+  },
+  mapear_oferta_e_servicos: {
+    label: 'Oferta & Serviços',
+    setor: 'dados',
+    icone: AGENT_ICONS.dados_market_research,
+    img: '/agentes/mercado.png',
+  },
+  estimar_investimento: {
+    label: 'Investimento',
+    setor: 'financeiro',
+    icone: AGENT_ICONS.financeiro_estimator,
+    img: '/agentes/mercado.png',
+  },
+  gerar_relatorio_formal: {
+    label: 'Relatório Formal',
+    setor: 'marketing',
+    icone: AGENT_ICONS.marketing_report_writer,
+  },
+  consultar_base_conhecimento: {
+    label: 'Base de Conhecimento',
+    setor: 'conhecimento',
+    icone: AGENT_ICONS.conhecimento_rag_retriever,
+  },
+  consultar_catalogos_equipamentos: {
+    label: 'Equipamentos',
+    setor: 'tecnico',
+    icone: IconeTecnico,
+    img: '/agentes/tecnico.png',
+  },
 }
 
 export function agenteDaFerramenta(ferramenta: string): AgenteMeta | undefined {
@@ -61,12 +111,12 @@ export function mascoteDaMensagem(acoes?: { ferramenta: string }[]): Icon {
 
 /** Chave de `pesquisas_realizadas` → agente (ícone + cor), para o painel lateral
  * do consultor. É AQUI que o "handoff" vive: cada pesquisa acende seu ícone. */
-export const PESQUISA_AGENTE: Record<string, { setor: SetorId; icone: Icon }> = {
-  mercado: { setor: 'dados', icone: AGENT_ICONS.dados_context_builder },
-  demografia: { setor: 'dados', icone: AGENT_ICONS.dados_demo_analyst },
-  concorrentes: { setor: 'dados', icone: AGENT_ICONS.dados_competitor_search },
-  reviews: { setor: 'dados', icone: AGENT_ICONS.dados_competitor_analysis },
-  oferta_concorrentes: { setor: 'dados', icone: AGENT_ICONS.dados_market_research },
-  pontos_comerciais: { setor: 'dados', icone: AGENT_ICONS.dados_geoscout },
-  investimento: { setor: 'financeiro', icone: AGENT_ICONS.financeiro_estimator },
+export const PESQUISA_AGENTE: Record<string, { setor: SetorId; icone: Icon; img?: string }> = {
+  mercado: { setor: 'dados', icone: AGENT_ICONS.dados_context_builder, img: '/agentes/mercado.png' },
+  demografia: { setor: 'dados', icone: AGENT_ICONS.dados_demo_analyst, img: '/agentes/mercado.png' },
+  concorrentes: { setor: 'dados', icone: AGENT_ICONS.dados_competitor_search, img: '/agentes/mercado.png' },
+  reviews: { setor: 'dados', icone: AGENT_ICONS.dados_competitor_analysis, img: '/agentes/mercado.png' },
+  oferta_concorrentes: { setor: 'dados', icone: AGENT_ICONS.dados_market_research, img: '/agentes/mercado.png' },
+  pontos_comerciais: { setor: 'dados', icone: AGENT_ICONS.dados_geoscout, img: '/agentes/mercado.png' },
+  investimento: { setor: 'financeiro', icone: AGENT_ICONS.financeiro_estimator, img: '/agentes/mercado.png' },
 }

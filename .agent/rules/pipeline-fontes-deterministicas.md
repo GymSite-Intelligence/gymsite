@@ -17,7 +17,7 @@
 
 | Dado | Fonte canônica |
 |---|---|
-| Concorrentes | SearchAPI `google_maps` |
+| Concorrentes | SearchAPI `google_maps` · contagem = **R=1000 m** do centróide + tipo/status (**sem** gate string bairro) |
 | Reviews | SearchAPI `google_maps_reviews` + card det. (`_processar_review_card`); `topics[]` agregado (wire pendente); Gemini = refino `categoria_dor` |
 | Oferta site/IG | httpx + SearchAPI `instagram_profile` |
 | Imóveis candidato | `listing_cascata` (SearchAPI) — **não** alimenta aluguel |

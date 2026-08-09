@@ -1,0 +1,23 @@
+name: cub-golden-gate
+
+on:
+  pull_request:
+    paths:
+      - "data/cub_pilot/**"
+      - "tools/cub_golden_validate.py"
+      - "tools/test_cub_golden_validate.py"
+      - "tools/fixtures/cub_sinapi/**"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Unit tests CUB gate
+        run: python -m pytest tools/test_cub_golden_validate.py -q --tb=short
+      - name: Gate CUB golden file
+        run: python -m tools.cub_golden_validate --skip-ratio

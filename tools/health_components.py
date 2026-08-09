@@ -52,14 +52,23 @@ def _supabase_status() -> str:
 
 def _google_maps_status() -> str:
     try:
-        from tools.maps_health import check_google_maps
+        from tools.google_maps_key import get_google_maps_api_key
 
-        diag = check_google_maps()
-        if diag.get("ok"):
-            return "ok"
-        if not diag.get("configured"):
-            return "missing"
+        return "configured" if get_google_maps_api_key() else "missing"
+    except Exception:
         return "error"
+
+
+def _searchapi_status() -> str:
+    key = (os.getenv("SEARCHAPI_KEY") or "").strip()
+    return "configured" if key else "missing"
+
+
+def _osm_fallback_status() -> str:
+    try:
+        from tools.maps_fallback import fallback_habilitado
+
+        return "configured" if fallback_habilitado() else "off"
     except Exception:
         return "error"
 
@@ -98,6 +107,8 @@ def gather_health_components(*, probe_supabase: bool = True) -> dict[str, str]:
     out: dict[str, str] = {
         "langcache": _langcache_status(),
         "gemini": _gemini_status(),
+        "searchapi": _searchapi_status(),
+        "osm": _osm_fallback_status(),
         "google_maps": _google_maps_status(),
         "redis": _redis_status(),
     }

@@ -162,8 +162,10 @@ def filtrar_por_bairro(candidatos: list[dict], cidade: str, bairro: str, uf: str
                 continue
 
         # (2) geocode real do anúncio (rua/bairro do título), checa suburb + raio
-        consulta = c.get("endereco") or (
-            f"{bt}, {cidade}, {uf}, Brasil" if bt else f"{bairro}, {cidade}, {uf}, Brasil")
+        if not c.get("endereco") and not bt:
+            c["descarte_motivo"] = "anúncio sem endereço nem bairro verificável"
+            continue
+        consulta = c.get("endereco") or f"{bt}, {cidade}, {uf}, Brasil"
         geo = nominatim_geocode(consulta)
         if geo:
             c["latitude"], c["longitude"] = geo["lat"], geo["lon"]
@@ -180,6 +182,8 @@ def filtrar_por_bairro(candidatos: list[dict], cidade: str, bairro: str, uf: str
                 if dist > raio:
                     c["descarte_motivo"] = f"{dist:.1f}km do centroide > {raio}km"
                     continue
+        c["bairro_centro_lat"] = clat
+        c["bairro_centro_lng"] = clon
         out.append(c)
     return out
 

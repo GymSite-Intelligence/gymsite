@@ -7,6 +7,8 @@ Motor único: `agents_site.root_agent`. Tier em session.state:
 from __future__ import annotations
 
 import logging
+import os
+import re
 
 from google.adk.events import Event
 from google.adk.runners import Runner
@@ -20,6 +22,7 @@ from agents_site.llm_route import (
     mensagem_falha_turno,
     site_chat_developer_api,
 )
+from agents_site.model_provider import using_ollama
 from services.consultor.project_messages import carregar_historico, salvar_mensagem
 from services.consultor.project_state import (
     atualizar_campo_projeto,
@@ -79,6 +82,25 @@ _CUSTO_BRL_POR_TOOL: dict[str, float] = {
 
 def _resolver_agente(agente: str):
     return _PINADOS.get(agente, root_agent)
+
+
+_SELF_TRANSFER_RE = re.compile(
+    r"Agent '([^']+)' cannot transfer to itself",
+    re.I,
+)
+
+
+def _nome_self_transfer(exc: BaseException) -> str | None:
+    """ADK ValueError quando o especialista chama transfer_to_agent(si mesmo)."""
+    m = _SELF_TRANSFER_RE.search(str(exc))
+    return m.group(1) if m else None
+
+
+def _pinado_por_nome_adk(nome: str):
+    for pin in _PINADOS.values():
+        if getattr(pin, "name", None) == nome:
+            return pin
+    return None
 
 
 def _derivar_amostras(historico: list[dict]) -> int:
@@ -290,6 +312,149 @@ async def _persistir_falha_turno(projeto_id: str, exc: BaseException) -> str:
     return msg
 
 
+_TOOLS_NARRACAO_ENGENHARIA = frozenset(
+    {"consultar_engenharia_obra", "calcular_sanitarios_por_lotacao"}
+)
+_AUTORES_NARRACAO_ENGENHARIA = frozenset({"EngenheiroObra", "Arquiteto"})
+
+_PROMPT_NARRACAO_ENGENHARIA = (
+    "Você é o Engenheiro de Obra do GymSite. Com base APENAS nos dados das tools abaixo, "
+    "responda em português, curto e técnico. Se houver área em m², feche ocupantes "
+    "(área÷3,5), vazão V_ef=(P×5,0)+(A×0,6) l/s e carga proxy ~350 W/pessoa. "
+    "Cite NBR 16401 / PMOC quando aparecerem. Não invente número fora dos dados.\n\n"
+)
+_PROMPT_NARRACAO_GENERICA = (
+    "Você é o consultor GymSite. Com base APENAS nos dados das tools abaixo, "
+    "responda em português, claro e objetivo. Não invente número fora dos dados.\n\n"
+)
+
+
+def _persona_narracao_pos_tools(acoes: list[dict], autor: str | None = None) -> str:
+    nomes = {
+        (a.get("ferramenta") or a.get("resumo") or "").strip()
+        for a in (acoes or [])
+    }
+    if nomes & _TOOLS_NARRACAO_ENGENHARIA:
+        return _PROMPT_NARRACAO_ENGENHARIA
+    if autor in _AUTORES_NARRACAO_ENGENHARIA:
+        return _PROMPT_NARRACAO_ENGENHARIA
+    return _PROMPT_NARRACAO_GENERICA
+
+
+def _narrar_pos_tools_ollama(
+    mensagem: str,
+    acoes: list[dict],
+    autor: str | None = None,
+) -> str:
+    """qwen/ollama costuma devolver content=None após tool_calls — fecha em 1 call sem tools."""
+    if not using_ollama() or not acoes:
+        return ""
+    try:
+        import json
+
+        import litellm
+
+        base = (os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434").rstrip("/")
+        model_name = (os.getenv("OLLAMA_MODEL") or "qwen2.5:7b").strip()
+        litellm_id = model_name if model_name.startswith("ollama/") else f"ollama/{model_name}"
+        trechos: list[str] = []
+        for a in acoes:
+            nome = a.get("ferramenta") or a.get("resumo") or "tool"
+            res = a.get("resultado")
+            if res is None:
+                continue
+            trechos.append(f"### {nome}\n{json.dumps(res, ensure_ascii=False)[:3500]}")
+        if not trechos:
+            return ""
+        persona = _persona_narracao_pos_tools(acoes, autor)
+        prompt = (
+            f"{persona}"
+            f"Pergunta do usuário:\n{mensagem}\n\n"
+            f"Dados das tools:\n" + "\n\n".join(trechos)
+        )
+        r = litellm.completion(
+            model=litellm_id,
+            messages=[{"role": "user", "content": prompt}],
+            api_base=base,
+            max_tokens=1024,
+            temperature=0.2,
+        )
+        text = (r.choices[0].message.content or "").strip()
+        if text:
+            logger.info("ollama narracao pos-tools len=%d", len(text))
+        return text
+    except Exception:  # noqa: BLE001
+        logger.exception("ollama narracao pos-tools falhou")
+        return ""
+
+
+def _reforcar_resposta_pos_tools(
+    mensagem: str,
+    resposta: str | None,
+    acoes: list[dict],
+    *,
+    autor: str | None = None,
+) -> str:
+    texto = (resposta or "").strip()
+    if acoes and (not texto or len(texto) < 40):
+        narrado = _narrar_pos_tools_ollama(mensagem, acoes, autor=autor)
+        if narrado:
+            return narrado
+        if not texto:
+            return _FALLBACK_RESPOSTA
+        return texto
+    if not texto:
+        return _FALLBACK_RESPOSTA
+    return texto
+
+
+def _recuperar_corpo_apos_citacoes(
+    mensagem: str,
+    resposta: str,
+    acoes: list[dict],
+    *,
+    autor: str | None = None,
+) -> tuple[str, list[dict[str, str]]]:
+    corpo, citacoes = extrair_citacoes(resposta)
+    if (corpo or "").strip():
+        return corpo, citacoes
+    if using_ollama() and acoes:
+        narrado = _narrar_pos_tools_ollama(mensagem, acoes, autor=autor)
+        return (narrado or _FALLBACK_RESPOSTA), citacoes
+    return _FALLBACK_RESPOSTA, citacoes
+
+
+async def _rodar_turno_com_retry_self_transfer(
+    agente_obj,
+    historico: list[dict],
+    mensagem: str,
+    projeto_id: str,
+    *,
+    tier: str,
+    app_name: str,
+):
+    """Roda turno; se ADK explode em self-transfer, re-roda no especialista pinado."""
+    try:
+        return await _rodar_turno(
+            agente_obj, historico, mensagem, projeto_id, tier=tier, app_name=app_name
+        )
+    except Exception as exc:  # noqa: BLE001
+        nome = _nome_self_transfer(exc)
+        if not nome:
+            raise
+        pin = _pinado_por_nome_adk(nome)
+        if pin is None or pin is agente_obj:
+            raise
+        logger.warning(
+            "adk self-transfer %s — retry pinado (NVIDIA/LiteLLM)",
+            nome,
+            extra={"agent": "SITE_ADK"},
+        )
+        return await _rodar_turno(
+            pin, historico, mensagem, projeto_id, tier=tier, app_name=app_name
+        )
+
+
 async def _executar_turno_site(
     projeto_id: str,
     mensagem_efetiva: str,
@@ -298,7 +463,7 @@ async def _executar_turno_site(
 ) -> tuple[str, str | None, list[dict]]:
     escolhido = _resolver_agente(agente)
     with site_chat_developer_api(escolhido):
-        resposta, autor, alvo, acoes = await _rodar_turno(
+        resposta, autor, alvo, acoes = await _rodar_turno_com_retry_self_transfer(
             escolhido,
             historico,
             mensagem_efetiva,
@@ -319,8 +484,11 @@ async def _executar_turno_site(
         autor = autor_retry
     if acoes_retry:
         acoes = acoes_retry
-    if not resposta:
-        resposta = _FALLBACK_RESPOSTA
+    # qwen/ollama: content=None após tools, ou só JSON citacoes (extrair zera o corpo).
+    # Preferir narracao pos-tools quando há acoes e texto fraco/vazio.
+    resposta = _reforcar_resposta_pos_tools(
+        mensagem_efetiva, resposta, acoes or [], autor=autor
+    )
     return resposta, autor, acoes
 
 
@@ -341,7 +509,9 @@ async def completar_turno_orfao_site(projeto_id: str, agente: str = "degustacao"
     except Exception as exc:  # noqa: BLE001
         await _persistir_falha_turno(projeto_id, exc)
         return True
-    resposta, citacoes = extrair_citacoes(resposta)
+    resposta, citacoes = _recuperar_corpo_apos_citacoes(
+        mensagem_efetiva, resposta, acoes or [], autor=autor
+    )
     await salvar_mensagem(
         projeto_id,
         role="assistant",
@@ -365,6 +535,7 @@ async def run_site_agent_adk(
     agente: str = "degustacao",
     localizacao_hint: dict | None = None,
 ) -> str:
+    """Turno degustação/sandbox: history → ADK → salvar assistant (sem Evolution)."""
     from agents_site.localizacao import injetar_contexto_localizacao, resolver_localizacao
     from services.consultor.consultor_engine import _ANON_SITE_USER_ID
     from services.consultor.project_state import atualizar_campo_projeto, carregar_projeto
@@ -414,7 +585,9 @@ async def run_site_agent_adk(
     except Exception as exc:  # noqa: BLE001
         return await _persistir_falha_turno(projeto_id, exc)
 
-    resposta, citacoes = extrair_citacoes(resposta)
+    resposta, citacoes = _recuperar_corpo_apos_citacoes(
+        mensagem_efetiva, resposta, acoes or [], autor=autor
+    )
 
     await salvar_mensagem(
         projeto_id,
@@ -443,13 +616,17 @@ async def run_consultor_adk(
     usuario_id: str,
     agente: str = "degustacao",
 ) -> str:
+    """Turno consultor logado = blueprint processAIResponse sem sendText WA.
+
+    1) carregar_historico  2) ADK (agents_site)  3) salvar_mensagem assistant
+    """
     historico = await carregar_historico(projeto_id, limite=20)
     await salvar_mensagem(projeto_id, role="user", content=mensagem)
 
     escolhido = _resolver_agente(agente)
     try:
         with site_chat_developer_api(escolhido):
-            resposta, autor, alvo, acoes = await _rodar_turno(
+            resposta, autor, alvo, acoes = await _rodar_turno_com_retry_self_transfer(
                 escolhido,
                 historico,
                 mensagem,
@@ -473,12 +650,15 @@ async def run_consultor_adk(
     except Exception as exc:  # noqa: BLE001
         return await _persistir_falha_turno(projeto_id, exc)
 
-    if not resposta:
-        resposta = "Tive um problema ao gerar a resposta agora. Pode reformular a pergunta ou tentar de novo?"
+    resposta = _reforcar_resposta_pos_tools(
+        mensagem, resposta, acoes or [], autor=autor
+    )
 
     await _sync_consultor_pos_turno(projeto_id, usuario_id, acoes)
 
-    resposta, citacoes = extrair_citacoes(resposta)
+    resposta, citacoes = _recuperar_corpo_apos_citacoes(
+        mensagem, resposta, acoes or [], autor=autor
+    )
 
     await salvar_mensagem(
         projeto_id,

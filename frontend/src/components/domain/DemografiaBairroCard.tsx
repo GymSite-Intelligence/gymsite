@@ -39,10 +39,14 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
   if (!block) return null
   const temRenda = block.renda_media != null
   const temPop = block.populacao != null
+  const fonteBlob = `${block.renda_fonte || ''} ${block.populacao_fonte || ''}`
+  const isDistrito =
+    block.unidade_tipo === 'distrito' || /distrito/i.test(fonteBlob)
+  const unidadeCurta = isDistrito ? 'distrito' : 'bairro'
   if (!temRenda && !temPop) {
     return (
       <p className="text-sm text-muted-foreground">
-        Sem demografia de bairro disponível (CKAN/Censo não cobriram este bairro) — análise
+        Sem demografia de {unidadeCurta} disponível (CKAN/Censo não cobriram esta unidade) — análise
         usa o nível município.
       </p>
     )
@@ -59,7 +63,7 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
             sub={
               block.idh_renda != null
                 ? `ref. ${block.renda_data_referencia ?? '—'} · IDH-Renda (Atlas/CKAN)`
-                : `proxy: rend. do responsável ÷ moradores/dom. · IBGE Censo ${block.renda_data_referencia ?? '2022'}`
+                : `estimativa · renda do domicílio ÷ moradores · IBGE Censo ${block.renda_data_referencia ?? '2022'}`
             }
           />
         )}
@@ -74,9 +78,13 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
         {temPop && (
           <MiniCard
             icon={Users}
-            label="população (bairro)"
+            label={`população (${unidadeCurta} · raio)`}
             value={_int(block.populacao as number)}
-            sub={block.censo_n_setores ? `${block.censo_n_setores} setores · raio do centróide · IBGE 2022` : undefined}
+            sub={
+              block.censo_n_setores
+                ? `${block.censo_n_setores} setores · raio do centróide · IBGE 2022`
+                : undefined
+            }
           />
         )}
         {block.media_moradores != null && (
@@ -94,7 +102,7 @@ export function DemografiaBairroCard({ block }: { block: DemografiaBairroJSON })
               icon={UsersRound}
               label={`público ${block.perfil_sexo_publico.faixa_idade ?? '25-40'} (sexo)`}
               value={`${Math.round(block.perfil_sexo_publico.pct_mulheres)}% ♀ / ${Math.round(block.perfil_sexo_publico.pct_homens)}% ♂`}
-              sub={`gancho mkt · ${block.perfil_sexo_publico.granularidade === 'municipio' ? 'município' : 'bairro'} · Censo 2022`}
+              sub={`gancho mkt · ${block.perfil_sexo_publico.granularidade === 'municipio' ? 'município' : unidadeCurta} · Censo 2022`}
             />
           )}
       </div>

@@ -40,8 +40,11 @@ SaaS). **Ingerir isso no store público `gymsite-market-docs` VAZA estratégia p
 ### C) `gymsite-obra-docs` (Arquiteto/Engenheiro) — já ingerido
 | arquivo | status |
 |---|---|
-| docs/agente/agentes_site/rag/engenharia_obra_academia_ref.txt | ✅ ingerido hoje |
-| docs/agente/agentes_site/rag/engenharia_layout_academia_ref.txt | ✅ ingerido hoje |
+| docs/agente/agentes_site/rag/engenharia_obra_academia_ref.txt | ✅ ingerido |
+| docs/agente/agentes_site/rag/engenharia_layout_academia_ref.txt | ✅ ingerido |
+| docs/agente/agentes_site/rag/engenharia_normas_obra_projeto_ref.txt | ✅ ingerido |
+| docs/agente/agentes_site/rag/engenharia_dimensionamento_academia_ref.txt | ✅ ingerido (HVAC/MEP) |
+| docs/agente/agentes_site/rag/engenharia_climatizacao_academia_ref.txt | ✅ ingerido (doc focado NBR 16401 / PMOC) |
 | docs/arquitetura/CATEGORIAS_TAREFAS.md | candidato — processo real de abertura (3 tipos) |
 
 > `INGEST:equip` (Técnico): **nenhum doc novo** — o catálogo já cobre. (FRETE_BENCHMARK era frete da Vectra, não academia → ver DELETE.)

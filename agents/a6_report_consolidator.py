@@ -21,9 +21,14 @@ from tools.parametros_metodologia import param
 # bairros alternativos quando score_geral < 6, escolhe o veredito final
 # e renderiza tabelas complexas com regras condicionais. Síntese pesada —
 # thinking alto melhora consistência e tie-breaker do Top 3.
-# tools=[] — sem function_calling_config necessário (não chama tools).
+# tools=[] + function_calling NONE: data/bairros já vêm do before_agent /
+# before_model. Sem tools o LLM não alucina tool de outro agente (ex.:
+# fatos_competicao_local do A0) e não derruba o Sequential (Pirapora 2026-08-05).
 _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=8192),  # pyright: ignore[reportCallIssue]
+    tool_config=types.ToolConfig(
+        function_calling_config=types.FunctionCallingConfig(mode="NONE"),
+    ),
 )
 
 
@@ -997,6 +1002,40 @@ def _renderizar_secao_bairros_alternativos(pronto: dict) -> str:
     return "\n".join(linhas)
 
 
+def _bairros_indicados_do_state(state: dict) -> list[str]:
+    if not isinstance(state, dict):
+        return []
+    input_params = state.get("input_params")
+    if not isinstance(input_params, dict):
+        return []
+    raw = input_params.get("bairros_indicados")
+    if not isinstance(raw, list):
+        return []
+    bairros: list[str] = []
+    for value in raw:
+        bairro = str(value or "").strip()
+        if bairro and bairro not in bairros:
+            bairros.append(bairro)
+    return bairros
+
+
+def _renderizar_secao_crowdsource(state: dict) -> str:
+    bairros = _bairros_indicados_do_state(state)
+    if not bairros:
+        return ""
+    linhas = [
+        "## SEÇÃO PRÉ-COMPUTADA — DEMANDA SOCIAL (CROWDSOURCE)",
+        "",
+        "Copie literalmente esta seção no início do relatório:",
+        "",
+        "## 📣 Demanda Social Detectada (Crowdsource)",
+        "Bairros indicados pela comunidade, na ordem informada:",
+    ]
+    linhas.extend(f"{index}. {_escape_md_pipe(bairro)}" for index, bairro in enumerate(bairros, 1))
+    linhas.append("")
+    return "\n".join(linhas)
+
+
 def _renderizar_secao_ofertas_mapeadas(oferta_raw, concorrentes: list) -> str:
     """
     Renderiza markdown das ofertas reais mapeadas pelo A3b (ex-A3c fundido).
@@ -1235,94 +1274,56 @@ def _renderizar_secao_novos_entrantes(entrantes_block: dict) -> str:
 
 
 def _renderizar_secao_referencia_aluguel(inner_fin: dict) -> str:
-    """
-    Markdown determinístico da cascata Tier 1 portais → Tier 2 Grounding
-    (+ panorama macro BCB quando portais vazios). Evita silêncio quando N=0.
-    """
     if not isinstance(inner_fin, dict):
         return ""
 
-    det = inner_fin.get("aluguel_pesquisa_detalhes") or {}
-    tier = det.get("tier")
-    if tier is None:
-        return ""
+    def _brl(value) -> str | None:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return f"{number:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
 
-    linhas = ["## SEÇÃO PRÉ-COMPUTADA — REFERÊNCIA DE ALUGUEL (A4)"]
-    linhas.append("")
-    linhas.append(
-        "Inclua um bloco visível na seção financeira (antes ou junto de "
-        "'⚠️ <aviso_metodologia do A4>') com os fatos abaixo. "
-        "NÃO diga que portais 'passaram' se N=0. NÃO use BCB como aluguel local."
-    )
-    linhas.append("")
-
-    fonte = inner_fin.get("fonte_aluguel") or "—"
-    aviso = (inner_fin.get("aviso_metodologia_aluguel") or "").strip()
-    linhas.append(f"- **Fonte ativa no modelo:** {fonte}")
-    linhas.append(f"- **Tier usado:** {tier}")
-
-    t1 = det.get("tier1_tentativa") or {}
-    n_t1 = det.get("n_validos_tier1", t1.get("n_validos", 0))
-    linhas.append(f"- **Portais municipais (Tier 1):** N={n_t1} anúncios válidos")
-    if det.get("tier1_vazio"):
-        linhas.append("  - Status: **sem amostra** (consulta feita, nenhum preço/área parseável)")
-    elif not det.get("tier1_suficiente"):
-        linhas.append("  - Status: amostra **insuficiente** para mediana confiável")
-    if det.get("motivo_tier1"):
-        linhas.append(f"  - Motivo: {det['motivo_tier1']}")
-    if t1.get("urls_por_portal"):
-        urls_txt = ", ".join(f"{p}={n}" for p, n in t1["urls_por_portal"].items())
-        linhas.append(f"  - URLs consultadas: {urls_txt}")
-    erros = t1.get("erros_portais") or det.get("erros_portais") or []
-    if erros:
-        linhas.append(f"  - Erros portais (amostra): {'; '.join(str(e)[:80] for e in erros[:3])}")
-
-    if tier == 2:
-        med = det.get("mediana_r_m2")
-        q = det.get("queries_com_dados", 0)
-        linhas.append("")
-        linhas.append("### Search Grounding (Tier 2 — referência ativa)")
-        if med:
-            linhas.append(
-                f"- Mediana **R$ {float(med):.0f}/m²** ({q} consulta(s) com dados)"
-            )
-        faixa = det.get("faixa_rs_m2") or {}
-        if isinstance(faixa, dict) and faixa.get("mediana"):
-            linhas.append(
-                f"- Faixa orientativa: R$ {faixa.get('p25', faixa.get('baixo', '—'))} – "
-                f"R$ {faixa.get('p75', faixa.get('alto', '—'))}/m² "
-                f"(mediana {faixa.get('mediana')})"
-            )
-        vals = det.get("valores_coletados") or []
-        if vals:
-            amostra = ", ".join(f"R$ {v:.0f}" for v in vals[:8])
-            linhas.append(f"- Valores extraídos (amostra): {amostra}")
-
-    macro = inner_fin.get("referencia_macro_bcb")
-    if isinstance(macro, dict) and macro:
-        linhas.append("")
-        linhas.append("### Panorama macro BCB (contexto — **não** é aluguel local)")
-        linhas.append(
-            "_Crédito/financiamento imobiliário nacional; não substitui R$/m² do bairro._"
+    fonte = str(inner_fin.get("fonte_aluguel") or "")
+    aviso = str(inner_fin.get("aviso_metodologia_aluguel") or "").strip()
+    if "mrlr" not in fonte.lower():
+        return "\n".join(
+            [
+                "## SEÇÃO PRÉ-COMPUTADA — ALUGUEL MRLR (A4)",
+                "",
+                "MRLR indisponível — não apresente fonte alternativa como aluguel de decisão.",
+                "- validar cotação local antes da decisão financeira.",
+                aviso or "Validar cotação local.",
+                "",
+            ]
         )
-        if macro.get("ok"):
-            linhas.append(f"- {macro.get('norte', '')}")
-            dest = macro.get("destaques") or {}
-            if isinstance(dest, dict):
-                for chave, s in list(dest.items())[:3]:
-                    if isinstance(s, dict):
-                        linhas.append(
-                            f"  - {chave}: {s.get('valor')} ({s.get('data', '—')})"
-                        )
-        else:
-            linhas.append(
-                f"- Indisponível: {macro.get('erro') or macro.get('norte', 'erro BCB')}"
-            )
 
+    aluguel = _brl(inner_fin.get("aluguel_mensal"))
+    unitario = _brl(
+        inner_fin.get("aluguel_mediana_m2")
+        or inner_fin.get("aluguel_unitario_m2")
+    )
+    area = inner_fin.get("area_m2")
+    inputs = inner_fin.get("aluguel_mrlr_inputs")
+    if not isinstance(inputs, dict):
+        inputs = {}
+    area = area or inputs.get("area_m2")
+
+    linhas = [
+        "## SEÇÃO PRÉ-COMPUTADA — ALUGUEL MRLR (A4)",
+        "",
+        "Copie os fatos abaixo na seção financeira sem substituir a fonte:",
+        f"- **Fonte de decisão:** {_escape_md_pipe(fonte)}",
+        "- **Base:** espelhos municipio_pib + renda_bairro",
+    ]
+    if aluguel:
+        linhas.append(f"- **Aluguel mensal:** R$ {aluguel}")
+    if unitario:
+        linhas.append(f"- **Valor unitário:** R$ {unitario}/m²")
+    if area:
+        linhas.append(f"- **Área calculada:** {area} m²")
     if aviso:
-        linhas.append("")
-        linhas.append(f"**Aviso metodologia (copiar ou parafrasear):** {aviso}")
-
+        linhas.append(f"- **Metodologia:** {_escape_md_pipe(aviso)}")
     linhas.append("")
     return "\n".join(linhas)
 
@@ -1331,11 +1332,26 @@ def _a6_before_model_callback(callback_context, llm_request):
     """
     Antes de cada chamada ao modelo do A6, anexa o markdown pré-renderizado
     de Distribuição Geográfica + Bairros Alternativos + Ofertas Reais de Concorrentes + Novos Entrantes à system instruction.
+    Também injeta data_br (sem tool call — tools=[]).
     """
     try:
         state = getattr(callback_context, "state", None)
         if state is None:
             return
+
+        # Data determinística (substitui obter_data_atual tool).
+        try:
+            data = obter_data_atual()
+            data_br = (data or {}).get("data_br") or datetime.now().strftime("%d/%m/%Y")
+        except Exception:
+            data_br = datetime.now().strftime("%d/%m/%Y")
+        llm_request.append_instructions([
+            f"## DATA DO RELATÓRIO (injetada — NÃO chame tools)\n"
+            f"**data_br:** {data_br}\n"
+            f"Use exatamente este valor no campo `Data:` do cabeçalho. "
+            f"Você NÃO tem tools — não invente chamadas a fatos_competicao_local "
+            f"nem a qualquer outra função."
+        ])
 
         sections_injected = []
         from tools.competitor_tools import _parse_market_context
@@ -1358,6 +1374,21 @@ def _a6_before_model_callback(callback_context, llm_request):
                 if "SEÇÃO PRÉ-COMPUTADA — BAIRROS ALTERNATIVOS" not in existing_si:
                     llm_request.append_instructions([markdown_bairros])
                     sections_injected.append("bairros_alternativos")
+
+        markdown_crowdsource = _renderizar_secao_crowdsource(state)
+        if markdown_crowdsource:
+            existing_si = ""
+            try:
+                existing_si = llm_request.config.system_instruction or ""
+            except Exception:
+                logger.debug(
+                    "A6 existing_si parse skip",
+                    exc_info=True,
+                    extra={"agent": "A6", "context": "before_model_crowdsource_si"},
+                )
+            if "SEÇÃO PRÉ-COMPUTADA — DEMANDA SOCIAL" not in existing_si:
+                llm_request.append_instructions([markdown_crowdsource])
+                sections_injected.append("crowdsource")
 
         # 2. Ofertas Mapeadas
         oferta_raw = state.get("oferta_concorrentes")
@@ -1401,7 +1432,7 @@ def _a6_before_model_callback(callback_context, llm_request):
                     llm_request.append_instructions([markdown_entrantes])
                     sections_injected.append("novos_entrantes")
 
-        # 4. Referência de aluguel (Tier 1 portais / Tier 2 Grounding / macro BCB)
+        # 4. Referência de aluguel MRLR
         inner_fin_aluguel = _resolver_analise_financeira(state)
         if isinstance(inner_fin_aluguel, dict):
             markdown_aluguel = _renderizar_secao_referencia_aluguel(inner_fin_aluguel)
@@ -1515,21 +1546,6 @@ def _resolver_analise_financeira(state) -> dict:
             merged["justificativa"] = just
         return merged
     return echo_inner if isinstance(echo_inner, dict) else {}
-
-
-def _rank_candidatos_for_top3(candidatos: list) -> list:
-    """Prioriza listings OLX/ImovelWeb antes do slice top 3."""
-
-    def sort_key(c: dict) -> tuple:
-        is_listing = (
-            c.get("fonte") == "listing"
-            or c.get("qualidade_sinal") == "direto-listing"
-            or str(c.get("place_id") or "").startswith("listing_")
-        )
-        return (1 if is_listing else 0, _safe_float(c.get("score_geoscout")))
-
-    valid = [c for c in candidatos if isinstance(c, dict)]
-    return sorted(valid, key=sort_key, reverse=True)
 
 
 def _enriquecer_candidato_investigacao(c: dict) -> dict:
@@ -1868,7 +1884,7 @@ def _rotulo_score_bucket(val) -> str:
 
 
 def _renderizar_md_top3_candidatos(top_3: list) -> str:
-    """Seção Top 3 determinística (âncoras GeoScout ou listings)."""
+    """Seção Top 3 determinística de listing + MRLR + payback estimado."""
     cand = [c for c in (top_3 or []) if isinstance(c, dict)]
     if not cand:
         return (
@@ -1879,7 +1895,12 @@ def _renderizar_md_top3_candidatos(top_3: list) -> str:
     linhas = ["## 🏆 Top 3 Candidatos", ""]
     for i, c in enumerate(cand[:3], 1):
         nome = _escape_md_pipe(c.get("nome") or "—")
-        sg = _fmt_score_md(c.get("score_geral") or c.get("score_geoscout"))
+        composto = c.get("score_composto")
+        sg = _fmt_score_md(
+            float(composto) * 10
+            if composto is not None
+            else c.get("score_geral") or c.get("score_geoscout")
+        )
         score_g = _fmt_score_md(c.get("score_geoscout"))
         score_a = _fmt_score_md(c.get("score_ancoragem"))
         area = c.get("area_estimada_m2") or c.get("area_m2") or "—"
@@ -1888,12 +1909,30 @@ def _renderizar_md_top3_candidatos(top_3: list) -> str:
         vis = _escape_md_pipe(c.get("estimativa_visibilidade") or "—")
         endereco = _escape_md_pipe(c.get("endereco") or "—")
         qual = _escape_md_pipe(c.get("qualidade_sinal") or "indireto-heurístico")
-        linhas.append(f"### #{i} — {nome} — Score {sg}")
+        linhas.append(f"### #{i} — {nome} — Score composto {sg}/10")
+        if composto is not None:
+            linhas.append(
+                "- **Composição:** 35% geo / 65% payback "
+                f"(geo {_fmt_score_md(c.get('score_geo_norm'))}; "
+                f"payback {_fmt_score_md(c.get('score_payback_norm'))})"
+            )
         linhas.append(f"- **Endereço:** {endereco}")
         linhas.append(f"- **Tipo:** {tipo}")
         linhas.append(f"- **Área estimada:** ~{area} m²")
         linhas.append(f"- **Score GeoScout:** {score_g} ({qual}) | **Motivo:** {motivo}")
         linhas.append(f"- **Score Ancoragem:** {score_a} — visibilidade: {vis}")
+        carimbo = c.get("carimbo_aluguel") or c.get("aluguel_carimbo")
+        if carimbo:
+            linhas.append(f"- **Aluguel MRLR:** {_escape_md_pipe(carimbo)}")
+        payback = c.get("payback_est_meses")
+        if payback is not None:
+            linhas.append(
+                f"- **Payback estimado:** {payback} meses "
+                "(derivado do cenário A4 mid + MRLR do ponto)"
+            )
+        aviso_viabilidade = c.get("aviso_viabilidade")
+        if aviso_viabilidade:
+            linhas.append(f"- **Aviso:** {_escape_md_pipe(aviso_viabilidade)}")
         polos = c.get("polos_geradores") or []
         if isinstance(polos, list) and polos:
             linhas.append("- **Polos geradores próximos:**")
@@ -1955,17 +1994,19 @@ def _sincronizar_bloco_scores_md(md: str, out: dict) -> str:
     # Transparência: concorrentes no bairro / raio (quando LLM deixou —)
     if total_c is not None:
         md = re.sub(
-            r"(Concorrentes no bairro \(analisados\):\s*)(?:—|" + _SCORE_CELL + r")"
+            r"(?:Concorrentes no bairro \(analisados\)|"
+            r"Concorrentes na praça \(raio 1 km\)):\s*(?:—|" + _SCORE_CELL + r")"
             r"([^\n]*?satura[cç][aã]o\s+)(?:—|[A-Za-zÀ-ÿ_]+)",
-            rf"\g<1>{total_c}\g<2>{nivel}",
+            rf"Concorrentes na praça (raio 1 km): {total_c}\g<1>{nivel}",
             md,
             count=1,
             flags=re.I,
         )
     if total_raio is not None:
         md = re.sub(
-            r"(Densidade regional \(raio 3km, contexto\):\s*)(?:—|" + _SCORE_CELL + r")",
-            rf"\g<1>{total_raio}",
+            r"(?:Densidade regional \(raio 3km, contexto\)|"
+            r"Retorno bruto da busca \(contexto\)):\s*(?:—|" + _SCORE_CELL + r")",
+            rf"Retorno bruto da busca (contexto): {total_raio}",
             md,
             count=1,
             flags=re.I,
@@ -2150,7 +2191,6 @@ def _resumo_executivo_deterministico(
     else:
         partes.append(f"{loc}: veredito {vere}.")
 
-    # Saturação SEMPRE do bairro (contagem gated) — NUNCA densidade do raio 3km.
     try:
         n = int(total_concorrentes) if total_concorrentes is not None else None
     except (TypeError, ValueError):
@@ -2158,11 +2198,12 @@ def _resumo_executivo_deterministico(
     sat = (nivel_saturacao or "indeterminada").strip()
     if n is not None:
         partes.append(
-            f"Saturação do bairro: {sat} ({n} concorrente{'s' if n != 1 else ''} "
-            f"analisado{'s' if n != 1 else ''} no bairro)."
+            f"Saturação da praça (raio 1 km): {sat} "
+            f"({n} concorrente{'s' if n != 1 else ''} "
+            f"analisado{'s' if n != 1 else ''} na praça após tipo/status)."
         )
     else:
-        partes.append(f"Saturação do bairro: {sat}.")
+        partes.append(f"Saturação da praça (raio 1 km): {sat}.")
 
     # Zoneamento (viabilidade regulatória do bairro), quando disponível.
     if isinstance(zoneamento, dict):
@@ -2380,7 +2421,10 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     if not isinstance(geo_raw, dict):
         geo_raw = {}
     candidatos = _lista_candidatos_geoscout(geo_raw)
-    ranked = _rank_candidatos_for_top3(candidatos)  # pyright: ignore[reportArgumentType]
+    inner_fin = _resolver_analise_financeira(state)
+    from tools.candidato_viabilidade_rank import rank_candidatos_viabilidade
+
+    ranked = rank_candidatos_viabilidade(candidatos, inner_fin)
     top_3 = [_enriquecer_candidato_investigacao(c) for c in (ranked[:3] if ranked else [])]
 
     # Zoneamento (VEC-378): viabilidade REGULATÓRIA do top candidato (lat/lon) — valida
@@ -2480,8 +2524,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     )
     score_demografico = inner_demo.get("score_demografico") if isinstance(inner_demo, dict) else None
 
-    # ── Output: análise financeira (A4) — snapshot determinístico > echo do LLM ──
-    inner_fin = _resolver_analise_financeira(state)
+    # ── Output: análise financeira (A4) — resolvida antes do rank Top3 ──
 
     # ── Output: contato decisor (A5) ──
     contato_raw = _parse_market_context(state.get("contato_decisor"))
@@ -2888,6 +2931,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             "area_m2_min": ip.get("area_m2_min") or inner_mc.get("area_m2_min") or 1000,
             "area_m2_max": ip.get("area_m2_max") or inner_mc.get("area_m2_max") or 1500,
             "publico_alvo": ip.get("publico_alvo") or inner_mc.get("publico_alvo") or "25-40",
+            "bairros_indicados": _bairros_indicados_do_state(state),
             # Schema v1.4: replica genero_alvo do market_context (A0) pra
             # permitir re-execução determinística e auditoria. Default "misto"
             # preserva comportamento pré-v1.4 quando o A0 não emitiu o campo.
@@ -3057,8 +3101,18 @@ def _slim_market_context(inner_mc: dict) -> dict:
         "tendencia_mercado",
         "regulamentacao_resumo",
         "insights_estrategicos",
-        # Entrantes (RFB CNPJ Aberto) — schema v1.7
+        # Entrantes / baixas (RFB CNPJ Aberto) — schema v1.7 + v1.14 baixas
         "novos_cnpj_fitness_90d",
+        "baixas_cnpj_fitness_90d",
+        "baixas_cnpj_fitness_q",
+        "entrantes_cnpj_fitness_q",
+        "saldo_oferta_q",
+        "pressao_oferta_q",
+        "janela_q_label",
+        "cnpj_as_of",
+        "arvore_oferta",
+        "arvore_2x2_parque",
+        "redes",
         "parque_ativo_total",
         "academias_ativas_cidade_cnpj",
         "composicao_parque",
@@ -3294,6 +3348,15 @@ def _a6_after_agent_callback(callback_context):
         )
         callback_context.state["relatorio_local_id"] = relatorio["id"]
 
+        # Bridge A6→A9: demografia_bairro era só no JSON consolidado; A9 lê do state
+        # (`_publico_dominante`). Sem isso o Brilliant Basics de público maduro nunca
+        # disparava no Sequential (achado loop deps-reverse 2026-08-05).
+        out_cons_early = relatorio.get("output_consolidado") or {}
+        if isinstance(out_cons_early, dict):
+            demo_b = out_cons_early.get("demografia_bairro")
+            if isinstance(demo_b, dict) and demo_b:
+                callback_context.state["demografia_bairro"] = demo_b
+
         # Supabase + A8
         try:
             from db.supabase_writer import write_relatorio_failsafe
@@ -3354,18 +3417,22 @@ report_consolidator_agent = build_llm_agent(
     instruction="""
 Você é o ReportConsolidator — sintetizador final do pipeline GymSite Intelligence.
 
-## PASSO 0 — OBRIGATÓRIO ANTES DE QUALQUER COISA
-Chame **obter_data_atual()** PRIMEIRO. Use o valor `data_br` retornado no campo
-`Data:` do cabeçalho do relatório. NUNCA invente data — seu knowledge cutoff
-é meados de 2024, então adivinhar gera "Data: 2024-05-XX" que é absurdo
-em produção.
+## PASSO 0 — DATA (já injetada)
+Use o valor **data_br** da instrução injetada no campo `Data:` do cabeçalho.
+NUNCA invente data. NUNCA chame tools — você não tem tools disponíveis
+(bairros alternativos e demais seções já vieram pré-computadas).
 
 ## REGRAS ABSOLUTAS
 - NUNCA peça confirmação. Execute SEMPRE com os dados disponíveis.
 - SEMPRE produza markdown completo, nunca parcial.
 - Se algum agente retornou vazio, registre em "Alertas Globais" e prossiga.
-- Use APENAS dados reais dos outputs anteriores. NÃO invente números.
-- Data do relatório: **SEMPRE** via obter_data_atual(), NUNCA inventada.
+- PROIBIDO emitir function call / tool call de qualquer nome.
+
+## INTEGRIDADE DOS DADOS
+- Use APENAS fatos dos outputs anteriores e das seções pré-computadas.
+- NUNCA invente, recalcule ou complete números ausentes.
+- NUNCA substitua MRLR por preço de anúncio, portal ou Search Grounding.
+- Preserve literalmente veredito, scores, valores, fontes e janelas de coleta.
 
 ## REGRAS DE FORMATAÇÃO — CRÍTICAS
 
@@ -3430,47 +3497,22 @@ para compor o Score Top 1.)
 - 4.0–5.9  → 🔍 INVESTIGAR MAIS
 - < 4.0    → ❌ REPROVADO
 
-## TIE-BREAKER OBRIGATÓRIO PARA TOP 3
-Os scores demográfico, competitivo e de viabilidade são REGIONAIS — iguais
-para todos os candidatos do mesmo bairro. Apenas score_geoscout varia. Quando
-2+ candidatos terminam com Score Geral idêntico (caso comum), aplicar
-tie-breakers nesta ORDEM determinística para definir #1, #2, #3:
-
-1. **Maior `total_avaliacoes` no Google Maps** (proxy de fluxo real do entorno)
-2. **Tipo preferencial** na ordem: supermarket > car_dealer > warehouse >
-   hardware_store > store > shopping_mall
-3. **Endereço em Avenida** (contém "Av." ou "Avenida") > rua secundária
-4. **Ordem alfabética por nome** (último recurso, garante determinismo)
-
-NUNCA listar 3 candidatos com Score idêntico sem aplicar tie-breaker —
-o usuário precisa decidir a ordem de prospecção.
+## ORDEM DO TOP 3
+`top_3_candidatos` já chega ordenado deterministicamente pelo código:
+35% score geográfico + 65% score de payback recalculado com MRLR.
+Copie a ordem recebida. NUNCA reordene, desempate ou substitua candidatos.
 
 ## REGRA DE BAIRROS ALTERNATIVOS
 Se Score_Geral médio < 6.0, OU se nenhum candidato APROVADO existir,
-inclua a seção "🗺️ Bairros Alternativos Recomendados" usando este mapeamento:
-
-Fortaleza CE:
-  1. Cocó/Guararapes — alto poder aquisitivo, baixa oferta premium
-  2. Papicu/Edson Queiroz — crescimento imobiliário, público jovem
-  3. Cidade dos Funcionários/Cambeba — classe média, poucos concorrentes
-  4. Maraponga/Montese — alta densidade, low-cost viável
-
-São Paulo SP:
-  1. Tatuapé/Mooca, Santo André/SBC, Osasco, Guarulhos
-
-Rio de Janeiro RJ:
-  1. Méier/Tijuca, Campo Grande/Bangu, Niterói
-
-Outras cidades — sugerir bairros com:
-  - Menor concentração de Smart Fit/Selfit/BlueFit
-  - Renda domiciliar R$1.200-R$2.000 (público mid)
-  - Expansão imobiliária recente
+inclua "🗺️ Bairros Alternativos Recomendados" copiando SOMENTE a
+`SEÇÃO PRÉ-COMPUTADA — BAIRROS ALTERNATIVOS`. Se a seção não foi injetada,
+omita bairros alternativos; não sugira nomes por conhecimento próprio.
 
 ## REGRA DE MODO CROWDSOURCE
-Se o usuário ou root_agent mencionou `bairros_indicados=[...]`, OU usou termos
-"indicações da comunidade", "formulário", "campanha", "pesquisa", "votação",
-inclua a seção "📣 Demanda Social Detectada (Crowdsource)" no INÍCIO do
-relatório, listando os bairros indicados e marcando como prioridade.
+Inclua "📣 Demanda Social Detectada (Crowdsource)" SOMENTE quando receber a
+`SEÇÃO PRÉ-COMPUTADA — DEMANDA SOCIAL`, derivada de
+`input_params.bairros_indicados` não vazio. Copie a ordem recebida.
+Não detecte crowdsource por palavras do pedido.
 
 ## FORMATO DE SAÍDA — MARKDOWN ESTRUTURADO
 
@@ -3480,12 +3522,12 @@ Seguir EXATAMENTE este template (omitindo seções condicionais quando não apli
 # 🏋️ GymSite Intelligence — Relatório Executivo
 
 **Cidade/Bairro:** <cidade>/<UF> — <bairro>
-**Data:** <data_br retornada por obter_data_atual()>
+**Data:** <data_br injetada — não chame tools>
 **Total de candidatos avaliados:** <N>
 
 ---
 
-<!-- Seção CONDICIONAL: só se houver bairros_indicados (Modo Crowdsource) -->
+<!-- Seção CONDICIONAL: só se houver SEÇÃO PRÉ-COMPUTADA — DEMANDA SOCIAL -->
 ## 📣 Demanda Social Detectada (Crowdsource)
 Bairros indicados pela comunidade (priorizar análise nesta ordem):
 1. <bairro indicado 1>
@@ -3524,11 +3566,9 @@ Bairros indicados pela comunidade (priorizar análise nesta ordem):
 Qual o melhor candidato e por quê?>
 
 **ANCHORING COMPETITIVO (OBRIGATÓRIO):** a saturação e a narrativa competitiva do resumo
-executivo DEVEM ancorar nos concorrentes DO BAIRRO (`total_concorrentes_analisados` +
-`nivel_saturacao`), NUNCA no `total_encontrados_raio` (densidade do raio 3km, que inclui
-bairros adjacentes). NÃO escreva "extrema saturação" / "211 academias no raio 3km" como
-diagnóstico do bairro. Se `nivel_saturacao` = MEDIO ou BAIXO, o texto reflete isso, mesmo
-que o raio 3km tenha centenas — o raio 3km é só contexto regional.
+executivo DEVEM ancorar nos concorrentes da praça canônica — raio de 1 km do centróide,
+após gate de tipo e status — usando `total_concorrentes_analisados` +
+`nivel_saturacao`. `total_encontrados_raio` é contexto bruto e não redefine saturação.
 
 ---
 
@@ -3541,10 +3581,10 @@ que o raio 3km tenha centenas — o raio 3km é só contexto regional.
 | Viabilidade financeira | X.X | <viabilidade do A4 melhor cenário> |
 
 **Transparência (OBRIGATÓRIO):** logo após a tabela acima, inclua DUAS linhas curtas:
-- `Concorrentes no bairro (analisados): <total_concorrentes_analisados> — saturação <nivel_saturacao>`
-- `Densidade regional (raio 3km, contexto): <total_encontrados_raio> academias — inclui bairros adjacentes, NÃO é a saturação do bairro`
-A saturação competitiva do bairro é a do A3 (`nivel_saturacao`), ancorada nos concorrentes
-analisados DO BAIRRO — não no número do raio 3km.
+- `Concorrentes na praça (raio 1 km): <total_concorrentes_analisados> — saturação <nivel_saturacao>`
+- `Retorno bruto da busca (contexto): <total_encontrados_raio> resultados — não redefine a saturação`
+A saturação competitiva é a do A3 (`nivel_saturacao`), calculada após raio +
+tipo + status; não por string de bairro.
 
 **ATENÇÃO — campo correto para "Competitivo":**
 Use **`score_concorrencia`** do A3 (range 0-10, onde 10 = mercado pouco saturado / favorável).
@@ -3567,8 +3607,11 @@ oportunidade de gap). Os dois existem mas têm semânticas diferentes — sempre
 ### #1 — <Nome> — Score Geral X.X — <STATUS>
 - **Endereço:** <endereço>
 - **Tipo:** <tipo>
-- **Área estimada:** ~<m²>
-- **Score GeoScout:** X.X (sinal indireto-heurístico) | **Motivo:** <motivo>
+- **Área do listing:** <m²>
+- **Score GeoScout:** X.X (<qualidade_sinal>) | **Motivo:** <motivo>
+- **Composição:** 35% geo / 65% payback
+- **Aluguel MRLR:** <carimbo_aluguel>
+- **Payback estimado:** <payback_est_meses> meses
 - **Score Ancoragem:** <score_ancoragem> — visibilidade: <estimativa_visibilidade>
 - **Polos geradores próximos:**
   - <polos_geradores[0]>
@@ -3642,8 +3685,8 @@ e listar apenas redes_solicitadas + redes_cobertas (todas validadas ✅).
 
 ## 🥊 Inteligência Competitiva — Concorrente por Concorrente
 
-Os concorrentes vêm de uma busca em raio de 3 km do bairro alvo, então
-incluem academias de bairros adjacentes. **Agrupe os cards por
+Os concorrentes vêm da busca canônica em raio de 1 km do centróide, com gate
+de tipo e status operacional, sem filtro por string de bairro. **Agrupe os cards por
 `bairro_concorrente`** (campo presente em cada item de `concorrentes_detalhados`),
 ordenando do bairro com mais academias para o com menos. Ponha o bairro
 alvo da pesquisa SEMPRE primeiro, mesmo que tenha menos academias.
@@ -3969,8 +4012,13 @@ REGRAS ESTRITAS para esta seção (evitar alertas falsos):
    tipo "Top!" naturalmente ficam em "outra"; isso não é falha do
    classificador, é sinal correto de que a review é positiva neutra).
 
-4. Sinal indireto GeoScout: alertar SEMPRE — é informação padrão útil
-   pro usuário entender que candidatos são âncoras, não imóveis vagos.
+4. Qualidade do candidato: alertar SOMENTE quando `qualidade_sinal` for
+   diferente de `"direto-listing-bairro"`. Listing direto não recebe alerta
+   de sinal indireto.
+
+5. MRLR/payback: se `aviso_viabilidade` estiver preenchido ou
+   `carimbo_aluguel` estiver ausente, copie o aviso. NUNCA use `price_raw`
+   como aluguel de decisão.
 
 NUNCA invente alerta com base em padrão visual (ex: "vi muitas reviews
 'outra', então a classificação falhou"). Use APENAS o status literal
@@ -3985,16 +4033,24 @@ emitido pelas tools.>
 ---
 
 *Relatório gerado pelo GymSite Intelligence — pipeline ADK multi-agente.
-Scores GeoScout são sinais indiretos heurísticos; validação presencial obrigatória.*
+Candidatos vêm de listings do bairro e aluguel de decisão via MRLR;
+validação documental e presencial continua obrigatória.*
 
 ## REGRAS DE QUALIDADE
 - NÃO inclua código JSON cru no relatório
 - NÃO repita conteúdo entre seções
-- Use NÚMEROS REAIS dos outputs anteriores
 - Tom executivo: direto, decisório, sem hedging desnecessário
 - Se uma seção condicional não se aplica, OMITA inteiramente (não escreva "N/A")
+
+## AUTOVERIFICAÇÃO ANTES DE EMITIR
+- Todo valor monetário segue a máscara brasileira.
+- Pico semanal só aparece quando `pico_semanal` existe; caso contrário, "—".
+- Nenhum JSON cru aparece no corpo.
+- A ordem de `top_3_candidatos` foi preservada.
+- Todo aluguel exibido está carimbado como MRLR; `price_raw` não aparece como decisão.
+- Crowdsource e bairros alternativos foram copiados apenas de seções pré-computadas.
 """,
-    tools=[obter_data_atual, bairros_alternativos_inteligentes],
+    tools=[],
     before_model_callback=_a6_before_model_callback,
     output_key="relatorio_md",
 )

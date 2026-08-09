@@ -63,6 +63,8 @@ BASE_URL = "https://dadosabertos.rfb.gov.br/CNPJ/dados_abertos_cnpj"
 DEFAULT_WEBDAV_BASE = "https://arquivos.receitafederal.gov.br/public.php/webdav"
 CNAE_ALVO = "9313100"
 SITUACAO_ATIVA = {"2", "02"}  # layout usa 2, mas tolera 02
+SITUACAO_BAIXADA = {"8", "08"}
+SITUACAO_LOAD = SITUACAO_ATIVA | SITUACAO_BAIXADA
 
 # Layout Estabelecimentos (30 colunas) — docs/cnpj-metadados.pdf
 EST_CNPJ_BASICO = 0
@@ -271,6 +273,113 @@ def _build_cnpj(basico: str, ordem: str, dv: str) -> str:
     return f"{basico}{ordem}{dv}"
 
 
+def _situacao_token(value: Any) -> str:
+    if value is None:
+        return ""
+    s = str(value).strip()
+    if s.isdigit():
+        return s.zfill(2) if len(s) <= 2 else s
+    return s
+
+
+def assert_json_has_baixadas(rows: list[dict]) -> None:
+    """Exige ≥1 row situacao 08 — baixadas first-class no load JSON."""
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        tok = _situacao_token(row.get("situacao_cadastral"))
+        if tok in SITUACAO_BAIXADA or tok in {"8", "08"}:
+            return
+    raise ValueError(
+        "JSON sem situacao_cadastral=08 (baixadas). "
+        "Use receita-cnae-9313100-principal-ativo-baixada.json"
+    )
+
+
+def json_row_to_estabelecimento(
+    row: dict,
+    *,
+    ref_date: str,
+    cidade: str | None,
+    empresas_map: dict[str, str] | None = None,
+) -> dict | None:
+    """Mapeia 1 registro do JSON processado → payload upsert. Skip situacao fora 02/08."""
+    from tools.cnpj_oferta_janelas import parse_rfb_date
+    from tools.cnpj_segment_classifier import classificar_segmento
+
+    if not isinstance(row, dict):
+        return None
+    tok = _situacao_token(row.get("situacao_cadastral"))
+    if tok not in SITUACAO_LOAD:
+        return None
+
+    cnpj = str(row.get("cnpj") or "").strip()
+    if not cnpj.isdigit() or len(cnpj) != 14:
+        basico = str(row.get("cnpj_basico") or "").strip().zfill(8)[:8]
+        ordem = str(row.get("cnpj_ordem") or "0001").strip().zfill(4)[-4:]
+        dv = str(row.get("cnpj_dv") or "").strip().zfill(2)[-2:]
+        if basico.isdigit() and len(basico) == 8:
+            cnpj = _build_cnpj(basico, ordem, dv)
+        else:
+            return None
+
+    basico = str(row.get("cnpj_basico") or "").strip()
+    if not basico or not basico.isdigit():
+        basico = cnpj[:8]
+    else:
+        basico = basico.zfill(8)[:8]
+
+    data_inicio = parse_rfb_date(row.get("data_inicio_atividade"))
+    data_situacao = parse_rfb_date(row.get("data_situacao_cadastral"))
+    if data_inicio is None and data_situacao is None:
+        return None
+
+    cnae_principal = str(row.get("cnae_fiscal_principal") or "").strip()
+    cnae_sec = str(
+        row.get("cnae_fiscal_secundaria") or row.get("cnaes_secundarios") or ""
+    ).strip()
+    nome_fantasia = str(row.get("nome_fantasia") or "").strip()
+    segmento = classificar_segmento(nome_fantasia, cnae_principal, cnae_sec).segmento
+
+    cep_raw = row.get("cep")
+    cep = str(cep_raw).strip() if cep_raw is not None else ""
+    if cep.endswith(".0"):
+        cep = cep[:-2]
+    municipio = str(row.get("municipio") or row.get("municipio_codigo") or "").strip()
+    uf_row = str(row.get("uf") or "").strip().upper()[:2]
+    bairro = str(row.get("bairro") or "").strip() or None
+    razao = None
+    if empresas_map:
+        razao = (empresas_map.get(basico) or "").strip() or None
+
+    situacao_int = int(tok) if tok.isdigit() else None
+
+    return {
+        "ref_month": ref_date,
+        "cnpj": cnpj,
+        "cnpj_basico": basico,
+        "municipio_codigo": municipio or None,
+        "uf": uf_row or None,
+        "cidade": (cidade or None),
+        "cnae_fiscal_principal": cnae_principal or None,
+        "cnaes_secundarios": cnae_sec or None,
+        "data_inicio_atividade": data_inicio.isoformat() if data_inicio else None,
+        "situacao_cadastral": situacao_int,
+        "data_situacao_cadastral": data_situacao.isoformat() if data_situacao else None,
+        "nome_fantasia": nome_fantasia or None,
+        "razao_social": razao,
+        "cep": cep or None,
+        "logradouro": str(row.get("logradouro") or "").strip() or None,
+        "numero": str(row.get("numero") or "").strip() or None,
+        "complemento": str(row.get("complemento") or "").strip() or None,
+        "bairro": bairro,
+        "email": str(row.get("correio_eletronico") or row.get("email") or "").strip()
+        or None,
+        "telefone": None,
+        "segmento_operacao": segmento,
+    }
+
+
 def _parse_date(s: str) -> str | None:
     # RFB usa YYYYMMDD; vazio ou lixo (ex. "0") vira None no Postgres
     s = (s or "").strip()
@@ -426,14 +535,42 @@ def _load_empresas_map(
     return mapping
 
 
+def load_municipios_map_from_json(path: str | Path) -> dict[str, str]:
+    """Carrega mapa codigo RFB → cidade a partir de municipios-rfb-tom.json (assistent-control)."""
+    import json
+
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    by = raw.get("by_rfb") if isinstance(raw, dict) else None
+    if not isinstance(by, dict):
+        raise ValueError(f"JSON municípios sem by_rfb: {path}")
+    mapping: dict[str, str] = {}
+    for codigo, info in by.items():
+        if not isinstance(info, dict):
+            continue
+        nome = _title_municipio(str(info.get("nome") or ""))
+        if not codigo or not nome:
+            continue
+        c = str(codigo).strip()
+        mapping[c] = nome
+        if c.isdigit():
+            mapping[str(int(c))] = nome
+            mapping[c.zfill(4)] = nome
+    print(f"[info] municipios JSON: {len(by)} mun -> {len(mapping)} chaves")
+    return mapping
+
+
 def _load_municipios_map(
     ref_month: str,
     *,
     local_dir: str,
     rfb_share_token: str,
     rfb_webdav_base: str,
-    nacional: bool,
+    nacional: bool = True,
+    municipios_json: str = "",
 ) -> dict[str, str]:
+    """codigo RFB → nome cidade. Prefere --municipios-json; senão Municipios.zip."""
+    if municipios_json:
+        return load_municipios_map_from_json(municipios_json)
     if not nacional:
         return {}
     path = _ensure_municipios_zip(
@@ -450,8 +587,102 @@ def _load_municipios_map(
         nome = _title_municipio(row[1])
         if codigo and nome:
             mapping[codigo] = nome
-    print(f"[info] Municipios.zip: {len(mapping)} municípios")
+            if codigo.isdigit():
+                mapping[str(int(codigo))] = nome
+                mapping[codigo.zfill(4)] = nome
+    print(f"[info] Municipios.zip: {len(mapping)} chaves (com aliases)")
     return mapping
+
+
+def _lookup_cidade(municipios_map: dict[str, str], municipio_codigo: str) -> str | None:
+    mun = (municipio_codigo or "").strip()
+    if not mun:
+        return None
+    if mun in municipios_map:
+        return municipios_map[mun]
+    if mun.isdigit():
+        return (
+            municipios_map.get(mun.zfill(4))
+            or municipios_map.get(str(int(mun)))
+            or None
+        )
+    return None
+
+
+def backfill_cidade_ref_month(
+    ref_month: str,
+    *,
+    local_dir: str = "",
+    rfb_share_token: str = "",
+    rfb_webdav_base: str = DEFAULT_WEBDAV_BASE,
+    municipios_json: str = "",
+    dry_run: bool = False,
+    page_size: int = 1000,
+) -> dict[str, int]:
+    """Preenche cidade null a partir de municipio_codigo + mapa RFB."""
+    ref_month = _normalize_ref_month(ref_month)
+    ref_date = f"{ref_month}-01"
+    mapping = _load_municipios_map(
+        ref_month,
+        local_dir=local_dir,
+        rfb_share_token=rfb_share_token,
+        rfb_webdav_base=rfb_webdav_base,
+        nacional=True,
+        municipios_json=municipios_json,
+    )
+    if not mapping:
+        raise RuntimeError("Mapa de municípios vazio — não dá pra backfill")
+
+    sb = _supabase_client()
+    updated = 0
+    skipped_sem_map = 0
+    scanned = 0
+    # loop até zerar nulls (update remove da query)
+    while True:
+        res = (
+            tbl(sb, "cnpj_fitness_estabelecimentos")
+            .select("cnpj, municipio_codigo, cidade")
+            .eq("ref_month", ref_date)
+            .is_("cidade", "null")
+            .limit(page_size)
+            .execute()
+        )
+        batch = [r for r in (res.data or []) if isinstance(r, dict)]
+        if not batch:
+            break
+        scanned += len(batch)
+        by_cidade: dict[str, list[str]] = {}
+        for r in batch:
+            cidade = _lookup_cidade(mapping, str(r.get("municipio_codigo") or ""))
+            if not cidade:
+                skipped_sem_map += 1
+                continue
+            by_cidade.setdefault(cidade, []).append(str(r["cnpj"]))
+        if not by_cidade:
+            print(f"[warn] lote sem match de mapa ({skipped_sem_map} skipped) — abort")
+            break
+        if dry_run:
+            for cidade, cnpjs in by_cidade.items():
+                updated += len(cnpjs)
+                print(f"[dry-run] {cidade}: {len(cnpjs)} rows")
+            break
+        for cidade, cnpjs in by_cidade.items():
+            for i in range(0, len(cnpjs), 200):
+                chunk = cnpjs[i : i + 200]
+                tbl(sb, "cnpj_fitness_estabelecimentos").update(
+                    {"cidade": cidade}
+                ).eq("ref_month", ref_date).in_("cnpj", chunk).execute()
+                updated += len(chunk)
+            print(f"backfill {cidade}: +{len(cnpjs)} (acum {updated})", flush=True)
+
+    out = {
+        "scanned": scanned,
+        "updated": updated,
+        "skipped_sem_map": skipped_sem_map,
+        "ref_month": ref_date,
+    }
+    print(f"backfill cidade done: {out}")
+    return out
 
 
 def _resolve_cidade(
@@ -462,7 +693,7 @@ def _resolve_cidade(
 ) -> str:
     if cidade_cli:
         return cidade_cli
-    return municipios_map.get((municipio_codigo or "").strip(), "")
+    return _lookup_cidade(municipios_map, municipio_codigo) or ""
 
 
 def _upsert_rows(sb: Any, rows: list[dict], *, strip_segmento: bool) -> bool:
@@ -512,16 +743,19 @@ def load_ref_month(
     dry_run: bool,
     skip_missing: bool,
     nacional: bool = False,
+    include_baixadas: bool = True,
 ) -> int:
     """
-    Baixa Estabelecimentos*.zip e upserta apenas linhas ativas com CNAE alvo.
+    Baixa Estabelecimentos*.zip e upserta CNAE alvo (ativos; baixadas se include_baixadas).
     Retorna quantidade selecionada (gravada ou em dry-run).
+    Não apaga refs antigos — snapshot novo = só rows presentes no ZIP/JSON.
     """
     ref_month = _normalize_ref_month(ref_month)
     ref_date = f"{ref_month}-01"
     municipio_filtro = _resolve_municipio_codigo(municipio_codigo) if municipio_codigo else ""
     uf_filter = "" if nacional else (uf or "").strip().upper()[:2]
     cidade_cli = "" if nacional else (cidade or "").strip()
+    allowed_situacao = SITUACAO_LOAD if include_baixadas else SITUACAO_ATIVA
 
     municipios_map = _load_municipios_map(
         ref_month,
@@ -636,7 +870,7 @@ def load_ref_month(
                 continue
             if uf_filter and uf_row != uf_filter:
                 continue
-            if situacao not in SITUACAO_ATIVA:
+            if situacao not in allowed_situacao:
                 continue
             if not _match_cnae(cnae_principal, cnae_sec):
                 continue
@@ -655,6 +889,7 @@ def load_ref_month(
                 {
                     "ref_month": ref_date,
                     "cnpj": cnpj_completo,
+                    "cnpj_basico": (basico or "").strip()[:8] or None,
                     "municipio_codigo": municipio,
                     "uf": uf_row,
                     "cidade": cidade_row,
@@ -693,6 +928,97 @@ def load_ref_month(
     return total_upserted or total_selected
 
 
+def load_from_json(
+    path: str | Path,
+    *,
+    ref_month: str,
+    dry_run: bool = False,
+    empresas_map: dict[str, str] | None = None,
+    municipios_map: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Ingest JSON ativo+baixada → upsert. Exige ≥1 row 08. Não apaga refs antigos."""
+    import json
+
+    path = Path(path)
+    ref_month = _normalize_ref_month(ref_month)
+    ref_date = f"{ref_month}-01"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError("JSON deve ser array de estabelecimentos")
+    assert_json_has_baixadas(raw)
+
+    empresas_map = empresas_map or {}
+    municipios_map = municipios_map or {}
+    buffer: list[dict] = []
+    counts = {
+        "upserted_02": 0,
+        "upserted_08": 0,
+        "skipped_situacao": 0,
+        "skipped_bad_date": 0,
+        "ref_month": ref_date,
+    }
+    sb = None if dry_run else _supabase_client()
+    strip_segmento = False
+
+    def _flush() -> None:
+        nonlocal strip_segmento
+        if not buffer or dry_run:
+            buffer.clear()
+            return
+        strip_segmento = _upsert_rows(sb, buffer, strip_segmento=strip_segmento)
+        buffer.clear()
+
+    for item in raw:
+        if not isinstance(item, dict):
+            counts["skipped_situacao"] += 1
+            continue
+        tok = _situacao_token(item.get("situacao_cadastral"))
+        if tok and tok not in SITUACAO_LOAD:
+            counts["skipped_situacao"] += 1
+            continue
+        mun = str(item.get("municipio") or "").strip()
+        cidade = _lookup_cidade(municipios_map, mun) if municipios_map else None
+        mapped = json_row_to_estabelecimento(
+            item, ref_date=ref_date, cidade=cidade, empresas_map=empresas_map
+        )
+        if mapped is None:
+            if tok in SITUACAO_LOAD:
+                counts["skipped_bad_date"] += 1
+            else:
+                counts["skipped_situacao"] += 1
+            continue
+        sit = mapped.get("situacao_cadastral")
+        if sit in (2,):
+            counts["upserted_02"] += 1
+        elif sit in (8,):
+            counts["upserted_08"] += 1
+        buffer.append(mapped)
+        if len(buffer) >= FLUSH_BUFFER:
+            _flush()
+            if not dry_run:
+                print(
+                    f"upsert parcial 02={counts['upserted_02']} "
+                    f"08={counts['upserted_08']}",
+                    flush=True,
+                )
+
+    _flush()
+    if dry_run:
+        print(
+            f"[dry-run] selected_02={counts['upserted_02']} "
+            f"selected_08={counts['upserted_08']} "
+            f"skipped_situacao={counts['skipped_situacao']} "
+            f"skipped_bad_date={counts['skipped_bad_date']} "
+            f"ref_month={ref_date}"
+        )
+    else:
+        print(
+            f"done json: upserted_02={counts['upserted_02']} "
+            f"upserted_08={counts['upserted_08']} ref_month={ref_date}"
+        )
+    return counts
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Loader CNPJ fitness (RFB) → Supabase")
     ap.add_argument("--ref", default="latest", help="YYYY-MM ou 'latest'")
@@ -726,6 +1052,27 @@ def main(argv: list[str]) -> int:
     )
     ap.add_argument("--dry-run", action="store_true", help="Não grava no Supabase")
     ap.add_argument(
+        "--from-json",
+        default="",
+        help="Path JSON ativo+baixada (CNAE 9313100). Dispensa --cidade/--uf.",
+    )
+    ap.add_argument(
+        "--municipios-json",
+        default="",
+        help="Path municipios-rfb-tom.json (by_rfb). Evita download Municipios.zip.",
+    )
+    ap.add_argument(
+        "--backfill-cidade",
+        action="store_true",
+        help="Só preenche cidade null via mapa mun (ref=--ref). Sem --from-json.",
+    )
+    ap.add_argument(
+        "--include-baixadas",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Inclui situacao 08 no load ZIP (default: true).",
+    )
+    ap.add_argument(
         "--nacional",
         action="store_true",
         help="Carga Brasil inteiro: dispensa --cidade/--uf, resolve cidade via Municipios.zip",
@@ -751,8 +1098,40 @@ def main(argv: list[str]) -> int:
         print("SUPABASE_SERVICE_ROLE_KEY:", "ok" if key else "MISSING")
         return 0 if url and key else 1
 
+    if args.backfill_cidade:
+        backfill_cidade_ref_month(
+            args.ref,
+            local_dir=args.local_dir,
+            rfb_share_token=args.rfb_share_token,
+            rfb_webdav_base=args.rfb_webdav_base,
+            municipios_json=args.municipios_json,
+            dry_run=args.dry_run,
+        )
+        return 0
+
+    if args.from_json:
+        municipios_map = _load_municipios_map(
+            _normalize_ref_month(args.ref),
+            local_dir=args.local_dir,
+            rfb_share_token=args.rfb_share_token,
+            rfb_webdav_base=args.rfb_webdav_base,
+            nacional=True,
+            municipios_json=args.municipios_json,
+        )
+        counts = load_from_json(
+            args.from_json,
+            ref_month=args.ref,
+            dry_run=args.dry_run,
+            municipios_map=municipios_map,
+        )
+        print("done:", counts)
+        return 0
+
     if not args.nacional and (not args.cidade or not args.uf):
-        ap.error("--cidade e --uf são obrigatórios (use --nacional para carga Brasil)")
+        ap.error(
+            "--cidade e --uf são obrigatórios "
+            "(use --nacional, --from-json ou --backfill-cidade)"
+        )
 
     parts: list[int] = []
     for p in str(args.parts).split(","):
@@ -775,6 +1154,7 @@ def main(argv: list[str]) -> int:
         dry_run=args.dry_run,
         skip_missing=args.skip_missing,
         nacional=args.nacional,
+        include_baixadas=args.include_baixadas,
     )
     print("done:", n)
     return 0

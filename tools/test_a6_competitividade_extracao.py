@@ -97,8 +97,8 @@ def test_alinhar_markdown_scores_em_dash_c908():
 | Viabilidade financeira | — | — |
 
 **Transparência (OBRIGATÓRIO):**
-- `Concorrentes no bairro (analisados): — — saturação —`
-- `Densidade regional (raio 3km, contexto): — academias — inclui bairros adjacentes, NÃO é a saturação do bairro`
+- `Concorrentes na praça (raio 1 km): — — saturação —`
+- `Retorno bruto da busca (contexto): — resultados — não redefine a saturação`
 
 **Score Bairro:** — — indicador macro
 **Score Top 1 Candidato:** — — — base do veredito
@@ -142,8 +142,9 @@ x
     assert "| Viabilidade financeira | 5 | moderado |" in fixed
     assert "**Score Bairro:** 5.64" in fixed
     assert "**Score Top 1 Candidato:** 5.98" in fixed
-    assert "Concorrentes no bairro (analisados): 4" in fixed
+    assert "Concorrentes na praça (raio 1 km): 4" in fixed
     assert "saturação MEDIO" in fixed
+    assert "Retorno bruto da busca (contexto): 12" in fixed
     assert "Não há candidatos" not in fixed
     assert "Empório de Fátima" in fixed
     assert "Score GeoScout:** 7" in fixed

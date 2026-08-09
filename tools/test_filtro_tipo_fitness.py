@@ -32,6 +32,10 @@ def test_parque_esportes_legitimo_sem_tipos():
 def test_especializada_continua_fora():
     assert not _tipo_relevante(_c("Eikō Artes Marciais", ["gym"]), "academia")
     assert not _tipo_relevante(_c("Academia de Boxe Cocó"), "academia")
+    assert not _tipo_relevante(_c("Checkmat Bessa", ["gym"]), "academia")
+    assert not _tipo_relevante(_c("Academia de Cordel do Vale", ["gym"]), "academia")
+    assert not _tipo_relevante(_c("DoctorFit João Pessoa – Bessa", ["gym"]), "academia")
+    assert not _tipo_relevante(_c("BOXDELAS – Academia para mulheres", ["gym"]), "academia")
 
 
 def test_filtro_integrado_caso_coco():

@@ -113,10 +113,14 @@ def places_autocomplete(
     uf: str = "",
     lat: Optional[float] = None,
     lng: Optional[float] = None,
+    escopo: str = "bairro",
 ) -> dict[str, Any]:
     """
     Retorna {"suggestions": [...]} ou {"suggestions": [], "error": "..."}.
     Contrato espelha o middleware Vite (frontend/vite.config.ts).
+
+    escopo=bairro (default): só sublocality/neighborhood (Novo Relatório).
+    escopo=endereco: sem filtro de tipo — rua, bairro, cidade (Explorar).
     """
     api_key = get_google_maps_api_key()
     if not api_key:
@@ -138,8 +142,9 @@ def places_autocomplete(
         "input": query_string,
         "languageCode": "pt-BR",
         "regionCode": "BR",
-        "includedPrimaryTypes": ["sublocality", "neighborhood"],
     }
+    if escopo != "endereco":
+        params["includedPrimaryTypes"] = ["sublocality", "neighborhood"]
     if lat is not None and lng is not None:
         params["locationBias"] = {
             "circle": {

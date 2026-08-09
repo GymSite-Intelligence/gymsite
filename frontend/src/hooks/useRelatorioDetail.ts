@@ -304,6 +304,18 @@ export interface AbsorcaoMargemFrescaJSON {
   nota_modelo_secundario?: string
   carimbos?: Record<string, string | AbsorcaoCarimboJSON>
   base_espacial?: string
+  voronoi_smoke?: AbsorcaoVoronoiSmokeJSON | null
+}
+
+export interface AbsorcaoVoronoiSmokeJSON {
+  status?: 'ok' | 'indisponivel' | string
+  metodo_pool?: 'piramide_celula' | 'escala_pop' | string | null
+  estoque_primario_celula?: number | null
+  pin_fonte?: 'explicito' | 'centroide_bairro' | string | null
+  pool_voronoi?: number | null
+  pool_voronoi_ponderado?: number | null
+  delta_pct?: number | null
+  motivo?: string | null
 }
 
 export interface ComposicaoSegmentoJSON {

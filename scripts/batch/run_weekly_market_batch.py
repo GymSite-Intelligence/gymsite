@@ -113,6 +113,7 @@ def main() -> int:
             else:
                 bundle_args.append("--refresh-enrichment")
             label = f"bundle {cidade}/{bairro or '-'}/{uf}"
+            # Non-zero includes GeocodeBairroError → main() exit 2 (hard gate).
             if _run(bundle_args, label=label) != 0:
                 rc = 1
 

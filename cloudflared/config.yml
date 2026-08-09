@@ -27,4 +27,29 @@ ingress:
       noTLSVerify: true
       originServerName: gymsite-api
 
+  # Staging Hetzner — validar HTTPS ANTES do cutover DNS de produção
+  # (PLAN_HETZNER_VPS_TUNNEL §8 decisão 3A). Criar rota DNS do túnel:
+  #   cloudflared tunnel route dns <TUNNEL_ID> api-hetzner.getgymsite.com.br
+  - hostname: api-hetzner.getgymsite.com.br
+    service: http://gymsite-api:8000
+    originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      keepAliveConnections: 100
+      http2Origin: false
+      noTLSVerify: true
+      originServerName: gymsite-api
+
+  # Canônico do produto — cutover Hetzner (PLAN_HETZNER_VPS_TUNNEL §2). Requer
+  # rota DNS do túnel para este hostname além do ingress.
+  - hostname: api.getgymsite.com.br
+    service: http://gymsite-api:8000
+    originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      keepAliveConnections: 100
+      http2Origin: false
+      noTLSVerify: true
+      originServerName: gymsite-api
+
   - service: http_status:404

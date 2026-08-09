@@ -1,6 +1,6 @@
 /**
  * Mapa API id (catalog.py / poll `agente`) → UI EspecialistaId.
- * Mercado na lateral manda `degustacao` (roteador); poll devolve `mercado` após handoff.
+ * Mercado pinado (`mercado`) — evita roteador→Mercado→self-transfer (NVIDIA/LiteLLM).
  */
 import type { EspecialistaId } from '@/config/consultor-agentes'
 
@@ -22,7 +22,7 @@ const API_TO_UI: Record<AgenteApiId, EspecialistaId | null> = {
 }
 
 const UI_TO_API: Record<EspecialistaId, AgenteApiId> = {
-  mercado: 'degustacao',
+  mercado: 'mercado',
   tecnico: 'responsavel_tecnico',
   regulatorio: 'regulatorio',
   arquiteto: 'arquiteto',

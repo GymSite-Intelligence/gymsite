@@ -21,24 +21,109 @@ _USER_AGENT = os.getenv(
     "MAPS_FALLBACK_USER_AGENT",
     "GymSite-Intelligence/1.0 (prospeccao academias; contacto vectracargo.com.br)",
 )
+_last_nominatim = 0.0
+
+
+def _aguardar_nominatim() -> None:
+    """ToS Nominatim: 1 req/s. Mesmo intervalo do geocoder (param nominatim_intervalo_seg)."""
+    global _last_nominatim
+    try:
+        from tools.parametros_metodologia import param
+
+        intervalo = float(param("nominatim_intervalo_seg"))
+    except Exception:
+        intervalo = 1.1
+    elapsed = time.time() - _last_nominatim
+    if elapsed < intervalo:
+        time.sleep(intervalo - elapsed)
 
 
 def fallback_habilitado() -> bool:
-    """
-    OSM/Nominatim só quando explicitamente ligado.
-    Com Google Maps OK, use MAPS_FALLBACK_ENABLED=0 (padrão) para carga enriquecida Places.
-    """
-    return os.getenv("MAPS_FALLBACK_ENABLED", "0").strip().lower() in (
+    """OSM/Nominatim ligado por padrão. MAPS_FALLBACK_ENABLED=0 só se Google Maps for o geo primário."""
+    return os.getenv("MAPS_FALLBACK_ENABLED", "1").strip().lower() in (
         "1",
         "true",
         "yes",
     )
 
 
+def suggest_nominatim(
+    query: str,
+    lat: float | None = None,
+    lng: float | None = None,
+    limit: int = 8,
+) -> list[dict[str, Any]]:
+    """Autocomplete OSM (Nominatim) — usado no Explorar quando Places falha (403)."""
+    q = (query or "").strip()
+    if len(q) < 3:
+        return []
+    params: dict[str, Any] = {
+        "q": q,
+        "format": "json",
+        "limit": limit,
+        "countrycodes": "br",
+        "addressdetails": 1,
+        "accept-language": "pt-BR",
+    }
+    if lat is not None and lng is not None:
+        d = 0.25
+        params["viewbox"] = f"{lng - d},{lat + d},{lng + d},{lat - d}"
+        params["bounded"] = 0
+    global _last_nominatim
+    _aguardar_nominatim()
+    try:
+        with httpx.Client(timeout=12, headers={"User-Agent": _USER_AGENT}) as c:
+            r = c.get(_NOMINATIM_URL, params=params)
+        _last_nominatim = time.time()
+        if r.status_code != 200:
+            return []
+        rows = r.json() or []
+    except Exception:
+        _last_nominatim = time.time()
+        logger.warning("nominatim suggest falhou", exc_info=True)
+        return []
+    out: list[dict[str, Any]] = []
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        addr = item.get("address") or {}
+        main = (
+            addr.get("suburb")
+            or addr.get("neighbourhood")
+            or addr.get("city_district")
+            or addr.get("road")
+            or item.get("name")
+            or (item.get("display_name") or "").split(",")[0]
+        )
+        cidade = addr.get("city") or addr.get("town") or addr.get("municipality") or ""
+        estado = addr.get("state") or ""
+        contexto = ", ".join(p for p in (cidade, estado) if p)
+        display = item.get("display_name") or f"{main}, {contexto}".strip(", ")
+        try:
+            la, lo = float(item["lat"]), float(item["lon"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        out.append(
+            {
+                "placeId": f"osm_{item.get('osm_type', '')}_{item.get('osm_id', '')}",
+                "bairro": str(main).strip() or display,
+                "contexto": contexto,
+                "textoCompleto": display,
+                "lat": la,
+                "lng": lo,
+                "osm_class": str(item.get("class") or ""),
+                "osm_type_tag": str(item.get("type") or ""),
+            }
+        )
+    return out
+
+
 def geocode_nominatim(endereco: str) -> dict:
     """Geocode via Nominatim (BR)."""
+    global _last_nominatim
     if not endereco.strip():
         return {"error": "endereco vazio"}
+    _aguardar_nominatim()
     try:
         with httpx.Client(timeout=15, headers={"User-Agent": _USER_AGENT}) as c:
             r = c.get(
@@ -51,6 +136,7 @@ def geocode_nominatim(endereco: str) -> dict:
                     "addressdetails": 1,
                 },
             )
+        _last_nominatim = time.time()
         if r.status_code != 200:
             return {"error": f"Nominatim HTTP {r.status_code}"}
         rows = r.json()

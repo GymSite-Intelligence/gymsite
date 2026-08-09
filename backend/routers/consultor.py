@@ -1,9 +1,26 @@
 """
 CONSULTOR V2 — Endpoints FastAPI
 =================================
-Cole estas rotas no api.py existente, abaixo dos endpoints /api/assistente/*.
-
 Prefixo: /api/consultor/
+
+Blueprint (chat genérico → GymSite):
+
+```text
+# GENÉRICO (ex.: Evolution/WA)          # GYMSITE CONSULTOR
+1. history por contactPhone             1. carregar_historico(projeto_id)
+2. openai.chat gpt-4 system+msgs        2. run_consultor_adk → ADK root_agent
+                                        (especialistas + tools; modelo=resolve_site_model)
+3. Evolution sendText(number, text)     3. salvar_mensagem(role=assistant)
+                                        Front faz poll GET .../mensagens
+```
+
+Não há Evolution neste repo. Envio WA/IG = Eros (`assistent-control`), canal
+whatsapp only quando CHANNEL_PROVIDER=evolution. Aqui a “entrega” é persistir
+a resposta no projeto e o app logado ler via poll.
+
+POST /conversar só ENFILEIRA (`consultor_conversar`). Worker:
+`tools/redis_queue.py` → `run_consultor_adk` (Ollama local = BackgroundTasks
+inline, ver SANDBOX_OLLAMA.md).
 """
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -65,7 +82,10 @@ async def consultor_conversar(
     request: Request,
     background: BackgroundTasks,
 ):
-    """Enfileira turno ADK. Resposta vem por GET /projetos/{id}/mensagens."""
+    """Enfileira turno ADK (blueprint passo 1–2). Resposta = poll mensagens (passo 3 GymSite).
+
+    Equivalente ao `processAIResponse(job)` genérico, sem sendText Evolution.
+    """
     from api import _enqueue_ou_background
 
     user_id = _auth_user_id(request)
@@ -121,13 +141,18 @@ async def consultor_mensagens(
     )
     if desde:
         q = q.gt("created_at", desde)
-    msgs = q.order("created_at").execute().data or []
+    raw_msgs = q.order("created_at").execute().data or []
     from agents_site.carimbo import unpack_citacoes_from_msg
+    from tools.floor_plan_layout import sanitize_tool_calls_planta
 
+    msgs: list[dict] = [m for m in raw_msgs if isinstance(m, dict)]
     for m in msgs:
-        m["agente"] = id_publico(m.get("agente"))
+        agente_raw = m.get("agente")
+        m["agente"] = id_publico(agente_raw if isinstance(agente_raw, str) else None)
         m["citacoes"] = unpack_citacoes_from_msg(m)
         m.pop("tool_results", None)
+        tc = m.get("tool_calls")
+        sanitize_tool_calls_planta(tc if isinstance(tc, list) else None)
 
     pesq = projeto.pesquisas_realizadas or {}
     pode_relatorio = bool(
@@ -207,13 +232,13 @@ async def detalhe_projeto(
         },
         "mensagens": [
             {
-                "id": m["id"],
-                "role": m["role"],
-                "content": m["content"],
+                "id": m.get("id"),
+                "role": m.get("role"),
+                "content": m.get("content"),
                 "tool_calls": m.get("tool_calls"),
                 "citacoes": unpack_citacoes_from_msg(m),
-                "agente": id_publico(m.get("agente")),
-                "created_at": m["created_at"],
+                "agente": id_publico(m["agente"] if isinstance(m.get("agente"), str) else None),
+                "created_at": m.get("created_at"),
             }
             for m in mensagens
         ],

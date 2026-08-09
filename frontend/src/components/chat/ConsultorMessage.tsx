@@ -42,7 +42,12 @@ export function ConsultorMessage({ msg, especialistaAnterior }: ConsultorMessage
           <CabecalhoHandoff anterior={especialistaAnterior!} atual={especialista} />
         )}
         <div className="mb-1 flex items-center gap-1.5 text-xs">
-          <ConsultorAgentAvatar Icone={especialista.Icone} isActive size="inline" />
+          <ConsultorAgentAvatar
+            Icone={especialista.Icone}
+            imgSrc={especialista.img}
+            isActive
+            size="inline"
+          />
           <span className="font-medium text-foreground">{especialista.nome}</span>
           <span className="text-muted-foreground">· {especialista.especialidade}</span>
         </div>

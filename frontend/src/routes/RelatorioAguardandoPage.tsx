@@ -396,7 +396,7 @@ export function RelatorioAguardandoPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate({ to: '/relatorios/new' })}
+                onClick={() => navigate({ to: '/explorar', search: { novo: true } })}
               >
                 Começar do zero
               </Button>

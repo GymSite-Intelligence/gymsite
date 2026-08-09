@@ -65,10 +65,25 @@ def _injetar_telemetria(kwargs: dict[str, Any]) -> None:
     kwargs["after_model_callback"] = _chained
 
 
+def _strip_gemini_only_config(kwargs: dict[str, Any]) -> None:
+    """thinking_config / extras Gemini quebram LiteLlm(NVIDIA) — remove no path nvidia."""
+    from tools.pipeline_model import using_pipeline_nvidia
+
+    if not using_pipeline_nvidia():
+        return
+    kwargs.pop("generate_content_config", None)
+
+
 def build_llm_agent(**kwargs: Any):
     """Constrói um google.adk.agents.Agent com ACL (retry) + telemetria já aplicados."""
     from google.adk.agents import Agent
 
+    from tools.pipeline_model import resolve_pipeline_model
+
+    model = kwargs.get("model")
+    if isinstance(model, str) and model.strip():
+        kwargs["model"] = resolve_pipeline_model(model)
+    _strip_gemini_only_config(kwargs)
     _wrap_model_com_retry(kwargs)
     _injetar_telemetria(kwargs)
     return Agent(**kwargs)

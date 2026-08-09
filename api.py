@@ -32,7 +32,7 @@ import time
 import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from tools.supabase_client import load_create_client
 
@@ -427,7 +427,20 @@ async def _enqueue_ou_background(job: dict, background: BackgroundTasks) -> str:
     ConnectionError (localhost:6379 recusado). Em vez de devolver 500, processamos
     o mesmo `job` pelo próprio worker (`gymsite_worker`) como tarefa de fundo.
     Requer CPU sempre alocada + min-instances>=1 no serviço (pipeline é longo).
+
+    LLM_PROVIDER=ollama|local: NUNCA enfileira no Redis compartilhado — o worker
+    Cloud Run roubaria o job e rodaria Gemini. Processa in-process (BackgroundTasks).
     """
+    try:
+        from agents_site.model_provider import using_ollama
+
+        if using_ollama():
+            background.add_task(gymsite_worker, job)
+            logger.info("enqueue inline (Ollama local) type=%s", job.get("type"))
+            return "background-ollama"
+    except Exception:  # noqa: BLE001
+        pass
+
     if _queue is not None:
         try:
             return await _queue.enqueue(job)
@@ -465,14 +478,27 @@ async def lifespan(app: FastAPI):
                     creds,
                 )
         else:
-            gkey = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
-            if gkey.startswith("AQ."):
-                logger.error(
-                    "GOOGLE_API_KEY formato AQ.* inválido para pipeline ADK (401). "
-                    "Use AIzaSy... de https://aistudio.google.com/apikey ou Vertex."
-                )
-            elif not gkey:
-                logger.warning("GOOGLE_API_KEY ausente — agentes Gemini falharão")
+            from tools.pipeline_model import pipeline_llm_provider, using_pipeline_nvidia
+
+            backend = pipeline_llm_provider()
+            logger.info("pipeline LLM backend=%s", backend)
+            if using_pipeline_nvidia():
+                if not (os.getenv("NVIDIA_API_KEY") or "").strip():
+                    logger.error(
+                        "PIPELINE nvidia sem NVIDIA_API_KEY — A0/A6 vão falhar"
+                    )
+            else:
+                gkey = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
+                if gkey.startswith("AQ."):
+                    logger.error(
+                        "GOOGLE_API_KEY formato AQ.* inválido para pipeline ADK (401). "
+                        "Use AIzaSy... de https://aistudio.google.com/apikey ou Vertex."
+                    )
+                elif not gkey:
+                    logger.warning(
+                        "GOOGLE_API_KEY ausente — agentes Gemini falharão "
+                        "(ou defina PIPELINE_LLM_PROVIDER=nvidia)"
+                    )
     except Exception as e:
         logger.warning("Gemini auth startup check skip: %s", e)
 
@@ -592,14 +618,18 @@ app = FastAPI(
 
 from backend.routers.parceiros_admin import router as parceiros_admin_router
 from backend.routers.parceiros_admin import require_admin
+from backend.routers.llm_admin import router as llm_admin_router
 from backend.routers.execucao import router as execucao_router
 from backend.routers.rebusca import router as rebusca_router
 from backend.routers.leads import router as leads_router
 from backend.routers.chat import router as chat_router
 from backend.routers.site_agent import router_site_agent
 from backend.routers.market_tools import router_market_tools
+from backend.routers.internal_cron import router_internal_cron
+from backend.routers.explorar import router as explorar_router
 
 app.include_router(parceiros_admin_router)
+app.include_router(llm_admin_router)
 app.include_router(execucao_router)
 app.include_router(rebusca_router)
 app.include_router(leads_router)
@@ -608,6 +638,8 @@ app.include_router(router_site_agent)
 from backend.routers.cno import router_cno
 app.include_router(router_cno)
 app.include_router(router_market_tools)
+app.include_router(router_internal_cron)
+app.include_router(explorar_router)
 
 # CORS: dev libera localhost:* via regex; producao vem de CORS_ORIGINS (.env),
 # comma-separated. Ex: CORS_ORIGINS=https://vectracargo.com.br,https://gymsite.vectracargo.com.br
@@ -709,6 +741,7 @@ class PlacesAutocompleteInput(BaseModel):
     uf: str = ""
     lat: Optional[float] = None
     lng: Optional[float] = None
+    escopo: Literal["bairro", "endereco"] = "bairro"
 
 
 class TerritorioReadInput(BaseModel):
@@ -1399,7 +1432,7 @@ def get_metrics() -> Response:
 
 @app.get("/health/maps")
 def health_maps() -> dict:
-    """Diagnóstico Google Maps + status do fallback OSM."""
+    """Diagnóstico Google Maps (opcional) + OSM fallback."""
     from tools.maps_health import check_google_maps
     from tools.maps_fallback import fallback_habilitado
 
@@ -1535,6 +1568,7 @@ def places_autocomplete_endpoint(body: PlacesAutocompleteInput) -> dict:
         uf=body.uf,
         lat=body.lat,
         lng=body.lng,
+        escopo=body.escopo,
     )
 
 
@@ -2324,10 +2358,14 @@ def get_relatorio_pdf(
     relatorio_id: str,
     request: Request,
     layout: str = "classic",
-    engine: str = "reportlab",
+    engine: str = "weasy",
     access_code: str | None = None,
 ) -> Any:
-    """PDF estruturado do relatório. engine=reportlab (default) | weasy (HTML/CSS, produção)."""
+    """PDF estruturado do relatório. engine=weasy (default, HTML/CSS) | reportlab (fallback).
+
+    O default segue o front (download-relatorio-pdf.ts): acesso direto ao endpoint,
+    sem ?engine=, precisa entregar o MESMO layout que o app entrega.
+    """
     from fastapi.responses import Response
 
     from pdf import LayoutId, generate_relatorio_pdf

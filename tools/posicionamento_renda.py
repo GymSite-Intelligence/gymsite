@@ -25,16 +25,28 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s)
 
 
-# Bairros POPULARES ausentes da base IBGE 2022 (gap de DADO, não de nome — ex: Moema, cujo
-# distrito falta na base) → mapeados pro vizinho COBERTO de MESMO tier de renda. É APROXIMAÇÃO
-# (não sinônimo exato): o resultado é marcado na `fonte` (item c). Só pares conferidos mesmo-
-# tier. Extensível — alias errado injeta renda errada, então seja conservador.
-# VAZIO de propósito: a base `renda_bairro` NÃO cobre São Paulo CAPITAL (só interior/metro)
-# nem DF/TO — então não há bairro SP-capital coberto pra onde mapear Moema/Itaim Bibi/etc.
-# (alias→cidade errada injeta renda pobre num bairro rico — pior que o fallback). O fix certo
-# é INGESTÃO da renda dos distritos de SP capital (IBGE 2022) ou fonte de secretaria (SEADE-SP).
-# Só popular aqui com pares conferidos MESMO-tier + MESMA cidade coberta.
-_ALIAS_BAIRRO: dict[tuple[str, str], str] = {}
+# Bairros POPULARES ausentes da base → vizinho/RA coberto MESMO tier. APROXIMAÇÃO
+# (resultado marca `fonte`). Alias errado injeta renda errada — conservador.
+# SP capital: ainda sem camada bairro/distrito na base (não mapear Moema→outro município).
+# DF: PDAD 2024 cobre RAs; aliases Receita (Asa Norte, Samambaia Sul) → RA administrativa.
+_ALIAS_BAIRRO: dict[tuple[str, str], str] = {
+    ("DF", "asa norte"): "Plano Piloto",
+    ("DF", "asa sul"): "Plano Piloto",
+    ("DF", "noroeste"): "Plano Piloto",
+    ("DF", "samambaia sul"): "Samambaia",
+    ("DF", "samambaia norte"): "Samambaia",
+    ("DF", "samambaia sul (samambaia)"): "Samambaia",
+    ("DF", "taguatinga norte"): "Taguatinga",
+    ("DF", "taguatinga sul"): "Taguatinga",
+    ("DF", "ceilandia norte"): "Ceilândia",
+    ("DF", "ceilandia sul"): "Ceilândia",
+    ("DF", "guara i"): "Guará",
+    ("DF", "guara ii"): "Guará",
+    ("DF", "estrutural"): "SCIA/Estrutural",
+    ("DF", "scia"): "SCIA/Estrutural",
+    ("DF", "octogonal"): "Sudoeste/Octogonal",
+    ("DF", "sudoeste"): "Sudoeste/Octogonal",
+}
 
 
 def renda_bairro_ipece(cidade: str, uf: str, bairro: str) -> dict | None:

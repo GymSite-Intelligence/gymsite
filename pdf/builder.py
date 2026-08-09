@@ -235,6 +235,8 @@ def _logo_path() -> str | None:
     """
     candidatos = [
         os.environ.get("GYMSITE_PDF_LOGO"),
+        str(Path(__file__).resolve().parent / "assets" / "logo-gymsite-lockup.png"),
+        str(Path(__file__).resolve().parent / "assets" / "logo-gymsite-lime.png"),
         str(Path(__file__).resolve().parent / "assets" / "logo-gymsite.png"),
         str(
             Path(__file__).resolve().parent.parent
@@ -417,7 +419,35 @@ def _market_section(model: RelatorioPdfModel, styles: dict) -> list:
     if m.parque_ativo is not None:
         rows.append(["Parque ativo (CNPJ)", str(m.parque_ativo)])
     if m.novos_cnpj_90d is not None:
-        rows.append(["Novos CNPJ fitness (90d)", str(m.novos_cnpj_90d)])
+        rows.append(["Aberturas CNPJ (90d)", str(m.novos_cnpj_90d)])
+    if m.baixas_cnpj_90d is not None:
+        rows.append(["Baixas CNPJ (90d)", str(m.baixas_cnpj_90d)])
+    q_lab = m.janela_q_label or "Q"
+    if m.entrantes_cnpj_q is not None:
+        rows.append([f"Aberturas CNPJ ({q_lab})", str(m.entrantes_cnpj_q)])
+    if m.baixas_cnpj_q is not None:
+        rows.append([f"Baixas CNPJ ({q_lab})", str(m.baixas_cnpj_q)])
+    if m.saldo_oferta_q is not None:
+        press = m.pressao_oferta_q or ""
+        rows.append(
+            [
+                f"Saldo oferta ({q_lab})",
+                f"{m.saldo_oferta_q}" + (f" · {press}" if press else ""),
+            ]
+        )
+    if m.baixas_bairro_q is not None:
+        rows.append([f"Baixas bairro ({q_lab})", str(m.baixas_bairro_q)])
+    if m.cnpj_as_of or m.ref_month_cnpj:
+        carimbo = " · ".join(
+            x
+            for x in [
+                "RFB CNPJ",
+                f"as_of {m.cnpj_as_of}" if m.cnpj_as_of else "",
+                f"ref {m.ref_month_cnpj[:7]}" if m.ref_month_cnpj else "",
+            ]
+            if x
+        )
+        rows.append(["Carimbo CNPJ", carimbo])
     flow.append(_table(rows, [CONTENT_W * 0.45, CONTENT_W * 0.55]))
     if m.redes:
         flow.append(Spacer(1, 6))
@@ -965,7 +995,35 @@ def _market_section_bala(model: RelatorioPdfModel, styles: dict) -> list:
     if m.parque_ativo is not None:
         rows.append(["Parque ativo (CNPJ)", str(m.parque_ativo)])
     if m.novos_cnpj_90d is not None:
-        rows.append(["Novos CNPJ fitness (90d)", str(m.novos_cnpj_90d)])
+        rows.append(["Aberturas CNPJ (90d)", str(m.novos_cnpj_90d)])
+    if m.baixas_cnpj_90d is not None:
+        rows.append(["Baixas CNPJ (90d)", str(m.baixas_cnpj_90d)])
+    q_lab = m.janela_q_label or "Q"
+    if m.entrantes_cnpj_q is not None:
+        rows.append([f"Aberturas CNPJ ({q_lab})", str(m.entrantes_cnpj_q)])
+    if m.baixas_cnpj_q is not None:
+        rows.append([f"Baixas CNPJ ({q_lab})", str(m.baixas_cnpj_q)])
+    if m.saldo_oferta_q is not None:
+        press = m.pressao_oferta_q or ""
+        rows.append(
+            [
+                f"Saldo oferta ({q_lab})",
+                f"{m.saldo_oferta_q}" + (f" · {press}" if press else ""),
+            ]
+        )
+    if m.baixas_bairro_q is not None:
+        rows.append([f"Baixas bairro ({q_lab})", str(m.baixas_bairro_q)])
+    if m.cnpj_as_of or m.ref_month_cnpj:
+        carimbo = " · ".join(
+            x
+            for x in [
+                "RFB CNPJ",
+                f"as_of {m.cnpj_as_of}" if m.cnpj_as_of else "",
+                f"ref {m.ref_month_cnpj[:7]}" if m.ref_month_cnpj else "",
+            ]
+            if x
+        )
+        rows.append(["Carimbo CNPJ", carimbo])
     flow.append(_table_bala(rows, [CONTENT_W * 0.45, CONTENT_W * 0.55]))
     if m.redes:
         flow.append(Spacer(1, 6))

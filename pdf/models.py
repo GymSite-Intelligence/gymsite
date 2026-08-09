@@ -109,6 +109,19 @@ class MarketContextPdf:
     insights: list[str] = field(default_factory=list)
     parque_ativo: int | None = None
     novos_cnpj_90d: int | None = None
+    # Oferta CNPJ — baixas first-class (spec 2026-08-05)
+    baixas_cnpj_90d: int | None = None
+    baixas_cnpj_q: int | None = None
+    entrantes_cnpj_q: int | None = None
+    saldo_oferta_q: int | None = None
+    pressao_oferta_q: str | None = None
+    janela_q_label: str | None = None
+    cnpj_as_of: str | None = None
+    baixas_bairro_90d: int | None = None
+    baixas_bairro_q: int | None = None
+    entrantes_bairro_q: int | None = None
+    saldo_bairro_q: int | None = None
+    ref_month_cnpj: str | None = None
 
 
 @dataclass

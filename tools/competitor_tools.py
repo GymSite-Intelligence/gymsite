@@ -547,6 +547,10 @@ _TIPO_EXCLUDE_ACADEMIA = (
 )
 _TIPO_PLACES_PADRAO = "gym"
 
+# Contagem nacional: inclusão por distância ao centróide (não string de bairro).
+# Evidência jul/2026: Cocó ~3,3 km²; R=1500 vazava vizinho; Meireles/Bessa/Moema.
+RAIO_CONCORRENCIA_CANONICO_M = 1000
+
 
 def exclude_aplicado_tipo(tipo_negocio: str) -> list[str]:
     """Termos excluídos pós-fetch (Formato 1) conforme tipo_negocio do form."""
@@ -596,8 +600,8 @@ def _maps_search_url_from_query(query: str) -> str:
     return f"https://www.google.com/maps/search/{quote_plus((query or '').strip())}/"
 
 
-def _filtrar_status_e_bairro(concorrentes: list[dict], *, bairro: str) -> list[dict]:
-    """Descarta fechadas + mantém só quem tem bairro-alvo no nome/endereço."""
+def _filtrar_status_operacional(concorrentes: list[dict]) -> list[dict]:
+    """Descarta fechadas. Sem gate de string de bairro (canônico nacional — R do centróide)."""
     if not concorrentes:
         return concorrentes
     out = [c for c in concorrentes if isinstance(c, dict)]
@@ -612,35 +616,28 @@ def _filtrar_status_e_bairro(concorrentes: list[dict], *, bairro: str) -> list[d
         logger.info("filtro status: %d fechada(s) descartada(s) (%s)", len(fechadas),
                     ", ".join(f"{s.get('nome','?')}={_status(s)}" for s in fechadas[:5]))
         out = operacionais
-
-    alvo = _norm_txt(bairro or "")
-    if alvo:
-        def _do_bairro(s: dict) -> bool:
-            blob = _norm_txt((s.get("nome") or "") + " " + (s.get("endereco") or ""))
-            return alvo in blob
-        no_bairro = [s for s in out if _do_bairro(s)]
-        fora = [s for s in out if not _do_bairro(s)]
-        if no_bairro:
-            if fora:
-                logger.info("filtro bairro '%s': %d no bairro, %d fora (%s)", bairro,
-                            len(no_bairro), len(fora), ", ".join(s.get("nome", "?") for s in fora[:5]))
-            out = no_bairro
     return out
+
+
+def _filtrar_status_e_bairro(concorrentes: list[dict], *, bairro: str) -> list[dict]:
+    """Compat: só status. `bairro` ignorado (gate string proibido no caminho crítico)."""
+    del bairro
+    return _filtrar_status_operacional(concorrentes)
 
 
 def filtrar_concorrentes_bairro_tipo(
     concorrentes: list[dict], *, bairro: str, tipo_negocio: str
 ) -> list[dict]:
-    """Filtro determinístico AUTORITATIVO (aplicado no A6, na lista final — A3b é LLM e
-    re-emite, então filtrar só dentro da tool não governa a saída).
+    """Filtro determinístico AUTORITATIVO (A6 / site / tools).
 
-    BAIRRO: mantém quem tem o bairro-alvo no NOME ou ENDEREÇO. NÃO usa bairro_concorrente
-    (corrompível: o parser de endereço taggeia 'Cocó' p/ academia de Papicu). Salvaguarda:
-    mantém todos só se ZERO casa o bairro.
-    TIPO: tira off-type (CrossFit/Artes Marciais/Pilates num relatório de 'academia')."""
+    Inclusão geográfica = raio do centróide em `buscar_academias` (R canônico 1000 m).
+    Aqui: status operacional + gate de TIPO (tira pilates/crossfit/luta num relatório
+    de academia). `bairro` permanece na assinatura por compat; NÃO filtra por string.
+    """
     if not concorrentes:
         return concorrentes
-    out = _filtrar_status_e_bairro(concorrentes, bairro=bairro)
+    out = _filtrar_status_operacional(concorrentes)
+    del bairro
     tn = (tipo_negocio or "").strip().lower()
     if tn == "academia" or tn in _TIPO_ON_KW:
         on_tipo = [s for s in out if _tipo_relevante(s, tipo_negocio)]
@@ -684,7 +681,9 @@ def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
         _OFF_NOME = ("crossfit", "cross training", "cross fit", "artes marciais", "jiu",
                      "muay", "boxe", "judo", "karate", "taekwondo", "mma", "pilates",
                      "ballet", "dojo", "luta livre", "escola de danca",
-                     "studio", "estudio", "funcional", "personal training", "personalizado")
+                     "studio", "estudio", "funcional", "personal training", "personalizado",
+                     "checkmat", "gracie", "cordel", "doctorfit", "doctor fit",
+                     "boxdelas", "fisiot", "clinica", "beach tennis")
         return not any(_norm_txt(k) in nome_blob for k in _OFF_NOME)
     on = _TIPO_ON_KW.get(tn)
     if not on:  # 'outro' ou tipo sem regra → sem filtro
@@ -762,9 +761,9 @@ def cross_check_concorrentes_bairro(
     return {
         "status": "ok", "query": query, "google_n": len(raw), "gated_n": len(no_bairro),
         "no_bairro": no_bairro, "novos": novos, "ja_no_set_n": len(no_bairro) - len(novos),
-        "fonte": "SearchAPI google_maps (termos do formulário) + gate bairro+tipo",
-        "nota": ("Contagem autoritativa de concorrentes no bairro = gated_n. Google mostra "
-                 "google_n; gate remove vizinhos/off-tipo; ja_no_set = já analisados a fundo."),
+        "fonte": "SearchAPI google_maps (termos do formulário) + gate raio+tipo",
+        "nota": ("Contagem autoritativa = gated_n (R canônico do centróide + tipo). "
+                 "google_n = bruto; gate remove off-tipo/fora do raio; ja_no_set = já analisados a fundo."),
     }
 
 
@@ -774,6 +773,8 @@ def _searchapi_maps_textsearch(
     max_results: int = 40,
     region: str = "",
     places_type: str = "",
+    lat: float | None = None,
+    lng: float | None = None,
 ) -> list[dict]:
     """SearchAPI engine=google_maps → adaptado p/ o MESMO shape do Places searchText
     (places[]). place_id é `ChIJ...` (idêntico ao Places API) → cache/dedup compatíveis.
@@ -787,6 +788,8 @@ def _searchapi_maps_textsearch(
         sa_params["region"] = region
     if places_type:
         sa_params["type"] = places_type
+    if lat is not None and lng is not None:
+        sa_params["ll"] = f"@{float(lat)},{float(lng)},14z"
     data: dict = {}
     try:
         from tools.search_raw_cache import get_search_raw, set_search_raw
@@ -962,20 +965,34 @@ def _places_para_concorrentes_bairro(
     bairro: str,
     lat_centro: float,
     lng_centro: float,
+    raio_metros: int = RAIO_CONCORRENCIA_CANONICO_M,
+    ring: list[tuple[float, float]] | None = None,
 ) -> list[dict]:
-    alvo = _norm_txt(bairro or "")
+    """Adapta Places → concorrentes. Gate geo = polígono IBGE (se ring) senão dist ≤ raio."""
+    del bairro  # recall hint only — gate geo = ring ou raio
+    from tools.bairro_poligono import point_in_ring
+
     out: list[dict] = []
+    raio_m = max(300, min(5000, int(raio_metros or RAIO_CONCORRENCIA_CANONICO_M)))
     for p in places:
         if not _place_eh_fitness(p):
             continue
         end = p.get("formattedAddress", "")
         nome = (p.get("displayName") or {}).get("text") or ""
-        if alvo:
-            blob = _norm_txt(end + " " + nome)
-            if alvo not in blob:
-                continue
         loc = p.get("location") or {}
         plat, plng = loc.get("latitude", 0.0), loc.get("longitude", 0.0)
+        dist_km = (
+            round(calcular_distancia_km(lat_centro, lng_centro, plat, plng), 2)
+            if plat else 0.0
+        )
+        if ring:
+            if not plat or not point_in_ring(float(plng), float(plat), ring):
+                continue
+            gate = "poligono_ibge_bairro"
+        else:
+            if plat and (dist_km * 1000.0) > raio_m:
+                continue
+            gate = "raio_1000m"
         periodos = (p.get("regularOpeningHours") or {}).get("weekdayDescriptions", [])
         backend = p.get("_fonte_textsearch") or "places_textsearch"
         out.append({
@@ -983,7 +1000,7 @@ def _places_para_concorrentes_bairro(
             "nome": nome,
             "endereco": end,
             "lat": plat, "lng": plng,
-            "distancia_km": round(calcular_distancia_km(lat_centro, lng_centro, plat, plng), 2) if plat else 0.0,
+            "distancia_km": dist_km,
             "rating": p.get("rating"),
             "num_avaliacoes": p.get("userRatingCount", 0),
             "nivel_preco": "",
@@ -996,6 +1013,7 @@ def _places_para_concorrentes_bairro(
             "horarios": periodos[:3],
             "fonte_busca": backend,
             "_query_formato1": query,
+            "gate_espacial": gate,
         })
     return out
 
@@ -1003,17 +1021,35 @@ def _places_para_concorrentes_bairro(
 def _descobrir_concorrentes_bairro(
     tipo_negocio: str, bairro: str, cidade: str, uf: str,
     lat_centro: float, lng_centro: float,
+    raio_metros: int = RAIO_CONCORRENCIA_CANONICO_M,
+    id_municipio: str | None = None,
 ) -> list[dict]:
-    """Formato 1: query tipada + gate bairro (nome|end) + types fitness
-    + cruz parque CNPJ + filtro tipo (exclude studio/cross quando academia).
-    """
+    """Formato 1: query tipada + gate polígono IBGE (se houver) ou dist ≤ raio + types fitness."""
     query = _query_formato1(tipo_negocio, bairro, cidade, uf)
     region = ", ".join(p for p in (cidade, uf) if p)
     places = _places_textsearch(
         query, max_results=40, region=region, places_type=_TIPO_PLACES_PADRAO,
     )
+    ring = None
+    try:
+        from tools.bairro_poligono import resolver_bairro_poligono
+
+        poly = resolver_bairro_poligono(
+            id_municipio=id_municipio, bairro=bairro or "", cidade=cidade, uf=uf,
+        )
+        ring_cand = poly.get("ring") if poly else None
+        if ring_cand:
+            ring = ring_cand
+    except Exception:
+        ring = None
     out = _places_para_concorrentes_bairro(
-        places, query=query, bairro=bairro, lat_centro=lat_centro, lng_centro=lng_centro,
+        places,
+        query=query,
+        bairro=bairro,
+        lat_centro=lat_centro,
+        lng_centro=lng_centro,
+        raio_metros=raio_metros,
+        ring=ring,
     )
     cruzados = _cross_parque_contato(out, cidade, uf, bairro)
     return filtrar_concorrentes_bairro_tipo(
@@ -1052,9 +1088,10 @@ def _buscar_academias_overpass(
 def buscar_academias(
     bairro: str,
     cidade: str,
-    raio_metros: int = 3000,
+    raio_metros: int = RAIO_CONCORRENCIA_CANONICO_M,
     uf: str = "",
     tipo_negocio: str = "academia",
+    id_municipio: str | None = None,
 ) -> dict:
     """
     Busca academias e fitness centers num raio do bairro/cidade.
@@ -1062,6 +1099,7 @@ def buscar_academias(
 
     Ordem: Geocode (Google → Nominatim) → Places Nearby → Overpass OSM.
     Sem chave Google ou com API bloqueada, usa OSM quando MAPS_FALLBACK_ENABLED=1.
+    Com polígono IBGE resolvido: gate inclusão = point-in-polygon (Spec C).
     """
     endereco = f"{bairro}, {cidade}, Brasil" if bairro else f"{cidade}, Brasil"
     geo = geocode_endereco(endereco)
@@ -1073,6 +1111,14 @@ def buscar_academias(
         }
 
     lat, lng = geo["lat"], geo["lng"]
+    if not id_municipio:
+        try:
+            from tools.ibge_tools import buscar_municipio
+
+            _mun = buscar_municipio(cidade, uf or "")
+            id_municipio = (_mun or {}).get("codigo") or id_municipio
+        except Exception:
+            pass
     fonte_geocode = geo.get("fonte_geocode", "google")
     api_key = get_google_maps_api_key()
 
@@ -1173,7 +1219,10 @@ def buscar_academias(
     _conc_src = os.getenv("CONCORRENTES_SOURCE", "").strip().lower()
     _usar_ancora_bairro = _conc_src not in ("radius", "nearby", "raio", "municipio")
     if _usar_ancora_bairro and bairro.strip():
-        base_bairro = _descobrir_concorrentes_bairro(tipo_negocio, bairro, cidade, uf, lat, lng)
+        base_bairro = _descobrir_concorrentes_bairro(
+            tipo_negocio, bairro, cidade, uf, lat, lng, raio_metros=raio_metros,
+            id_municipio=id_municipio,
+        )
         if base_bairro:
             base_bairro.sort(key=lambda x: -(x.get("num_avaliacoes") or 0))
             _cnt = agregados.get("count_total") if isinstance(agregados, dict) else None
@@ -1188,11 +1237,10 @@ def buscar_academias(
                 "fonte_busca_competidores": "places_textsearch_bairro+cnpj",
                 "redes_detectadas_osm": [],
                 "concorrentes": base_bairro,
-                "nota_fonte": ("Âncora bairro: Places textSearch '{} {} {}' filtrado por "
-                               "bairro+fitness; parque CNPJ cruza contato. Densidade 3km = "
-                               "contexto regional.").format(
-                                   _TIPO_NEGOCIO_KW.get((tipo_negocio or '').strip().lower(), 'academias'),
-                                   bairro, cidade),
+                "nota_fonte": (
+                    "Âncora query bairro + inclusão dist≤{raio}m do centróide + gate tipo; "
+                    "parque CNPJ cruza contato. Densidade regional = contexto."
+                ).format(raio=raio_metros),
             }
         # textSearch vazio → AGORA roda o Places nearby (lazy) como fallback 3km.
         if api_key:
@@ -2329,7 +2377,7 @@ def buscar_concorrentes_balanceados(
     tool_context,
     bairro: str,
     cidade: str,
-    raio_metros: int = 3000,
+    raio_metros: int = RAIO_CONCORRENCIA_CANONICO_M,
     raio_expandido_metros: int = 5000,
 ) -> dict:
     """

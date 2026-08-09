@@ -1,0 +1,65 @@
+---
+config:
+  layout: elk
+  theme: mc
+  flowchart:
+    defaultRenderer: elk
+---
+%% carregar_market_bundle — batch → A0 → downstream
+%% Fonte: tools/market_bundle.py · agents/a0_context_builder.py · SPEC_market_bundle_v2
+flowchart TB
+
+  subgraph BATCH["Batch semanal (1×)"]
+    Build@{ shape: procs, label: "build_market_bundles.py<br/>IBGE · CVM · franquias · BCB · SINAPI · OSM snapshot" }
+    Save@{ shape: subproc, label: "save_market_bundle" }
+    FS@{ shape: das, label: "data/market_bundles<br/>{slug}.json" }
+    SB@{ shape: cyl, label: "Supabase market_bundles<br/>MARKET_BUNDLE_SUPABASE=1" }
+
+    Build ==> Save
+    Save ==> FS
+    Save -.->|upsert best-effort| SB
+  end
+
+  subgraph REPORT["Cada relatório"]
+    API@{ shape: event, label: "api.py / worker<br/>input_params cidade·bairro·uf" }
+    Inject@{ shape: lean-l, label: "inject_market_bundle_context<br/>flags: fresh · skip_deep_research · briefing_md" }
+    Runner@{ shape: rect, label: "ADK Runner<br/>root_agent → A0" }
+    A0@{ shape: rect, label: "ContextBuilder A0<br/>gemini-2.5-flash" }
+    Load@{ shape: lean-r, label: "carregar_market_bundle<br/>tool ADK → markdown" }
+    Fresh@{ shape: diam, label: "bundle existe<br/>e ≤ 7 dias?" }
+    Brief@{ shape: docs, label: "briefing_completo_md<br/>demografia · CVM · franquias · macro" }
+    Gap@{ shape: hex, label: "dados_nao_disponiveis<br/>campos qualitativos" }
+    Cnpj@{ shape: lean-r, label: "dados_parque_cnpj_para_a0<br/>parque · aberturas · CNO" }
+    Osm@{ shape: lean-r, label: "fatos_competicao_local<br/>redes_detectadas_osm" }
+    Json@{ shape: docs, label: "market_context JSON" }
+    Override@{ shape: subproc, label: "_a0_override_cnpj_numeros<br/>número CNPJ = tool, não LLM" }
+    State@{ shape: fr-circ, label: "state.market_context" }
+
+    API ==> Inject ==> Runner ==> A0
+    A0 ==> Load ==> Fresh
+    Fresh -->|sim| Brief
+    Fresh -->|não / expirado| Gap
+    Brief --> Cnpj
+    Gap --> Cnpj
+    Cnpj --> Osm --> Json ==> Override ==> State
+  end
+
+  subgraph DOWN["Downstream (não lê bundle direto)"]
+    A2@{ shape: rect, label: "A2 DemoAnalyst<br/>renda_bairro · IBGE vivo" }
+    A3a@{ shape: rect, label: "A3a CompetitorSearch<br/>SearchAPI · reviews · place_id" }
+    A4@{ shape: rect, label: "A4 MRLR Tier0<br/>aluguel viabilidade" }
+    A6@{ shape: rect, label: "A6 ReportConsolidator<br/>§5 briefing · §8 CNPJ" }
+
+    State ==> A2
+    State ==> A3a
+    State ==> A4
+    State ==> A6
+  end
+
+  SB -.->|load_market_bundle 1º| Load
+  FS -.->|dev / fallback| Load
+  RFB@{ shape: datastore, label: "RFB CNPJ Aberto" }
+  RFB -.-> Cnpj
+
+  Note@{ shape: comment, label: "bundle = qualitativo batch · redes A0 = só OSM tool · aluguel = A4 MRLR · renda linha = A2 · A3a ≠ competicao_local do bundle" }
+  Note ~~~ State

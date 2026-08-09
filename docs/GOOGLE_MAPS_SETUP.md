@@ -41,14 +41,17 @@ A partir da **v3.65** do Maps JavaScript API, `google.maps.visualization.Heatmap
 
 ## Fallback automático (já no código)
 
-Com `MAPS_FALLBACK_ENABLED=1` (padrão):
+`MAPS_FALLBACK_ENABLED` default no código = **`0` (off)** — ver `tools/maps_fallback.py`.  
+Prod pode ligar com `MAPS_FALLBACK_ENABLED=1` (ex.: `.env.production.example`).
+
+Com fallback **ligado** (`1` / `true` / `yes`):
 
 | Função | Fallback |
 |--------|----------|
 | Geocode | [Nominatim](https://nominatim.org/) (OSM) |
 | Academias no raio | [Overpass](https://overpass-api.de/) (OSM) |
 
-O pipeline **não fica zerado** enquanto a chave Google não for corrigida. Reviews/horários detalhados do Places continuam limitados.
+Com Google Maps OK e fallback off, Places/geocode Google seguem no caminho principal. Reviews/horários detalhados do Places continuam limitados se a chave falhar sem fallback.
 
 ## Deploy
 

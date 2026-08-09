@@ -390,6 +390,10 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
     """Chat de degustação ASSÍNCRONO via ADK (`agents_site`). POST enfileira o turno;
     resposta vem por GET /conversar/{projeto_id}/mensagens.
 
+    Blueprint genérico (history→LLM→sendText) mapeia aqui para:
+    enqueue `site_conversar` → `run_site_agent_adk` → salvar_mensagem + poll.
+    Sem Evolution/WhatsApp (sandbox = HTTP).
+
     NOTA: cap de novas sessões por IP/dia ainda não enforced (Turnstile + K=2 +
     entitlement 1/email no /analise limitam o custo). Follow-up.
     """
@@ -483,11 +487,28 @@ async def conversar_mensagens(projeto_id: str, desde: Optional[str] = None):
     # É este campo que acende o crachá do especialista em cada balão — com o roteador,
     # quem respondeu só se sabe DEPOIS do turno.
     from agents_site.carimbo import unpack_citacoes_from_msg
+    from tools.floor_plan_layout import sanitize_tool_calls_planta
 
     for m in msgs:
         m["agente"] = id_publico(m.get("agente"))
         m["citacoes"] = unpack_citacoes_from_msg(m)
         m.pop("tool_results", None)
+        sanitize_tool_calls_planta(m.get("tool_calls"))
+
+        # RAG Eros: injeta fontes recuperadas via tools consultar_eros_* no polling.
+        # O frontend (siteAgent.ts → PollMsg.sources) renderiza no chat público.
+        fontes_eros = []
+        for tc in (m.get("tool_calls") or []):
+            nome = tc.get("ferramenta") or tc.get("name") or ""
+            if nome.startswith("consultar_eros_"):
+                resultado = tc.get("resultado") or tc.get("result") or {}
+                if isinstance(resultado, dict):
+                    fontes = resultado.get("fontes") or resultado.get("sources") or []
+                    if isinstance(fontes, list) and fontes:
+                        # Pega apenas as fontes da tool mais recente (última chamada)
+                        fontes_eros = fontes
+        if fontes_eros:
+            m["sources"] = fontes_eros
 
     mn = dict(proj.get("modelo_negocio") or {})
     mn.pop("_site", None)

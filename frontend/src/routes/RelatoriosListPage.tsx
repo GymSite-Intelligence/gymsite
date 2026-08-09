@@ -96,7 +96,7 @@ export function RelatoriosListPage() {
             <RefreshCw className={isFetching ? 'animate-spin' : ''} size={14} />
           </Button>
           <Button asChild>
-            <Link to="/relatorios/new">
+            <Link to="/explorar" search={{ novo: true }}>
               <Plus size={16} /> Novo Relatório
             </Link>
           </Button>
@@ -259,7 +259,7 @@ function EmptyState({
             Crie seu primeiro relatório de viabilidade comercial.
           </p>
           <Button asChild>
-            <Link to="/relatorios/new">
+            <Link to="/explorar" search={{ novo: true }}>
               <Plus size={16} /> Novo Relatório
             </Link>
           </Button>
