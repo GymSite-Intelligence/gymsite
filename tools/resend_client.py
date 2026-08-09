@@ -11,6 +11,7 @@ logger = logging.getLogger("gymsite.resend")
 
 _API = "https://api.resend.com"
 _FROM_DEFAULT = "GymSite <contato@gymsite.com.br>"
+EVENT_EXPLORAR_LEAD = "explorar.lead_captured"
 
 
 def _key() -> str:
@@ -55,15 +56,31 @@ def upsert_explorar_contact(email: str) -> dict[str, Any]:
     return created
 
 
-def send_explorar_welcome(email: str, cidade: str | None, bairro: str | None) -> dict[str, Any]:
+def send_explorar_welcome(
+    email: str,
+    cidade: str | None,
+    bairro: str | None,
+    resumo: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     addr = email.lower().strip()
-    lugar = ", ".join(p for p in (bairro, cidade) if p) or "o recorte que você olhou"
-    html = (
-        "<p>Olá,</p>"
-        f"<p>Guardamos seu e-mail depois da leitura de <strong>{lugar}</strong> no mapa GymSite.</p>"
-        "<p>Vamos te mandar por aqui as próximas leituras desse recorte — sem compromisso de compra.</p>"
-        "<p>Abraço,<br/>GymSite</p>"
-    )
+    if resumo:
+        from tools.explorar_leitura import html_resumo_explorar
+
+        html = html_resumo_explorar(
+            cidade=resumo.get("cidade") or cidade,
+            bairro=resumo.get("bairro") or bairro,
+            label=resumo.get("label"),
+            leituras=resumo.get("leituras"),
+            rivais=resumo.get("rivais"),
+        )
+    else:
+        lugar = ", ".join(p for p in (bairro, cidade) if p) or "o recorte que você olhou"
+        html = (
+            "<p>Olá,</p>"
+            f"<p>Guardamos seu e-mail depois da leitura de <strong>{lugar}</strong> no mapa GymSite.</p>"
+            "<p>Vamos te mandar por aqui as próximas leituras desse recorte — sem compromisso de compra.</p>"
+            "<p>Abraço,<br/>GymSite</p>"
+        )
     return _post(
         "/emails",
         {
@@ -77,10 +94,31 @@ def send_explorar_welcome(email: str, cidade: str | None, bairro: str | None) ->
     )
 
 
+def send_explorar_enrolled_event(
+    email: str,
+    cidade: str | None = None,
+    bairro: str | None = None,
+) -> dict[str, Any]:
+    addr = email.lower().strip()
+    return _post(
+        "/events/send",
+        {
+            "event": EVENT_EXPLORAR_LEAD,
+            "email": addr,
+            "payload": {
+                "cidade": (cidade or "").strip() or "sua cidade",
+                "bairro": (bairro or "").strip() or "seu recorte",
+            },
+        },
+        idempotency_key=f"explorar-enrolled/{addr}",
+    )
+
+
 def enroll_explorar_lead(
     email: str,
     cidade: str | None = None,
     bairro: str | None = None,
+    resumo: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not email or "@" not in email:
         return {"ok": False, "motivo": "email_invalido"}
@@ -88,5 +126,11 @@ def enroll_explorar_lead(
         logger.warning("RESEND_API_KEY ausente — lead Explorar sem cadência")
         return {"ok": False, "motivo": "sem_chave"}
     contact = upsert_explorar_contact(email)
-    welcome = send_explorar_welcome(email, cidade, bairro)
-    return {"ok": bool(welcome.get("ok")), "contact": contact, "welcome": welcome}
+    welcome = send_explorar_welcome(email, cidade, bairro, resumo)
+    evento = send_explorar_enrolled_event(email, cidade, bairro)
+    return {
+        "ok": bool(welcome.get("ok")),
+        "contact": contact,
+        "welcome": welcome,
+        "evento": evento,
+    }

@@ -1,7 +1,7 @@
-/** URLs canônicas — same-origin em www.gymsite.com.br. */
+/** URLs canônicas — same-origin em gymsite.com.br. */
 
 export const APP_ORIGIN =
-  typeof window !== 'undefined' ? window.location.origin : 'https://www.gymsite.com.br'
+  typeof window !== 'undefined' ? window.location.origin : 'https://gymsite.com.br'
 
 export function explorarHref(): string {
   return '/explorar'

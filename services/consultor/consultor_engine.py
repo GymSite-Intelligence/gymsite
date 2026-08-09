@@ -1018,33 +1018,37 @@ async def disparar_relatorio_formal(projeto_id: str, usuario_id: str) -> dict[st
 
 
 async def _tool_base_conhecimento(args: dict, projeto: ProjectState, modo_site: bool = False) -> dict:
-    """Base de conhecimento qualitativa (Vertex AI Search). Retorna trechos + citações;
-    o próprio Gemini do Consultor sintetiza. NÃO produz número.
+    """Base qualitativa ingestada: Eros Mercado. NÃO produz número.
 
-    Consultor LOGADO: market-docs (fato de mercado neutro) + consultor-docs (BI/estratégia
-    interna). Degustação (modo_site): SÓ market-docs — barreira anti-vazamento, a base interna
-    nunca chega ao visitante público."""
-    from tools.discovery_engine_tools import buscar_conhecimento, buscar_conhecimento_consultor
+    Vertex Discovery só se VERTEX_RAG_ENABLED=1 (legado) e só no consultor logado
+    (consultor-docs interno — nunca na degustação)."""
+    from agents_site.tools_l2_rag import consultar_base_mercado
 
     pergunta = (args.get("pergunta") or "").strip()
-    resultado = await asyncio.to_thread(buscar_conhecimento, pergunta)
+    resultado = await asyncio.to_thread(consultar_base_mercado, pergunta)
     if not isinstance(resultado, dict):
         resultado = {"resultados": [], "n_docs": 0}
 
     if not modo_site:
-        interno = await asyncio.to_thread(buscar_conhecimento_consultor, pergunta)
-        if isinstance(interno, dict) and interno.get("resultados"):
-            resultado["resultados"] = (resultado.get("resultados") or []) + interno["resultados"]
-            resultado["n_docs"] = len(resultado.get("resultados") or [])
+        from tools.discovery_engine_tools import (
+            buscar_conhecimento_consultor,
+            vertex_rag_enabled,
+        )
+
+        if vertex_rag_enabled():
+            interno = await asyncio.to_thread(buscar_conhecimento_consultor, pergunta)
+            if isinstance(interno, dict) and interno.get("resultados"):
+                resultado["resultados"] = (resultado.get("resultados") or []) + interno["resultados"]
+                resultado["n_docs"] = len(resultado.get("resultados") or [])
     return resultado
 
 
 async def _tool_catalogos_equipamentos(args: dict, projeto: ProjectState) -> dict:
-    """Catálogos de equipamento (data store/engine separado). Trechos + citações."""
-    from tools.discovery_engine_tools import buscar_catalogos_equipamentos
+    """Catálogos de equipamento — Eros Técnico / corpus local."""
+    from agents_site.tools_l2_rag import consultar_catalogo_equipamentos
 
     pergunta = (args.get("pergunta") or "").strip()
-    resultado = await asyncio.to_thread(buscar_catalogos_equipamentos, pergunta)
+    resultado = await asyncio.to_thread(consultar_catalogo_equipamentos, pergunta)
     return resultado if isinstance(resultado, dict) else {"resultados": [], "n_docs": 0}
 
 # ─── Helpers de resumo (texto curto para as pills do frontend) ────────────────

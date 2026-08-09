@@ -7,16 +7,16 @@ describe("resolveSiteAgentBases", () => {
       resolveSiteAgentBases({
         provider: "cloudflare",
         viteApiBase: "https://api.getgymsite.com.br",
-        origin: "https://www.gymsite.com.br",
+        origin: "https://gymsite.com.br",
       }),
-    ).toEqual(["https://www.gymsite.com.br"]);
+    ).toEqual(["https://gymsite.com.br"]);
   });
 
   test("sem provider usa API A0–A9", () => {
     expect(
       resolveSiteAgentBases({
         viteApiBase: "https://api.getgymsite.com.br",
-        origin: "https://www.gymsite.com.br",
+        origin: "https://gymsite.com.br",
       }),
     ).toEqual(["https://api.getgymsite.com.br"]);
   });

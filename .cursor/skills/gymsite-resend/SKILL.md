@@ -40,6 +40,7 @@ Skills oficiais Resend (templates React Email): `npx skills add resend/resend-sk
 - Env: `RESEND_API_KEY`, `RESEND_FROM` (já na VPS).
 - HTTP `POST https://api.resend.com/emails` com `Authorization: Bearer`.
 - Lead Explorar/landing: gravar em `gymsite.leads`, depois enfileirar drip (dia 0 / 3 / 8).
+- Dia 0 = `send_explorar_welcome` (HTML do recorte). Dia 3 e 8 = automação Resend `Explorar — cadência dia 3 e 8` no evento `explorar.lead_captured`.
 - Linguagem do e-mail: dono de academia, PT simples. Sem jargão técnico.
 
 ## Anti-padrões

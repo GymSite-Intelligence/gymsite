@@ -12,7 +12,7 @@ export function resolveSiteAgentBases(opts: {
 
   if (provider === "cloudflare") {
     const primary = (
-      (opts.origin ?? "").trim().replace(/\/$/, "") || "https://www.gymsite.com.br"
+      (opts.origin ?? "").trim().replace(/\/$/, "") || "https://gymsite.com.br"
     );
     return [primary];
   }

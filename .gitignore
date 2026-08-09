@@ -61,6 +61,7 @@ docs/series-historicas*.csv
 
 # Screenshots de debug (não versionar — usar Linear/Notion se precisar guardar)
 *.png
+!frontend/public/agentes/*.png
 
 # Deep Research cache (estrutura versionada via .gitkeep, conteúdo ignorado)
 market_context/*.md

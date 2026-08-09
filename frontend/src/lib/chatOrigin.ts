@@ -3,7 +3,7 @@
 const PREVIEW_HOST =
   /^[a-f0-9]{8}\.(gym-insight-hub|gymsite(-3p0)?)\.pages\.dev$/i;
 
-export const CHAT_PRODUCTION_URL = "https://www.gymsite.com.br/degustacao";
+export const CHAT_PRODUCTION_URL = "https://gymsite.com.br/degustacao";
 
 export function isDeploymentPreviewHost(hostname = typeof window !== "undefined" ? window.location.hostname : ""): boolean {
   return PREVIEW_HOST.test(hostname);

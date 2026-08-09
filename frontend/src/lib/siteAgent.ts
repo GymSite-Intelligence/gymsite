@@ -17,7 +17,7 @@ function parseApiBases(): string[] {
     viteApiBase: String(env.VITE_API_BASE ?? ""),
     viteApiFallback: String(env.VITE_API_FALLBACK_BASE ?? ""),
     viteApiBases: String(env.VITE_API_BASES ?? ""),
-    origin: typeof window !== "undefined" ? window.location.origin : "https://www.gymsite.com.br",
+    origin: typeof window !== "undefined" ? window.location.origin : "https://gymsite.com.br",
   });
 }
 
