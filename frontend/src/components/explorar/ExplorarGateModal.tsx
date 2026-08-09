@@ -1,7 +1,7 @@
 import { Check, Zap } from 'lucide-react'
 import { SITE_ORIGIN } from './explorar-chrome'
 
-const LOGIN = 'https://getgymsite.com.br/login'
+const LOGIN = '/login'
 
 const BENEFICIOS = [
   'Análise completa dos concorrentes',

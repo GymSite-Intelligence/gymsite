@@ -5,6 +5,21 @@ Este documento registra a convergência entre o site de marketing
 Ele descreve o que foi implementado em código e os passos manuais de
 configuração/infra que precisam ser aplicados pelo responsável.
 
+## Unificação www (2026-08-09)
+
+**Host canônico de UI:** `https://www.gymsite.com.br` (Pages projeto `gymsite`, monorepo `frontend/`).
+
+| Path | Auth |
+|------|------|
+| `/` landing, `/blog`, `/agentes`, `/degustacao` | público |
+| `/explorar` | misto (`!user` = degustação) |
+| `/dashboard`, `/consultor`, `/relatorios*`, … | RequireAuth |
+
+- `getgymsite.com.br/*` → 301 `www.gymsite.com.br/$1` (exceto `api.` / `api-hetzner.`).
+- Hub Pages: **desanexar** custom domain www após o cutover. Worker `gymsite-degustacao` permanece.
+- `VITE_DEGUSTACAO_PROVIDER=cloudflare` no build Pages; `_routes.json` exclui `/api/site-agent/*`.
+- Cutover manual: ver `docs/ops/CUTOVER-WWW-GYMSITE.md`.
+
 ## Visão geral das quatro frentes
 
 | Frente | Descrição | Status do código |

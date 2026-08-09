@@ -128,10 +128,10 @@ Craft de prompt (formato JSON, Gemini contexto-último, checklist de PR): ver
 
 | Camada | Onde sobe | Como |
 |---|---|---|
-| **Frontend produto** (`frontend/` deste monorepo) | **Cloudflare Pages** (projeto CF `gymsite`) | Git build Pages (`root_dir=frontend`) **ou** `cd frontend` → build → `npx wrangler pages deploy ./dist --project-name gymsite` · config: `frontend/wrangler.jsonc` |
-| **Landing + degustação** | **Cloudflare Pages** (projeto CF `gym-insight-hub`, repo separado) | push/`merge` `main` no repo hub **+** redeploy CF (Actions morto) · rota canônica `/degustacao` |
-| **Backend API** (`api.py`, agents, tools) | **Google Cloud Run** `us-central1` | trigger Cloud Build `gymsite-api` em `main` **ou** `gcloud run deploy gymsite-api` |
-| **Worker pipeline** | **Cloud Run** `gymsite-worker` | **mesma imagem** da API após rebuild — não auto-deploya; ver `CLAUDE.md` |
+| **Frontend unificado** (`frontend/` deste monorepo) | **Cloudflare Pages** (projeto CF `gymsite`) → **`www.gymsite.com.br`** | Git build Pages (`root_dir=frontend`) **ou** `cd frontend` → build → `npx wrangler pages deploy ./dist --project-name gymsite` · config: `frontend/wrangler.jsonc` |
+| **Landing + blog + `/degustacao` + `/explorar`** | **mesmo** Pages `gymsite` (não hub) | rotas públicas no mesmo SPA; Worker `/api/site-agent/*` |
+| **Backend API** (`api.py`, agents, tools) | **Hetzner + Tunnel** `api.getgymsite.com.br` | `./scripts/deploy.sh` · Cloud Run **deprecado** |
+| **Worker degustação** | CF Worker `gymsite-degustacao` (repo hub, código) | `www.gymsite.com.br/api/site-agent/*` · não mover nesta onda |
 
 **Mudou `agents/` / `tools/` / `api.py` / motor financeiro / `parametros_metodologia`?** → **Cloud Run obrigatório** (código vive na imagem). Seed/`ALTER` só no Supabase **não** entrega lazy-`param`, `clear_param_cache` nem defaults novos no processo. Após rebuild `gymsite-api`, **atualizar `gymsite-worker` com a mesma imagem** (worker não auto-deploya).
 
@@ -160,29 +160,33 @@ App/writers: **sempre** `tbl(sb, "…")` — nunca assumir `public` quando a fla
 
 1. **`VITE_*` precisa existir no build.** Com `root_dir=frontend`, env do painel CF **pode não** chegar ao subprocesso do Vite. Canônico: `build_command` grava `.env.production` (publishable key) **antes** de `npm run build`. Script: `scripts/fix-cf-pages-gymsite-build.ps1` (`-Redeploy` opcional).
 2. **Publishable ≠ JWT legado.** Supabase desabilitou anon JWT (`UNAUTHORIZED_DISABLED_LEGACY_KEY`). Usar `sb_publishable_*` em preview **e** production (`VITE_SUPABASE_ANON_KEY`).
-3. **Hub:** push `main` sozinho não basta. Redeploy:
+3. **Pages `gymsite`:** push `main` sozinho não basta. Redeploy:
 
 ```powershell
 # Token: CLOUDFLARE_API_TOKEN ou oauth wrangler (~/.wrangler/config/default.toml)
-# Account 361e9e1383bfa8e95e1db54e6c2a3bba — projeto gym-insight-hub
+# Account 361e9e1383bfa8e95e1db54e6c2a3bba — projeto gymsite (www)
 Invoke-RestMethod -Method POST `
-  -Uri "https://api.cloudflare.com/client/v4/accounts/361e9e1383bfa8e95e1db54e6c2a3bba/pages/projects/gym-insight-hub/deployments" `
+  -Uri "https://api.cloudflare.com/client/v4/accounts/361e9e1383bfa8e95e1db54e6c2a3bba/pages/projects/gymsite/deployments" `
   -Headers @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" } `
   -Body (@{ branch = "main" } | ConvertTo-Json)
 ```
 
-Mesmo padrão para projeto `gymsite` (app logado).
+Hub (`gym-insight-hub`) fica legado após cutover www → este monorepo.
 
-## 8. Domínios — Não Confundir
+## 8. Domínios — Canônico (2026-08-09)
 
-| Projeto Cloudflare | Domínio | App |
-|---|---|---|
-| `gym-insight-hub` | `gymsite.com.br` / `www` | Landing + degustação (chat consultores, lead) |
-| `gymsite` | `getgymsite.com.br` | App logado (dashboard, relatórios — **este monorepo** `frontend/`) |
+| Host | Papel |
+|---|---|
+| **`www.gymsite.com.br`** | **Único front:** landing `/`, `/blog`, `/agentes`, `/degustacao`, `/explorar` (misto) + app logado (`/dashboard`, `/consultor`, …). Pages projeto **`gymsite`**. |
+| `gymsite.com.br` (apex) | 301 → `www` (HostGator, já existente). |
+| `getgymsite.com.br` | **301 → `www.gymsite.com.br` mesmo path** (exceto `api.` / `api-hetzner.`). |
+| `api.getgymsite.com.br` | API Hetzner (A0–A9). Não misturar com o front. |
 
-Backend API: Cloud Run → custom domain `api.getgymsite.com.br` (ou URL `gymsite-api.vectracargo.com.br` até DNS finalizar). CORS e `VITE_API_BASE` devem apontar pro host API **de produção**, não pro domínio da landing.
+**Paths iguais** anônimo e logado. Entitlement muda, URL não: `/explorar` único (sem `/degustacao/explorar`). `/` = landing sempre; logado entra em `/dashboard`.
 
-**Erro comum:** tratar `gymsite.com.br` (marketing) como app logado, ou publicar o monorepo no projeto CF da landing.
+Worker: `www.gymsite.com.br/api/site-agent/*` → `gymsite-degustacao`. Pages `_routes.json` exclui esse prefixo.
+
+**Erro comum:** publicar landing no projeto CF `gym-insight-hub` ou tratar `getgymsite` como host de UI.
 
 ## 9. Repositórios Git e Branches
 
@@ -190,12 +194,12 @@ Backend API: Cloud Run → custom domain `api.getgymsite.com.br` (ou URL `gymsit
 
 | Papel | GitHub | Clone local típico | CF / deploy |
 |---|---|---|---|
-| **App logado** (API, pipeline A0–A9, `frontend/` dashboard) | https://github.com/Marcelo-Rosas/gymsite | `gymsite_intelligence/` | CF `gymsite` → `getgymsite.com.br` · API Cloud Run |
-| **Site** (landing + degustação `/degustacao`, chat 5 agentes) | https://github.com/Marcelo-Rosas/gym-insight-hub | `gym-insight-hub/` | CF `gym-insight-hub` → `gymsite.com.br` / `www` |
+| **Front unificado + API** | https://github.com/Marcelo-Rosas/gymsite | `gymsite/` | CF `gymsite` → `www.gymsite.com.br` · API `api.getgymsite.com.br` |
+| **Worker degustação + legado hub** | https://github.com/Marcelo-Rosas/gym-insight-hub | `gym-insight-hub/` | Worker `gymsite-degustacao`; Pages hub **sem** custom domain www após cutover |
 
-**Trunk:** `main` nos dois repos. PR → `main`. Sem long-lived `develop`.
+**Trunk:** `main`. PR → `main`. Sem long-lived `develop`.
 
-**Degustação (hub, jul/2026):** rota canônica `/degustacao`. Legado `/?abrir=diagnostico-interno|chat|analise|formulario` redireciona via `beforeLoad`. Cards `/agentes` → `/degustacao?agente=`. Helper: `src/lib/degustacaoUrls.ts`.
+**Degustação:** `/degustacao` neste `frontend/`. Legado `/?abrir=…` → `/degustacao`. Cards `/agentes` → `/degustacao?agente=`. Helper: `frontend/src/lib/degustacaoUrls.ts`.
 
 ### Convenção de nomes
 
@@ -251,7 +255,7 @@ Snapshot envelhece — re-rodar comando da seção “Comandos úteis” antes d
 | `feat/lgpd-privacidade` | PR #27 merged | **delete** |
 | `fix/title-gymsite` | PR #29 merged | **delete** |
 
-⚠️ **Redirect legado (aberto):** PR #9 hub apontou `301 getgymsite.com.br → gymsite.com.br`. §8 define papéis **separados** (`getgymsite` = app logado; `gymsite.com.br` = landing). **Não** unificar DNS sem decisão explícita — revisar redirect CF antes de `preview/app-*`.
+**Redirect canônico (2026-08-09):** `getgymsite.com.br/*` → `https://www.gymsite.com.br/$1` 301 (exceto API). Apex já 301 → www.
 
 ### Comandos úteis
 

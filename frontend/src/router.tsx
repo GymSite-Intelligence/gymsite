@@ -1,14 +1,8 @@
 /**
  * router.tsx — TanStack Router code-based.
  *
- * Por que code-based (não file-based):
- * - File-based exige o plugin Vite `@tanstack/router-plugin` + arquivo gerado
- *   `routeTree.gen.ts` que precisa rebuild ao adicionar rota.
- *
- * Auth: o root component decide se renderiza AppShell+RequireAuth ou só
- * `<Outlet />` (rotas públicas: /login, /auth/callback, /privacidade).
- * Mantém os paths das rotas autenticadas como `/relatorios`, `/mapa`, etc.
- * — sem afetar `useSearch({ from: ... })` nas páginas.
+ * Auth: APP_PATHS → RequireAuth + sidebar. Resto (landing, blog, degustação,
+ * explorar anônimo) → `<Outlet />` sem login. `/explorar` logado usa sidebar.
  */
 import {
   createRootRoute,
@@ -18,8 +12,10 @@ import {
   redirect,
   useRouterState,
 } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
 import { AuthenticatedSidebarLayout } from '@/components/layout/AuthenticatedSidebarLayout'
 import { RequireAuth } from '@/components/layout/RequireAuth'
+import { useAuth } from '@/lib/auth'
 import { RelatoriosListPage } from '@/routes/RelatoriosListPage'
 import { RelatorioViewerPage } from '@/routes/RelatorioViewerPage'
 import { NovoRelatorioPage } from '@/routes/NovoRelatorioPage'
@@ -45,29 +41,73 @@ import AdminLlmPage from '@/routes/AdminLlmPage'
 import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
 import { PlanosListPage } from '@/routes/PlanosListPage'
 import { ThemeLabPage } from '@/routes/ThemeLabPage'
+import { LandingPage } from '@/routes/LandingPage'
+import { DegustacaoPage } from '@/routes/DegustacaoPage'
+import { AgentesPage } from '@/routes/AgentesPage'
+import { BlogIndexPage } from '@/routes/BlogIndexPage'
+import { BlogSlugPage } from '@/routes/BlogSlugPage'
 import type { Veredito } from '@/types/domain'
+import {
+  legacyAbrirToDegustacaoSearchFromRecord,
+  parseDegustacaoSearch,
+} from '@/lib/degustacaoUrls'
 
-// Rotas que NÃO exigem auth (útil para smoke pages e fluxos de acesso externo).
-const PUBLIC_PATHS = new Set([
-  '/login',
-  '/auth/callback',
-  '/privacidade',
-  '/pdf-smoke',
-  '/acesso',
-  '/theme-lab',
-  '/degustacao/explorar',
-])
+/** Produto logado — sidebar + RequireAuth. Prefixo casa com subrotas. */
+const APP_PREFIXES = [
+  '/dashboard',
+  '/relatorios',
+  '/comparar',
+  '/mapa',
+  '/custos',
+  '/cno-obras',
+  '/prospeccao',
+  '/prospect',
+  '/perfil',
+  '/market-atlas',
+  '/consultor',
+  '/admin',
+  '/execucao',
+  '/assistente',
+] as const
+
+function isAppPath(pathname: string): boolean {
+  return APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+}
+
+function AuthSpinner() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center gap-2 text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      Carregando…
+    </div>
+  )
+}
 
 function RootLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
-  if (PUBLIC_PATHS.has(pathname)) {
+  const { session, loading } = useAuth()
+
+  if (isAppPath(pathname)) {
+    return (
+      <RequireAuth>
+        <AuthenticatedSidebarLayout />
+      </RequireAuth>
+    )
+  }
+
+  if (pathname === '/explorar' || pathname.startsWith('/explorar/')) {
+    if (loading) return <AuthSpinner />
+    if (session) {
+      return (
+        <RequireAuth>
+          <AuthenticatedSidebarLayout />
+        </RequireAuth>
+      )
+    }
     return <Outlet />
   }
-  return (
-    <RequireAuth>
-      <AuthenticatedSidebarLayout />
-    </RequireAuth>
-  )
+
+  return <Outlet />
 }
 
 const rootRoute = createRootRoute({
@@ -102,13 +142,30 @@ const leadAccessRoute = createRoute({
   component: LeadAccessPage,
 })
 
-// ── Rotas autenticadas ─────────────────────────────────────────────────────
+// ── `/` landing (sempre pública) ───────────────────────────────────────────
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  beforeLoad: () => {
-    throw redirect({ to: '/dashboard', replace: true })
+  validateSearch: (search: Record<string, unknown>) => ({
+    abrir: typeof search.abrir === 'string' ? search.abrir : undefined,
+    agente: typeof search.agente === 'string' ? search.agente : undefined,
+    dev_token: typeof search.dev_token === 'string' ? search.dev_token : undefined,
+  }),
+  beforeLoad: ({ search }) => {
+    const next = legacyAbrirToDegustacaoSearchFromRecord(search)
+    if (next) {
+      throw redirect({
+        to: '/degustacao',
+        search: {
+          agente: next.agente,
+          abrir: next.abrir,
+          dev_token: next.dev_token,
+          pid: next.pid,
+        },
+      })
+    }
   },
+  component: LandingPage,
 })
 
 interface RelatoriosSearch {
@@ -343,13 +400,35 @@ const explorarRoute = createRoute({
 const degustacaoExplorarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/degustacao/explorar',
-  validateSearch: (search: Record<string, unknown>): ExplorarSearch => ({
-    novo:
-      search.novo === true || search.novo === '1' || search.novo === 'true'
-        ? true
-        : undefined,
-  }),
-  component: ExplorarPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/explorar', replace: true })
+  },
+  component: () => null,
+})
+
+const degustacaoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/degustacao',
+  validateSearch: parseDegustacaoSearch,
+  component: DegustacaoPage,
+})
+
+const agentesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/agentes',
+  component: AgentesPage,
+})
+
+const blogIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/blog',
+  component: BlogIndexPage,
+})
+
+const blogSlugRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/blog/$slug',
+  component: BlogSlugPage,
 })
 
 const adminParceirosRoute = createRoute({
@@ -415,6 +494,10 @@ const routeTree = rootRoute.addChildren([
   consultorRoute,
   explorarRoute,
   degustacaoExplorarRoute,
+  degustacaoRoute,
+  agentesRoute,
+  blogIndexRoute,
+  blogSlugRoute,
   adminParceirosRoute,
   adminLlmRoute,
   planosListRoute,

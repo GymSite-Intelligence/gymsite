@@ -3,6 +3,11 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+/* Degustação / site (hub port): text-lime, bg-lime, border-lime */
+@theme {
+  --color-lime: #84cc01;
+}
+
 /**
  * Tokens semânticos de status — fundação do design system GymSite.
  * Triplets HSL para uso com hsl(var(--status-good)).

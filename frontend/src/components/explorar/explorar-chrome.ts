@@ -7,8 +7,8 @@ export const EXPLORAR_PAGE = 'explorar-page'
 /** Painéis sobre o mapa = paleta site (GYMSITE_PALETTE). */
 export const EXPLORAR_CHROME = 'explorar-chrome'
 
-/** Degustação chat canônica: https://www.gymsite.com.br/degustacao */
-export const SITE_ORIGIN = 'https://www.gymsite.com.br'
+/** Same-origin após unificação www (landing /degustacao /blog /explorar). */
+export const SITE_ORIGIN = ''
 
 export const ExplorarSiteContext = createContext(false)
 

@@ -54,7 +54,6 @@ function ufDoTexto(s: string): string | undefined {
 }
 
 export function ExplorarPage() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
   const novoSearch = useRouterState({
     select: (s) => {
       const q = s.location.search as { novo?: boolean | string }
@@ -62,9 +61,9 @@ export function ExplorarPage() {
     },
   })
   const navigate = useNavigate()
-  const degustacao = pathname.startsWith('/degustacao')
   const { user } = useAuth()
-  const loggedIn = Boolean(user) && !degustacao
+  const degustacao = !user
+  const loggedIn = Boolean(user)
 
   const [mapStyle, setMapStyle] = useState<MapStyle>(() =>
     readLs('explorar-map-style', 'claro', ['claro', 'escuro', 'satelite']),
@@ -143,7 +142,7 @@ export function ExplorarPage() {
     setDadosOpen(false)
     if (novoSearch) {
       void navigate({
-        to: degustacao ? '/degustacao/explorar' : '/explorar',
+        to: '/explorar',
         search: {},
         replace: true,
       })
@@ -425,35 +424,35 @@ export function ExplorarPage() {
       />
       </div>
 
-      <ExplorarAddressSearch
-        query={query}
-        biasLat={pin?.lat}
-        biasLng={pin?.lng}
-        onQueryChange={setQuery}
-        onPick={onPickSugestao}
-        onSubmitFree={() => void goToAddress(query)}
-        className={resultOpen ? 'right-94' : controlesOpen ? 'right-80' : undefined}
-      />
-
-      {controlesOpen && (
-        <div
-          className={cn(
-            'absolute top-3.5 z-50',
-            resultOpen ? 'left-3.5' : 'right-3.5',
-          )}
-        >
-          <ExplorarControles
-            mapStyle={mapStyle}
-            camada={camada}
-            modo={modo}
-            nMaps={rivals.length}
-            onStyle={changeStyle}
-            onCamada={changeCamada}
-            onModo={changeModo}
-            onClose={() => setControlesOpen(false)}
-          />
-        </div>
-      )}
+      <div
+        className={cn(
+          'pointer-events-none absolute top-3.5 z-50 flex flex-col items-stretch gap-2',
+          resultOpen ? 'left-3.5 right-94' : 'left-3.5 right-3.5',
+        )}
+      >
+        <ExplorarAddressSearch
+          query={query}
+          biasLat={pin?.lat}
+          biasLng={pin?.lng}
+          onQueryChange={setQuery}
+          onPick={onPickSugestao}
+          onSubmitFree={() => void goToAddress(query)}
+        />
+        {controlesOpen && (
+          <div className="pointer-events-auto self-start">
+            <ExplorarControles
+              mapStyle={mapStyle}
+              camada={camada}
+              modo={modo}
+              nMaps={rivals.length}
+              onStyle={changeStyle}
+              onCamada={changeCamada}
+              onModo={changeModo}
+              onClose={() => setControlesOpen(false)}
+            />
+          </div>
+        )}
+      </div>
 
       {absorcao && result?.status === 'ok' && (
         <ExplorarResultPanel

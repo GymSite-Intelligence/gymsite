@@ -21,7 +21,7 @@ Queremos a **mesma clareza de entrada**, sem copiar a metodologia otimista (scor
 | # | Escolha |
 |---|---|
 | Superfície | Nova rota mapa-first — **não** redesenhar Consultor inteiro nesta wave |
-| Acesso | **Logado** (`getgymsite.com.br/explorar`) **+ degustação anônima no site** (`gymsite.com.br/explorar`, 1 pesquisa/e-mail, Turnstile; chat especialistas = `/degustacao` — entitlements separados) |
+| Acesso | **Mesmo path** `www.gymsite.com.br/explorar`: anônimo = 1 pesquisa/e-mail + Turnstile; logado = full. Chat especialistas = `/degustacao`. Sem `/degustacao/explorar`. |
 | Vertical | Dropdown do form: **Academia · Studio · Crossfit · Pilates** (`tipo_negocio` + gate Maps) |
 | Veredito | **Absorção** (fresco / misto / roubo) + carimbos — **proibido** score 0–10 estilo OndeAbrir |
 | Mapa base | OSM/CARTO (ou equivalente barato) + atribuição ODbL |
