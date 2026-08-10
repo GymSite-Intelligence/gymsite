@@ -1,9 +1,9 @@
 ---
-id: spec-a3a-001
+id: spec-a3a-002
 agente: A3a CompetitorSearch
 modelo_llm: determinístico sem LLM (BaseAgent)
-versão: 1.0
-data: 2026-06-18
+versão: 2.0 (atualizada PONTO 11 — cascata de localização + incidente deps-reverse)
+data: 2026-08-10
 ---
 
 # SPEC — A3a CompetitorSearch
@@ -23,6 +23,14 @@ O A3a é responsável exclusivamente por **buscar, enriquecer e classificar conc
 | `market_context` | `dict` ou `str` (JSON/markdown fenced) | A0 MarketContext (`output_key="market_context"`) |
 
 Extração realizada por `_extrair_bairro_cidade(state)` em `a3a_competitor_search.py`, que prioriza o topo do state e cai em `market_context.market_context.bairro/cidade` via `_parse_market_context`.
+
+**RN-A3a-00 — Cascata de localização documentada (v2.0, PONTO 11)**
+A extração de `bairro`/`cidade` segue a cascata:
+1. **Raiz do state** (`state.get("bairro")`, `state.get("cidade")`) — origem: input direto do usuário via API
+2. **`input_params`** (`state["input_params"]["bairro"]`, `state["input_params"]["cidade"]`) — origem: validação/pydantic
+3. **`market_context` do A0** (`state["market_context"]["market_context"]["bairro"]`) — fallback final
+
+Se todos os níveis retornarem vazio, a macro `analisar_concorrentes_a3a_completo` é chamada com strings vazias e retorna lista vazia + fallback heurístico no A3b. O incidente `deps-reverse` (A3a depender de dado que A0 ainda não gravou) foi resolvido garantindo que A0 roda antes de A3a na orquestração paralela.
 
 ---
 
@@ -98,3 +106,5 @@ O agente é `BaseAgent` (não `LlmAgent`). Não há chamada de LLM no `_run_asyn
 **Gotcha 4 — Custo zero de token A3a:** O refator de 2026-06-14 eliminou o LlmAgent que ecoava ~83k tokens por relatório. Qualquer regressão que reintroduza um `LlmAgent` aqui é custo não-intencional.
 
 **Gotcha 5 — output_key vs state_delta:** A3a usa `state_delta` (BaseAgent), não `output_key` (LlmAgent). O A3b lê `state["concorrentes_brutos"]` — se o A3a for convertido para LlmAgent com `output_key="concorrentes_brutos"`, o JSON do LLM pode vir como string com markdown fence, quebrando `analisar_concorrentes_completo` no A3b.
+
+**Gotcha 6 — Incidente deps-reverse resolvido (v2.0):** Houve incidente onde A3a tentava ler `market_context` antes do A0 gravar. Solução: orquestração agora garante A0 completo antes de disparar A3a, mesmo em execução paralela com A2/A4. Documentado na RN-A3a-00.

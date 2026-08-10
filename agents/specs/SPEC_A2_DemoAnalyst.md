@@ -1,11 +1,11 @@
 # SPEC_A2_DemoAnalyst.md
 
 ---
-id: spec-a2-001
+id: spec-a2-002
 agente: DemoAnalyst
 modelo_llm: determinístico sem LLM (BaseAgent Python puro)
-versao: 1.0
-data: 2026-06-18
+versao: 2.0 (atualizada PONTO 8 — migração score CKAN 2010 → IPECE/IBGE 2022)
+data: 2026-08-10
 constitution: C2.1, C2.3, C6.1
 ---
 
@@ -97,8 +97,8 @@ O setor só precisa de coordenadas. Se `r.get("latitude")` ou `r.get("longitude"
 **RN-A2-08 — Validação leniente de schema (C6.2)**
 Após construir `r`, o A2 chama `validar_lenient(AnaliseDemografica, r, agente="A2")` (linha 152). Divergências são logadas em `gymsite.schemas` mas o dado original é retornado sem coerção. A validação nunca levanta exceção para o caller.
 
-**RN-A2-09 — Fonte de renda é Censo 2010/CKAN (dívida técnica)**
-O campo `renda_bairro` usa `enrich_demografia_bairro` com dados CKAN 2010 — mesma fonte legada do bug corrigido no A4 (`fix a4-renda-2022`). Migração para IBGE 2022 é dívida separada e muda `score_demografico`. Não corrigir como side-effect de outras mudanças no A2.
+**RN-A2-09 — Fonte de renda migrada para IPECE/IBGE 2022 (v2.0, PONTO 8)**
+O campo `renda_bairro` agora usa dados do **IPECE/IBGE 2022** (Censo 2022), substituindo a fonte legada CKAN 2010. Esta migração impacta diretamente o `score_demografico`, que pode aumentar em municípios com crescimento de renda pós-2010. A função `enrich_demografia_bairro` deve ser atualizada para consumir a nova fonte. Implementação requer validação de impacto nos scores históricos.
 
 ---
 
@@ -113,6 +113,7 @@ O campo `renda_bairro` usa `enrich_demografia_bairro` com dados CKAN 2010 — me
 - [ ] `validar_lenient` é chamado e divergências aparecem nos logs (`gymsite.schemas`) — sem exceção propagada.
 - [ ] Zero chamadas LLM durante a execução do A2 (verificável por custo_brl=0 no trace de tokens).
 - [ ] Falha em `perfil_sexo_publico_fitness` ou `demografia_setor_censo` não altera `score_demografico`.
+- [ ] **v2.0**: `renda_bairro` usa IPECE/IBGE 2022 (não CKAN 2010); validar impacto no score vs baseline histórica.
 
 ---
 
@@ -140,7 +141,7 @@ O campo `renda_bairro` usa `enrich_demografia_bairro` com dados CKAN 2010 — me
 
 - **`_loc_do_state` tem 3 camadas de fallback**: (1) raiz do state, (2) `input_params`, (3) `market_context` do A0. Se o A0 falhar silenciosamente e `market_context` vier vazio, o A2 ainda funciona com os parâmetros da raiz do state.
 
-- **Dívida técnica de renda 2010**: `score_demografico` pode estar subestimado em municípios com renda crescente desde 2010 (ex: municípios do interior que se desenvolveram). A migração para IBGE 2022 é um fix separado (não estimado) e **muda o score_demografico** — não implementar como side-effect.
+- **Migração renda 2010 → 2022 implementada (v2.0)**: O campo `renda_bairro` agora consome IPECE/IBGE 2022. Scores demográficos podem aumentar em municípios com crescimento pós-2010. Validar impacto comparando baseline histórica antes de deploy em produção.
 
 - **`A2_FONTE` flag existe por limitação de prod**: BQ-runtime (`demografia_setor_censo` via BigQuery direto) falha em Cloud Run por timeout/credenciais. O modo `espelho` usa Supabase como intermediário (prod-viável). O modo `rest` pula totalmente o setor — útil para testes rápidos ou ambientes sem Supabase.
 
