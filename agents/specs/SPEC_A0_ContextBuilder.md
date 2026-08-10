@@ -1,11 +1,11 @@
 # SPEC_A0_ContextBuilder.md
 
 ---
-id: spec-a0-001
+id: spec-a0-002
 agente: ContextBuilder
 modelo_llm: gemini-2.5-flash (thinking_budget=1024)
-versao: 1.1
-data: 2026-07-16
+versao: 2.0 (atualizada PONTO 1 — remoção aluguel_medio_m2 + guardrail esqueleto)
+data: 2026-08-10
 constitution: C2.1, C2.3, C6.1
 ---
 
@@ -43,7 +43,7 @@ O valor é um JSON com chave de envelope `"market_context"` contendo os seguinte
 | `bairro` | `str` | Bairro analisado |
 | `uf` | `str` | UF (2 letras) |
 | `ticket_medio_mercado` | `str` | Ticket médio de academia na cidade/bairro |
-| `aluguel_medio_m2` | `str` | Referência batch (`bundle.aluguel_portais`) se existir — **não** substitui A4 MRLR |
+| `aluguel_medio_m2` | `str` | **REMOVIDO v2.0 (PONTO 1)** — Aluguel é decisão do A4 (MRLR), não contexto do A0. Campo mantido apenas para compatibilidade legacy, deve receber `"dados_nao_disponiveis"` ou ser omitido. |
 | `renda_media_bairro` | `str` \| `"dados_nao_disponiveis"` | Renda do bairro (frequentemente indisponível) |
 | `faixa_etaria_predominante` | `str` | Faixa demográfica predominante |
 | `genero_alvo` | `str` | Default `"misto"` |
@@ -112,6 +112,9 @@ Se a tool CNPJ retornar `divergencia_parque_vs_aberturas=true`, o fato deve ser 
 **RN-A0-10 — Ordem canônica das tools**
 1. `carregar_market_bundle` → 2. `dados_parque_cnpj_para_a0` → 3. `fatos_competicao_local`.
 
+**RN-A0-11 — Guardrail esqueleto: aluguel_medio_m2 deve ser "dados_nao_disponiveis" (v2.0)**
+O campo `aluguel_medio_m2` **deve** receber `"dados_nao_disponiveis"` ou ser omitido. Qualquer valor numérico ou string que não seja `"dados_nao_disponiveis"` viola esta regra e deve ser rejeitado por lint/review. Aluguel é responsabilidade exclusiva do A4 (MRLR).
+
 ---
 
 ## 5. Critérios de Aceite Mensuráveis
@@ -125,6 +128,7 @@ Se a tool CNPJ retornar `divergencia_parque_vs_aberturas=true`, o fato deve ser 
 - [ ] `parque_ativo_total` é `int >= 0` (não string, não None).
 - [ ] `fonte` contém a string `"CNPJ/CNO (tools)"`.
 - [ ] `data_coleta` está no formato `YYYY-MM-DD`.
+- [ ] **v2.0**: `aluguel_medio_m2` é `"dados_nao_disponiveis"` ou omitido — nunca valor numérico.
 
 ---
 
@@ -158,3 +162,5 @@ Se a tool CNPJ retornar `divergencia_parque_vs_aberturas=true`, o fato deve ser 
 - **thinking_budget=1024**: o A0 usa thinking, o que eleva o custo. Não aumentar sem análise de custo.
 
 - **`build_llm_agent`**: o agente é construído via `agent_factory.build_llm_agent` que injeta retry (4 tentativas, exp backoff para 429/503/500) e telemetria de tokens. Não instanciar `Agent(...)` diretamente.
+
+- **Guardrail v2.0 — aluguel_medio_m2**: Qualquer valor numérico neste campo é violação crítica da RN-A0-11. Lint/review deve rejeitar imediatamente. O A4 MRLR é a única fonte canônica de aluguel para viabilidade.
