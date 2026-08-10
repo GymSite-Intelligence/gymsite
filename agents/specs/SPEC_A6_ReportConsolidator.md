@@ -7,8 +7,8 @@
 | **ID** | A6 |
 | **Agente** | ReportConsolidator |
 | **Modelo LLM** | `gemini-2.5-flash` com `thinking_budget=8192` |
-| **Versão** | 1.0 |
-| **Data** | 2026-06-18 |
+| **Versão** | 2.0 (atualizada PONTO 17-19) |
+| **Data** | 2026-08-10 |
 
 ---
 
@@ -82,7 +82,7 @@ O JSON canônico `metrics/relatorios/<id>.json` contém `output_consolidado` com
 | `obras_cno_em_curso` | dict | Obras fitness CNO |
 | `demanda_futura` | dict | Captura potencial T+24 |
 | `aneis_competitivos` | dict | Score ponderado por anel (NO_BAIRRO/FRONTEIRA/REGIONAL) |
-| `demografia_bairro` | dict | Dados Censo 2022 do bairro (renda CKAN, pop, perfil sexo) |
+| `demografia_bairro` | dict | Dados Censo 2022 do bairro (renda CKAN, pop, perfil sexo) — **Bridge para A9**: A6 grava no state via `after_agent_callback` para consumo pelo A9 PositioningStrategist (ver PONTO 19) |
 | `cobertura_redes_a0` | dict | Redes DR validadas vs redes fantasma |
 
 ---
@@ -105,7 +105,7 @@ Se `zoneamento_block.compatibilidade == "RESTRITO"`, veredito positivo é rebaix
 Se modelo recomendado é Premium e `ticket_recomendado >= 750` OU `ticket >= renda_local * 0.5`, alerta é adicionado e APROVADO é rebaixado para APROVADO COM RESSALVAS (linhas 2564-2579).
 
 **RN-A6-06 — `resumo_executivo` é determinístico, sobrescreve o do LLM.**
-`_resumo_executivo_deterministico(...)` (linhas 1926-2026) monta o resumo a partir dos campos estruturados (veredito, saturação do bairro, zoneamento, candidato gated). O resultado é gravado em `contato["resumo_executivo"]` e depois em `_alinhar_markdown_ao_estruturado` o bloco `## Resumo Executivo` do markdown é substituído via regex (linhas 1868-1877). O LLM nunca narra o resumo final.
+`_resumo_executivo_deterministico(...)` (linhas 1926-2026) monta o resumo a partir dos campos estruturados (veredito, saturação do bairro, zoneamento, candidato gated). O resultado é gravado em `contato["resumo_executivo"]` e depois em `_alinhar_markdown_ao_estruturado` o bloco `## Resumo Executivo` do markdown é substituído via regex (linhas 1868-1877). O LLM nunca narra o resumo final. **PONTO 18**: Narração Claude opcional via `NARRADOR_CLAUDE_ENABLED` foi removida — resumo é 100% determinístico por design.
 
 **RN-A6-07 — Candidato só nomeado no resumo se está no bairro alvo.**
 `_no_bairro(c)` normaliza e verifica se o endereço/bairro/título do candidato contém o bairro alvo. Candidato de bairro adjacente (ex: Eng. Luciano Cavalcante em relatório de Cocó) não é nomeado — a narrativa registra "Nenhum imóvel anunciado no bairro" (linhas 2004-2025).
@@ -140,8 +140,8 @@ Se `output_consolidado["demanda_futura"]` tiver `status=ok` E `provavel_residenc
 **RN-A6-17 — Persistência em filesystem é source-of-truth; Supabase é cache.**
 `metrics/relatorios/<id>.json` é escrito em `_a6_after_agent_callback` (linha 3001-3004). Falha no Supabase gera warning mas não bloqueia o pipeline (linhas 3051-3056).
 
-**RN-A6-18 — A8 validation é disparado em best-effort.**
-Após persistência Supabase, `run_a8_validation` é chamado. Falha não bloqueia; resultado enriquece o JSON canônico se disponível (linhas 3023-3050).
+**RN-A6-18 — A8 validation foi movido para after-A9 (ver PONTO 29).**
+O A8 agora roda após o posicionamento do A9 estar disponível, permitindo validação cruzada completa incluindo coerência do ERRC e veredito de posicionamento. A chamada é feita pelo `after_agent_callback` do A9 via `tools/a8_runner.run_a8_validation()`.
 
 ---
 

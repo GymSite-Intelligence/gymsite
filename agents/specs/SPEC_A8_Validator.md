@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |-------|-------|
-| **ID** | spec-a8-001 |
-| **Agente / Área** | A8 ValidadorCruzado — Validação pós-A6 |
+| **ID** | spec-a8-002 |
+| **Agente / Área** | A8 ValidadorCruzado — Validação pós-A9 (PONTO 24-25) |
 | **Modelo LLM** | Determinístico (sem LLM no caminho crítico; kimi_search opcional/corroboração) |
-| **Versão** | 1.0 |
-| **Data** | 2026-06-18 |
+| **Versão** | 2.0 (atualizada PONTO 24-25, after-A9) |
+| **Data** | 2026-08-10 |
 
 ---
 
@@ -60,8 +60,8 @@ O A8 executa **validação cruzada automática do relatório emitido pelo A6**, 
 
 ## 3. Regras de Negócio
 
-**RN-A8-001 — Execução fora do grafo ADK**
-O A8 não é um `Agent` ADK. É invocado como função Python pelo `after_agent_callback` do A6 via `tools/a8_runner.run_a8_validation()`. Não aparece no `GymSitePipeline` SequentialAgent.
+**RN-A8-001 — Execução fora do grafo ADK, após o A9 (ver PONTO 29)**
+O A8 não é um `Agent` ADK. É invocado como função Python pelo `after_agent_callback` do **A9 PositioningStrategist** via `tools/a8_runner.run_a8_validation()`. Não aparece no `GymSitePipeline` SequentialAgent. A mudança de after-A6 para after-A9 permite validação cruzada completa incluindo coerência do framework ERRC e veredito de posicionamento.
 
 **RN-A8-002 — Determinismo é primário; kimi é corroboração**
 Todas as validações de coerência (financeira, demográfica, competitiva, veredito, narrativa) são implementadas como regras Python puras. O `kimi_search` (OpenClaw) é chamado **apenas** para as 2 claims de maior severidade (`_validar_fontes_externas`, linha 258–279) e só quando `A8_USE_KIMI=1` (default) e OpenClaw estiver configurado. Uma falha do kimi não bloqueia nem altera o score.
@@ -97,7 +97,10 @@ O state do ADK mudou de `dict` para `google.adk.sessions.State` em ~2026-05-29. 
 `revisar_manual: True` sempre que `any(a.severidade == "CRITICO")`. Sinaliza revisão humana (CONSTITUTION C6.3 HITL).
 
 **RN-A8-013 — Timeout e persistência assíncrona**
-`run_a8_validation()` (linha 101): detecta se há loop asyncio rodando; se sim, executa em `ThreadPoolExecutor` com timeout `A8_VALIDATION_TIMEOUT_SEC` (default 120s). `persist_validacao()` (linha 201) é sempre em daemon thread para não bloquear o A6.
+`run_a8_validation()` (linha 101): detecta se há loop asyncio rodando; se sim, executa em `ThreadPoolExecutor` com timeout `A8_VALIDATION_TIMEOUT_SEC` (default 120s). `persist_validacao()` (linha 201) é sempre em daemon thread para não bloquear o A9.
+
+**RN-A8-014 — Validação de coerência de posicionamento (PONTO 25)**
+`_validar_coerencia_posicionamento()` valida: (1) veredito_posicionamento do A9 compatível com modelo_recomendado do A4, (2) framework_errc coerente com gaps_identificados, (3) ticket_recomendado dentro da banda financeira do A4. Inconsistências geram alerta CRITICO ou ALTA conforme severidade.
 
 ---
 
@@ -113,6 +116,7 @@ O state do ADK mudou de `dict` para `google.adk.sessions.State` em ~2026-05-29. 
 | **CA-A8-06** — `_state_to_dict()` retorna dict não-vazio para `google.adk.sessions.State` real | 100% |
 | **CA-A8-07** — Narrativa otimista em REPROVADO sem condicional gera alerta ALTA | 100% dos termos em `_TERMOS_OTIMISTAS` |
 | **CA-A8-08** — Cobertura de testes unitários das regras de negócio (RN-A8-004 a RN-A8-009) | >= 80% (C4.1) |
+| **CA-A8-09** — `_validar_coerencia_posicionamento()` detecta incompatibilidade veredito_posicionamento × modelo_recomendado | 100% dos casos (PONTO 25) |
 
 ---
 
@@ -131,8 +135,8 @@ O state do ADK mudou de `dict` para `google.adk.sessions.State` em ~2026-05-29. 
 
 ## 6. Contexto para IA
 
-**Gotcha #1 — A8 não é Agent ADK.**
-Não adicione `a8_validator` ao `pipeline` SequentialAgent. Ele é chamado pelo `after_agent_callback` do A6 via `tools/a8_runner.run_a8_validation()` (linha 3024–3044 de `a6_report_consolidator.py`). Colocá-lo no grafo quebraria a sequência e duplicaria a validação.
+**Gotcha #1 — A8 não é Agent ADK, roda no after-A9 (ver PONTO 29).**
+Não adicione `a8_validator` ao `pipeline` SequentialAgent. Ele é chamado pelo `after_agent_callback` do **A9 PositioningStrategist** via `tools/a8_runner.run_a8_validation()`. Colocá-lo no grafo quebraria a sequência e duplicaria a validação. A mudança de after-A6 para after-A9 permite validar coerência do framework ERRC e veredito de posicionamento.
 
 **Gotcha #2 — `_state_to_dict()` é invariante crítico.**
 A mudança de `dict` para `google.adk.sessions.State` no ADK (~2026-05-29) é silenciosa. Sem `_state_to_dict()`, `dict(State)` retorna `{0: ...}` (protocolo de sequência) e todos os `state.get("campo")` retornam `None`. O resultado é `validacoes` vazia sem erro visível.
