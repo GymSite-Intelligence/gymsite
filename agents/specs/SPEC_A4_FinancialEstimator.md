@@ -1,16 +1,17 @@
 ---
-id: spec-a4-001
+id: spec-a4-002
 agente: A4 FinancialEstimator
-modelo_llm: gemini-2.5-flash
-versão: 1.1
-data: 2026-07-13
+modelo_llm: BaseAgent (sem LLM)
+versao: 2.0
+data: 2026-08-10
+constitution: C2.1, C2.3, C4.4, C6.1
 ---
 
-# SPEC — A4 FinancialEstimator
+## 1. Responsabilidade Única
 
-## 1. Responsabilidade única
+O A4 FinancialEstimator é um **agente determinístico (BaseAgent, sem LLM)** responsável exclusivamente por **calcular e estruturar a viabilidade financeira do negócio em 3 cenários (low/mid/premium)**, incluindo aluguel via MRLR determinístico (Tier 0), CAPEX com árvore de decisão obra/licenças, margem, payback, análise de sensibilidade e score de viabilidade. O A4 **não interpreta** os dados — apenas executa a macro-tool `analise_financeira_a4_completo` e grava o resultado no state.
 
-O A4 é responsável exclusivamente por **calcular e estruturar a viabilidade financeira do negócio em 3 cenários (low/mid/premium)**, incluindo aluguel via **MRLR determinístico (Tier 0)** com fallbacks legados em tiers inferiores, CAPEX, margem, payback, análise de sensibilidade e score de viabilidade. Todos os números são determinísticos, produzidos pela macro-tool `analise_financeira_a4_completo` (`BaseAgent` sem LLM desde jun/2026).
+**Mudança crítica vs v1.1:** A spec v1.1 descrevia um LlmAgent (`gemini-2.5-flash`) que ecoava a macro `analise_financeira_a4_completo`. Evidência: header dizia LLM, corpo já reconhecia BaseAgent. Agora é BaseAgent puro: roda a macro direto, monta `justificativa` por template determinístico. Elimina variância, custo-token e risco de alucinação.
 
 ---
 
@@ -73,10 +74,10 @@ A macro em `analise_financeira_a4_completo` aplica tiers e **Tier 0 MRLR sobresc
 **Proibido:** usar preço de listing SearchAPI ou snippet `rent_sqm` como Tier 0. Ver `.agent/rules/conferencia-fontes-pipeline.md` §2.
 
 **RN-A4-03 — Snapshot determinístico `analise_financeira_pronto` (after_tool_callback)**
-`_persistir_a4_no_state` (registrado como `after_tool_callback`) grava o `tool_response` bruto de `analise_financeira_a4_completo` em `state["analise_financeira_pronto"]` antes de o LLM processar a resposta. Razão: o A4-Flash às vezes dropa/renomeia campos ao ecoar o JSON (`aviso_metodologia`, `aluguel_pesquisa_detalhes`, `capex.frete_equipamentos`, `custos_detalhados.aluguel`). O A6 lê `analise_financeira_pronto` para os números auditáveis e usa `analise_financeira` (output_key) apenas para a `justificativa`.
+`_persistir_a4_no_state` (registrado como `after_tool_callback`) grava o `tool_response` bruto de `analise_financeira_a4_completo` em `state["analise_financeira_pronto"]`. Razão: o A4-Flash às vezes dropa/renomeia campos ao ecoar o JSON (`aviso_metodologia`, `aluguel_pesquisa_detalhes`, `capex.frete_equipamentos`, `custos_detalhados.aluguel`). O A6 lê `analise_financeira_pronto` para os números auditáveis e usa `analise_financeira` (output_key) apenas para a `justificativa`.
 
-**RN-A4-04 — LLM como redator, não como calculador**
-`score_viabilidade`, `recomendacao_modelo` e `alertas[]` são calculados deterministicamente por `_resumo_decisao_a4(fin)` dentro da macro e devem ser copiados literais. O LLM não recalcula, não inventa e não remove alertas de risco. Pode adicionar **um** alerta textual de nicho (gênero/tamanho), mas apenas adicionando — nunca removendo os existentes.
+**RN-A4-04 — BaseAgent como executor direto, sem LLM**
+O BaseAgent recebe o JSON completo da macro e grava diretamente no state via `EventActions(state_delta={...})`. Não há reescrita em linguagem natural por LLM. A `justificativa` é montada por template Python puro (`_montar_justificativa_template()`). Proibido LLM no caminho.
 
 **RN-A4-05 — Alertas de risco determinísticos (6 regras em `_resumo_decisao_a4`)**
 A macro aplica estas regras em código e devolve em `alertas[]`:
@@ -87,8 +88,8 @@ A macro aplica estas regras em código e devolve em `alertas[]`:
 5. Sensibilidade matrículas -30% = INVIAVEL → `"só fecha no benchmark Smart Fit"`.
 6. Tier 2/3 de aluguel → alerta de fonte com recomendação de cotação local.
 
-**RN-A4-06 — Calibração por gênero e tamanho (LLM)**
-O LLM aplica ajustes de classificação/justificativa conforme `genero_alvo` e `tamanho_preset`:
+**RN-A4-06 — Calibração por gênero e tamanho (template)**
+O template aplica ajustes de classificação/justificativa conforme `genero_alvo` e `tamanho_preset`:
 - `exclusivamente_feminino`: Mix recomendado Premium > Mid (NUNCA Low). Adiciona alerta de mercado ~30% menor.
 - `exclusivamente_masculino`: adiciona alerta de mercado restrito.
 - `gg`: adiciona alerta de plano multi-unidade/franquia.
@@ -97,8 +98,8 @@ O LLM aplica ajustes de classificação/justificativa conforme `genero_alvo` e `
 **RN-A4-07 — Zero benchmark hardcoded no prompt**
 Os parâmetros numéricos do prompt (ticket, matr/m², capacidade simultânea, inadimplência, payback thresholds) são renderizados em tempo de boot por `_bloco_benchmarks()` via `param()` (lendo de `parametros_metodologia` no Supabase). Recalibrar o banco propaga automaticamente ao prompt. Nenhum número de benchmark deve ser hardcoded no agente.
 
-**RN-A4-08 — Modelo gemini-2.5-flash (não Pro)**
-O A4 usa Flash por ser aritmética estruturada (tools fazem a conta). O Pro foi revertido para Flash em 12/06 após estabilização do pipeline. Flash APENAS para o A4; A6 (síntese final) permanece Pro. Re-testar Flash com prompt anti-code-execution antes de qualquer rollback para Pro.
+**RN-A4-08 — BaseAgent, não LLM**
+O A4 foi migrado para BaseAgent em 2026-08. O código em `agents/a4_financial_estimator.py` é um `BaseAgent` puro que chama a macro diretamente. Não há `tools=[]`, não há `before_model_callback`, não há function_call. Qualquer spec que mencione LLM para A4 está obsoleta.
 
 **RN-A4-09 — Campos obrigatórios para A6 (`_renderizar_secao_referencia_aluguel`)**
 O A6 `_renderizar_secao_referencia_aluguel` lê `fonte_aluguel`, `aluguel_mensal`, `aluguel_mediana_m2`, `aluguel_mrlr_inputs` e `aviso_metodologia_aluguel` do snapshot `analise_financeira_pronto`. Só valores com fonte MRLR são narrados como aluguel de decisão. Se MRLR estiver indisponível, o relatório pede cotação local e não promove portal, anúncio ou Grounding a fonte decisória.
@@ -136,14 +137,23 @@ O A6 `_renderizar_secao_referencia_aluguel` lê `fonte_aluguel`, `aluguel_mensal
 
 ## 7. Contexto para IA
 
-**Gotcha 1 — `analise_financeira_pronto` é a fonte auditável:** O A6 foi arquitetado para ler números de `analise_financeira_pronto` (tool_response cru), não de `analise_financeira` (echo do LLM). Se `_persistir_a4_no_state` não rodar (ex: exceção antes do callback), o A6 pode usar dados inconsistentes. O snapshot é idempotente: só grava se `tool.name == "analise_financeira_a4_completo"` e o response é `dict`.
+**Gotcha #1 — BaseAgent, não LlmAgent:**
+O A4 foi migrado de LlmAgent para BaseAgent em 2026-08. O código em `agents/a4_financial_estimator.py` é um `BaseAgent` puro que chama a macro diretamente. Não há `tools=[]`, não há `before_model_callback`, não há function_call. Qualquer spec que mencione LLM para A4 está obsoleta.
 
-**Gotcha 2 — Flash alucinando `run_code`:** O Flash tentou executar código Python para aritmética (em vez de chamar a macro) no run 7 de 12/06. O Pro foi mantido por instabilidade. Re-testar Flash com `instruction` que proíba explicitamente execução de código antes de qualquer mudança de modelo.
+**Gotcha #2 — `analise_financeira_pronto` é a fonte auditável:**
+O A6 foi arquitetado para ler números de `analise_financeira_pronto` (tool_response cru), não de `analise_financeira` (echo do LLM). Se `_persistir_a4_no_state` não rodar (ex: exceção antes do callback), o A6 pode usar dados inconsistentes. O snapshot é idempotente: só grava se `tool.name == "analise_financeira_a4_completo"` e o response é `dict`.
 
-**Gotcha 3 — `_bloco_benchmarks()` roda em boot:** Os benchmarks são renderizados uma vez na inicialização do módulo quando `financial_estimator_agent` é construído. Mudanças em `parametros_metodologia` no Supabase exigem reinício do servidor para propagar ao prompt.
+**Gotcha #3 — `_bloco_benchmarks()` roda em boot:**
+Os benchmarks são renderizados uma vez na inicialização do módulo quando `financial_estimator_agent` é construído. Mudanças em `parametros_metodologia` no Supabase exigem reinício do servidor para propagar ao prompt.
 
-**Gotcha 4 — `destino_lat`/`destino_lng` injetados por `apply_patches.py`:** O top-1 de `candidatos_geoscout` é extraído no próprio prompt do LLM (código comentado no `instruction`). Se `candidatos_geoscout` estiver ausente ou vazio, `destino_lat/lng` ficam `None` e a macro usa fallback de distância nulo — não é erro crítico, apenas `frete_equipamentos=0` no CAPEX.
+**Gotcha #4 — `destino_lat`/`destino_lng` injetados por `apply_patches.py`:**
+O top-1 de `candidatos_geoscout` é extraído no próprio prompt do LLM (código comentado no `instruction`). Se `candidatos_geoscout` estiver ausente ou vazio, `destino_lat/lng` ficam `None` e a macro usa fallback de distância nulo — não é erro crítico, apenas `frete_equipamentos=0` no CAPEX.
 
-**Gotcha 5 — `schema_cenarios: "v2"`:** O shape dos cenários mudou entre versões. O A6 e o markdown renderer esperam `v2` (com `matriculas` como dict `{conservador, realista, agressivo}` onde cada item é `{valor, matr_por_m2, premissa}`). Schema v1 (onde `matriculas` era int simples) causou crash no A4 em produção (bug documentado em memória do projeto).
+**Gotcha #5 — `schema_cenarios: "v2"`:**
+O shape dos cenários mudou entre versões. O A6 e o markdown renderer esperam `v2` (com `matriculas` como dict `{conservador, realista, agressivo}` onde cada item é `{valor, matr_por_m2, premissa}`). Schema v1 (onde `matriculas` era int simples) causou crash no A4 em produção (bug documentado em memória do projeto).
 
-**Gotcha 6 — BCB só popula quando `tier1_vazio=True`:** `referencia_macro_bcb` é calculado apenas quando nenhum portal retornou amostra. É dado macro-econômico de contexto (não R$/m² local) e não substitui aluguel real.
+**Gotcha #6 — BCB só popula quando `tier1_vazio=True`:**
+`referencia_macro_bcb` é calculado apenas quando nenhum portal retornou amostra. É dado macro-econômico de contexto (não R$/m² local) e não substitui aluguel real.
+
+**Gotcha #7 — Template de justificativa:**
+A `justificativa` é montada por `_montar_justificativa_template()` dentro da macro. Não há LLM narrando — o template usa os fatos da macro sem adicionar números ou inferências.
