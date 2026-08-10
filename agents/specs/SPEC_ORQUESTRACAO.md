@@ -5,8 +5,8 @@
 | **ID** | spec-orch-001 |
 | **Agente / Área** | Orquestração GymSitePipeline — `gymsite_intelligence/agent.py` |
 | **Modelo LLM** | Root agent: `gemini-2.5-flash`; agentes delegados têm modelos próprios |
-| **Versão** | 1.0 |
-| **Data** | 2026-06-18 |
+| **Versão** | 2.0 (atualizada PONTO 30, A8 → after-A9) |
+| **Data** | 2026-08-10 |
 
 ---
 
@@ -46,15 +46,16 @@ root_agent (GymSiteIntelligence)
         │     │     ├── A3a CompetitorSearch   # busca Maps/OSM/CNPJ
         │     │     └── A3b CompetitorAnalysis # reviews + scores
         │     └── A4 FinancialEstimator        # 3 cenários financeiros
-        ├── A6 ReportConsolidator     # relatório + A8 (chamado dentro do after_agent_callback)
-        └── A9 PositioningStrategist  # ERRC + veredito posicionamento
+        ├── A6 ReportConsolidator     # relatório executivo
+        ├── A9 PositioningStrategist  # ERRC + veredito posicionamento
+        └── (A8 ValidadorCruzado)     # after-A9: validação cruzada via tools/a8_runner.run_a8_validation()
 ```
 
 **Agentes fora do pipeline de viabilidade:**
 - **A5 ContactHunter**: definido e importado, mas não incluído no `GymSitePipeline` (linha 163–165 de `agent.py`). Pertence à rota de prospecção (VEC-410 / Apollo people_search), não à viabilidade. Remover custo ~R$0,17/relatório e 1 step de latência.
 - **A3c CompetitorMapper**: REMOVIDO (jun/2026). Era `LlmAgent` dead code; sua função (mapear oferta) foi fundida no A3b determinístico. A oferta migrou Playwright→SearchAPI, matando o crash sync/async no Windows (run `9213f40d`).
 - **A7 MarketResearch**: importado como função dentro de A3a/A4 (não como AgentTool no grafo).
-- **A8 ValidadorCruzado**: invocado via `tools/a8_runner.run_a8_validation()` dentro do `after_agent_callback` do A6. Não é nó do grafo.
+- **A8 ValidadorCruzado**: invocado via `tools/a8_runner.run_a8_validation()` dentro do `after_agent_callback` do **A9** (PONTO 29). Não é nó do grafo. Validação ocorre após posicionamento estar disponível para validar coerência do ERRC e veredito.
 
 ### Saída (state keys produzidas ao longo do pipeline)
 
@@ -96,6 +97,9 @@ A5 foi removido do `GymSitePipeline` explicitamente (linha 163). Responsabilidad
 **RN-ORCH-006 — A3c fundido no A3b (removido do grafo)**
 `competitor_mapper_agent` foi REMOVIDO (arquivo `agents/a3c_competitor_mapper.py` deletado). O `CompetitorPipeline` é só A3a → A3b. O A3b (BaseAgent determinístico) absorveu o mapeamento de oferta: chama `mapear_oferta_competidores_completo` (site via httpx + Instagram via SearchAPI `engine=instagram_profile`, sem Playwright/Outscraper) e mescla os serviços por concorrente, gravando `oferta_concorrentes` no state.
 
+**RN-ORCH-010 — A8 roda no after-A9, não after-A6 (PONTO 29)**
+O A8 ValidadorCruzado agora é invocado pelo `after_agent_callback` do **A9 PositioningStrategist**, não mais pelo A6. Esta mudança (implementada em ago/2026) permite que a validação cruzada inclua a coerência do framework ERRC e o veredito de posicionamento, que só estão disponíveis após o A9 completar. O `tools/a8_runner.run_a8_validation()` recebe o output consolidado do A9 (`relatorio_posicionamento`) e valida contra os dados estruturados do A6.
+
 **RN-ORCH-007 — Modo Crowdsource detectado pelo root_agent**
 Palavras-chave: "indicações da comunidade", "formulário", "campanha", "pesquisa", "votação" ou lista de bairros sugeridos por terceiros. Ativa `bairros_indicados=[...]` na delegação. A6 renderiza seção especial "Demanda Social Detectada".
 
@@ -131,7 +135,7 @@ O ADK usa `InMemorySessionService` por default. Estado do pipeline não é recup
 | A4 falha | `ParallelAnalysis` reporta erro; A6 consolida sem cenários financeiros |
 | A6 falha | Pipeline para; A9 não executa; JSON local não gerado |
 | A9 falha (JSON malformado) | `after_agent_callback` do A9 grava erro no state; pipeline completa sem posicionamento |
-| A8 falha | Lógica dentro do `after_agent_callback` do A6 captura a exceção; relatório de viabilidade é emitido sem `validacao_a8` |
+| A8 falha | Lógica dentro do `after_agent_callback` do **A9** captura a exceção; relatório de viabilidade é emitido sem `validacao_a8` |
 | Retry de modelo esgotado (4 tentativas) | Exceção propagada para o agente → pipeline reporta falha no agente específico |
 | `_attach_telemetry` falha em qualquer callback | `try/except: pass` garante que pipeline continua; telemetria parcialmente perdida |
 
@@ -139,8 +143,8 @@ O ADK usa `InMemorySessionService` por default. Estado do pipeline não é recup
 
 ## 6. Contexto para IA
 
-**Gotcha #1 — A8 não é nó do grafo.**
-`A8ValidadorCruzado` é invocado pelo `after_agent_callback` do A6, não pelo `GymSitePipeline`. Adicionar `a8_validator_agent` ao `SequentialAgent` seria arquiteturalmente incorreto (A8 não é LlmAgent e duplicaria a validação).
+**Gotcha #1 — A8 não é nó do grafo, roda no after-A9 (PONTO 29).**
+`A8ValidadorCruzado` é invocado pelo `after_agent_callback` do **A9 PositioningStrategist**, não pelo `GymSitePipeline` ou A6. Adicionar `a8_validator_agent` ao `SequentialAgent` seria arquiteturalmente incorreto (A8 não é LlmAgent e duplicaria a validação). A mudança para after-A9 permite validar coerência do framework ERRC e veredito de posicionamento que só existem após o A9 completar.
 
 **Gotcha #2 — `_attach_telemetry` + `build_llm_agent` são redundantes por design.**
 `build_llm_agent` já aplica retry + telemetria. `_attach_telemetry` no `agent.py` aplica novamente. `_chain_callbacks` deduplica por identidade e o wrap de retry só roda quando `model` ainda é string (a segunda passagem encontra um objeto `Gemini` e pula). A redundância é intencional: garante que agentes criados sem a factory também fiquem instrumentados.

@@ -143,6 +143,9 @@ Se `output_consolidado["demanda_futura"]` tiver `status=ok` E `provavel_residenc
 **RN-A6-18 — A8 validation foi movido para after-A9 (ver PONTO 29).**
 O A8 agora roda após o posicionamento do A9 estar disponível, permitindo validação cruzada completa incluindo coerência do ERRC e veredito de posicionamento. A chamada é feita pelo `after_agent_callback` do A9 via `tools/a8_runner.run_a8_validation()`.
 
+**RN-A6-19 — Bridge `demografia_bairro` → A9 está documentada (§3.2, PONTO 19).**
+O campo `demografia_bairro` é gravado no state pelo `after_agent_callback` do A6 para consumo direto pelo A9 PositioningStrategist. Esta bridge permite que o A9 acesse dados demográficos do Censo 2022 (renda, população, perfil de sexo) sem precisar re-buscar. O A9 usa estes dados para fundamentar o framework ERRC e o veredito de posicionamento.
+
 ---
 
 ## 5. Critérios de Aceite Mensuráveis
