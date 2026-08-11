@@ -24,6 +24,7 @@ def test_proxy_osm_rotula_individualizar():
     assert out["status"] == "proxy_osm"
     assert out["compatibilidade"] == "INDIVIDUALIZAR"
     assert out["uso_predominante_osm"] == "residential"
+    assert "observado" in (out.get("uso_observado") or "")
     assert out["fonte_dados"] == "OSM_landuse_proxy"
     assert "prefeitura" in (out["alerta"] or "").lower()
 
@@ -31,7 +32,7 @@ def test_proxy_osm_rotula_individualizar():
 def test_municipio_sem_adapter_cai_proxy_ou_indisponivel():
     """Sem CKAN cadastrado: OSM ou indisponível — nunca PERMISSIVO inventado."""
     with patch("tools.zoneamento_tools._municipio_cfg", return_value=None), \
-         patch("tools.zoneamento_tools._buscar_osm_landuse", return_value=None):
+         patch("tools.zeus_osm_proxy.consultar_osm_proxy", return_value=None):
         out = analisar_zoneamento_candidato(
             "Cidade Sem Dados", "Centro", "XX", -15.0, -48.0)
     assert out["status"] == "indisponivel"
@@ -41,13 +42,22 @@ def test_municipio_sem_adapter_cai_proxy_ou_indisponivel():
 
 
 def test_municipio_sem_adapter_com_osm():
+    perfil = {
+        "tag_osm": "commercial",
+        "uso_observado": "comercial_observado",
+        "origem_tag": "landuse",
+        "n_features": 5,
+        "completude": "alta",
+        "confianca": 85,
+    }
     with patch("tools.zoneamento_tools._municipio_cfg", return_value=None), \
-         patch("tools.zoneamento_tools._buscar_osm_landuse", return_value="commercial"):
+         patch("tools.zeus_osm_proxy.consultar_osm_proxy", return_value=perfil):
         out = analisar_zoneamento_candidato(
             "Lagoa", "Barra da Tijuca", "RJ", -23.0, -43.3)
     assert out["status"] == "proxy_osm"
     assert out["compatibilidade"] == "INDIVIDUALIZAR"
     assert out["uso_predominante_osm"] == "commercial"
+    assert out["uso_observado"] == "comercial_observado"
 
 
 def test_ckan_fora_de_zona_rotula_permissivo_com_fonte():
@@ -78,7 +88,7 @@ def test_ckan_falha_nao_assume_permissivo():
     cfg = {"ckan_base": "https://example", "dataset_zonas": "zonas"}
     with patch("tools.zoneamento_tools._municipio_cfg", return_value=cfg), \
          patch("tools.zoneamento_tools._fetch_kmz", return_value=None), \
-         patch("tools.zoneamento_tools._buscar_osm_landuse", return_value=None):
+         patch("tools.zeus_osm_proxy.consultar_osm_proxy", return_value=None):
         out = analisar_zoneamento_candidato(
             "Fortaleza", "Meireles", "CE", -3.73, -38.49)
     assert out["status"] == "indisponivel"
@@ -112,13 +122,17 @@ def test_pdf_mostra_indisponivel_e_proxy():
         "status": "proxy_osm",
         "compatibilidade": "INDIVIDUALIZAR",
         "uso_predominante_osm": "residential",
+        "uso_observado": "residencial_observado",
         "zona_sigla": "OSM:residential",
         "alerta": "Avaliar junto à prefeitura do município.",
-        "descricao": "Proxy OSM — não é zoneamento legal.",
+        "descricao": "Uso OBSERVADO no OSM — não é zoneamento legal.",
         "fonte_dados": "OSM_landuse_proxy",
+        "confianca": 85,
+        "completude": "alta",
         "cnae": "9313-1/00",
     }
     html2 = gerar_html(relatorio_from_nested_json(d))
     assert "INDIVIDUALIZAR" in html2
-    assert "residential" in html2
+    assert "residencial_observado" in html2 or "residential" in html2
     assert "prefeitura" in html2.lower()
+    assert "OBSERVADO" in html2 or "observado" in html2.lower()

@@ -256,11 +256,11 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 | Demografia | IBGE Censo 2022 / BQ | CKAN 2010, nominatim | LLM inventando número |
 | Parque CNPJ/CNO | RFB/Supabase determinístico | — | LLM (A0 override fecha) |
 | Fluxo pedestre | OSMnx malha + Overpass POI | **nenhum grid sintético** | Score fake / fallback heurístico |
-| Zoneamento (ZEUS) | CKAN municipal (`zoneamento_municipio`) | OSM `landuse` (proxy → `INDIVIDUALIZAR`) | Assumir `PERMISSIVO` sem malha; omitir bloco quando indisponível |
+| Zoneamento (ZEUS) | CKAN municipal (`zoneamento_municipio`) | OSM `landuse`/`zoning` → **uso observado** (`INDIVIDUALIZAR`) | Assumir `PERMISSIVO` sem malha; mapear OSM→veredito legal |
 
 **Princípio:** dado numérico = **tool determinística** ou API paga estruturada (SearchAPI). LLM **narra** (A6/A9) ou **refina** texto já coletado (ex.: `categoria_dor` pós-SearchAPI; planos A3b). Fetch + card de review = SearchAPI + código, não LLM.
 
-**ZEUS (ago/2026):** sem adapter CKAN → `proxy_osm` (rótulo `INDIVIDUALIZAR` + alerta prefeitura) ou `indisponivel` (`compatibilidade=None`). PERMISSIVO só com malha oficial (ex.: Fortaleza fora de zona especial = uso geral). Código: `tools/zoneamento_tools.py`.
+**ZEUS (ago/2026):** Camada 1 = Fortaleza (KMZ) + **Recife** (ZEIS WGS84 + Micro UTM `EPSG:31985`) + **Belo Horizonte** (Lei 11.181, `EPSG:31983`). Reprojeção: `tools/zeus_crs.py`. `fora_malha=cascade` onde a malha é parcial/sem LUOS completa → OSM (`INDIVIDUALIZAR`). PERMISSIVO só com malha oficial completa (Fortaleza fora de zona especial).
 
 ---
 

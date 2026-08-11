@@ -1642,11 +1642,22 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             _fonte = "sem fonte oficial na cascata ZEUS"
             _nota = "Não se assume permissividade — avaliar junto à prefeitura do município."
         elif _comp == "INDIVIDUALIZAR":
-            _uso = zm.get("uso_predominante_osm") or "—"
+            _uso = zm.get("uso_observado") or zm.get("uso_predominante_osm") or "—"
             _compat_lbl = "INDIVIDUALIZAR"
-            _zona_lbl = f"Proxy OSM · {_uso}"
+            _zona_lbl = f"Uso observado OSM · {_uso}"
             _fonte = zm.get("fonte_dados") or "OSM_landuse_proxy"
-            _nota = "Sinal de uso do solo (OSM), não zoneamento legal — avaliar junto à prefeitura."
+            _conf = zm.get("confianca")
+            _nota = (
+                "Uso do solo OBSERVADO (OSM), não zoneamento legal — avaliar junto à prefeitura."
+            )
+            if zm.get("baixa_completude") or (zm.get("completude") == "baixa"):
+                _nota = (
+                    f"{_nota} Completude OSM baixa"
+                    + (f" (confiança {_conf})" if _conf is not None else "")
+                    + "."
+                )
+            elif _conf is not None:
+                _nota = f"{_nota} Confiança proxy: {_conf}/100."
         else:
             _compat_lbl = _comp
             _zona_lbl = f"{zm.get('zona_sigla') or '—'} · {zm.get('nome_geo') or '—'}"

@@ -57,18 +57,96 @@ def _fallback(nome: str) -> list[dict[str, Any]]:
                     "padrao_alto": 3, "fator_pibpc_corte": 50000,
                 }.items()]
     if nome == "zoneamento_municipio":
-        # Seed Fortaleza (CKAN oficial) — mesma metadata da tabela viva.
-        return [{
-            "chave": "fortaleza",
-            "valor": "CKAN",
-            "sinonimos": [],
-            "metadata": {
-                "cnae": "9313-1/00",
-                "ckan_base": "https://dados.fortaleza.ce.gov.br/api/3/action",
-                "subgrupos": ["SE", "SP", "PS"],
-                "dataset_zonas": "zonas-especiais",
+        return [
+            {
+                "chave": "fortaleza",
+                "valor": "CKAN",
+                "sinonimos": [],
+                "metadata": {
+                    "cnae": "9313-1/00",
+                    "ckan_base": "https://dados.fortaleza.ce.gov.br/api/3/action",
+                    "subgrupos": ["SE", "SP", "PS"],
+                    "dataset_zonas": "zonas-especiais",
+                    "formato": "kmz",
+                    "fora_malha": "permissivo",
+                },
             },
-        }]
+            {
+                "chave": "recife",
+                "valor": "CKAN",
+                "sinonimos": [],
+                "metadata": {
+                    "cnae": "9313-1/00",
+                    "ckan_base": "https://dados.recife.pe.gov.br/api/3/action",
+                    "dataset_zonas": "zoneamento",
+                    "formato": "geojson",
+                    "fora_malha": "cascade",
+                    "subgrupos": ["SE"],
+                    "camadas": [
+                        {
+                            "resource_name_contains": "Zeis",
+                            "layer_label": "ZEIS",
+                            "crs": "EPSG:4326",
+                            "compat_na_malha": "RESTRITO",
+                        },
+                        {
+                            "resource_name_contains": "Micro",
+                            "layer_label": "MICRO",
+                            "crs": "EPSG:31985",
+                            "compat_default_na_malha": "CONDICIONADO",
+                            "compat_prefixos": {
+                                "ZEIS": "RESTRITO",
+                                "ZDS": "CONDICIONADO",
+                            },
+                        },
+                    ],
+                },
+            },
+            {
+                "chave": "belo horizonte",
+                "valor": "CKAN",
+                "sinonimos": ["bh", "belo-horizonte"],
+                "metadata": {
+                    "cnae": "9313-1/00",
+                    "ckan_base": "https://ckan.pbh.gov.br/api/3/action",
+                    "dataset_zonas": "zoneamento-lei-11181",
+                    "formato": "geojson",
+                    "resource_format": "JSON",
+                    "resource_name_contains": "zoneamento_11181",
+                    "layer_label": "ZONEAMENTO_11181",
+                    "crs": "EPSG:31983",
+                    "fora_malha": "cascade",
+                    "compat_default_na_malha": "CONDICIONADO",
+                    "compat_prefixos": {
+                        "ZEIS": "RESTRITO",
+                        "AEIS": "RESTRITO",
+                        "PA-": "RESTRITO",
+                        "PA_": "RESTRITO",
+                        "OM-": "CONDICIONADO",
+                        "OP-": "CONDICIONADO",
+                        "AGEE": "CONDICIONADO",
+                        "AGEUC": "CONDICIONADO",
+                    },
+                    "subgrupos": ["SE"],
+                },
+            },
+        ]
+    if nome == "zoneamento_osm_uso_obs":
+        # Tag OSM → rótulo empírico (nunca PERMISSIVO/CONDICIONADO/RESTRITO).
+        return [
+            {"chave": k, "valor": v, "sinonimos": [], "metadata": {}}
+            for k, v in {
+                "commercial": "comercial_observado",
+                "retail": "comercial_observado",
+                "industrial": "industrial_observado",
+                "residential": "residencial_observado",
+                "grass": "area_verde_observada",
+                "forest": "area_verde_observada",
+                "farmland": "rural_observado",
+                "construction": "em_transformacao_observado",
+                "recreation_ground": "lazer_observado",
+            }.items()
+        ]
     return []
 
 

@@ -91,6 +91,10 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     "janela_demanda_min_concorrentes": _p(2, "mín de concorrentes COM popular_times p/ a janela de demanda agregada ser confiável — abaixo disso, amostra insuficiente (não inventa pico)", "janela_demanda", "concorrentes", "calibracao", "2026-06-18"),
     "zoneamento_penal_restrito":     _p(2.0, "penalidade no score do top candidato em zona RESTRITO (LUOS)", "penalidade_zoneamento", "pontos", "calibracao", "2026-06-18"),
     "zoneamento_penal_condicionado": _p(1.0, "penalidade no score em zona CONDICIONADO (LUOS)", "penalidade_zoneamento", "pontos", "calibracao", "2026-06-18"),
+    "zeus_osm_raio_m":               _p(150, "raio Overpass landuse/zoning (ZEUS Fase 1)", "zeus_osm", "metros", "calibracao", "2026-08-11"),
+    "zeus_osm_completude_min_features": _p(3, "mín. features OSM no raio p/ completude alta", "zeus_osm", "features", "calibracao", "2026-08-11"),
+    "zeus_osm_confianca_alta":       _p(85, "score confiança proxy OSM com amostra suficiente (nunca = legal)", "zeus_osm", "pontos", "calibracao", "2026-08-11"),
+    "zeus_osm_confianca_baixa":      _p(40, "score confiança proxy OSM com amostra esparsa", "zeus_osm", "pontos", "calibracao", "2026-08-11"),
     # ── Penetração fitness (% da pop. que É MEMBRO de academia) — ACAD ───────
     "penetracao_geral":     _p(0.045, "ACAD/Panorama Fitness Brasil", "penetracao_mercado", "fração", "benchmark", "2026-06-14"),
     "penetracao_bairro_ab": _p(0.10, "ACAD (bairro alta renda A/B)", "penetracao_mercado_segmentada", "fração", "benchmark", "2026-06-14"),

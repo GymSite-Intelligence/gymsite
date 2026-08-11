@@ -2285,9 +2285,13 @@ def _resumo_executivo_deterministico(
                 "Zoneamento oficial indisponível — avaliar junto à prefeitura do município."
             )
         elif comp == "INDIVIDUALIZAR":
-            uso = zoneamento.get("uso_predominante_osm") or "—"
+            uso = (
+                zoneamento.get("uso_observado")
+                or zoneamento.get("uso_predominante_osm")
+                or "—"
+            )
             partes.append(
-                f"Zoneamento legal não digitalizado (proxy OSM: {uso}) — "
+                f"Zoneamento legal não digitalizado (uso OSM observado: {uso}) — "
                 "avaliar junto à prefeitura do município."
             )
         elif sig and comp:

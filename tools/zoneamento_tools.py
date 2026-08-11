@@ -33,8 +33,13 @@ def _municipio_cfg(cidade: str) -> dict | None:
     from tools.catalogos import catalogo
 
     alvo = (cidade or "").strip().lower()
+    alvo_compact = alvo.replace("-", " ")
     for c in catalogo("zoneamento_municipio"):
-        if (c.get("chave") or "").lower() == alvo:
+        chave = (c.get("chave") or "").strip().lower()
+        nomes = {chave, chave.replace("-", " ")}
+        for s in c.get("sinonimos") or []:
+            nomes.add(str(s).strip().lower())
+        if alvo in nomes or alvo_compact in nomes:
             return c.get("metadata") or {}
     return None
 
@@ -109,14 +114,153 @@ def _fetch_kmz(cfg: dict) -> bytes | None:
         return None
 
 
+def _fetch_geojson_resource(cfg: dict, *, needle: str | None = None) -> dict | None:
+    """Baixa FeatureCollection GeoJSON/JSON do CKAN."""
+    base, dataset = cfg.get("ckan_base"), cfg.get("dataset_zonas")
+    if not base or not dataset:
+        return None
+    needle_l = (needle if needle is not None else cfg.get("resource_name_contains") or "").lower()
+    fmt_prefer = (cfg.get("resource_format") or "").upper()
+    try:
+        with httpx.Client(
+            timeout=120,
+            follow_redirects=True,
+            headers={"User-Agent": "GymSite-ZEUS/1.0 (ckan-geojson)"},
+        ) as c:
+            meta = c.get(f"{base}/package_show", params={"id": dataset}).json()
+            if not meta.get("success"):
+                return None
+            recs = meta["result"].get("resources", [])
+            candidatos = []
+            for r in recs:
+                fmt = (r.get("format") or "").upper()
+                name = (r.get("name") or "").lower()
+                if fmt not in ("GEOJSON", "JSON"):
+                    continue
+                if fmt_prefer and fmt != fmt_prefer and fmt_prefer not in ("GEOJSON", "JSON"):
+                    continue
+                if needle_l and needle_l not in name:
+                    continue
+                candidatos.append(r)
+            if not candidatos:
+                return None
+            # Preferir o recurso mais recente pelo nome (YYYYMMDD_...) quando houver vários.
+            geo = sorted(candidatos, key=lambda r: (r.get("name") or ""), reverse=True)[0]
+            resp = c.get(geo["url"])
+            if resp.status_code != 200:
+                return None
+            data = resp.json()
+            return data if isinstance(data, dict) else None
+    except Exception as e:
+        logger.warning("zoneamento GeoJSON CKAN falha: %s", e)
+        return None
+
+
+def _rings_from_geometry(geom: dict) -> list[list[tuple[float, float]]]:
+    """Extrai anéis exteriores brutos (x,y) de Polygon/MultiPolygon."""
+    if not isinstance(geom, dict):
+        return []
+    t = geom.get("type")
+    coords = geom.get("coordinates") or []
+    rings: list[list[tuple[float, float]]] = []
+
+    def _ring(pts) -> list[tuple[float, float]]:
+        out: list[tuple[float, float]] = []
+        for p in pts or []:
+            if isinstance(p, (list, tuple)) and len(p) >= 2:
+                try:
+                    out.append((float(p[0]), float(p[1])))
+                except (TypeError, ValueError):
+                    continue
+        return out
+
+    if t == "Polygon" and coords:
+        r = _ring(coords[0])
+        if len(r) >= 3:
+            rings.append(r)
+    elif t == "MultiPolygon":
+        for poly in coords:
+            if poly:
+                r = _ring(poly[0])
+                if len(r) >= 3:
+                    rings.append(r)
+    return rings
+
+
+def _parse_geojson_to_polygons(
+    fc: dict,
+    *,
+    layer_label: str = "ZEIS",
+    crs: str | None = None,
+    sigla_keys: list[str] | None = None,
+    nome_keys: list[str] | None = None,
+) -> list[dict]:
+    """FeatureCollection → polígonos em WGS84 (lon,lat)."""
+    from tools.zeus_crs import anel_para_wgs84, crs_de_feature_collection
+
+    crs_eff = crs_de_feature_collection(fc, default=crs)
+    sk = sigla_keys or [
+        "sigla_zona", "SIGLA_TIPO_ZONEAMENTO", "CDTIPO", "ZONA", "ZONA2", "SIGLA",
+    ]
+    nk = nome_keys or [
+        "nome_geo", "DESC_TIPO_ZONEAMENTO", "NMNOME", "MACROZONA", "name", "BAIRRO",
+    ]
+    polygons: list[dict] = []
+    for feat in fc.get("features") or []:
+        if not isinstance(feat, dict):
+            continue
+        props = feat.get("properties") or {}
+        geom = feat.get("geometry") or {}
+        sigla = layer_label
+        for k in sk:
+            if props.get(k):
+                sigla = props.get(k)
+                break
+        nome = ""
+        for k in nk:
+            if props.get(k):
+                nome = props.get(k)
+                break
+        for ring in _rings_from_geometry(geom):
+            ring_wgs = anel_para_wgs84(ring, crs_eff)
+            if len(ring_wgs) < 3:
+                continue
+            polygons.append({
+                "polygon": ring_wgs,
+                "sigla_zona": str(sigla).strip(),
+                "tipo_zona": layer_label,
+                "nome_geo": str(nome).strip(),
+                "nome_zona": str(nome or layer_label),
+                "folder": layer_label,
+                "crs_origem": crs_eff,
+                "props": props,
+            })
+    return polygons
+
+
+def _veredito_de_label(forced: str) -> dict:
+    forced = (forced or "").upper().strip()
+    raw = {"PERMISSIVO": "A", "CONDICIONADO": "P", "RESTRITO": "I"}.get(forced, "I")
+    forced = forced if forced in ("PERMISSIVO", "CONDICIONADO", "RESTRITO") else "RESTRITO"
+    desc = {
+        "PERMISSIVO": "Atividade adequada à zona (malha oficial municipal).",
+        "CONDICIONADO": "Permitida com restrições — validar parâmetros na prefeitura.",
+        "RESTRITO": (
+            "Zona especial / restrição urbanística. "
+            "Academia exige análise na prefeitura — não tratar como uso livre."
+        ),
+    }[forced]
+    return {"compatibilidade": forced, "compat_raw": raw, "descricao": desc}
+
+
 def _classificar(zona_sigla: str) -> dict:
-    """Compat LUOS (catálogo) → PERMISSIVO/CONDICIONADO/RESTRITO. A/P/I por zona."""
+    """Compat LUOS Fortaleza (catálogo) → PERMISSIVO/CONDICIONADO/RESTRITO."""
     from tools.catalogos import catalogo_map
 
     compat = catalogo_map("zoneamento_compat_se_fortaleza")
     key = (zona_sigla or "").upper().strip()
     raw = compat.get(key)
-    if raw is None:  # ZEIS 1/2/3 — match por prefixo
+    if raw is None:
         for k, v in compat.items():
             if key.startswith(k.upper()):
                 raw = v
@@ -130,6 +274,26 @@ def _classificar(zona_sigla: str) -> dict:
                 "descricao": "Permitida com restrições de recuo, área ou porte."}
     return {"compatibilidade": "RESTRITO", "compat_raw": "I",
             "descricao": "Atividade inadequada/vedada na zona. Necessita análise técnica."}
+
+
+def _classificar_municipio(zona_sigla: str, cfg: dict, *, layer_cfg: dict | None = None) -> dict:
+    """Override por camada / prefixos (BH, Recife) ou LUOS Fortaleza."""
+    lc = layer_cfg or {}
+    forced = (lc.get("compat_na_malha") or cfg.get("compat_na_malha") or "").upper().strip()
+    if forced in ("PERMISSIVO", "CONDICIONADO", "RESTRITO"):
+        return _veredito_de_label(forced)
+
+    key = (zona_sigla or "").upper().strip()
+    prefixos = lc.get("compat_prefixos") or cfg.get("compat_prefixos") or {}
+    for pref, lab in sorted(prefixos.items(), key=lambda kv: -len(str(kv[0]))):
+        if key.startswith(str(pref).upper()):
+            return _veredito_de_label(str(lab))
+
+    default = (lc.get("compat_default_na_malha") or cfg.get("compat_default_na_malha") or "").upper()
+    if default in ("PERMISSIVO", "CONDICIONADO", "RESTRITO"):
+        return _veredito_de_label(default)
+
+    return _classificar(zona_sigla)
 
 
 _COR_ZONA = {
@@ -251,47 +415,42 @@ def _bloco_indisponivel(
 
 
 def _buscar_osm_landuse(latitude: float, longitude: float, *, raio_m: int = 150) -> str | None:
-    """Proxy Overpass: landuse mais frequente no raio. Não é zoneamento legal."""
-    raio = max(50, min(int(raio_m), 500))
-    query = f"""
-    [out:json][timeout:15];
-    (
-      way(around:{raio},{latitude},{longitude})["landuse"];
-      relation(around:{raio},{latitude},{longitude})["landuse"];
-      node(around:{raio},{latitude},{longitude})["landuse"];
-    );
-    out tags center 20;
-    """
-    try:
-        with httpx.Client(
-            timeout=20,
-            headers={"User-Agent": "GymSite-ZEUS/1.0 (zoneamento-proxy)"},
-        ) as c:
-            r = c.post("https://overpass-api.de/api/interpreter", data={"data": query})
-        if r.status_code != 200:
-            logger.warning("zoneamento OSM landuse HTTP %s", r.status_code)
-            return None
-        elements = (r.json() or {}).get("elements") or []
-        counts: dict[str, int] = {}
-        for el in elements:
-            tags = el.get("tags") or {}
-            lu = (tags.get("landuse") or "").strip().lower()
-            if not lu:
-                continue
-            counts[lu] = counts.get(lu, 0) + 1
-        if not counts:
-            return None
-        return max(counts.items(), key=lambda kv: kv[1])[0]
-    except Exception as e:
-        logger.warning("zoneamento OSM landuse falha: %s", e)
-        return None
+    """Compat: retorna só a tag OSM predominante. Preferir consultar_osm_proxy."""
+    from tools.zeus_osm_proxy import consultar_osm_proxy
+
+    perfil = consultar_osm_proxy(latitude, longitude, raio_m=raio_m)
+    return (perfil or {}).get("tag_osm")
 
 
 def _bloco_proxy_osm(
     cidade: str, bairro: str, uf: str,
     latitude: float, longitude: float, cnae: str,
     uso_osm: str,
+    *,
+    perfil: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """Camada 2 ZEUS: uso OBSERVADO no OSM — nunca veredito legal (PERMISSIVO etc.)."""
+    from tools.zeus_osm_proxy import avaliar_completude, rotular_uso_observado
+
+    p = dict(perfil or {})
+    tag = (p.get("tag_osm") or uso_osm or "").strip().lower()
+    uso_obs = p.get("uso_observado") or rotular_uso_observado(tag)
+    if "completude" not in p:
+        p.update(avaliar_completude(int(p.get("n_features") or 1)))
+    baixa = (p.get("completude") or "") == "baixa"
+    nota_c = p.get("nota_completude")
+    desc = (
+        f"Sem plano diretor digital para {cidade}/{uf}. "
+        f"Uso do solo OBSERVADO no OpenStreetMap: {uso_obs} (tag {tag}). "
+        "Isso descreve a realidade no terreno — NÃO significa permissão legal para academia."
+    )
+    alerta = (
+        f"Sem plano diretor digital para {cidade}/{uf}. "
+        f"Atividade/uso observado no OSM: {uso_obs}. "
+        "Avaliar uso e ocupação do solo junto à prefeitura do município antes de fechar o ponto."
+    )
+    if nota_c:
+        alerta = f"{alerta} {nota_c}"
     return {
         "status": "proxy_osm",
         "cidade": cidade,
@@ -302,25 +461,72 @@ def _bloco_proxy_osm(
         "cnae": cnae,
         "compatibilidade": "INDIVIDUALIZAR",
         "compat_raw": None,
-        "zona_sigla": f"OSM:{uso_osm}",
-        "zona_nome": f"Uso predominante OSM ({uso_osm})",
+        "zona_sigla": f"OSM:{tag}",
+        "zona_nome": f"Uso observado OSM ({uso_obs})",
         "nome_geo": bairro,
-        "uso_predominante_osm": uso_osm,
-        "descricao": (
-            f"Sem plano diretor digital para {cidade}/{uf}. "
-            f"Uso predominante no OpenStreetMap: {uso_osm}. "
-            "Sinal de contexto — NÃO substitui o zoneamento legal da prefeitura."
-        ),
+        "uso_predominante_osm": tag,
+        "uso_observado": uso_obs,
+        "origem_tag": p.get("origem_tag") or "landuse",
+        "descricao": desc,
         "restricoes": ["Validar zoneamento legal na prefeitura"],
-        "alerta": (
-            f"Sem plano diretor digital para {cidade}/{uf}. "
-            f"Uso predominante OSM: {uso_osm}. "
-            "Avaliar uso e ocupação do solo junto à prefeitura do município antes de fechar o ponto."
-        ),
+        "alerta": alerta,
         "mapa_svg": None,
         "fonte_dados": "OSM_landuse_proxy",
         "camada": "osm_proxy",
+        "completude": p.get("completude") or "alta",
+        "confianca": p.get("confianca") if p.get("confianca") is not None else 85,
+        "n_features_osm": p.get("n_features"),
+        "baixa_completude": baixa,
     }
+
+
+def _carregar_poligonos_municipio(cidade: str, cfg: dict) -> list[dict] | None:
+    """Cache por município: KMZ ou uma/várias camadas GeoJSON (c/ CRS)."""
+    ckey = f"{cidade.strip().lower()}_zonas"
+    if ckey in _polygons_cache:
+        return _polygons_cache[ckey]
+    formato = (cfg.get("formato") or "kmz").lower()
+    if formato == "geojson":
+        camadas = cfg.get("camadas")
+        if isinstance(camadas, list) and camadas:
+            polys: list[dict] = []
+            for camada in camadas:
+                if not isinstance(camada, dict):
+                    continue
+                needle = camada.get("resource_name_contains") or cfg.get("resource_name_contains")
+                fc = _fetch_geojson_resource(cfg, needle=needle)
+                if not fc:
+                    logger.warning("camada GeoJSON vazia: %s/%s", cidade, needle)
+                    continue
+                layer = camada.get("layer_label") or needle or "ZONA"
+                layer_polys = _parse_geojson_to_polygons(
+                    fc,
+                    layer_label=str(layer),
+                    crs=camada.get("crs") or cfg.get("crs"),
+                )
+                for p in layer_polys:
+                    p["_layer_cfg"] = camada
+                polys.extend(layer_polys)
+            if not polys:
+                return None
+        else:
+            fc = _fetch_geojson_resource(cfg)
+            if not fc:
+                return None
+            layer = cfg.get("layer_label") or cfg.get("resource_name_contains") or "ZONA"
+            polys = _parse_geojson_to_polygons(
+                fc, layer_label=str(layer), crs=cfg.get("crs"),
+            )
+            for p in polys:
+                p["_layer_cfg"] = {}
+    else:
+        kmz = _fetch_kmz(cfg)
+        if not kmz:
+            return None
+        polys = _parse_kmz_to_polygons(kmz)
+    _polygons_cache[ckey] = polys
+    logger.info("zoneamento: %d polígonos p/ %s (%s)", len(polys), cidade, formato)
+    return polys
 
 
 def _zoneamento_por_ckan(
@@ -328,24 +534,40 @@ def _zoneamento_por_ckan(
     latitude: float, longitude: float,
     endereco: str | None, cnae: str, cfg: dict,
 ) -> dict[str, Any]:
-    """Camada 1: KMZ municipal (ex. Fortaleza zonas especiais)."""
-    ckey = f"{cidade.strip().lower()}_zonas"
-    polys = _polygons_cache.get(ckey)
+    """Camada 1: malha oficial municipal (KMZ ou GeoJSON CKAN)."""
+    polys = _carregar_poligonos_municipio(cidade, cfg)
     if polys is None:
-        kmz = _fetch_kmz(cfg)
-        if not kmz:
-            return {"status": "ckan_indisponivel", "mensagem": "KMZ de zoneamento indisponível (CKAN)."}
-        polys = _parse_kmz_to_polygons(kmz)
-        _polygons_cache[ckey] = polys
-        logger.info("zoneamento: %d polígonos p/ %s", len(polys), cidade)
+        return {"status": "ckan_indisponivel", "mensagem": "Malha de zoneamento indisponível (CKAN)."}
 
     zona = next(
         (p for p in polys if p.get("polygon")
          and _point_in_polygon(longitude, latitude, p["polygon"])),
         None,
     )
+    fonte = f"CKAN_{(cidade or '').upper()}"
+    base_url = (cfg.get("ckan_base") or "").replace("/api/3/action", "")
+    dataset = cfg.get("dataset_zonas") or ""
+    fonte_url = f"{base_url}/dataset/{dataset}" if base_url and dataset else None
+    fora_mode = (cfg.get("fora_malha") or "permissivo").lower()
+
     if zona is None:
-        # Fora das zonas especiais = uso geral (malha CKAN) → PERMISSIVO rotulado.
+        if fora_mode == "cascade":
+            # Malha parcial (ex.: só ZEIS) — fora NÃO é PERMISSIVO; segue OSM.
+            return {
+                "status": "fora_malha_cascade",
+                "cidade": cidade,
+                "bairro": bairro,
+                "uf": uf,
+                "latitude": latitude,
+                "longitude": longitude,
+                "cnae": cnae,
+                "mensagem": (
+                    f"Ponto fora da malha oficial parcial ({cfg.get('layer_label') or 'zonas'}). "
+                    "Não se assume permissividade — cascata OSM."
+                ),
+                "fonte_dados": fonte,
+                "camada": "ckan_municipal",
+            }
         return {
             "status": "fora_de_zona",
             "cidade": cidade,
@@ -363,13 +585,15 @@ def _zoneamento_por_ckan(
             "restricoes": [],
             "alerta": None,
             "mapa_svg": _svg_mapa_zonas(latitude, longitude, polys),
-            "fonte_dados": f"CKAN_{cidade.upper()}",
+            "fonte_dados": fonte,
+            "fonte_url": fonte_url,
             "camada": "ckan_municipal",
+            "confianca": 100,
         }
 
     sigla = (zona.get("sigla_zona") or zona.get("tipo_zona") or "").strip()
     nome_geo = zona.get("nome_geo") or zona.get("name") or ""
-    cls = _classificar(sigla)
+    cls = _classificar_municipio(sigla, cfg, layer_cfg=zona.get("_layer_cfg") or {})
     params = _zedus_params(nome_geo) if sigla.upper().startswith("ZEDUS") else {}
     out = {
         "status": "ok",
@@ -393,22 +617,23 @@ def _zoneamento_por_ckan(
         "restricoes": [],
         "alerta": None,
         "mapa_svg": _svg_mapa_zonas(latitude, longitude, polys),
-        "fonte_dados": f"CKAN_{cidade.upper()}",
-        "fonte_url": f"https://dados.fortaleza.ce.gov.br/dataset/{cfg.get('dataset_zonas')}",
+        "fonte_dados": fonte,
+        "fonte_url": fonte_url,
         "camada": "ckan_municipal",
+        "confianca": 100,
     }
     if cls["compatibilidade"] == "RESTRITO":
         out["alerta"] = (
             f"Imóvel em {sigla} ({nome_geo}). Academia (CNAE {cnae}) é INADEQUADA "
-            "nesta zona — buscar candidato em ZEDUS, ZOC ou ZEU."
+            "nesta zona especial — validar na prefeitura / buscar outra localização."
         )
-        out["restricoes"].append("Atividade vedada na zona especial identificada")
+        out["restricoes"].append("Atividade vedada ou fortemente condicionada na zona especial")
     elif cls["compatibilidade"] == "CONDICIONADO":
         out["alerta"] = (
             f"Imóvel em {sigla} ({nome_geo}). Permitida com restrições — "
-            "verificar recuos e parâmetros urbanísticos (Anexo 8 LUOS)."
+            "verificar parâmetros urbanísticos na prefeitura."
         )
-        out["restricoes"].append("Necessita atender recuos do Anexo 8 da LUOS")
+        out["restricoes"].append("Necessita atender parâmetros urbanísticos locais")
     return out
 
 
@@ -421,7 +646,7 @@ def analisar_zoneamento_candidato(
     """Cascata ZEUS: CKAN municipal → proxy OSM landuse → indisponível (prefeitura).
 
     status: ok | fora_de_zona | proxy_osm | indisponivel | erro.
-    NUNCA assume PERMISSIVO sem malha oficial do município.
+    NUNCA assume PERMISSIVO sem malha oficial completa do município.
     """
     if latitude is None or longitude is None:
         return {"status": "erro", "mensagem": "Candidato sem lat/lon (rodar geocoding antes)."}
@@ -430,12 +655,20 @@ def analisar_zoneamento_candidato(
     if cfg:
         out = _zoneamento_por_ckan(
             cidade, bairro, uf, latitude, longitude, endereco, cnae, cfg)
-        if out.get("status") != "ckan_indisponivel":
+        if out.get("status") not in ("ckan_indisponivel", "fora_malha_cascade"):
             return out
-        logger.warning("zoneamento CKAN falhou p/ %s — cascata OSM", cidade)
+        logger.info(
+            "zoneamento %s → cascata OSM (%s)",
+            cidade, out.get("status"),
+        )
 
-    uso = _buscar_osm_landuse(latitude, longitude)
-    if uso:
-        return _bloco_proxy_osm(cidade, bairro, uf, latitude, longitude, cnae, uso)
+    from tools.zeus_osm_proxy import consultar_osm_proxy
+
+    perfil = consultar_osm_proxy(latitude, longitude)
+    if perfil and perfil.get("tag_osm"):
+        return _bloco_proxy_osm(
+            cidade, bairro, uf, latitude, longitude, cnae,
+            perfil["tag_osm"], perfil=perfil,
+        )
 
     return _bloco_indisponivel(cidade, bairro, uf, latitude, longitude, cnae)
