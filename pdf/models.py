@@ -89,6 +89,10 @@ class CompetidorPdf:
     oferta_modalidades: list | None = None   # chaves canônicas do catálogo (minerado)
     oferta_comodidades: list | None = None   # texto livre do Wellhub
     oferta_fontes: list | None = None        # ["website", "instagram", "wellhub"]
+    # B3 — gated da praça: analisado (deep) | mapeado (só gate)
+    profundidade: str | None = None
+    place_id: str | None = None
+    endereco: str | None = None
 
 
 @dataclass

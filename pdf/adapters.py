@@ -38,6 +38,10 @@ def _sem_placeholder(v: Any) -> str | None:
     return s
 
 
+def _as_dict(v: Any) -> dict[str, Any]:
+    return v if isinstance(v, dict) else {}
+
+
 def _num(v: Any) -> float | None:
     if v is None:
         return None
@@ -151,8 +155,13 @@ def _map_candidato(row: dict[str, Any], pos: int) -> CandidatoPdf:
 
 
 def _map_competidor(row: dict[str, Any]) -> CompetidorPdf:
-    rating = _num(row.get("rating_oficial") or row.get("rating_geral"))
-    om = row.get("oferta_mapeada") if isinstance(row.get("oferta_mapeada"), dict) else {}
+    rating = _num(row.get("rating_oficial") or row.get("rating_geral") or row.get("rating"))
+    om = _as_dict(row.get("oferta_mapeada"))
+    profundidade = str(row.get("profundidade") or "").strip() or None
+    if profundidade not in ("analisado", "mapeado"):
+        profundidade = "analisado" if (
+            row.get("planos_precos") or row.get("reviews") or om.get("modalidades")
+        ) else profundidade
     return CompetidorPdf(
         nome=str(row.get("nome") or "—"),
         rating=rating,
@@ -165,7 +174,99 @@ def _map_competidor(row: dict[str, Any]) -> CompetidorPdf:
         oferta_modalidades=om.get("modalidades") if isinstance(om.get("modalidades"), list) else None,
         oferta_comodidades=om.get("comodidades") if isinstance(om.get("comodidades"), list) else None,
         oferta_fontes=om.get("fontes") if isinstance(om.get("fontes"), list) else None,
+        profundidade=profundidade,
+        place_id=str(row.get("place_id") or row.get("id") or "").strip() or None,
+        endereco=str(row.get("endereco") or "").strip() or None,
     )
+
+
+def _no_bairro_gated(out: dict[str, Any]) -> list[dict[str, Any]]:
+    aneis = out.get("aneis_competitivos") if isinstance(out.get("aneis_competitivos"), dict) else {}
+    cc = aneis.get("cross_check") if isinstance(aneis, dict) else None
+    nb = (cc or {}).get("no_bairro") if isinstance(cc, dict) else None
+    return [g for g in (nb or []) if isinstance(g, dict)]
+
+
+def merge_competidores_praca(
+    competidores_raw: list | None,
+    out: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """B3: une deep (`competitors_set`) + gated (`cross_check.no_bairro`).
+
+    Todo gated entra no denominador do PDF. Deep preserva payload; gated sem deep
+    vira entrada mínima `profundidade=mapeado`.
+    """
+    out = out if isinstance(out, dict) else {}
+    deep = [c for c in (competidores_raw or []) if isinstance(c, dict)]
+    gated = _no_bairro_gated(out)
+    cov = _as_dict(out.get("cobertura_competitiva"))
+    oferta_por = _as_dict(cov.get("oferta_por_gated"))
+
+    seen: set[str] = set()
+    merged: list[dict[str, Any]] = []
+
+    for c in deep:
+        pid = str(c.get("place_id") or c.get("id") or "").strip()
+        if pid:
+            seen.add(pid)
+        row = dict(c)
+        entry = oferta_por.get(pid) if pid else None
+        if isinstance(entry, dict):
+            row["profundidade"] = entry.get("profundidade") or "analisado"
+            if not row.get("oferta_mapeada") and entry.get("servicos"):
+                row["oferta_mapeada"] = {
+                    "modalidades": entry.get("servicos") or [],
+                    "fontes": entry.get("fontes") or [],
+                }
+        else:
+            row.setdefault("profundidade", "analisado")
+        merged.append(row)
+
+    for g in gated:
+        pid = str(g.get("place_id") or g.get("id") or "").strip()
+        if pid and pid in seen:
+            continue
+        if pid:
+            seen.add(pid)
+        entry = oferta_por.get(pid) if pid else None
+        if not isinstance(entry, dict):
+            entry = {}
+        profundidade = str(
+            entry.get("profundidade")
+            or ("analisado" if g.get("deep") else "mapeado")
+        )
+        om = None
+        if entry.get("servicos"):
+            om = {
+                "modalidades": list(entry.get("servicos") or []),
+                "fontes": list(entry.get("fontes") or []),
+            }
+        merged.append({
+            "place_id": pid or None,
+            "nome": g.get("nome") or entry.get("nome") or "—",
+            "endereco": g.get("endereco"),
+            "rating_oficial": g.get("rating"),
+            "num_avaliacoes": g.get("num_avaliacoes"),
+            "profundidade": profundidade,
+            "oferta_mapeada": om,
+        })
+
+    return merged
+
+
+def resolver_modo_localizacao(
+    candidatos_raw: list | None,
+    out: dict[str, Any] | None,
+) -> str:
+    """B6: sem imóvel no top_3 → prospecção por vias (quando houver)."""
+    out = out if isinstance(out, dict) else {}
+    cands = [c for c in (candidatos_raw or []) if isinstance(c, dict)]
+    if cands:
+        return "imoveis"
+    vias = out.get("melhores_vias_prospeccao")
+    if isinstance(vias, dict) and vias.get("status") == "ok" and (vias.get("top_vias") or []):
+        return "vias_por_fluxo"
+    return "sem_ponto"
 
 
 def _map_market(mc: dict[str, Any] | None) -> MarketContextPdf | None:
@@ -173,8 +274,8 @@ def _map_market(mc: dict[str, Any] | None) -> MarketContextPdf | None:
         return None
     redes = mc.get("principais_redes_concorrentes")
     insights = mc.get("insights_estrategicos")
-    arv = mc.get("arvore_oferta") if isinstance(mc.get("arvore_oferta"), dict) else {}
-    janela_q = arv.get("janela_q") if isinstance(arv.get("janela_q"), dict) else {}
+    arv = _as_dict(mc.get("arvore_oferta"))
+    janela_q = _as_dict(arv.get("janela_q"))
     return MarketContextPdf(
         ticket_mercado=_sem_placeholder(mc.get("ticket_medio_mercado")),
         aluguel_m2=_sem_placeholder(mc.get("aluguel_medio_m2")),
@@ -363,9 +464,14 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
         if isinstance(c, dict)
     ]
 
+    # B3 — praça completa (deep + gated); B6 — modo de localização.
+    competidores_merged = merge_competidores_praca(competidores_raw, out)
+    gated_n = len(_no_bairro_gated(out))
+    lim_comp = max(12, gated_n) if gated_n else 12
     competidores = [
-        _map_competidor(c) for c in competidores_raw[:12] if isinstance(c, dict)
+        _map_competidor(c) for c in competidores_merged[:lim_comp] if isinstance(c, dict)
     ]
+    modo_localizacao = resolver_modo_localizacao(candidatos_raw, out)
 
     bairros = []
     for b in bairros_raw:
@@ -436,9 +542,24 @@ def relatorio_from_api_payload(payload: dict[str, Any]) -> RelatorioPdfModel:
             "panorama": panorama,
             "pico": pico_top,
             "zoneamento": out.get("zoneamento") if isinstance(out.get("zoneamento"), dict) else None,
-            "dores_consolidadas": _agg_dores_consolidadas(competidores_raw),
+            "dores_consolidadas": _agg_dores_consolidadas(competidores_merged or competidores_raw),
             "veredito_oceano": (out.get("posicionamento_estrategico") or {}).get("veredito_posicionamento")
             if isinstance(out.get("posicionamento_estrategico"), dict) else None,
+            # B3+B6 — praça gated + fallback de prospecção por via.
+            "modo_localizacao": modo_localizacao,
+            "gated_n": gated_n or None,
+            "competidores_n": len(competidores),
+            "fluxo_pedestre": out.get("fluxo_pedestre") if isinstance(out.get("fluxo_pedestre"), dict) else None,
+            "melhores_vias_prospeccao": (
+                out.get("melhores_vias_prospeccao")
+                if isinstance(out.get("melhores_vias_prospeccao"), dict)
+                else None
+            ),
+            "cobertura_competitiva": (
+                out.get("cobertura_competitiva")
+                if isinstance(out.get("cobertura_competitiva"), dict)
+                else None
+            ),
         },
     )
 

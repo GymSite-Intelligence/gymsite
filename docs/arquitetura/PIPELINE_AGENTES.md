@@ -45,13 +45,14 @@ GymSitePipeline (Sequential)
 ## 2. Script interno por agente
 
 ### A0 — ContextBuilder · [`a0_context_builder.py`](../../agents/a0_context_builder.py)
-- **Classe / model:** `Agent` (LLM) · gemini-2.5-flash
-- **Tools:** `carregar_market_bundle`, `rodar_deep_research`, `rodar_kimi_research`, `dados_parque_cnpj_para_a0`, `fatos_competicao_local`
-- **Lê:** `input_params` (cidade/bairro/uf) · **Escreve:** `market_context`
-- **Fonte:** Deep Research + Kimi (qualitativo) · CNPJ RFB/Supabase + CNO (quantitativo) · market_bundle (cache) · OSM
-- **Faz:** consolida contexto de mercado (ticket, aluguel, tendência, redes, parque CNPJ/CNO). **Aqui mora a árvore 2×2 do parque** (`dados_parque_cnpj_para_a0` → `arvore_2x2_parque`).
-- **Callback (jun/2026):** `after_agent_callback` `_a0_override_cnpj_numeros` — re-roda a tool determinística e **sobrescreve todo número CNPJ** no `market_context` + pluga `arvore_2x2_parque`. O LLM produz a prosa qualitativa; **número = sempre da tool (banco)**, nunca da boca do LLM. Fecha o último "LLM produz dado" do pipeline.
-- **Relatório:** §5 (Cobertura Deep Research), §8 (Novos Entrantes CNPJ).
+- **Classe / model:** `Agent` (LLM) · gemini-3.6-flash (NVIDIA via `PIPELINE_LLM_PROVIDER`)
+- **Tools:** `carregar_market_bundle`, `dados_parque_cnpj_para_a0`, `fatos_competicao_local` (Deep Research/Kimi removidos — Act-on bundle-only)
+- **Lê:** `input_params` (cidade/bairro/uf) · **Escreve:** `market_context`, `a0_tool_snapshots` (payloads completos das tools)
+- **Fonte:** market_bundle (qualitativo) · CNPJ RFB/Supabase + CNO (quantitativo) · OSM (`fatos_competicao_local`)
+- **Faz:** consolida contexto de mercado (ticket, tendência, redes, parque CNPJ/CNO). **Aqui mora a árvore 2×2 do parque** (`dados_parque_cnpj_para_a0` → `arvore_2x2_parque`).
+- **Slim prompt (ago/2026):** `after_tool_callback` `_a0_after_tool_slim` — grava tool response **completa** em `a0_tool_snapshots` e devolve versão slim (`tools/context_slimmer.py`) ao LLM. State/`market_context` final permanece completo (A4/A6 leem daqui). Loop/cap: `before_model_callback` (máx. 12 turns / tool repetida 3×) + `on_model_error_callback` fail-soft em estouro de contexto (NVIDIA 131k).
+- **Callback:** `after_agent_callback` `_a0_override_cnpj_numeros` — preferência por snapshot completo; fallback re-roda a tool e **sobrescreve todo número CNPJ** no `market_context` + pluga `arvore_2x2_parque`. Número = tool/banco, nunca LLM.
+- **Relatório:** §5 (contexto mercado), §8 (Novos Entrantes CNPJ).
 
 ### A1 — GeoScout · [`a1_geoscout.py`](../../agents/a1_geoscout.py)
 - **Classe / model:** `BaseAgent` (determinístico) · —
@@ -80,7 +81,7 @@ GymSitePipeline (Sequential)
 - **Relatório:** §6.1 (por bairro), §11 (Distribuição Geográfica).
 
 ### A3b — CompetitorAnalysis · [`a3b_competitor_analysis.py`](../../agents/a3b_competitor_analysis.py) — **determinizado + FUNDIDO com A3c (jun/2026)**
-- **Classe / model:** `BaseAgent` (determinístico) · — *(era `Agent` gemini-2.5-flash-lite)*
+- **Classe / model:** `BaseAgent` (determinístico) · — *(era `Agent` gemini-3.6-flash)*
 - **Macros:** `analisar_concorrentes_completo` (agrega) + `mapear_oferta_competidores_completo` (oferta site+IG via SearchAPI)
 - **Lê:** `concorrentes_brutos`, `market_context`, `input_params` · **Escreve:** `inteligencia_competitiva` **+ `oferta_concorrentes`**
 - **Faz:** (1) macro calcula gaps/dores/saturação/`score_concorrencia`; (2) grava envelope verbatim + filtra bairro/tipo/CLOSED (`_filtrar_envelope`); (3) sintetiza `posicionamento_recomendado`/`resumo_executivo` por template; (4) **FUSÃO A3c:** roda a oferta e **mescla as modalidades em `servicos_oferecidos` de cada concorrente** (`_mesclar_servicos_na_oferta`).
@@ -108,7 +109,7 @@ GymSitePipeline (Sequential)
 - **Faz:** decisor #1 + canal + script de abordagem.
 
 ### A6 — ReportConsolidator · [`a6_report_consolidator.py`](../../agents/a6_report_consolidator.py)
-- **Classe / model:** `Agent` (LLM) · gemini-2.5-flash · **tools=[]** (só narra)
+- **Classe / model:** `Agent` (LLM) · gemini-3.6-flash · **tools=[]** (só narra)
 - **Lê:** `market_context`, `analise_demografica`, `inteligencia_competitiva`, `oferta_concorrentes`, `analise_financeira_pronto`, `candidatos_geoscout_pronto`, `contato_decisor` · **Escreve:** `relatorio_md`
 - **Callbacks:**
   - `before_agent` `_a6_precompute_callback` → pré-computa `bairros_alternativos_pronto`, `entrantes_cnpj_pronto`, `obras_cno_pronto`, **`fluxo_pedestre`** (jul/2026 — ver §8) (seções **PRÉ-COMPUTADAS** = determinísticas, LLM usa literal)
@@ -119,7 +120,7 @@ GymSitePipeline (Sequential)
 - **Relatório:** §1, Top3 enriched (carimbo MRLR + payback estimado), §16, `fluxo_pedestre`.
 
 ### A7 — MarketResearch · [`a7_market_research.py`](../../agents/a7_market_research.py) — *auxiliar (chat), NÃO pipeline*
-- **Classe / model:** `Agent` (LLM) · gemini-2.5-flash
+- **Classe / model:** `Agent` (LLM) · gemini-3.6-flash
 - **Tool:** `google_search` (Grounding oficial)
 - **Lê:** — · **Escreve:** `market_research_result`
 - **Fonte:** Google Search Grounding (URLs reais, tempo real)
@@ -149,7 +150,7 @@ GymSitePipeline (Sequential)
 - **Relatório:** §7 (Posicionamento Recomendado) + seção PDF **Modelo de Negócio Adequado**.
 
 ### A3 — CompetitorIntel · [`a3_competitor_intel.py`](../../agents/a3_competitor_intel.py) — **LEGADO**
-- `Agent` (LLM) gemini-2.5-flash, 8 tools soltas. Monólito que estourava AFC=10 (`MALFORMED_FUNCTION_CALL`). **Substituído** por A3a/A3b/A3c. Mantido só p/ referência.
+- `Agent` (LLM) gemini-3.6-flash, 8 tools soltas. Monólito que estourava AFC=10 (`MALFORMED_FUNCTION_CALL`). **Substituído** por A3a/A3b/A3c. Mantido só p/ referência.
 
 ---
 
@@ -193,6 +194,7 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 | `input_params` | entrypoint | A0, A1, A2, A3a, A3b, A4, A6, A9 |
 | `demanda_futura` | entrypoint (`api.py` enrichment) | A6, A9 |
 | `market_context` | A0 | A1, A2, A3a, A3b, A4, A6, A9 |
+| `a0_tool_snapshots` | A0 (`after_tool`) | A0 after_agent (CNPJ/CNO completo) |
 | `candidatos_geoscout(_pronto)` | A1 | A4, A6 (ambas as chaves; `_pronto` preferido) |
 | `analise_demografica` | A2 | A6 |
 | `concorrentes_brutos` | A3a | A3b, A6, A9 |
@@ -202,6 +204,8 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 | `analise_financeira_pronto` | A4 | A6 (números) |
 | `analise_financeira` | A4 | A9 (alertas fiscais / piso) |
 | `demografia_bairro` | A6 (bridge after_agent) | A9 (Brilliant Basics público) |
+| `cobertura_competitiva` | A6 (B1 pós–cross_check) | A9 (mapa_servicos + gaps_validados B2) |
+| `zoneamento` | A6 (cascata ZEUS: CKAN → OSM proxy → indisponível) | PDF Weasy § zoneamento; resumo A6 |
 | `contato_decisor` | A5 [fora] | A6, A9 (opcional — tratam ausência) |
 | `relatorio_md` | A6 | A9, A8 |
 | `relatorio_posicionamento(_md)` | A9 | persistência / PDF |
@@ -252,19 +256,23 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 | Demografia | IBGE Censo 2022 / BQ | CKAN 2010, nominatim | LLM inventando número |
 | Parque CNPJ/CNO | RFB/Supabase determinístico | — | LLM (A0 override fecha) |
 | Fluxo pedestre | OSMnx malha + Overpass POI | **nenhum grid sintético** | Score fake / fallback heurístico |
+| Zoneamento (ZEUS) | CKAN municipal (`zoneamento_municipio`) | OSM `landuse` (proxy → `INDIVIDUALIZAR`) | Assumir `PERMISSIVO` sem malha; omitir bloco quando indisponível |
 
 **Princípio:** dado numérico = **tool determinística** ou API paga estruturada (SearchAPI). LLM **narra** (A6/A9) ou **refina** texto já coletado (ex.: `categoria_dor` pós-SearchAPI; planos A3b). Fetch + card de review = SearchAPI + código, não LLM.
+
+**ZEUS (ago/2026):** sem adapter CKAN → `proxy_osm` (rótulo `INDIVIDUALIZAR` + alerta prefeitura) ou `indisponivel` (`compatibilidade=None`). PERMISSIVO só com malha oficial (ex.: Fortaleza fora de zona especial = uso geral). Código: `tools/zoneamento_tools.py`.
 
 ---
 
 ## 8. Fluxo pedestre (jul/2026) — acoplamento e dívidas
 
-**Spec:** [`agents/specs/SPEC_FLUXO_PEDESTRE.md`](../../agents/specs/SPEC_FLUXO_PEDESTRE.md) · **Código:** `tools/space_syntax.py`, `tools/fluxo_pedestre_tools.py`, cache `spatial_flow_cache`.
+**Spec:** [`agents/specs/SPEC_FLUXO_PEDESTRE.md`](../../agents/specs/SPEC_FLUXO_PEDESTRE.md) · **Código:** `tools/space_syntax.py`, `tools/fluxo_pedestre_tools.py`, `tools/vias_geometry_tools.py`, cache `spatial_flow_cache`.
 
 | Onde roda | O quê | Input POI | Latência típica |
 |---|---|---|---|
 | **A1** `anchoring_tools.py` L421-429 | `enrich_candidato_fluxo` nos **top 3** | Overpass (não reusa concorrentes A3a ainda) | **9+ min** cold OSMnx × até 3 coords distintas |
 | **A6** `_a6_precompute_callback` | `build_fluxo_pedestre_block` no candidato #1 ou centróide bairro | `competidores` do state A3b | cache hit se mesma coord; senão +1 cold |
+| **A6** | `top_vias_por_fluxo` → `melhores_vias_prospeccao` (+ `mapa_svg` / `coords`) | mesmo GeoJSON do motor (sem 2ª osmnx) | ~ms após cache |
 | **API** | `GET /api/relatorios/{id}/fluxo-pedestre` | lê persistido + cache | fora do pipeline |
 
 **Conflitos com §7 (auditados jul/2026):**

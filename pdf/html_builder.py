@@ -265,9 +265,10 @@ table.d thead { display:table-header-group; }
 
 {% if competidores %}
 <div class="sec">Inteligência Competitiva</div>
-<table class="d"><tr><th>Concorrente</th><th>Rating</th><th>Avaliações</th><th>Bairro</th><th>24h</th>{% if competidores_tem_tier %}<th>Tier agregador</th>{% endif %}</tr>
-{% for c in competidores %}<tr><td>{{ c.nome }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td>{% if competidores_tem_tier %}<td>{{ c.tier }}</td>{% endif %}</tr>{% endfor %}
+<table class="d"><tr><th>Concorrente</th><th>Prof.</th><th>Rating</th><th>Avaliações</th><th>Bairro</th><th>24h</th>{% if competidores_tem_tier %}<th>Tier agregador</th>{% endif %}</tr>
+{% for c in competidores %}<tr><td>{{ c.nome }}</td><td style="font-size:7.5pt; color:#64748B;">{{ c.profundidade }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td>{% if competidores_tem_tier %}<td>{{ c.tier }}</td>{% endif %}</tr>{% endfor %}
 </table>
+{% if competidores_tem_mapeado %}<div class="note"><strong>analisado</strong> = reviews/oferta em profundidade · <strong>mapeado</strong> = no gate do bairro (contagem autoritativa), sem deep dive. Todos entram no denominador da praça.</div>{% endif %}
 {% if competidores_tem_tier %}<div class="note">Rating adicional e <strong>tier</strong> = menor plano corporativo que dá acesso ao concorrente no agregador (Wellhub/similares) — sinal de posicionamento, <strong>não é mensalidade de balcão</strong>.</div>{% endif %}
 {% if narrativa.competitiva %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.competitiva }}</div>{% endif %}
 {% if pico %}
@@ -283,6 +284,38 @@ table.d thead { display:table-header-group; }
 {% for p in planos %}<tr><td>{{ p.academia }}</td><td>{{ p.plano }}</td><td>{{ p.preco }}</td><td>{{ p.fidelidade }}</td><td style="font-size:8pt;">{{ p.inclui }}</td></tr>{% endfor %}
 </table>
 <div class="note">Planos públicos coletados via busca web por academia — a coleta NÃO distingue fonte: linhas marcadas <strong>[agregador]</strong> são o tier corporativo (Wellhub/similares), <strong>não mensalidade de balcão</strong>; as demais vêm de site/anúncio da própria academia. Referência para o posicionamento tarifário vs concorrência.</div>{% endif %}
+
+{% if passantes %}
+<div class="sec">Passantes — fluxo estrutural</div>
+{% if passantes.indisponivel %}
+<div class="alert" style="background:#F8FAFC; border-color:#E2E8F0;"><div style="font-size:8.5pt; color:#475569;">Fluxo estrutural indisponível — malha OSM não carregou para este ponto (timeout ou área sem rede walk).</div></div>
+{% else %}
+<div class="duo" style="margin-bottom:10px;">
+  <div class="c" style="border-left:4px solid {{ passantes.cor }};"><div class="l">Score no ponto analisado</div><div class="v" style="color:{{ passantes.cor }};">{{ passantes.score }}</div>{% if passantes.segmento %}<div style="font-size:8pt; color:#64748B;">Segmento: {{ passantes.segmento }}</div>{% endif %}</div>
+  <div class="c"><div class="l">Confiança · malha</div><div class="v">{{ passantes.confianca }}</div>{% if passantes.segments_n %}<div style="font-size:8pt; color:#64748B;">{{ passantes.segments_n }} segmentos · flow médio {{ passantes.mean_flow }}</div>{% endif %}</div>
+</div>
+{% if passantes.top %}
+<table class="d"><tr><th>#</th><th>Artéria (segmento OSM)</th><th>Flow (0–1)</th></tr>
+{% for t in passantes.top %}<tr><td>{{ t.rank }}</td><td>{{ t.nome }}</td><td>{{ t.flow }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% if passantes.carimbo %}<div class="note">{{ passantes.carimbo }}</div>{% endif %}
+<div class="note">Score do ponto = segmento OSM mais próximo do candidato/centróide (não confundir com a artéria top-1 de prospecção). Fonte: OSM · sintaxe espacial angular · © OpenStreetMap contributors.</div>
+{% endif %}{% endif %}
+
+{% if top_vias %}
+<div class="sec">{% if top_vias.modo_vias %}TOP vias para prospecção{% else %}Artérias de maior fluxo{% endif %}</div>
+{% if top_vias.modo_vias %}
+<div class="alert" style="background:#F0FDF4; border-color:#BBF7D0; margin-bottom:10px;"><div style="font-size:8.5pt; color:#14532D;">Nenhum imóvel anunciado na especificação neste bairro. Priorize as vias abaixo por fluxo estrutural de pedestres e valide <strong>in loco</strong> a disponibilidade de ponto comercial.</div></div>
+{% endif %}
+{% if top_vias.mapa_svg %}<div style="margin-bottom:10px;">{{ top_vias.mapa_svg | safe }}<div class="note" style="margin-top:2px;">Mapa das top vias · vermelho = maior fluxo · ponto = centróide/candidato · © OpenStreetMap.</div></div>{% endif %}
+<table class="d"><tr><th>#</th><th>Via</th><th>Tipo</th><th>Fluxo (0–100)</th><th>Concorrentes no trecho</th></tr>
+{% for v in top_vias.vias %}<tr><td>{{ v.rank }}</td><td><strong>{{ v.nome }}</strong></td><td>{{ v.tipo }}</td><td>{{ v.fluxo }}</td><td>{{ v.concorrentes }}</td></tr>{% endfor %}
+</table>
+{% if top_vias.recomendacao %}<div class="note" style="border-left:3px solid #0E5C66; padding-left:8px;">{{ top_vias.recomendacao }}</div>{% endif %}
+{% if top_vias.carimbo %}<div class="note">{{ top_vias.carimbo }}</div>{% endif %}
+<div class="note">Agregado por nome de via (máx. flow dos segmentos OSM). Confiança: <strong>{{ top_vias.confianca }}</strong>. Imóvel no relatório é referência de aluguel — a prioridade de prospecção, neste modo, é por via.</div>
+{% endif %}
 
 {% if oferta_mapeada %}
 <div class="sec">Oferta mapeada por concorrente</div>
@@ -464,16 +497,20 @@ table.d thead { display:table-header-group; }
 {% if zoneamento.mapa_svg %}<div style="margin-bottom:10px;">{{ zoneamento.mapa_svg | safe }}<div class="note" style="margin-top:2px;">Polígonos das zonas especiais (Plano Diretor) no entorno · verde = comercial/permissivo · vermelho = ZEIS/ZEA restritivo · âmbar = ZEPH/patrimônio · ponto = candidato.</div></div>{% endif %}
 <div class="duo" style="margin-bottom:10px;">
   <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Zona identificada</div><div class="v">{{ zoneamento.zona }}</div></div>
-  <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Compatibilidade — CNAE {{ zoneamento.cnae }}</div><div class="v" style="color:{{ zoneamento.cor }};">{{ zoneamento.compat }}</div><div style="font-size:8pt; color:#64748B;">Subgrupo {{ zoneamento.subgrupo }} · Classe {{ zoneamento.classe }}</div></div>
+  <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Compatibilidade — CNAE {{ zoneamento.cnae }}</div><div class="v" style="color:{{ zoneamento.cor }};">{{ zoneamento.compat }}</div>{% if zoneamento.oficial %}<div style="font-size:8pt; color:#64748B;">Subgrupo {{ zoneamento.subgrupo }} · Classe {{ zoneamento.classe }}</div>{% endif %}</div>
 </div>
+{% if zoneamento.oficial %}
 <table class="d"><tr><th>Parâmetro</th><th>Valor</th><th>Impacto</th></tr>
   <tr><td>Compatibilidade (LUOS)</td><td><span class="pill {{ zoneamento.compat_cls }}">{{ zoneamento.compat_raw }}</span></td><td style="font-size:8pt;">{{ zoneamento.descricao }}</td></tr>
   {% if zoneamento.ia %}<tr><td>Índice de aproveitamento máx.</td><td>{{ zoneamento.ia }}</td><td style="font-size:8pt;">Potencial de área construída</td></tr>{% endif %}
   {% if zoneamento.tx %}<tr><td>Taxa de ocupação</td><td>{{ zoneamento.tx }}%</td><td style="font-size:8pt;">Percentual do terreno construível</td></tr>{% endif %}
   {% if zoneamento.alt %}<tr><td>Altura máxima</td><td>{{ zoneamento.alt }} m</td><td style="font-size:8pt;">Limita pavimentos</td></tr>{% endif %}
 </table>
+{% else %}
+<div style="font-size:8.5pt; color:#334155; line-height:1.5; margin-bottom:8px;">{{ zoneamento.descricao }}</div>
+{% endif %}
 {% if zoneamento.alerta %}<div class="alert" style="background:#FFFBEB; border-color:#FCD34D; margin-top:8px;"><div style="font-weight:bold; color:#92400E; font-size:9pt;">Atenção</div><div style="font-size:8.5pt; color:#78350F; line-height:1.5;">{{ zoneamento.alerta }}</div></div>{% endif %}
-<div class="note">Fonte: {{ zoneamento.fonte }} · Plano Diretor / LUOS 236/2017. Camada de viabilidade regulatória — valida se a zona permite academia antes do financeiro.</div>
+<div class="note">Fonte: {{ zoneamento.fonte }}{% if zoneamento.oficial %} · Plano Diretor / LUOS{% endif %}. {{ zoneamento.nota_fonte }}</div>
 </div>{% endif %}
 
 {% if candidatos or candidatos_descartados %}
@@ -530,6 +567,10 @@ def _int(v) -> str:
         return "—"
 
 
+def _as_dict(v: Any) -> dict[str, Any]:
+    return v if isinstance(v, dict) else {}
+
+
 def _faixas_humanas(faixas: list | None) -> str:
     if not faixas:
         return ""
@@ -538,6 +579,133 @@ def _faixas_humanas(faixas: list | None) -> str:
         nome = _NOME_FAIXA.get(str(f), str(f))
         parts.append(f"{f} · {nome}")
     return "; ".join(parts)
+
+
+def _passantes_ctx(meta: dict[str, Any]) -> dict[str, Any] | None:
+    """B4 — bloco Passantes a partir de metadata.fluxo_pedestre."""
+    fp = meta.get("fluxo_pedestre")
+    if not isinstance(fp, dict) or not fp:
+        return None
+    if str(fp.get("confianca") or "").lower() == "indisponivel":
+        return {"indisponivel": True}
+
+    score_n = None
+    try:
+        if fp.get("fluxo_score") is not None:
+            score_n = float(fp["fluxo_score"])
+    except (TypeError, ValueError):
+        score_n = None
+    if score_n is None:
+        try:
+            if fp.get("fluxo_norm") is not None:
+                score_n = float(fp["fluxo_norm"]) * 100.0
+        except (TypeError, ValueError):
+            score_n = None
+
+    if score_n is not None and score_n >= 70:
+        cor = "#16A34A"
+    elif score_n is not None and score_n >= 40:
+        cor = "#D97706"
+    else:
+        cor = "#64748B"
+
+    top = []
+    for i, seg in enumerate((fp.get("top_segments") or [])[:5], 1):
+        if not isinstance(seg, dict):
+            continue
+        nome = seg.get("street_name") or seg.get("name") or f"Segmento {i}"
+        fs = seg.get("flow_score")
+        if fs is None:
+            flow = "—"
+        else:
+            try:
+                flow = f"{float(fs):.2f}"
+            except (TypeError, ValueError):
+                flow = "—"
+        top.append({"rank": i, "nome": str(nome)[:52], "flow": flow})
+
+    stats = _as_dict(fp.get("statistics"))
+    carimbo = _as_dict(fp.get("carimbo"))
+    carimbo_txt = None
+    if carimbo:
+        bits = []
+        if carimbo.get("valor") is not None:
+            bits.append(f"valor {carimbo.get('valor')}")
+        if carimbo.get("base"):
+            bits.append(str(carimbo["base"]))
+        if carimbo.get("fonte"):
+            bits.append(str(carimbo["fonte"]))
+        if carimbo.get("janela"):
+            bits.append(str(carimbo["janela"]))
+        carimbo_txt = " · ".join(bits) if bits else None
+
+    mean_flow = stats.get("mean_flow_score")
+    try:
+        mean_txt = f"{float(mean_flow):.2f}" if mean_flow is not None else None
+    except (TypeError, ValueError):
+        mean_txt = None
+
+    total_segments = stats.get("total_segments")
+    return {
+        "indisponivel": False,
+        "score": f"{int(round(score_n))}/100" if score_n is not None else "—",
+        "cor": cor,
+        "segmento": str(fp.get("fluxo_segmento") or "").strip()[:60] or None,
+        "confianca": str(fp.get("confianca") or "—"),
+        "top": top,
+        "carimbo": carimbo_txt,
+        "segments_n": _int(total_segments) if total_segments is not None else None,
+        "mean_flow": mean_txt,
+    }
+
+
+def _top_vias_ctx(meta: dict[str, Any]) -> dict[str, Any] | None:
+    """B5 — TOP vias a partir de metadata.melhores_vias_prospeccao."""
+    mv = meta.get("melhores_vias_prospeccao")
+    if not isinstance(mv, dict) or mv.get("status") != "ok":
+        return None
+    raw = [v for v in (mv.get("top_vias") or []) if isinstance(v, dict)]
+    if not raw:
+        return None
+
+    vias = []
+    for i, v in enumerate(raw[:3], 1):
+        fluxo = v.get("fluxo_score")
+        if fluxo is None:
+            fluxo_txt = "—"
+        else:
+            try:
+                fluxo_txt = str(int(round(float(fluxo))))
+            except (TypeError, ValueError):
+                fluxo_txt = "—"
+        vias.append({
+            "rank": i,
+            "nome": str(v.get("nome_via") or "—")[:48],
+            "tipo": str(v.get("tipo_via") or "rua"),
+            "fluxo": fluxo_txt,
+            "concorrentes": v.get("concorrentes_no_trecho", 0),
+        })
+
+    carimbo = None
+    c0 = raw[0].get("fluxo_carimbo") if isinstance(raw[0].get("fluxo_carimbo"), dict) else {}
+    if c0:
+        bits = [str(x) for x in (c0.get("fonte"), c0.get("janela"), c0.get("metodo")) if x]
+        carimbo = " · ".join(bits) if bits else None
+
+    rec = mv.get("recomendacao")
+    if isinstance(rec, str) and rec.strip():
+        rec_txt = rec.strip()[:400]
+    else:
+        rec_txt = None
+
+    return {
+        "vias": vias,
+        "confianca": str(mv.get("confianca") or "—"),
+        "recomendacao": rec_txt,
+        "carimbo": carimbo,
+        "modo_vias": meta.get("modo_localizacao") == "vias_por_fluxo",
+        "mapa_svg": mv.get("mapa_svg") if isinstance(mv.get("mapa_svg"), str) and "<svg" in mv.get("mapa_svg", "") else None,
+    }
 
 
 def _absorcao_leitura_blocos(raw: dict[str, Any]) -> list[dict[str, str]]:
@@ -1359,8 +1527,13 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "aval": _int(c.num_avaliacoes) if c.num_avaliacoes else "—",
         "bairro": _limpar_bairro(c.bairro), "h24": "sim" if c.tem_24h else "—",
         "tier": _tier_txt(c.tier_agregador),
+        "profundidade": (
+            "analisado" if (c.profundidade or "") == "analisado"
+            else ("mapeado" if (c.profundidade or "") == "mapeado" else "—")
+        ),
     } for c in (model.competidores or [])]
     tem_tier = any(x["tier"] != "—" for x in competidores)
+    tem_mapeado = any(x["profundidade"] == "mapeado" for x in competidores)
 
     # Seção "Oferta mapeada por concorrente" (contrato Wellhub + site/IG): serviços
     # ENTREGUES por academia com fonte — substrato visível do ERRC/gaps.
@@ -1450,13 +1623,40 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
 
     zm = meta.get("zoneamento") if isinstance(meta.get("zoneamento"), dict) else None
     zoneamento = None
-    if zm and zm.get("compatibilidade"):
-        _zcor = {"PERMISSIVO": "#16A34A", "CONDICIONADO": "#D97706", "RESTRITO": "#DC2626"}
+    _zst = (zm.get("status") if isinstance(zm, dict) else None) or ""
+    _zshow = _zst in ("ok", "fora_de_zona", "proxy_osm", "indisponivel") or (
+        isinstance(zm, dict) and bool(zm.get("compatibilidade"))
+    )
+    if zm and _zshow:
+        _zcor = {
+            "PERMISSIVO": "#16A34A", "CONDICIONADO": "#D97706", "RESTRITO": "#DC2626",
+            "INDIVIDUALIZAR": "#D97706",
+        }
+        _comp = zm.get("compatibilidade")
+        _oficial = _comp in ("PERMISSIVO", "CONDICIONADO", "RESTRITO") and _zst in (
+            "ok", "fora_de_zona", "",
+        )
+        if _comp is None:
+            _compat_lbl = "INDISPONÍVEL"
+            _zona_lbl = "Não digitalizado · validar na prefeitura"
+            _fonte = "sem fonte oficial na cascata ZEUS"
+            _nota = "Não se assume permissividade — avaliar junto à prefeitura do município."
+        elif _comp == "INDIVIDUALIZAR":
+            _uso = zm.get("uso_predominante_osm") or "—"
+            _compat_lbl = "INDIVIDUALIZAR"
+            _zona_lbl = f"Proxy OSM · {_uso}"
+            _fonte = zm.get("fonte_dados") or "OSM_landuse_proxy"
+            _nota = "Sinal de uso do solo (OSM), não zoneamento legal — avaliar junto à prefeitura."
+        else:
+            _compat_lbl = _comp
+            _zona_lbl = f"{zm.get('zona_sigla') or '—'} · {zm.get('nome_geo') or '—'}"
+            _fonte = zm.get("fonte_dados") or "CKAN"
+            _nota = "Camada de viabilidade regulatória — valida se a zona permite academia antes do financeiro."
         zoneamento = {
-            "zona": f"{zm.get('zona_sigla') or '—'} · {zm.get('nome_geo') or '—'}",
-            "compat": zm.get("compatibilidade"),
-            "cor": _zcor.get(zm.get("compatibilidade"), "#0E5C66"),
-            "compat_raw": zm.get("compat_raw") or "—",
+            "zona": _zona_lbl,
+            "compat": _compat_lbl,
+            "cor": _zcor.get(_comp or "", "#64748B"),
+            "compat_raw": zm.get("compat_raw") or ("—" if _comp is None else "IND"),
             "compat_cls": {"A": "ok", "P": "mid"}.get(str(zm.get("compat_raw") or ""), "no"),
             "subgrupo": zm.get("subgrupo") or "SE", "classe": zm.get("classe") or 1,
             "descricao": zm.get("descricao") or "",
@@ -1464,7 +1664,10 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "restricoes": [str(r) for r in (zm.get("restricoes") or [])][:4],
             "alerta": zm.get("alerta"),
             "mapa_svg": zm.get("mapa_svg"),
-            "fonte": zm.get("fonte_dados") or "CKAN", "cnae": zm.get("cnae") or "9313-1/00",
+            "fonte": _fonte,
+            "cnae": zm.get("cnae") or "9313-1/00",
+            "oficial": _oficial,
+            "nota_fonte": _nota,
         }
 
     demanda = None
@@ -1801,10 +2004,13 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "cenarios_tem_fiscal": cenarios_tem_fiscal, "ocupacao_alertas": ocupacao_alertas,
         "zona": zona, "alertas_ff": alertas_ff,
         "competidores": competidores, "competidores_tem_tier": tem_tier,
+        "competidores_tem_mapeado": tem_mapeado,
         "oferta_mapeada": oferta_mapeada,
         "planos": planos[:12],
         "ticket_segmentos": _ticket_segmentos(model.competidores),
         "dores_quadro": _dores_quadro(meta.get("dores_consolidadas")), "pico": meta.get("pico"),
+        "passantes": _passantes_ctx(meta),
+        "top_vias": _top_vias_ctx(meta),
         "aneis": _aneis(meta.get("aneis_competitivos") or {}),
         "cobertura": _cobertura(_cob) if isinstance(_cob, dict) else None,
         "obras": _obras(_obr) if isinstance(_obr, dict) else None,

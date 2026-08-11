@@ -48,6 +48,38 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     # Matriz demografia × saturação → modelo (spec 2026-08-07)
     "matriz_n_per_10k_baixo":        _p(2.0, "N/10k < limiar = densidade competitiva baixa", "matriz_demo_saturacao", "acad/10k_hab", "calibracao", "2026-08-07"),
     "matriz_n_per_10k_alto":         _p(4.0, "N/10k ≥ limiar = saturação geral / guerra", "matriz_demo_saturacao", "acad/10k_hab", "calibracao", "2026-08-07"),
+    "genero_diff_limiar_pp":         _p(8.0, "diff % mulheres−homens < limiar → misto; ≥ limiar → lado majoritário (faixa-alvo)", "genero_estrategia", "pp", "calibracao", "2026-08-10"),
+    # B1+B2 — cobertura competitiva / gaps universais (A6→A9)
+    "limiar_cobertura_gap": _p(
+        0.60,
+        "GymSite B2: n_com_oferta/gated_n < limiar → gap universal = artefato_cobertura (não ERRC)",
+        "limiar_cobertura_oferta",
+        "fração",
+        "calibracao",
+        "2026-08-11",
+    ),
+    "servicos_universais": _p(
+        [
+            "Musculação",
+            "Spinning",
+            "Treino funcional/HIIT",
+            "Personal (PT)",
+            "Yoga/Pilates",
+        ],
+        "GymSite B2: serviços quase-universais — gap só é real se amostra de oferta ≥ limiar",
+        "catalogo_servicos_universais",
+        "lista",
+        "calibracao",
+        "2026-08-11",
+    ),
+    "servicos_nicho_gap": _p(
+        ["Natação/Hidro", "Crossfit", "Aulas/espaço kids"],
+        "GymSite B2: nichos — gap sempre candidato a CRIAR (confiança média)",
+        "catalogo_servicos_nicho",
+        "lista",
+        "calibracao",
+        "2026-08-11",
+    ),
     "matriz_premium_min_armadilha":  _p(2, "≥2 Premium no polígono + alta renda = Armadilha", "matriz_demo_saturacao", "concorrentes", "calibracao", "2026-08-07"),
     "matriz_rating_fraco_max":       _p(4.0, "rating médio < limiar = oferta fraca (Oceano com N>0)", "matriz_demo_saturacao", "estrelas", "calibracao", "2026-08-07"),
     "matriz_ticket_low_max":         _p(150.0, "ticket ≤ limiar → tier low", "matriz_demo_saturacao", "BRL/mês", "calibracao", "2026-08-07"),
@@ -390,6 +422,16 @@ def param(nome: str) -> float:
 def param_int(nome: str) -> int:
     """Valor inteiro do parâmetro (limiares discretos: meses, pessoas, avaliações)."""
     return int(round(param(nome)))
+
+
+def param_list(nome: str) -> list:
+    """Valor lista do parâmetro (override Supabase > default). Aceita list ou 'a|b|c'."""
+    v = param_meta(nome)["valor"]
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if str(x).strip()]
+    if isinstance(v, str):
+        return [x.strip() for x in v.split("|") if x.strip()]
+    raise TypeError(f"parâmetro {nome!r} não é lista (got {type(v).__name__})")
 
 
 def param_por_modelo(prefixo: str) -> dict[str, float]:

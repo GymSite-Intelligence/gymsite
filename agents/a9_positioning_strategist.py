@@ -205,26 +205,37 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
             logger.warning("A9 alertas fiscais falharam", exc_info=True, extra={"agent": "A9"})
         # GAPs determinísticos: o PDF/relatório lê gaps_identificados (output estruturado);
         # o LLM chutava genérico (Nutrição/Recovery/Silver). Sobrepõe pelo dado real da praça.
-        gaps_reais = _gaps_reais(state)
-        if gaps_reais is not None:
-            llm_gaps = parsed.get("gaps_identificados")
-            if llm_gaps:
-                parsed["gaps_identificados_llm"] = llm_gaps
-            parsed["gaps_identificados"] = [
-                f"{g} — nenhum concorrente da praça anuncia (oportunidade de CRIAR)" for g in gaps_reais
-            ] if gaps_reais else ["Mercado coberto nos serviços-núcleo — foco em AUMENTAR/REDUZIR (qualidade/preço), não em CRIAR"]
-            parsed["fonte_gaps"] = "deterministico_oferta_concorrentes (planos+IG)"
+        # B1+B2: mapa + gaps via cobertura_competitiva (ponto único).
+        try:
+            from tools.cobertura_competitiva import aplicar_cobertura_no_posicionamento
+
+            aplicar_cobertura_no_posicionamento(state, parsed)
+        except Exception:
+            logger.warning("A9 cobertura override falhou", exc_info=True, extra={"agent": "A9"})
+            gaps_reais = _gaps_reais(state)
+            if gaps_reais is not None:
+                llm_gaps = parsed.get("gaps_identificados")
+                if llm_gaps:
+                    parsed["gaps_identificados_llm"] = llm_gaps
+                parsed["gaps_identificados"] = [
+                    f"{g} — nenhum concorrente da praça anuncia (oportunidade de CRIAR)" for g in gaps_reais
+                ] if gaps_reais else ["Mercado coberto nos serviços-núcleo — foco em AUMENTAR/REDUZIR (qualidade/preço), não em CRIAR"]
+                parsed["fonte_gaps"] = "deterministico_oferta_concorrentes (planos+IG)"
         vd = hr.get("veredito_posicionamento")
         if vd and vd != "INDETERMINADO":
-            llm_v = parsed.get("veredito_posicionamento")
-            if llm_v and llm_v != vd:
-                parsed["veredito_posicionamento_llm"] = llm_v
-            parsed["veredito_posicionamento"] = vd
-            parsed["fonte_veredito"] = "deterministico_headroom_renda (IBGE Censo 2022)"
-            logger.info(
-                "A9 veredito determinístico: %s (LLM dizia %s) headroom_ratio=%s",
-                vd, llm_v, hr.get("headroom_ratio"), extra={"agent": "A9"},
-            )
+            # RN-A9-014/015: A4 sem modelo não cede ao headroom.
+            if parsed.get("fonte_veredito") == "a4_sem_modelo_viavel":
+                pass
+            else:
+                llm_v = parsed.get("veredito_posicionamento")
+                if llm_v and llm_v != vd:
+                    parsed["veredito_posicionamento_llm"] = llm_v
+                parsed["veredito_posicionamento"] = vd
+                parsed["fonte_veredito"] = "deterministico_headroom_renda (IBGE Censo 2022)"
+                logger.info(
+                    "A9 veredito determinístico: %s (LLM dizia %s) headroom_ratio=%s",
+                    vd, llm_v, hr.get("headroom_ratio"), extra={"agent": "A9"},
+                )
     except Exception:
         logger.warning("A9 override determinístico falhou", exc_info=True, extra={"agent": "A9"})
 
@@ -392,13 +403,21 @@ def _dores_da_praca(state: dict) -> set[str]:
 
 
 def _publico_dominante(state: dict) -> tuple[str, int] | None:
-    """(faixa dominante, %feminino da faixa) do Censo por setor — direciona o CRIAR
-    de comunidade (público maduro → longevidade funcional, não alta intensidade)."""
+    """(faixa de referência, %feminino) — PONTO 80: prioriza faixa-alvo do input
+    (mesmo lastro da regra de gênero), não o segmento com maior headcount."""
+    from tools.genero_estrategia import resolver_faixa_alvo
+
     demo = state.get("demografia_bairro")
     perfil = (demo or {}).get("perfil_idade_sexo_bairro") if isinstance(demo, dict) else None
     seg = (perfil or {}).get("segmentos") if isinstance(perfil, dict) else None
     if not isinstance(seg, dict) or not seg:
         return None
+
+    faixa_alvo = resolver_faixa_alvo(state, perfil if isinstance(perfil, dict) else None)
+    if faixa_alvo in seg and isinstance(seg[faixa_alvo], dict) and seg[faixa_alvo].get("total"):
+        dados = seg[faixa_alvo]
+        return faixa_alvo, int(round(float(dados.get("pct_mulheres") or 0)))
+
     faixa, dados = max(
         ((f, v) for f, v in seg.items() if isinstance(v, dict) and v.get("total")),
         key=lambda kv: kv[1]["total"], default=(None, None),
@@ -469,10 +488,35 @@ def _penetracao_oferta_unificada(state: dict, concs: list[dict]) -> tuple["Count
 
 
 def _gaps_reais(state: dict) -> list[str] | None:
-    """Lista determinística dos serviços que NENHUM concorrente da praça ANUNCIA
-    (nome + planos_precos.inclui + modalidades + servicos_ig + oferta minerada do
-    state, sobre a praça inteira). Substrato da dimensão CRIAR da ERRC — SOBREPÕE
-    o gaps do LLM (que chutava genérico)."""
+    """Lista determinística dos serviços que NENHUM concorrente da praça ANUNCIA.
+
+    Preferência: cobertura_competitiva (B1+B2) → só gaps com incluir_no_errc.
+    Fallback: praça unificada legado (detalhados + minerada).
+    """
+    try:
+        from tools.cobertura_competitiva import (
+            filtrar_gaps_universais,
+            mapa_servicos_da_cobertura,
+            montar_cobertura_from_state,
+        )
+
+        cov = state.get("cobertura_competitiva")
+        if not isinstance(cov, dict) or not cov.get("oferta_por_gated"):
+            cov = montar_cobertura_from_state(state)
+        if isinstance(cov, dict) and cov.get("oferta_por_gated"):
+            state["cobertura_competitiva"] = cov
+            _mapa, pen = mapa_servicos_da_cobertura(cov)
+            n = int(cov.get("n_com_oferta") or 0)
+            if not n:
+                return []
+            brutos = sorted(
+                s for s in set(_SERVICOS_CATALOGO.values()) if pen.get(s, 0) == 0
+            )
+            validados = filtrar_gaps_universais(brutos, cobertura=cov)
+            return [g["servico"] for g in validados if g.get("incluir_no_errc")]
+    except Exception:
+        logger.warning("A9 gaps via cobertura falhou — fallback legado", exc_info=True, extra={"agent": "A9"})
+
     concs = _concorrentes_para_oferta(state)
     minerados = _servicos_minerados_state(state)
     if not concs and not minerados:
@@ -596,8 +640,10 @@ def _cenario_recomendado_a4(state: dict) -> dict:
     cenarios = fin.get("cenarios") if isinstance(fin.get("cenarios"), dict) else {}
     if not cenarios:
         return {}
-    rec = fin.get("recomendacao") or fin.get("recomendacao_modelo") or ""
+    rec = fin.get("recomendacao") or fin.get("recomendacao_modelo") or fin.get("modelo_recomendado") or ""
     rec_l = str(rec).strip().lower()
+    if rec_l in ("nenhum", "none"):
+        return {}
     # casa pelo label do modelo OU pelo modelo_key; senão pega o primeiro cenário.
     for c in cenarios.values():
         if isinstance(c, dict) and (
@@ -705,6 +751,71 @@ def _alertas_financeiros_fiscais(state: dict, tier: str | None, ticket_rec) -> l
     return alertas
 
 
+def _build_errc_indeterminado(state: dict, motivo: str, fonte_veredito: str) -> dict:
+    """Output A9 quando não dá para cravar posicionamento (ex.: A4 sem modelo viável)."""
+    market = state.get("market_context") if isinstance(state.get("market_context"), dict) else {}
+    cidade, bairro = _resolve_location_from_state(state)
+    uf = _resolve_uf_from_state(state)
+    out = {
+        "markdown": (
+            "## Posicionamento Estratégico\n\n"
+            f"_Posicionamento indeterminado: {motivo}._\n\n"
+            "_Sem modelo viável identificado pelo A4, não é possível "
+            "recomendar ticket nem tier de posicionamento com confiança._\n\n"
+            "_Revisar parâmetros financeiros (área, aluguel, ticket) antes de "
+            "definir estratégia de mercado._\n"
+        ),
+        "veredito_posicionamento": "INDETERMINADO",
+        "fonte_veredito": fonte_veredito,
+        "zona_percepcao": None,
+        "zona_nome": None,
+        "zona_descricao": None,
+        "recomendacao_ticket": {
+            "ticket_recomendado": None,
+            "ticket_mercado": None,
+            "ticket_minimo": None,
+            "ticket_maximo": None,
+            "confianca": "indisponivel",
+            "aviso": motivo,
+        },
+        "headroom_renda": None,
+        "modelo_a4": "nenhum",
+        "framework_errc": {
+            "eliminar": [],
+            "reduzir": [],
+            "aumentar": [],
+            "criar": [],
+        },
+        "gaps_identificados": [],
+        "mapa_servicos": {},
+        "alertas_financeiros_fiscais": [],
+        "fonte_geracao": "deterministico_errc",
+        "bairro": bairro or market.get("bairro"),
+        "cidade": cidade or market.get("cidade"),
+        "uf": uf or market.get("uf"),
+    }
+    # B1+B2: mapa/gaps competitivos independem do veredito financeiro.
+    try:
+        from tools.cobertura_competitiva import aplicar_cobertura_no_posicionamento
+
+        aplicar_cobertura_no_posicionamento(state, out)
+        criar = [
+            g.get("gap") or g.get("servico")
+            for g in (out.get("gaps_validados") or [])
+            if g.get("incluir_no_errc")
+        ]
+        out["framework_errc"]["criar"] = (
+            criar
+            if criar
+            else ["Mercado coberto nos serviços-núcleo — sem CRIAR; foco em AUMENTAR/REDUZIR."]
+            if out.get("mapa_servicos")
+            else []
+        )
+    except Exception:
+        logger.warning("A9 cobertura no indeterminado falhou", exc_info=True, extra={"agent": "A9"})
+    return out
+
+
 def _errc_deterministica(state: dict) -> dict:
     """ERRC + posicionamento 100% DETERMINÍSTICO, da matéria-prima já calculada:
     headroom de renda (avaliar_posicionamento — IBGE Censo 2022 × ticket dos concorrentes),
@@ -719,6 +830,26 @@ def _errc_deterministica(state: dict) -> dict:
     from tools.competitor_tools import _parse_market_context
     from tools.posicionamento_renda import avaliar_posicionamento
 
+    # RN-A9-014: ancora no modelo A4; "nenhum" → INDETERMINADO sem ticket (RN-A9-015).
+    fin = _parse_market_context(state.get("analise_financeira") or state.get("analise_financeira_pronto"))
+    if isinstance(fin, dict) and isinstance(fin.get("analise_financeira"), dict):
+        fin = fin["analise_financeira"]
+    if not isinstance(fin, dict):
+        fin = {}
+    modelo_a4 = (
+        fin.get("modelo_recomendado")
+        or fin.get("recomendacao_modelo")
+        or fin.get("recomendacao")
+        or ""
+    )
+    if str(modelo_a4).strip().lower() in ("nenhum", "none"):
+        alerta = fin.get("alerta_viabilidade") or "todos_cenarios_inviaveis"
+        return _build_errc_indeterminado(
+            state,
+            motivo=f"A4 sem modelo viável (alerta: {alerta})",
+            fonte_veredito="a4_sem_modelo_viavel",
+        )
+
     cidade, bairro = _resolve_location_from_state(state)
     uf = _resolve_uf_from_state(state)
     loc = f"{bairro.title()}, {cidade.title()}" if cidade else (bairro.title() or "bairro alvo")
@@ -731,17 +862,44 @@ def _errc_deterministica(state: dict) -> dict:
 
     # penetração dos serviços do catálogo (universo) na oferta real dos concorrentes.
     # Calculado ANTES do avaliar_posicionamento → alimenta os sinais da Zona de Percepção.
-    # Task #40: UNE detalhados + oferta minerada do state — este caminho calculava só
-    # dos detalhados e o ERRC mandou "Criar Personal" com o Parque Esportes anunciando
-    # Personal no quadro da MESMA página (run 7456705e).
+    # B1+B2: preferência cobertura_competitiva (denominador = n_com_oferta); fallback legado.
     universo = sorted(set(_SERVICOS_CATALOGO.values()))
-    pen, n = _penetracao_oferta_unificada(state, concs)
-    mapa_servicos = {
-        s: {"oferecem": pen.get(s, 0), "de": n,
-            "penetracao_pct": round(100 * pen.get(s, 0) / n) if n else 0}
-        for s in universo
-    }
-    gaps = [s for s in universo if pen.get(s, 0) == 0] if n else []
+    mapa_servicos: dict = {}
+    gaps: list[str] = []
+    n = 0
+    try:
+        from tools.cobertura_competitiva import (
+            aplicar_cobertura_no_posicionamento,
+            montar_cobertura_from_state,
+        )
+
+        cov = state.get("cobertura_competitiva")
+        if not isinstance(cov, dict) or not cov.get("oferta_por_gated"):
+            cov = montar_cobertura_from_state(state)
+        if isinstance(cov, dict) and cov.get("oferta_por_gated"):
+            state["cobertura_competitiva"] = cov
+            _tmp: dict = {}
+            aplicar_cobertura_no_posicionamento(state, _tmp)
+            mapa_servicos = _tmp.get("mapa_servicos") or {}
+            gaps = [
+                g["servico"]
+                for g in (_tmp.get("gaps_validados") or [])
+                if g.get("incluir_no_errc")
+            ]
+            n = int(cov.get("n_com_oferta") or 0)
+    except Exception:
+        logger.warning("A9 mapa via cobertura falhou — fallback", exc_info=True, extra={"agent": "A9"})
+        mapa_servicos = {}
+        gaps = []
+
+    if not mapa_servicos:
+        pen, n = _penetracao_oferta_unificada(state, concs)
+        mapa_servicos = {
+            s: {"oferecem": pen.get(s, 0), "de": n,
+                "penetracao_pct": round(100 * pen.get(s, 0) / n) if n else 0}
+            for s in universo
+        }
+        gaps = [s for s in universo if pen.get(s, 0) == 0] if n else []
 
     # Sinais da Zona de Percepção (§2.1): tem_gaps = há serviço que ninguém oferece;
     # densidade_baixa = saturação NÃO alta/saturada (poucos players no raio).
@@ -760,6 +918,10 @@ def _errc_deterministica(state: dict) -> dict:
     ticket_mkt = hr.get("ticket_mercado") if ok else None
     ratio = hr.get("headroom_ratio") if ok else None
     tier = hr.get("tier_modelo_percentil") if ok else None
+
+    # RN-A9-015: veredito INDETERMINADO não crava ticket.
+    if veredito == "INDETERMINADO":
+        ticket_rec = None
 
     # banda de ticket: piso = mercado atual, teto = teto sustentável da renda (recomendado).
     ticket_min = round(ticket_mkt) if isinstance(ticket_mkt, (int, float)) else None
@@ -843,14 +1005,27 @@ def _errc_deterministica(state: dict) -> dict:
     criar = ([f"{g} — nenhum concorrente da praça anuncia." for g in gaps]
              if gaps else ["Mercado coberto nos serviços-núcleo — sem CRIAR; foco em AUMENTAR/REDUZIR."])
     # Público maduro → comunidade de longevidade funcional (não disputar alta intensidade
-    # já coberta). Derivado do Censo por setor, não de palpite.
+    # já coberta). Derivado do Censo por setor na FAIXA-ALVO (PONTO 80), não do max headcount.
     _pub = _publico_dominante(state)
     if _pub and _pub[0] in ("40-59", "60+"):
         criar.append(
             f"Comunidade de longevidade funcional — mobilidade, saúde articular e hipertrofia "
-            f"preventiva: o público predominante da praça é {_pub[0]} ({_pub[1]}% feminino, "
+            f"preventiva: o público-alvo da praça é {_pub[0]} ({_pub[1]}% feminino, "
             f"Censo 2022 por setor), que migra por previsibilidade e conforto, não por intensidade."
         )
+
+    # PONTO 56: pauta ERRC no gênero da faixa-alvo (mesma regra do A6).
+    try:
+        from tools.genero_estrategia import extrair_genero_do_state, sugestoes_genero_errc
+
+        _gdec = extrair_genero_do_state(state)
+        for _sug in sugestoes_genero_errc(
+            _gdec.get("genero") or "misto",
+            _gdec.get("pct_mulheres") if _gdec.get("genero") == "feminino" else _gdec.get("pct_homens"),
+        ):
+            aumentar.append(_sug)
+    except Exception:
+        pass
 
     # ── markdown ──
     def _bul(xs):
@@ -892,7 +1067,7 @@ def _errc_deterministica(state: dict) -> dict:
         f"(planos + IG). ERRC determinística — recalibrável via parametros_metodologia._\n"
     )
 
-    return {
+    out = {
         "markdown": markdown,
         # §2.1 — 6 Zonas de Percepção (campos novos); veredito legado DERIVADO da zona (compat).
         "zona_percepcao": zona_percepcao,
@@ -904,6 +1079,7 @@ def _errc_deterministica(state: dict) -> dict:
             "ticket_recomendado": ticket_rec, "ticket_mercado": ticket_mkt,
             "ticket_minimo": ticket_min, "ticket_maximo": ticket_max,
             "comparativo_mercado": comparativo,
+            "confianca": "indisponivel" if veredito == "INDETERMINADO" else "alta",
             # §2.3 — cruzamento com o piso de ocupação (aluguel) do A4.
             "ticket_piso_ocupacao": (
                 round(float(ticket_piso_ocupacao), 2)
@@ -916,7 +1092,12 @@ def _errc_deterministica(state: dict) -> dict:
             [f"{g} — nenhum concorrente da praça anuncia (oportunidade de CRIAR)" for g in gaps]
             if gaps else ["Mercado coberto nos serviços-núcleo — foco em AUMENTAR/REDUZIR"]
         ),
-        "fonte_gaps": "deterministico_oferta_concorrentes (planos+IG)",
+        "fonte_gaps": (
+            "deterministico_cobertura_competitiva_b1_b2"
+            if isinstance(state.get("cobertura_competitiva"), dict)
+            and (state.get("cobertura_competitiva") or {}).get("oferta_por_gated")
+            else "deterministico_oferta_concorrentes (planos+IG)"
+        ),
         "mapa_servicos": mapa_servicos,
         "framework_errc": {"eliminar": eliminar, "reduzir": reduzir,
                            "aumentar": aumentar, "criar": criar},
@@ -925,6 +1106,34 @@ def _errc_deterministica(state: dict) -> dict:
         "headroom_renda": hr if ok else None,
         "fonte_geracao": "deterministico_errc",
     }
+    try:
+        from tools.cobertura_competitiva import aplicar_cobertura_no_posicionamento
+
+        aplicar_cobertura_no_posicionamento(state, out)
+        # Reancora CRIAR no ERRC aos gaps já filtrados (B2).
+        para_criar = [
+            g.get("gap") or g.get("servico")
+            for g in (out.get("gaps_validados") or [])
+            if g.get("incluir_no_errc")
+        ]
+        if para_criar or out.get("gaps_validados") is not None:
+            # Preserva bullets de público maduro / gênero já anexados em `criar`.
+            extras = [
+                x for x in criar
+                if isinstance(x, str) and "nenhum concorrente" not in x.lower()
+                and "mercado coberto" not in x.lower()
+            ]
+            base = (
+                para_criar
+                if para_criar
+                else ["Mercado coberto nos serviços-núcleo — sem CRIAR; foco em AUMENTAR/REDUZIR."]
+            )
+            out["framework_errc"]["criar"] = [*base, *extras]
+            # Markdown CRIAR: re-render leve só da seção seria caro; gaps_identificados
+            # já está filtrado — o PDF estruturado é a fonte canônica.
+    except Exception:
+        logger.warning("A9 attach cobertura no return falhou", exc_info=True, extra={"agent": "A9"})
+    return out
 
 
 def _a9_inject_oferta_e_gaps(state: dict, llm_request) -> None:
@@ -952,7 +1161,7 @@ def _a9_inject_demanda_futura(state: dict, llm_request) -> None:
 
 
 def _a9_before_model_callback(callback_context, llm_request):
-    """LangCache hit → retorna LlmResponse e pula gemini-2.5-pro (~30–90s)."""
+    """LangCache hit → retorna LlmResponse e pula gemini-3.6-flash (~30–90s)."""
     _state = getattr(callback_context, "state", {}) or {}
     _a9_inject_oferta_e_gaps(_state, llm_request)  # oferta real dos concorrentes + gaps
     _a9_inject_demanda_futura(_state, llm_request)
@@ -1068,6 +1277,13 @@ def _a9_after_agent_callback(callback_context):
         state["relatorio_posicionamento"] = parsed
         # Veredito DETERMINÍSTICO (headroom de renda) sobrepõe o do LLM — sourced/auditável.
         _a9_override_veredito_deterministico(state, parsed)
+        # B1+B2: garante mapa/gaps mesmo se o override saiu cedo (sem cidade / headroom).
+        try:
+            from tools.cobertura_competitiva import aplicar_cobertura_no_posicionamento
+
+            aplicar_cobertura_no_posicionamento(state, parsed)
+        except Exception:
+            logger.warning("A9 after_agent cobertura falhou", exc_info=True, extra={"agent": "A9"})
         try:
             from tools.matriz_demo_saturacao import attach_matriz_demo_saturacao
 

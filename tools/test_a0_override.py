@@ -129,6 +129,31 @@ def test_sem_cidade_nem_chama_tool(monkeypatch):
     st = {"market_context": {"market_context": {}}}  # sem cidade
     a0._a0_override_cnpj_numeros(_ctx(st))
     assert chamou["v"] is False
+    inner = st["market_context"]["market_context"]
+    assert inner.get("a0_envelope_incompleto") is True
+    assert set(inner.get("a0_envelope_faltantes") or []) == {"cidade", "bairro", "uf"}
+
+
+def test_p115_rehidrata_locais_do_input(monkeypatch):
+    """Parangaba NVIDIA: market_context só com CNPJ — repõe cidade/bairro/uf do input."""
+    monkeypatch.setattr("tools.cnpj_fitness_tools.dados_parque_cnpj_para_a0",
+                        lambda *a, **k: _FAKE_TOOL)
+    st = {
+        "input_params": {"cidade": "Fortaleza", "uf": "CE", "bairro": "Parangaba"},
+        "market_context": {
+            "market_context": {
+                "parque_ativo_total": 1,
+                "fatos_parque_cnpj": {"fonte": "RFB"},
+            }
+        },
+    }
+    a0._a0_override_cnpj_numeros(_ctx(st))
+    inner = st["market_context"]["market_context"]
+    assert inner["cidade"] == "Fortaleza"
+    assert inner["bairro"] == "Parangaba"
+    assert inner["uf"] == "CE"
+    assert inner.get("a0_envelope_rehidratado_de_input") is True
+    assert not inner.get("a0_envelope_incompleto")
 
 
 # ── Saneamento do esqueleto do schema (bug Pirapora) ────────────────────────

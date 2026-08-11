@@ -337,14 +337,18 @@ def _bairro_alvo_da_busca(state) -> str:
         ctx = _parse_market_context(state.get("market_context"))
         if isinstance(ctx, dict):
             inner = ctx.get("market_context") if isinstance(ctx.get("market_context"), dict) else ctx
-            return (inner.get("bairro") or "").strip()  # pyright: ignore[reportOptionalMemberAccess]
+            bairro = (inner.get("bairro") or "").strip()  # pyright: ignore[reportOptionalMemberAccess]
+            if bairro:
+                return bairro
     except Exception:
         logger.warning(
             "A6 market_context fallback falhou ao extrair bairro alvo",
             exc_info=True,
             extra={"agent": "A6", "context": "_bairro_alvo_da_busca"},
         )
-    return ""
+    # A0 às vezes não propaga market_context; input_params do form/CLI é autoritativo
+    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    return (ip.get("bairro") or state.get("bairro") or "").strip()
 
 
 def _enriquecer_entrantes_bairro(bloco: dict, bairro_alvo: str) -> dict:
@@ -1486,7 +1490,7 @@ def _safe_float(v, default=0.0):
 def _normalizar_cenarios_aluguel(cenarios, aluguel_fallback):
     """Garante custos_detalhados.aluguel em cada cenário antes de gravar.
 
-    A4 (gemini-2.5-flash) às vezes omite `custos_detalhados.aluguel` no echo do
+    A4 (gemini-3.6-flash) às vezes omite `custos_detalhados.aluguel` no echo do
     LLM. Sem o campo, o writer gravava NULL → o front convertia em zero → KPI
     "aluguel R$ 0" e payback fake (caso Bessa 11/06). Aqui, na consolidação
     determinística, preenchemos do `aluguel_mensal` do output do A4 quando o
@@ -1883,6 +1887,60 @@ def _rotulo_score_bucket(val) -> str:
     return "crítico"
 
 
+def _renderizar_md_top_vias(vias_block: dict | None) -> str:
+    """Seção Top vias para prospecção — determinística de top_vias_por_fluxo."""
+    if not isinstance(vias_block, dict) or vias_block.get("status") != "ok":
+        return ""
+    top_vias = vias_block.get("top_vias") or []
+    if not top_vias:
+        return ""
+
+    confianca = vias_block.get("confianca", "baixa")
+    linhas = [
+        "## Top 3 Ruas/Avenidas para Prospecção (Due Diligence)",
+        "",
+        "_Nenhum imóvel anunciado na especificação foi encontrado no bairro._ "
+        "_As vias abaixo são priorizadas por fluxo estrutural de pedestres "
+        "(sintaxe espacial angular OSM). Validar in loco disponibilidade de "
+        f"imóvel comercial antes de fechar negociação. Confiança: {confianca}._",
+        "",
+        "| # | Via | Tipo | Fluxo (0-100) | Trecho | Concorrentes |",
+        "|---|---|---|---|---|---|",
+    ]
+
+    for i, v in enumerate(top_vias[:3], 1):
+        if not isinstance(v, dict):
+            continue
+        nome = _escape_md_pipe(v.get("nome_via", "—"))
+        tipo = _escape_md_pipe(v.get("tipo_via", "rua"))
+        score = v.get("fluxo_score", "—")
+        trecho = _escape_md_pipe(v.get("trecho", "—"))
+        conc = v.get("concorrentes_no_trecho", 0)
+        linhas.append(f"| {i} | {nome} | {tipo} | {score} | {trecho} | {conc} |")
+
+    carimbo = (top_vias[0].get("fluxo_carimbo") or {}) if isinstance(top_vias[0], dict) else {}
+    linhas.append("")
+    linhas.append(
+        f"_Fonte: {carimbo.get('fonte', 'OSM')} · {carimbo.get('janela', 'malha estática')}_"
+    )
+    linhas.append("")
+    linhas.append(
+        "_Imóvel só aparece neste relatório para comparação de valor de aluguel "
+        "(listing real vs MRLR). A prioridade de prospecção é por via, não por imóvel._"
+    )
+    return "\n".join(linhas)
+
+
+def _tem_candidato_listing_real(top_3: list | None) -> bool:
+    for c in top_3 or []:
+        if not isinstance(c, dict):
+            continue
+        qs = str(c.get("qualidade_sinal") or "").lower()
+        if qs.startswith("direto-listing"):
+            return True
+    return False
+
+
 def _renderizar_md_top3_candidatos(top_3: list) -> str:
     """Seção Top 3 determinística de listing + MRLR + payback estimado."""
     cand = [c for c in (top_3 or []) if isinstance(c, dict)]
@@ -2065,6 +2123,18 @@ def _alinhar_markdown_ao_estruturado(md: str, out: dict) -> str:
         if n_sub:
             md = md2
 
+    # Top vias: prospecção por fluxo quando não há listing real
+    vias_block = out.get("melhores_vias_prospeccao")
+    if (
+        isinstance(vias_block, dict)
+        and vias_block.get("status") == "ok"
+        and not _tem_candidato_listing_real(top_3 if isinstance(top_3, list) else None)
+        and "Top 3 Ruas/Avenidas" not in md
+    ):
+        secao_vias = _renderizar_md_top_vias(vias_block)
+        if secao_vias:
+            md = md.rstrip() + "\n\n" + secao_vias + "\n"
+
     # Post-check de SATURAÇÃO (safety net p/ A6 flash): o LLM às vezes narra "extrema
     # saturação"/"mercado SATURADO" puxando o nº do raio 3km, contradizendo o
     # nivel_saturacao estruturado (do bairro). Quando o dado diz BAIXO/MEDIO, corrige
@@ -2205,11 +2275,22 @@ def _resumo_executivo_deterministico(
     else:
         partes.append(f"Saturação da praça (raio 1 km): {sat}.")
 
-    # Zoneamento (viabilidade regulatória do bairro), quando disponível.
+    # Zoneamento (viabilidade regulatória), quando a cascata ZEUS retornou bloco.
     if isinstance(zoneamento, dict):
         sig = zoneamento.get("zona_sigla") or zoneamento.get("zona_nome")
         comp = (zoneamento.get("compatibilidade") or "").upper()
-        if sig and comp:
+        st = (zoneamento.get("status") or "").lower()
+        if st == "indisponivel" or (not comp and st):
+            partes.append(
+                "Zoneamento oficial indisponível — avaliar junto à prefeitura do município."
+            )
+        elif comp == "INDIVIDUALIZAR":
+            uso = zoneamento.get("uso_predominante_osm") or "—"
+            partes.append(
+                f"Zoneamento legal não digitalizado (proxy OSM: {uso}) — "
+                "avaliar junto à prefeitura do município."
+            )
+        elif sig and comp:
             verbo = {"PERMISSIVO": "permitida", "CONDICIONADO": "condicionada",
                      "RESTRITO": "vedada/restrita"}.get(comp, comp.lower())
             partes.append(f"Zoneamento {sig}: atividade de academia {verbo}.")
@@ -2336,8 +2417,8 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     if not isinstance(inner_mc, dict):
         inner_mc = {}
 
-    cidade = inner_mc.get("cidade", "")
-    bairro = inner_mc.get("bairro", "")
+    cidade = (inner_mc.get("cidade") or ip.get("cidade") or "").strip()
+    bairro = (inner_mc.get("bairro") or ip.get("bairro") or "").strip()
 
     # Diagnóstico defensivo: se inner_mc veio vazio mas state.market_context
     # tem conteúdo, é bug de propagação A0→A6. Logamos pra debug + tenta um
@@ -2427,9 +2508,8 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     ranked = rank_candidatos_viabilidade(candidatos, inner_fin)
     top_3 = [_enriquecer_candidato_investigacao(c) for c in (ranked[:3] if ranked else [])]
 
-    # Zoneamento (VEC-378): viabilidade REGULATÓRIA do top candidato (lat/lon) — valida
-    # se a zona permite academia (CNAE 9313 × LUOS). Pega o furo: candidato bom em zona
-    # restrita (ZEIS/ZEPH/ZEA) é inviável legal. Best-effort; só Fortaleza por ora.
+    # Zoneamento (VEC-378 / ZEUS): cascata CKAN municipal → OSM landuse (proxy) →
+    # indisponível (prefeitura). Nunca assume PERMISSIVO sem malha oficial.
     zoneamento_block = None
     _zlat = _zlon = None
     try:
@@ -2476,14 +2556,17 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
         if _cz_cid and _zlat is not None and _zlon is not None:
             _z = analisar_zoneamento_candidato(
                 _cz_cid, _cz_bai, _cz_uf, float(_zlat), float(_zlon), endereco=_zend)
-            if isinstance(_z, dict) and _z.get("status") in ("ok", "fora_de_zona"):
+            if isinstance(_z, dict) and _z.get("status") in (
+                "ok", "fora_de_zona", "proxy_osm", "indisponivel",
+            ):
                 _z["ancora"] = "imovel" if _cand_geo else "centroide_bairro"
                 zoneamento_block = _z
     except Exception:
         logger.warning("A6 zoneamento falhou", exc_info=True, extra={"agent": "A6"})
     fluxo_pedestre_block: dict | None = None
+    melhores_vias_block: dict | None = None
     try:
-        from tools.fluxo_pedestre_tools import build_fluxo_pedestre_block
+        from tools.fluxo_pedestre_tools import build_fluxo_pedestre_block, top_vias_por_fluxo
 
         _fp_cand = next(
             (c for c in top_3 if isinstance(c, dict) and c.get("lat") is not None and c.get("lng") is not None),
@@ -2496,13 +2579,24 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             _fp_name = _fp_cand.get("endereco") or _fp_name
         elif _zlat is not None and _zlon is not None:
             _fp_lat, _fp_lng = float(_zlat), float(_zlon)
+        _comps_fluxo = comp.get("academias_analisadas") or comp.get("concorrentes") or []
         if _fp_lat is not None and _fp_lng is not None:
             fluxo_pedestre_block = build_fluxo_pedestre_block(
                 _fp_lat,
                 _fp_lng,
-                competidores=comp.get("academias_analisadas") or comp.get("concorrentes") or [],
+                competidores=_comps_fluxo,
                 radius_m=2000,
                 location_name=_fp_name,
+            )
+            # Guia de vias: always when we have coords (hits spatial cache from block above).
+            # MD section only when there is no listing real (see _alinhar_markdown).
+            melhores_vias_block = top_vias_por_fluxo(
+                _fp_lat,
+                _fp_lng,
+                top_n=5,
+                radius_m=2000,
+                competidores=_comps_fluxo,
+                bairro=_bairro_alvo_da_busca(state) or "",
             )
     except Exception:
         logger.warning("A6 fluxo pedestre falhou", exc_info=True, extra={"agent": "A6"})
@@ -2591,7 +2685,37 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                     f"{_perfil_sx['faixa_idade']} anos · {_perfil_sx['pct_mulheres']:.0f}% mulheres / "
                     f"{_perfil_sx['pct_homens']:.0f}% homens ({_selo})"
                 )
-                slim_market_context["genero_alvo"] = _perfil_sx.get("maioria") or slim_market_context.get("genero_alvo")
+                # PONTO 52/55: limiar configurável — não usar maioria bruta (54>46).
+                from tools.genero_estrategia import aplicar_regra_genero
+
+                _ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+                _genero_in = (
+                    _ip.get("genero_alvo")
+                    or slim_market_context.get("genero_alvo")
+                    or "misto"
+                )
+                _dec = aplicar_regra_genero(
+                    _genero_in,
+                    {"demografia_bairro": demografia_bairro_block, "input_params": _ip},
+                )
+                slim_market_context["genero_alvo"] = _dec["genero_final"]
+                slim_market_context["genero_estrategia"] = {
+                    "genero_input": _dec.get("genero_input"),
+                    "genero_final": _dec.get("genero_final"),
+                    "diff_pp": _dec.get("diff_pp"),
+                    "limiar_pp": _dec.get("limiar_pp"),
+                    "nivel_base": _dec.get("nivel_base"),
+                    "faixa_idade": _dec.get("faixa_idade"),
+                    "fonte": _dec.get("fonte"),
+                    "sobrescrito": _dec.get("sobrescrito"),
+                }
+                if _dec.get("insight"):
+                    _ins = slim_market_context.get("insights_estrategicos")
+                    if not isinstance(_ins, list):
+                        _ins = []
+                        slim_market_context["insights_estrategicos"] = _ins
+                    if _dec["insight"] not in _ins:
+                        _ins.append(_dec["insight"])
     except Exception:
         logger.warning("A6 demografia_bairro falhou", exc_info=True, extra={"agent": "A6"})
 
@@ -2766,9 +2890,17 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     try:
         from tools.competitor_tools import cross_check_concorrentes_bairro
 
-        _cc_cid = (inner_mc.get("cidade") if isinstance(inner_mc, dict) else "") or ""
-        _cc_uf = (inner_mc.get("uf") if isinstance(inner_mc, dict) else "") or ""
-        _cc_bai = _bairro_alvo_da_busca(state) or ""
+        _cc_cid = (
+            (inner_mc.get("cidade") if isinstance(inner_mc, dict) else "")
+            or ip.get("cidade")
+            or ""
+        )
+        _cc_uf = (
+            (inner_mc.get("uf") if isinstance(inner_mc, dict) else "")
+            or ip.get("uf")
+            or ""
+        )
+        _cc_bai = _bairro_alvo_da_busca(state) or ip.get("bairro") or ""
         if _cc_cid and _cc_bai:
             cross_check_concorrentes = cross_check_concorrentes_bairro(
                 _cc_cid, _cc_uf, _cc_bai, _tn_cc, existentes=concorrentes_detalhados)
@@ -2921,6 +3053,36 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             modelo_recomendado=modelo_recomendado, nivel_saturacao=nivel_saturacao,
         )
 
+    # B1 — cobertura competitiva (gate × deep × oferta). Alimenta A9 mapa/gaps.
+    cobertura_competitiva_block = None
+    try:
+        from tools.cobertura_competitiva import montar_cobertura_competitiva
+
+        _cs_cov = [
+            {
+                **c,
+                "oferta_mapeada": (
+                    mapeamento_ofertas.get(str(c.get("place_id")).lower())
+                    or mapeamento_ofertas.get((c.get("nome") or "").lower())
+                ),
+            }
+            for c in concorrentes_detalhados
+            if isinstance(c, dict)
+        ]
+        _nb = []
+        if isinstance(cross_check_concorrentes, dict):
+            _nb = list(cross_check_concorrentes.get("no_bairro") or [])
+        cobertura_competitiva_block = montar_cobertura_competitiva(
+            no_bairro=_nb,
+            competitors_set=_cs_cov,
+            oferta_concorrentes=oferta_raw,
+        )
+        if isinstance(cobertura_competitiva_block, dict):
+            state["cobertura_competitiva"] = cobertura_competitiva_block
+    except Exception:
+        logger.warning("A6 cobertura_competitiva falhou", exc_info=True, extra={"agent": "A6"})
+        cobertura_competitiva_block = None
+
     return {
         "id": f"rpt_{int(time.time())}",
         "tipo_relatorio": "prospeccao_academia",
@@ -2980,6 +3142,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             # VEC-378 — viabilidade regulatória (zoneamento LUOS) do top candidato.
             "zoneamento": zoneamento_block,
             "fluxo_pedestre": fluxo_pedestre_block,
+            "melhores_vias_prospeccao": melhores_vias_block,
             "investigacoes_imoveis": investigacoes_resumo,
             # Diagnóstico GeoScout (A1) — UI usa pra banner sem hardcode REQUEST_DENIED
             "coleta_geografica": {
@@ -3057,6 +3220,8 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
             # Schema v1.12 — anéis competitivos (Apêndice D): score PONDERADO por
             # proximidade (NO_BAIRRO/FRONTEIRA/REGIONAL) — não infla pela força do vizinho.
             "aneis_competitivos": aneis_competitivos_resumo,
+            # B1 — oferta por gated (denominador honesto p/ mapa_servicos / gaps A9).
+            "cobertura_competitiva": cobertura_competitiva_block,
             # Schema v1.13 — demografia do bairro (renda CKAN + pop/ocupação Censo 2022),
             # fontes reais por dimensão. Renderizado em mini-cards na UI.
             "demografia_bairro": demografia_bairro_block,
@@ -3356,6 +3521,15 @@ def _a6_after_agent_callback(callback_context):
             demo_b = out_cons_early.get("demografia_bairro")
             if isinstance(demo_b, dict) and demo_b:
                 callback_context.state["demografia_bairro"] = demo_b
+            cov_b = out_cons_early.get("cobertura_competitiva")
+            if isinstance(cov_b, dict) and cov_b:
+                callback_context.state["cobertura_competitiva"] = cov_b
+            cs_b = out_cons_early.get("competitors_set")
+            if isinstance(cs_b, list) and cs_b:
+                callback_context.state["competitors_set"] = cs_b
+            aneis_b = out_cons_early.get("aneis_competitivos")
+            if isinstance(aneis_b, dict) and aneis_b:
+                callback_context.state["aneis_competitivos"] = aneis_b
 
         # Supabase + A8
         try:
@@ -3407,7 +3581,7 @@ report_consolidator_agent = build_llm_agent(
     # templada (instrução muito detalhada) sobre dados estruturados/determinísticos +
     # contexto já enxuto (slim_concorrente) — Flash dá conta. Corta ~R$3,6/relatório.
     # Validar qualidade da narrativa com golden case; reverter pra Pro se degradar.
-    model="gemini-2.5-flash",
+    model="gemini-3.6-flash",
     generate_content_config=_GENERATE_CONFIG,
     description=(
         "Consolida outputs dos 5 agentes em relatório executivo markdown completo, "

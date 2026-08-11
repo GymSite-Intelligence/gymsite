@@ -56,6 +56,19 @@ def _fallback(nome: str) -> list[dict[str, Any]]:
                     "porte_acima100k": 4, "padrao_baixo": 1, "padrao_normal": 2,
                     "padrao_alto": 3, "fator_pibpc_corte": 50000,
                 }.items()]
+    if nome == "zoneamento_municipio":
+        # Seed Fortaleza (CKAN oficial) — mesma metadata da tabela viva.
+        return [{
+            "chave": "fortaleza",
+            "valor": "CKAN",
+            "sinonimos": [],
+            "metadata": {
+                "cnae": "9313-1/00",
+                "ckan_base": "https://dados.fortaleza.ce.gov.br/api/3/action",
+                "subgrupos": ["SE", "SP", "PS"],
+                "dataset_zonas": "zonas-especiais",
+            },
+        }]
     return []
 
 
