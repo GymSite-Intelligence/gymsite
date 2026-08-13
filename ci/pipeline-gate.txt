@@ -1,0 +1,29 @@
+# Allowlist do Pipeline Gate (PR). Um path por linha.
+# Teste novo NÃO entra sozinho — acrescentar aqui após existir no main e passar sem rede.
+# Cap A3a de produção = 25 (SPEC_TOOLS_V2 RN-T-04 cap 3 está desatualizada).
+#
+# adiar: tools/test_a4_modelo_nenhum.py (ainda não está no main)
+# adiar: tools/test_a9_errc_indeterminado.py (ainda não está no main)
+# adiar: tools/test_a9_fase1_integridade.py (ainda não está no main)
+# adiar: tools/test_universo_deep_bairro.py (ainda não está no main)
+# adiar: tools/test_reviews_deep_searchapi.py (ainda não está no main)
+
+tests/test_pipeline_deps.py
+tests/test_a0.py
+tests/test_a1.py
+tests/test_a2.py
+tests/test_a3.py
+tests/test_a4.py
+tests/test_a5.py
+tests/test_a6.py
+tests/test_a9.py
+tools/test_pipeline_schemas.py
+tools/test_a1_deterministico.py
+tools/test_a4_deterministico.py
+tools/test_aluguel_mrlr.py
+tools/test_a6_resumo_deterministico.py
+tools/test_a6_analise_financeira_snapshot.py
+tools/test_html_builder.py
+tools/test_cobertura_competitiva.py
+tools/test_a8_coerencia_posicionamento.py
+tools/test_a3a_acton_pico_cap.py

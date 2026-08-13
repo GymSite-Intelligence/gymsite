@@ -1,4 +1,4 @@
-"""Act-on A3a: pico Supabase cache + MAX_ENRIQUECIMENTO default 3."""
+"""Act-on A3a: pico Supabase cache + MAX_ENRIQUECIMENTO default 25."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -61,9 +61,10 @@ def test_save_pico_cache_writes_supabase(monkeypatch, tmp_path):
     assert (tmp_path / "ChIJ_x.json").is_file()
 
 
-def test_max_enriquecimento_default_3(monkeypatch):
-    """Default do env ausente = 3 (Act-on), não 6."""
-    import os
+def test_max_enriquecimento_default_25(monkeypatch):
+    """Teto de segurança (bairro denso), não amostra de 3."""
+    from tools.competitor_tools import DEFAULT_MAX_ENRIQUECIMENTO, _max_enriquecimento
 
     monkeypatch.delenv("MAX_ENRIQUECIMENTO", raising=False)
-    assert max(1, int(os.getenv("MAX_ENRIQUECIMENTO", "3"))) == 3
+    assert DEFAULT_MAX_ENRIQUECIMENTO == 25
+    assert _max_enriquecimento() == 25
