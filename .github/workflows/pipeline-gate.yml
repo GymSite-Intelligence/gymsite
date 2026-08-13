@@ -1,0 +1,61 @@
+# =============================================================================
+# Pipeline Gate — contratos A0–A9 / MRLR / HTML (R$ 0, sem LLM, sem rede)
+# Required check no main. Allowlist: ci/pipeline-gate.txt
+# =============================================================================
+name: Pipeline Gate
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'agents/**'
+      - 'tools/**'
+      - 'tests/**'
+      - 'pdf/**'
+      - 'models/**'
+      - 'ci/**'
+      - 'pytest.ini'
+      - '.github/workflows/pipeline-gate.yml'
+
+concurrency:
+  group: pipeline-gate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pipeline-gate:
+    name: Pipeline Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-socket
+
+      - name: Run Pipeline Gate
+        run: |
+          mapfile -t files < <(grep -vE '^\s*(#|$)' ci/pipeline-gate.txt)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "ci/pipeline-gate.txt está vazia"
+            exit 1
+          fi
+          python -m pytest -q --tb=short \
+            -m "not integration and not e2e" \
+            --disable-socket --allow-unix-socket \
+            --allow-hosts=127.0.0.1,::1 \
+            "${files[@]}"

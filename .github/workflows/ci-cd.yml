@@ -52,10 +52,7 @@ jobs:
           pip install mypy types-requests
           mypy api.py --ignore-missing-imports || true
 
-      - name: Unit tests
-        run: |
-          pip install pytest pytest-asyncio
-          pytest -xvs --timeout=60 || true
+      # Contratos do pipeline: .github/workflows/pipeline-gate.yml (required check)
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

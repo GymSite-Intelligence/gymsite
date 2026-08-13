@@ -11,19 +11,24 @@ Ambiente: **PowerShell**, raiz do repo `gymsite_intelligence`.
 
 ## Gate mínimo (obrigatório — fecha a etapa)
 
+Esteira de pipeline (allowlist, o mesmo do CI **Pipeline Gate**):
+
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -x --tb=short
+$paths = Get-Content ci/pipeline-gate.txt | Where-Object { $_ -and $_ -notmatch '^\s*#' }
+.\.venv\Scripts\python.exe -m pytest -q --tb=short -m "not integration and not e2e" @paths
 cd frontend; npx tsc --noEmit; cd ..
 ```
 
 Critério de sucesso: exit code **0** nos dois.
 
+`pytest` largo (fora da allowlist) é opcional — não é o gate de PR.
+
 ### Escopo focável
 
 ```powershell
-# só tools / agents / um arquivo
+# só um arquivo
 .\.venv\Scripts\python.exe -m pytest tools\test_aluguel_mrlr.py -x --tb=short
-.\.venv\Scripts\python.exe -m pytest tests\ -x --tb=short -q
+.\.venv\Scripts\python.exe -m pytest tests\test_pipeline_deps.py -x --tb=short -q
 ```
 
 `pytest.ini` deve ter `asyncio_mode = auto` — sem isso, `async def test_*` falha em modo strict.
