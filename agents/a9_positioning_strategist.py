@@ -25,7 +25,9 @@ import json
 import logging
 import os
 import time
+from collections import Counter
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger("gymsite.a9")
 
@@ -43,6 +45,15 @@ _GENERATE_CONFIG = types.GenerateContentConfig(
 )
 
 _RELATORIOS_DIR = Path(__file__).resolve().parent.parent / "metrics" / "relatorios"
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    """Garante dict (nunca None) — evita ternário duplo-get que o pyright não estreita."""
+    return value if isinstance(value, dict) else {}
+
+
+def _input_params(state: dict) -> dict[str, Any]:
+    return _as_dict(state.get("input_params"))
 
 
 def _parse_json_from_text(raw: str) -> dict:
@@ -73,7 +84,11 @@ def _emendar_ressalva(texto: str | None) -> str | None:
     return f"{texto.rstrip()} {_RESSALVA_INDETERMINADO}"
 
 
-def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None:
+def _patch_relatorio_json(
+    relatorio_local_id: str,
+    posicionamento: dict,
+    state: dict | None = None,
+) -> None:
     """Atualiza metrics/relatorios/<id>.json com posicionamento_estrategico. Se o
     veredito ficou INDETERMINADO, emenda a ressalva no resumo_executivo já gravado
     pelo A6 (o resumo nasce ANTES do A9 — sem isso ele recomenda modelo sem aviso)."""
@@ -94,6 +109,13 @@ def _patch_relatorio_json(relatorio_local_id: str, posicionamento: dict) -> None
             out = {}
             rel["output_consolidado"] = out
         out["posicionamento_estrategico"] = posicionamento
+        cov = (state or {}).get("cobertura_competitiva") if isinstance(state, dict) else None
+        if (
+            isinstance(cov, dict)
+            and cov.get("oferta_por_gated")
+            and not isinstance(out.get("cobertura_competitiva"), dict)
+        ):
+            out["cobertura_competitiva"] = cov
         if str(posicionamento.get("veredito_posicionamento") or "").upper() == "INDETERMINADO":
             contato = out.get("contato_decisor")
             if isinstance(contato, dict) and contato.get("resumo_executivo"):
@@ -126,7 +148,7 @@ def _a9_langcache_enabled() -> bool:
 
 def _resolve_location_from_state(state: dict) -> tuple[str, str]:
     """cidade/bairro vêm de input_params, market_context ou chaves legadas no state."""
-    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    ip = _input_params(state)
     cidade = (
         state.get("cidade")
         or state.get("input_cidade")
@@ -153,7 +175,7 @@ def _resolve_location_from_state(state: dict) -> tuple[str, str]:
 
 
 def _resolve_uf_from_state(state: dict) -> str:
-    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    ip = _input_params(state)
     uf = state.get("uf") or state.get("input_uf") or ip.get("uf") or ""
     if not uf:
         mc = _parse_market_context(state.get("market_context"))
@@ -190,7 +212,7 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
                                     densidade_premium_baixa=densidade_baixa, tem_gaps=tem_gaps)
         if hr.get("status") != "ok":
             return
-        parsed["headroom_renda"] = hr  # renda_pc/percentil/tier sempre determinísticos
+        parsed["headroom_renda"] = hr
         # §2.1 — Zona de Percepção determinística sobrepõe (campos novos no output do A9).
         if hr.get("zona_percepcao"):
             parsed["zona_percepcao"] = hr.get("zona_percepcao")
@@ -198,9 +220,13 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
             parsed["zona_descricao"] = hr.get("zona_descricao")
         # §2.2 — alertas financeiros/fiscais determinísticos (consome A4).
         try:
-            parsed["alertas_financeiros_fiscais"] = _alertas_financeiros_fiscais(
-                state, hr.get("tier_modelo_percentil"), hr.get("ticket_teto_sustentavel")
-            )
+            if (
+                str(parsed.get("veredito_posicionamento") or "").upper() != "INDETERMINADO"
+                and parsed.get("fonte_veredito") != "a4_sem_modelo_viavel"
+            ):
+                parsed["alertas_financeiros_fiscais"] = _alertas_financeiros_fiscais(
+                    state, hr.get("tier_modelo_percentil"), hr.get("ticket_teto_sustentavel")
+                )
         except Exception:
             logger.warning("A9 alertas fiscais falharam", exc_info=True, extra={"agent": "A9"})
         # GAPs determinísticos: o PDF/relatório lê gaps_identificados (output estruturado);
@@ -236,6 +262,15 @@ def _a9_override_veredito_deterministico(state: dict, parsed: dict) -> None:
                     "A9 veredito determinístico: %s (LLM dizia %s) headroom_ratio=%s",
                     vd, llm_v, hr.get("headroom_ratio"), extra={"agent": "A9"},
                 )
+        if (
+            str(parsed.get("veredito_posicionamento") or "").upper() == "INDETERMINADO"
+            or parsed.get("fonte_veredito") == "a4_sem_modelo_viavel"
+        ):
+            parsed["headroom_renda"] = _sanitizar_headroom_se_indeterminado(
+                parsed.get("headroom_renda") if isinstance(parsed.get("headroom_renda"), dict) else hr,
+                "INDETERMINADO",
+            )
+            _garantir_eixos_errc_indeterminado(state, parsed)
     except Exception:
         logger.warning("A9 override determinístico falhou", exc_info=True, extra={"agent": "A9"})
 
@@ -248,7 +283,7 @@ def _a9_cache_prompt(state: dict) -> str:
     estavam vazios no state) e hash dos top-5 concorrentes.
     """
     cidade, bairro = _resolve_location_from_state(state)
-    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    ip = _input_params(state)
     tipo = str(
         state.get("tipo_negocio") or ip.get("tipo_negocio") or "academia"
     ).strip().lower()
@@ -391,6 +426,12 @@ def _dores_da_praca(state: dict) -> set[str]:
     ic = _parse_market_context(state.get("inteligencia_competitiva"))
     inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
     dores = (inner.get("dores_dominantes") if isinstance(inner, dict) else None) or []
+    if not dores:
+        oc = state.get("output_consolidado")
+        if isinstance(oc, dict) and oc.get("dores_dominantes"):
+            dores = oc["dores_dominantes"]
+    if not dores:
+        dores = state.get("dores_dominantes") or []
     out: set[str] = set()
     for d in dores:
         if isinstance(d, dict):
@@ -400,6 +441,152 @@ def _dores_da_praca(state: dict) -> set[str]:
         if cat:
             out.add(cat.replace(" ", "_"))
     return out
+
+
+def _aplicar_brilliant_basics_errc(
+    eliminar: list[str],
+    reduzir: list[str],
+    aumentar: list[str],
+    state: dict,
+    *,
+    extra_dores: bool = False,
+) -> None:
+    """Dores medidas + gênero → bullets ERRC. Mutates listas in-place."""
+    dores = _dores_da_praca(state)
+    if {"contrato_abusivo", "contrato"} & dores:
+        eliminar.append(
+            "Atrito contratual — cancelamento livre e termos transparentes: "
+            "'contrato abusivo' é dor medida nos reviews da praça "
+            "(retenção por valor, não por multa)."
+        )
+    if {"atendimento_ruim", "atendimento"} & dores:
+        eliminar.append(
+            "Instrutor de salão passivo — equipe dimensionada pra acolhimento proativo: "
+            "'atendimento ruim' é a dor mais citada da praça."
+        )
+    if {"ruido_alto", "ruido"} & dores:
+        reduzir.append(
+            "Pressão do horário de pico — escalonar grade e precificar off-peak: dissipa a "
+            "superlotação de 17h–19h que gera a dor 'ruído alto' medida nos reviews."
+        )
+    if {"climatizacao", "estrutura_envelhecida", "equipamento_problema"} & dores:
+        aumentar.append(
+            "Conforto ambiental como diferencial defensável: climatização dimensionada pro "
+            "calor local + manutenção preventiva com SLA de reparo — ataca as dores "
+            "'climatização/estrutura/equipamento' medidas nos reviews da concorrência."
+        )
+    if extra_dores and {"horarios_limitados", "horario"} & dores:
+        aumentar.append(
+            "Amplitude de horário — operar em janelas que a praça não cobre: "
+            "'horários limitados' é dor medida nos reviews."
+        )
+    if extra_dores and {"seguranca", "estacionamento"} & dores:
+        aumentar.append(
+            "Segurança e acesso — estacionamento validado e controle de entrada: "
+            "dores 'segurança/estacionamento' medidas nos reviews."
+        )
+    try:
+        from tools.genero_estrategia import extrair_genero_do_state, sugestoes_genero_errc
+
+        _gdec = extrair_genero_do_state(state)
+        for _sug in sugestoes_genero_errc(
+            _gdec.get("genero") or "misto",
+            _gdec.get("pct_mulheres") if _gdec.get("genero") == "feminino" else _gdec.get("pct_homens"),
+        ):
+            aumentar.append(_sug)
+    except Exception:
+        pass
+
+
+def _eixos_errc_sem_modelo(state: dict) -> tuple[list[str], list[str], list[str]]:
+    """Eliminar/Reduzir/Aumentar quando A4 não fecha modelo — única fonte (JSON = PDF)."""
+    eliminar = [
+        "Guerra de preço / planos genéricos low-cost — sem modelo financeiro fechado, "
+        "margem é a única alavanca defensável.",
+    ]
+    reduzir = [
+        "CAC alto e complexidade operacional (mix de planos excessivo) — "
+        "foco em retenção enquanto o modelo não fecha.",
+        "Capacidade ociosa em horário de baixa — escalonar a grade.",
+    ]
+    aumentar = [
+        "Retenção, NPS e comunidade — diferenciação por experiência "
+        "(sem lastro premium cravado pelo A4).",
+    ]
+    _aplicar_brilliant_basics_errc(eliminar, reduzir, aumentar, state, extra_dores=True)
+    _pub = _publico_dominante(state)
+    if _pub and _pub[0] in ("40-59", "60+"):
+        aumentar.append(
+            f"Comunidade de longevidade funcional — mobilidade, saúde articular e "
+            f"hipertrofia preventiva: o público-alvo da praça é {_pub[0]} "
+            f"({_pub[1]}% feminino, Censo 2022 por setor)."
+        )
+    return eliminar, reduzir, aumentar
+
+
+def _sanitizar_headroom_se_indeterminado(hr: dict | None, veredito: str | None) -> dict | None:
+    """INDETERMINADO: renda IBGE fica; some tier/ticket/ratio (não é recomendação)."""
+    if not isinstance(hr, dict):
+        return hr
+    vd = str(veredito or hr.get("veredito_posicionamento") or "").upper()
+    if vd != "INDETERMINADO":
+        return hr
+    out = dict(hr)
+    out["tier_modelo_percentil"] = None
+    out["ticket_teto_sustentavel"] = None
+    out["headroom_ratio"] = None
+    out["headroom_premium"] = None
+    out["veredito_posicionamento"] = "INDETERMINADO"
+    return out
+
+
+def _garantir_eixos_errc_indeterminado(state: dict, parsed: dict) -> None:
+    """After-agent: se INDETERMINADO veio com ERRC vazio (LLM/cache), preenche a fonte única."""
+    if str(parsed.get("veredito_posicionamento") or "").upper() != "INDETERMINADO":
+        return
+    errc = parsed.get("framework_errc")
+    if not isinstance(errc, dict):
+        errc = {"eliminar": [], "reduzir": [], "aumentar": [], "criar": []}
+        parsed["framework_errc"] = errc
+    if not any(errc.get(k) for k in ("eliminar", "reduzir", "aumentar")):
+        eliminar, reduzir, aumentar = _eixos_errc_sem_modelo(state)
+        errc["eliminar"] = eliminar
+        errc["reduzir"] = reduzir
+        errc["aumentar"] = aumentar
+    _anexar_gap_24h_se_ausente(state, parsed)
+
+
+def _anexar_gap_24h_se_ausente(state: dict, out: dict) -> None:
+    """CRIAR 24h só se nenhum concorrente com horário conhecido anuncia 24h."""
+    oc = _as_dict(state.get("output_consolidado"))
+    ic = _as_dict(state.get("inteligencia_competitiva"))
+    inner = ic.get("inteligencia_competitiva") if isinstance(ic.get("inteligencia_competitiva"), dict) else ic
+    comps = (
+        oc.get("competitors_set")
+        or (inner.get("competitors_set") if isinstance(inner, dict) else None)
+        or state.get("competitors_set")
+        or []
+    )
+    if not isinstance(comps, list):
+        return
+    known = [c for c in comps if isinstance(c, dict) and c.get("tem_24h") is not None]
+    if not known or any(bool(c.get("tem_24h")) for c in known):
+        return
+    bullet = (
+        "Funcionamento 24h — nenhum dos concorrentes analisados anuncia "
+        "(oportunidade de CRIAR)"
+    )
+    errc = out.setdefault("framework_errc", {})
+    if not isinstance(errc, dict):
+        return
+    criar = list(errc.get("criar") or [])
+    if any("24h" in str(x).lower() for x in criar):
+        return
+    criar.append(bullet)
+    errc["criar"] = criar
+    gaps = list(out.get("gaps_identificados") or [])
+    if bullet not in gaps:
+        out["gaps_identificados"] = gaps + [bullet]
 
 
 def _publico_dominante(state: dict) -> tuple[str, int] | None:
@@ -422,7 +609,7 @@ def _publico_dominante(state: dict) -> tuple[str, int] | None:
         ((f, v) for f, v in seg.items() if isinstance(v, dict) and v.get("total")),
         key=lambda kv: kv[1]["total"], default=(None, None),
     )
-    if not faixa:
+    if not faixa or not isinstance(dados, dict):
         return None
     return faixa, int(round(float(dados.get("pct_mulheres") or 0)))
 
@@ -465,13 +652,11 @@ def _oferta_minerada_por_nome(state: dict) -> dict[str, set[str]]:
     return out
 
 
-def _penetracao_oferta_unificada(state: dict, concs: list[dict]) -> tuple["Counter", int]:
+def _penetracao_oferta_unificada(state: dict, concs: list[dict]) -> tuple[Counter, int]:
     """Penetração por serviço unindo, POR CONCORRENTE, o detalhado (_servicos_do_
     concorrente) e a oferta minerada do state. Concorrente que só existe na oferta
     minerada (fora do gate de análise, ex.: Parque Esportes) entra na contagem —
     gap só existe se NINGUÉM da praça oferece (task #40)."""
-    from collections import Counter
-
     minerada = _oferta_minerada_por_nome(state)
     pen: Counter = Counter()
     nomes_vistos: set[str] = set()
@@ -752,16 +937,25 @@ def _alertas_financeiros_fiscais(state: dict, tier: str | None, ticket_rec) -> l
 
 
 def _build_errc_indeterminado(state: dict, motivo: str, fonte_veredito: str) -> dict:
-    """Output A9 quando não dá para cravar posicionamento (ex.: A4 sem modelo viável)."""
-    market = state.get("market_context") if isinstance(state.get("market_context"), dict) else {}
+    """Output A9 quando não dá para cravar posicionamento (ex.: A4 sem modelo viável).
+
+    Eliminar/Reduzir/Aumentar vêm das dores da praça + demografia (independem do A4).
+    CRIAR continua via B1+B2.
+    """
+    market = _as_dict(state.get("market_context"))
     cidade, bairro = _resolve_location_from_state(state)
     uf = _resolve_uf_from_state(state)
+    eliminar, reduzir, aumentar = _eixos_errc_sem_modelo(state)
+
     out = {
         "markdown": (
             "## Posicionamento Estratégico\n\n"
             f"_Posicionamento indeterminado: {motivo}._\n\n"
             "_Sem modelo viável identificado pelo A4, não é possível "
             "recomendar ticket nem tier de posicionamento com confiança._\n\n"
+            "_As diretrizes ERRC abaixo derivam das dores dominantes da praça "
+            "(reviews) e do perfil demográfico — valem independente do modelo "
+            "financeiro a ser definido._\n\n"
             "_Revisar parâmetros financeiros (área, aluguel, ticket) antes de "
             "definir estratégia de mercado._\n"
         ),
@@ -781,9 +975,9 @@ def _build_errc_indeterminado(state: dict, motivo: str, fonte_veredito: str) -> 
         "headroom_renda": None,
         "modelo_a4": "nenhum",
         "framework_errc": {
-            "eliminar": [],
-            "reduzir": [],
-            "aumentar": [],
+            "eliminar": eliminar,
+            "reduzir": reduzir,
+            "aumentar": aumentar,
             "criar": [],
         },
         "gaps_identificados": [],
@@ -813,6 +1007,7 @@ def _build_errc_indeterminado(state: dict, motivo: str, fonte_veredito: str) -> 
         )
     except Exception:
         logger.warning("A9 cobertura no indeterminado falhou", exc_info=True, extra={"agent": "A9"})
+    _anexar_gap_24h_se_ausente(state, out)
     return out
 
 
@@ -936,7 +1131,11 @@ def _errc_deterministica(state: dict) -> dict:
     )
 
     # §2.2 — alertas financeiros/fiscais determinísticos (FATOR_R, OCUPACAO_TICKET, KPI_BENCHMARK).
-    alertas_financeiros_fiscais = _alertas_financeiros_fiscais(state, tier, ticket_rec)
+    alertas_financeiros_fiscais = (
+        []
+        if veredito == "INDETERMINADO" or not tier
+        else _alertas_financeiros_fiscais(state, tier, ticket_rec)
+    )
 
     # comparativo de mercado: menor plano REAL de cada concorrente + o recomendado.
     comparativo: dict = {}
@@ -976,31 +1175,8 @@ def _errc_deterministica(state: dict) -> dict:
     else:
         aumentar.append("Retenção, NPS e comunidade — diferenciação por experiência (sem lastro premium).")
     aumentar.append("Ticket médio rumo ao teto sustentável da renda local.")
-    # ── Brilliant Basics (auditoria Gemini 05/07): as DORES medidas nos reviews viram
-    # diretriz nas 4 dimensões — "entregar com precisão o que a praça executa mal".
-    # Cada item cita a dor/dado de origem (regra do carimbo).
-    dores = _dores_da_praca(state)
-    if {"contrato_abusivo", "contrato"} & dores:
-        eliminar.append(
-            "Atrito contratual — cancelamento livre e termos transparentes: "
-            "'contrato abusivo' é dor medida nos reviews da praça (retenção por valor, não por multa)."
-        )
-    if {"atendimento_ruim", "atendimento"} & dores:
-        eliminar.append(
-            "Instrutor de salão passivo — equipe dimensionada pra acolhimento proativo: "
-            "'atendimento ruim' é a dor mais citada da praça."
-        )
-    if {"ruido_alto", "ruido"} & dores:
-        reduzir.append(
-            "Pressão do horário de pico — escalonar grade e precificar off-peak: dissipa a "
-            "superlotação de 17h–19h que gera a dor 'ruído alto' medida nos reviews."
-        )
-    if {"climatizacao", "estrutura_envelhecida", "equipamento_problema"} & dores:
-        aumentar.append(
-            "Conforto ambiental como diferencial defensável: climatização dimensionada pro "
-            "calor local + manutenção preventiva com SLA de reparo — ataca as dores "
-            "'climatização/estrutura/equipamento' medidas nos reviews da concorrência."
-        )
+    # Brilliant Basics + gênero (mesmo helper do caminho INDETERMINADO).
+    _aplicar_brilliant_basics_errc(eliminar, reduzir, aumentar, state)
 
     criar = ([f"{g} — nenhum concorrente da praça anuncia." for g in gaps]
              if gaps else ["Mercado coberto nos serviços-núcleo — sem CRIAR; foco em AUMENTAR/REDUZIR."])
@@ -1013,19 +1189,9 @@ def _errc_deterministica(state: dict) -> dict:
             f"preventiva: o público-alvo da praça é {_pub[0]} ({_pub[1]}% feminino, "
             f"Censo 2022 por setor), que migra por previsibilidade e conforto, não por intensidade."
         )
-
-    # PONTO 56: pauta ERRC no gênero da faixa-alvo (mesma regra do A6).
-    try:
-        from tools.genero_estrategia import extrair_genero_do_state, sugestoes_genero_errc
-
-        _gdec = extrair_genero_do_state(state)
-        for _sug in sugestoes_genero_errc(
-            _gdec.get("genero") or "misto",
-            _gdec.get("pct_mulheres") if _gdec.get("genero") == "feminino" else _gdec.get("pct_homens"),
-        ):
-            aumentar.append(_sug)
-    except Exception:
-        pass
+    _scratch_24h = {"framework_errc": {"criar": criar}, "gaps_identificados": list(gaps or [])}
+    _anexar_gap_24h_se_ausente(state, _scratch_24h)
+    criar = list(_scratch_24h["framework_errc"]["criar"])
 
     # ── markdown ──
     def _bul(xs):
@@ -1103,7 +1269,9 @@ def _errc_deterministica(state: dict) -> dict:
                            "aumentar": aumentar, "criar": criar},
         # §2.2 — alertas determinísticos financeiros/fiscais (consome A4 analise_financeira).
         "alertas_financeiros_fiscais": alertas_financeiros_fiscais,
-        "headroom_renda": hr if ok else None,
+        "headroom_renda": (
+            _sanitizar_headroom_se_indeterminado(hr, veredito) if ok else None
+        ),
         "fonte_geracao": "deterministico_errc",
     }
     try:
@@ -1133,6 +1301,7 @@ def _errc_deterministica(state: dict) -> dict:
             # já está filtrado — o PDF estruturado é a fonte canônica.
     except Exception:
         logger.warning("A9 attach cobertura no return falhou", exc_info=True, extra={"agent": "A9"})
+    _anexar_gap_24h_se_ausente(state, out)
     return out
 
 
@@ -1277,6 +1446,12 @@ def _a9_after_agent_callback(callback_context):
         state["relatorio_posicionamento"] = parsed
         # Veredito DETERMINÍSTICO (headroom de renda) sobrepõe o do LLM — sourced/auditável.
         _a9_override_veredito_deterministico(state, parsed)
+        _garantir_eixos_errc_indeterminado(state, parsed)
+        if str(parsed.get("veredito_posicionamento") or "").upper() == "INDETERMINADO":
+            parsed["headroom_renda"] = _sanitizar_headroom_se_indeterminado(
+                parsed.get("headroom_renda") if isinstance(parsed.get("headroom_renda"), dict) else None,
+                "INDETERMINADO",
+            )
         # B1+B2: garante mapa/gaps mesmo se o override saiu cedo (sem cidade / headroom).
         try:
             from tools.cobertura_competitiva import aplicar_cobertura_no_posicionamento
@@ -1321,7 +1496,7 @@ def _a9_after_agent_callback(callback_context):
 
         local_id = state.get("relatorio_local_id")
         if isinstance(local_id, str) and local_id:
-            _patch_relatorio_json(local_id, parsed)
+            _patch_relatorio_json(local_id, parsed, state=state)
 
         rel_uuid = state.get("relatorio_id")
         if isinstance(rel_uuid, str) and rel_uuid:
@@ -1354,7 +1529,8 @@ def _a9_after_agent_callback(callback_context):
                 _p = _RELATORIOS_DIR / f"{local_id}.json"
                 if _p.is_file():
                     relatorio_full = json.loads(_p.read_text(encoding="utf-8"))
-            markdown = state.get("relatorio_md") if isinstance(state.get("relatorio_md"), str) else ""
+            markdown_raw = state.get("relatorio_md")
+            markdown = markdown_raw if isinstance(markdown_raw, str) else ""
             validacao = run_a8_validation(markdown, state, relatorio=relatorio_full)
             if validacao:
                 if relatorio_full is not None and isinstance(local_id, str):

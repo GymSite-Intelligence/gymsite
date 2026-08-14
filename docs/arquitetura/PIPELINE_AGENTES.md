@@ -74,9 +74,9 @@ GymSitePipeline (Sequential)
 - **Classe / model:** `BaseAgent` (determinístico) · —
 - **Macro:** `analisar_concorrentes_a3a_completo`
 - **Lê:** `input_params`, `market_context` · **Escreve:** `concorrentes_brutos`
-- **Fonte:** **SearchAPI `engine=google_maps`** (primário, 4× barato; Places fallback) + **SearchAPI `engine=google_maps_reviews`** (`sort_by=lowest_rating`, cache 7d) → card determinístico `_processar_review_card` (`dores_detectadas`, `sentimento`, `servicos_mencionados`) + **refino opcional** Gemini Flash batch (`categoria_dor` taxonomia fechada; fallback substring se falha)
+- **Fonte:** **SearchAPI `engine=google_maps`** (primário) + deep por gated via **`google_maps_place`** (1 call: pico + `review_results` + website) → card `_processar_review_card`; fallback **`google_maps_reviews`** (`sort_by=lowest_rating`) só se o place não trouxe reviews. Planos: site oficial → **`google_light`**. Places Details **fora** do deep (só `COMPETIDOR_MAPS_BACKEND=places` ou `A3A_FETCH_ATRIBUTOS=1`). Gemini Flash = refino opcional de `categoria_dor`.
 - **Gate espacial (Spec C):** inclusão = **point-in-polygon** no polígono IBGE do bairro se resolvido; senão **R=1000 m** do centróide (`RAIO_CONCORRENCIA_CANONICO_M`). Bairro na query = só recall.
-- **Faz:** busca + gate `_eh_academia_tradicional` + reviews SearchAPI + enriquecimento.
+- **Faz:** busca + gate `_eh_academia_tradicional` + **deep em todos os gated no bairro** (reviews SearchAPI + planos/preços). `MAX_ENRIQUECIMENTO` default 25 = teto, não amostra.
 - **⚠️ Nosso fix:** o gate agora entende types PT do SearchAPI (era só EN → cortava academia real). Ver [`tools/competitor_tools.py`](../../tools/competitor_tools.py).
 - **Relatório:** §6.1 (por bairro), §11 (Distribuição Geográfica).
 
@@ -272,7 +272,7 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 |---|---|---|---|
 | **A1** `anchoring_tools.py` L421-429 | `enrich_candidato_fluxo` nos **top 3** | Overpass (não reusa concorrentes A3a ainda) | **9+ min** cold OSMnx × até 3 coords distintas |
 | **A6** `_a6_precompute_callback` | `build_fluxo_pedestre_block` no candidato #1 ou centróide bairro | `competidores` do state A3b | cache hit se mesma coord; senão +1 cold |
-| **A6** | `top_vias_por_fluxo` → `melhores_vias_prospeccao` (+ `mapa_svg` / `coords`) | mesmo GeoJSON do motor (sem 2ª osmnx) | ~ms após cache |
+| **A6** | `top_vias_por_fluxo` → `melhores_vias_prospeccao` (+ `mapa_svg` / `mapa_png` / `coords`) | mesmo GeoJSON do motor (sem 2ª osmnx); PNG = tiles OSM + overlay | ~ms após cache (+ tiles se miss) |
 | **API** | `GET /api/relatorios/{id}/fluxo-pedestre` | lê persistido + cache | fora do pipeline |
 
 **Conflitos com §7 (auditados jul/2026):**

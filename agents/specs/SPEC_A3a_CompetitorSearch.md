@@ -55,8 +55,12 @@ Gravado via `EventActions(state_delta={"concorrentes_brutos": resultado})` — n
 **RN-A3a-01 — Fluxo determinístico em 1 macro-call**
 A execução chama `analisar_concorrentes_a3a_completo(tool_context, bairro, cidade)` (em `tools/competitor_tools.py`, linha 2292). Esta macro encapsula em código Python: `buscar_concorrentes_balanceados` → filtro semântico → `buscar_reviews_academia` → `enriquecer_concorrente_via_google` (async/Playwright) → `classificar_dores_reviews_batch_gemini` (1 call Gemini Flash batch) → `aplicar_classificacao_dores`. Nenhum LLM orquestra o fluxo — é 100% Python.
 
-**RN-A3a-02 — Cap de enriquecimento por latência**
-Enriquece somente os `MAX_ENRIQUECIMENTO` (default **3**, via env) concorrentes com maior número de avaliações. Concorrentes além do cap ficam na lista com dados básicos (sem reviews/pico). Razão: enrichment sequencial é long-pole; cap 3 corta wall sem matar cobertura do top.
+**RN-A3a-02 — Deep = todos no gate bairro+tipo via SearchAPI**
+Quem passou no gate raio+tipo recebe reviews **e** planos/preços pela metodologia SearchAPI:
+1. `engine=google_maps_place` (1 call: pico + `review_results` + website/telefone; dores primeiro)
+2. `engine=google_maps_reviews` (`sort_by=lowest_rating`) só se o place não trouxe reviews
+3. Planos: site oficial → `engine=google_light`
+Places Details não entra no deep. `MAX_ENRIQUECIMENTO` (default **25**) é teto de segurança, não amostra.
 
 **RN-A3a-03 — Filtro semântico de tipo pré-enriquecimento**
 Antes do enriquecimento, cada item passa por `_eh_academia_tradicional(c)`. Itens que não passam (ex: clínicas, estúdios de dança classificados pelo Google como fora do escopo) vão para `concorrentes_excluidos`. O filtro é binário e determinístico.
@@ -77,7 +81,7 @@ O agente é `BaseAgent` (não `LlmAgent`). Não há chamada de LLM no `_run_asyn
 - [ ] `state["concorrentes_brutos"]` existe após a execução e é `dict` com chave `concorrentes_brutos` sendo `list`.
 - [ ] Em caso de falha total da macro, `state["concorrentes_brutos"]` contém `{"erro": "...", "concorrentes_brutos": [], ...}` — nunca `KeyError` ou ausência da chave.
 - [ ] Nenhum token de LLM consumido pelo agente A3a em si (log de telemetria: `tokens_a3a == 0`).
-- [x] Com `MAX_ENRIQUECIMENTO=3` (default), no máximo 3 concorrentes recebem reviews e horários de pico.
+- [x] Com `MAX_ENRIQUECIMENTO=25` (default), todos os gated no bairro (até o teto) recebem reviews e planos/preços.
 - [ ] Clínicas médicas ou estúdios de dança retornados pela busca inicial aparecem em `concorrentes_excluidos`, não em `concorrentes_brutos`.
 - [ ] Smoke E2E: relatório completo gera `concorrentes_brutos.concorrentes_brutos` com lista não-vazia para cidades com academias mapeadas no Google Maps.
 

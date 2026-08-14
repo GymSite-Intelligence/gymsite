@@ -32,9 +32,9 @@ CONFIABILIDADE_MIN_SUCESSO = 0.30
 
 # Limite de academias mapeadas por relatório. Ordem: detalhados do A3b primeiro
 # (ranking de relevância), depois o resto da praça (brutos do A3a) por nº de
-# avaliações. 10 cobre o bairro típico; o cache em disco do IG zera o custo das
-# rodadas seguintes. Override via env var A3C_MAX_COMPETIDORES sem precisar deploy.
-DEFAULT_MAX_COMPETIDORES = 10
+# avaliações. 25 cobre bairro denso (Meireles ~14); cache IG zera rerun.
+# Override via env var A3C_MAX_COMPETIDORES sem precisar deploy.
+DEFAULT_MAX_COMPETIDORES = 25
 
 
 def _max_competidores() -> int:
@@ -265,20 +265,63 @@ def mapear_oferta_competidores_completo(tool_context) -> dict:
                         mensais.append(float(p.get("valor_brl")))
                     except (TypeError, ValueError):
                         pass
-            faixa = {"plano_mensal_min": min(mensais), "plano_mensal_max": max(mensais)} if mensais else None
+            for p in (raw.get("planos_extraidos") or []):
+                if p.get("suspeito"):
+                    continue
+                try:
+                    v = float(p.get("preco_mensal_brl"))
+                except (TypeError, ValueError):
+                    continue
+                if v > 0:
+                    mensais.append(v)
+            faixa = raw.get("faixa_preco_brl")
+            if not isinstance(faixa, dict) and mensais:
+                faixa = {
+                    "min": round(min(mensais), 2),
+                    "max": round(max(mensais), 2),
+                    "mediana": round(sorted(mensais)[len(mensais) // 2], 2),
+                    "plano_mensal_min": round(min(mensais), 2),
+                    "plano_mensal_max": round(max(mensais), 2),
+                }
+            elif isinstance(faixa, dict) and mensais:
+                faixa = {
+                    **faixa,
+                    "plano_mensal_min": faixa.get("min") or round(min(mensais), 2),
+                    "plano_mensal_max": faixa.get("max") or round(max(mensais), 2),
+                }
+            else:
+                faixa = faixa if isinstance(faixa, dict) else None
             fontes = []
-            if raw.get("fonte_url_ok"):       fontes.append("website")
-            if raw.get("fonte_instagram_ok"): fontes.append("instagram")
+            if raw.get("fonte_url_ok"):
+                fontes.append("website")
+            if raw.get("fonte_instagram_ok"):
+                fontes.append("instagram")
             if raw.get("fontes_agregador"):
                 fontes.extend(raw["fontes_agregador"])
+            for f in raw.get("fontes") or []:
+                if f and f not in fontes:
+                    fontes.append(f)
+            # RN-A3b-14: eleva confiança por fontes múltiplas.
+            from tools.instagram_highlights_gemini import elevar_confianca
+
+            if len(set(fontes)) >= 3:
+                conf_label = elevar_confianca(conf_label, "alta")
+            elif len(set(fontes)) >= 2:
+                conf_label = elevar_confianca(conf_label, "media")
             normalizado[chave] = {
                 "nome": raw.get("nome"),
                 "modalidades": raw.get("modalidades_keywords") or [],
                 "diferenciais": raw.get("diferenciais_keywords") or [],
                 "faixa_preco_brl": faixa,
+                "planos_extraidos": raw.get("planos_extraidos") or [],
                 "fontes": fontes,
-                # Camada 3 (SPEC_OFERTA_AGREGADORES): tier corporativo NUNCA vira
-                # preço de balcão — campo próprio, rotulado, até a vitrine do PDF.
+                "instagram_username": raw.get("instagram_username"),
+                "instagram_l3_5_status": (
+                    (raw.get("highlights_gemini") or {}).get("status")
+                    if isinstance(raw.get("highlights_gemini"), dict)
+                    else None
+                ),
+                "highlights_gemini": raw.get("highlights_gemini"),
                 "tier_agregador": raw.get("tier_agregador"),
                 "rating_agregador": raw.get("rating_agregador"),
                 "comodidades": raw.get("comodidades_agregador") or [],

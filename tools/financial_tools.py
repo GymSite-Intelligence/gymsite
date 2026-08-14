@@ -1016,6 +1016,25 @@ def _escolher_cenario_recomendado(
     # auto-contradição (VPL negativo, quebra em todo stress test).
     viaveis = [c for c in cenarios.values() if c.get("viabilidade") not in ("INVIAVEL", None)]
 
+    # RN-A4-11: todos inviáveis → nenhum modelo (força A9 a degradar INDETERMINADO).
+    if not viaveis:
+        inviaveis_keys = [k for k in ("low", "mid", "premium") if k in cenarios]
+        msg = (
+            "Nenhum modelo fecha conta no cenário realista para este bairro/área. "
+            "Revisar: área (reduzir m²), aluguel (negociar) ou ticket (reposicionar). "
+            f"Cenários inviáveis: {', '.join(inviaveis_keys) or 'todos'}."
+        )
+        return {
+            "modelo": "nenhum",
+            "lucro_mensal_estimado": 0.0,
+            "payback_meses": 999,
+            "viabilidade": "INVIAVEL",
+            "justificativa_recomendacao": msg,
+            "justificativa": msg,
+            "alerta_viabilidade": "todos_cenarios_inviaveis",
+            "cenarios_inviaveis": inviaveis_keys,
+        }
+
     # GATE DE PAYBACK (opção c, jun/2026): tier-por-renda NÃO recomenda payback longo.
     # Ceiling = 48 meses (mesmo limiar do alerta "Payback acima de 48 meses — risco elevado").
     # Premium num bairro rico só é recomendado se fecha em payback aceitável; senão cai pro
@@ -1513,8 +1532,38 @@ def _resumo_decisao_a4(fin: dict) -> dict:
     (folha do veredito), recomendacao_modelo (do cenário escolhido) e os alertas de
     risco obrigatórios. LLM fica só com a justificativa narrativa.
     """
-    cenarios = fin.get("cenarios") or {}
-    rec_modelo = fin.get("recomendacao") or "Nenhum"
+    cenarios = fin.get("cenarios") if isinstance(fin.get("cenarios"), dict) else {}
+    rec_modelo = fin.get("recomendacao") or fin.get("recomendacao_modelo") or "nenhum"
+
+    inviaveis: list[str] = []
+    viaveis_keys: list[str] = []
+    for key in ("low", "mid", "premium"):
+        c0 = cenarios.get(key)
+        if not isinstance(c0, dict):
+            continue
+        if c0.get("viabilidade") not in ("INVIAVEL", None, ""):
+            viaveis_keys.append(key)
+        else:
+            inviaveis.append(key)
+
+    rec_l = str(rec_modelo).strip().lower()
+    if (cenarios and not viaveis_keys) or rec_l in ("nenhum", "none"):
+        alerta = (
+            "Nenhum modelo fecha conta no cenário realista para este bairro/área. "
+            "Revisar: área (reduzir m²), aluguel (negociar) ou ticket (reposicionar). "
+            f"Cenários inviáveis: {', '.join(inviaveis) or 'todos'}."
+        )
+        return {
+            "score_viabilidade": 0.0,
+            "recomendacao_modelo": "nenhum",
+            "modelo_recomendado": "nenhum",
+            "ocupacao_break_recomendado": 0.0,
+            "alertas_risco": [f"⚠️ {alerta}"],
+            "alerta_viabilidade": "todos_cenarios_inviaveis",
+            "cenarios_inviaveis": inviaveis or ["low", "mid", "premium"],
+            "modelo_recomendado_justificativa": alerta,
+        }
+
     c = cenarios.get(_faixa_key_de_modelo(rec_modelo)) or {}
 
     payback = float(c.get("payback_meses") or 999)
@@ -1543,8 +1592,13 @@ def _resumo_decisao_a4(fin: dict) -> dict:
     for s in c.get("sensibilidade") or []:
         if s.get("id") == "matriculas_menos_30pct" and s.get("viabilidade") == "INVIAVEL":
             alertas.append("⚠️ Matrículas −30% torna o modelo inviável — só fecha no benchmark Smart Fit.")
-    return {"score_viabilidade": score, "recomendacao_modelo": rec_modelo,
-            "ocupacao_break_recomendado": round(ocup_break, 3), "alertas_risco": alertas}
+    return {
+        "score_viabilidade": score,
+        "recomendacao_modelo": rec_modelo,
+        "modelo_recomendado": rec_modelo,
+        "ocupacao_break_recomendado": round(ocup_break, 3),
+        "alertas_risco": alertas,
+    }
 
 
 async def analise_financeira_a4_completo(
@@ -1785,7 +1839,16 @@ async def analise_financeira_a4_completo(
     _dec = _resumo_decisao_a4(fin)
     fin["score_viabilidade"] = _dec["score_viabilidade"]
     fin["recomendacao_modelo"] = _dec["recomendacao_modelo"]
+    fin["modelo_recomendado"] = _dec.get("modelo_recomendado") or _dec["recomendacao_modelo"]
     fin["ocupacao_break_recomendado"] = _dec["ocupacao_break_recomendado"]
+    if _dec.get("alerta_viabilidade"):
+        fin["alerta_viabilidade"] = _dec["alerta_viabilidade"]
+    if _dec.get("cenarios_inviaveis") is not None:
+        fin["cenarios_inviaveis"] = _dec["cenarios_inviaveis"]
+    if _dec.get("modelo_recomendado_justificativa"):
+        fin["modelo_recomendado_justificativa"] = _dec["modelo_recomendado_justificativa"]
+        if not fin.get("recomendacao_justificativa"):
+            fin["recomendacao_justificativa"] = _dec["modelo_recomendado_justificativa"]
     for av in _dec["alertas_risco"]:
         if av not in fin["alertas"]:
             fin["alertas"].append(av)
