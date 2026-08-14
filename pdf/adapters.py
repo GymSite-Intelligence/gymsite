@@ -290,16 +290,9 @@ def _map_market(mc: dict[str, Any] | None) -> MarketContextPdf | None:
         parque_ativo=_int(
             mc.get("parque_ativo_total") or mc.get("academias_ativas_cidade_cnpj"),
         ),
-        novos_cnpj_90d=_int(
-            mc.get("novos_cnpj_fitness_90d")
-            if mc.get("novos_cnpj_fitness_90d") is not None
-            else arv.get("entrantes_municipio_90d")
-        ),
-        baixas_cnpj_90d=_int(
-            mc.get("baixas_cnpj_fitness_90d")
-            if mc.get("baixas_cnpj_fitness_90d") is not None
-            else arv.get("baixas_municipio_90d")
-        ),
+        # 90d não vai pro PDF cliente — canônico é o trimestre civil (Q).
+        novos_cnpj_90d=None,
+        baixas_cnpj_90d=None,
         baixas_cnpj_q=_int(
             mc.get("baixas_cnpj_fitness_q")
             if mc.get("baixas_cnpj_fitness_q") is not None
@@ -329,7 +322,7 @@ def _map_market(mc: dict[str, Any] | None) -> MarketContextPdf | None:
         cnpj_as_of=(
             str(mc.get("cnpj_as_of") or arv.get("as_of") or "").strip() or None
         ),
-        baixas_bairro_90d=_int(arv.get("baixas_bairro_90d")),
+        baixas_bairro_90d=None,
         baixas_bairro_q=_int(arv.get("baixas_bairro_q")),
         entrantes_bairro_q=_int(arv.get("entrantes_bairro_q")),
         saldo_bairro_q=_int(arv.get("saldo_oferta_bairro_q")),

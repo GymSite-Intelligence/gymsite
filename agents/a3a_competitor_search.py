@@ -6,7 +6,7 @@ Sub-agente da fase competitiva. Busca academias concorrentes, processa reviews
 e faz enrichment. NÃO faz análise agregada — isso é do A3b.
 
 REFATOR custo-LLM (2026-06-14):
-Antes era um LlmAgent (gemini-2.5-flash) cujo único trabalho era chamar a macro
+Antes era um LlmAgent (gemini-3.6-flash) cujo único trabalho era chamar a macro
 determinística `analisar_concorrentes_a3a_completo` e ECOAR o JSON de volta via
 output_key. O LLM não decidia nada: re-enviava o state inteiro (~83k tokens por
 relatório, medido em metrics/tokens_pipeline.csv) só pra repetir o resultado da

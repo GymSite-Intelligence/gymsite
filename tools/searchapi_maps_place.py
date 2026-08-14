@@ -273,3 +273,15 @@ def seed_reviews_cache_from_place(place_id: str, raw: dict | None) -> list[dict]
 def website_from_maps_place(raw: dict | None) -> str:
     pr = _place_result(raw)
     return (pr.get("website") or "").strip()
+
+
+def contato_from_maps_place(raw: dict | None) -> dict[str, Any]:
+    """Website / telefone / rating / N avaliações do mesmo payload google_maps_place."""
+    pr = _place_result(raw)
+    n = pr.get("reviews")
+    return {
+        "website": (pr.get("website") or "").strip(),
+        "telefone": str(pr.get("phone") or pr.get("phone_number") or "").strip(),
+        "rating": pr.get("rating"),
+        "num_avaliacoes": int(n) if isinstance(n, (int, float)) else None,
+    }

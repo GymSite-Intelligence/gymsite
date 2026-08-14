@@ -27,9 +27,17 @@ from tools.parametros_metodologia import param
 _GENERATE_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(thinking_budget=8192),  # pyright: ignore[reportCallIssue]
     tool_config=types.ToolConfig(
-        function_calling_config=types.FunctionCallingConfig(mode="NONE"),
+        function_calling_config=types.FunctionCallingConfig(
+            mode=types.FunctionCallingConfigMode.NONE,
+        ),
     ),
 )
+
+
+def _input_params(state: dict) -> dict[str, Any]:
+    """Form/CLI params do request — sempre dict (nunca None) p/ o type-checker."""
+    raw = state.get("input_params")
+    return raw if isinstance(raw, dict) else {}
 
 
 # ── Mapa de bairros alternativos por cidade (acionado quando score < 6) ──
@@ -347,7 +355,7 @@ def _bairro_alvo_da_busca(state) -> str:
             extra={"agent": "A6", "context": "_bairro_alvo_da_busca"},
         )
     # A0 às vezes não propaga market_context; input_params do form/CLI é autoritativo
-    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    ip = _input_params(state)
     return (ip.get("bairro") or state.get("bairro") or "").strip()
 
 
@@ -2382,7 +2390,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # Params reais do request (injetados por api.py em session_state["input_params"]).
     # input_canonico DEVE refleti-los — antes hardcodava area/publico/estacionamento,
     # corrompendo o registro canônico (auditoria/re-run/CRUD liam defaults, não o pedido).
-    ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    ip = _input_params(state)
 
     # Mapeamento de ofertas (para enriquecer o competitors_set do JSON canônico)
     oferta_raw = state.get("oferta_concorrentes")
@@ -2474,7 +2482,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
     # Plugado em 2026-05-11 após fix geo-fence (#89): quando o DR pede uma rede
     # que não tem unidade local no raio alvo, A3a marca em redes_a0_nao_encontradas.
     cs_raw = _parse_market_context(state.get("concorrentes_brutos"))
-    _ip_cc = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+    _ip_cc = _input_params(state)
     _tn_cc = (_ip_cc.get("tipo_negocio")
               or (inner_mc.get("tipo_negocio") if isinstance(inner_mc, dict) else "")
               or "academia")
@@ -2692,7 +2700,7 @@ def _extrair_relatorio_estruturado(callback_context) -> dict:
                 # PONTO 52/55: limiar configurável — não usar maioria bruta (54>46).
                 from tools.genero_estrategia import aplicar_regra_genero
 
-                _ip = state.get("input_params") if isinstance(state.get("input_params"), dict) else {}
+                _ip = _input_params(state)
                 _genero_in = (
                     _ip.get("genero_alvo")
                     or slim_market_context.get("genero_alvo")
