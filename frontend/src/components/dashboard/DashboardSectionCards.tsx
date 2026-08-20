@@ -1,5 +1,5 @@
 /**
- * DashboardSectionCards — KPIs do dashboard em mini-cards (linguagem Geo-Intel).
+ * DashboardSectionCards — KPIs do dashboard em mini-cards.
  *
  * Cards user-facing: Relatórios, Aprovados (taxa), Reprovados, Score médio.
  * O card de CUSTO (custoTotalBrl) é economia operacional INTERNA (base de margem
@@ -22,10 +22,10 @@ interface KpiCard {
   label: string
   value: string
   hint: string
-  accent: string
   Icon: typeof FileText
   badge?: { text: string; tone: 'success' | 'warning' }
   internal?: boolean
+  valueTone?: 'destructive'
 }
 
 export function DashboardSectionCards({
@@ -61,14 +61,12 @@ export function DashboardSectionCards({
       label: 'Relatórios',
       value: String(stats?.total ?? 0),
       hint: `${stats?.concluidos ?? 0} concluídos · ${stats?.emAndamento ?? 0} em fila`,
-      accent: 'var(--chart-1)',
       Icon: FileText,
     },
     {
       label: 'Aprovados',
       value: String(stats?.aprovados ?? 0),
       hint: `${taxaAprovacao}% dos concluídos`,
-      accent: 'hsl(var(--veredito-aprovado))',
       Icon: CheckCircle2,
       badge:
         stats && stats.concluidos > 0
@@ -79,25 +77,22 @@ export function DashboardSectionCards({
       label: 'Reprovados',
       value: String(stats?.reprovados ?? 0),
       hint: `${taxaReprovacao}% dos concluídos`,
-      accent: 'hsl(var(--veredito-reprovado))',
       Icon: XCircle,
+      valueTone: (stats?.reprovados ?? 0) > 0 ? 'destructive' : undefined,
     },
     {
       label: 'Score médio',
       value: stats?.scoreMedio != null ? stats.scoreMedio.toFixed(1) : '—',
       hint: 'Top candidato · concluídos',
-      accent: 'var(--chart-2)',
       Icon: Gauge,
     },
   ]
 
-  // Custo: economia operacional interna — só admin.
   if (isAdmin) {
     cards.push({
       label: 'Custo Gemini',
       value: brl(stats?.custoTotalBrl ?? 0),
       hint: 'Soma custo_brl dos relatórios',
-      accent: 'hsl(var(--veredito-ressalvas))',
       Icon: Lock,
       internal: true,
     })
@@ -109,37 +104,37 @@ export function DashboardSectionCards({
         <div
           key={c.label}
           data-slot="card"
-          className="relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-4 shadow-xs"
-          style={{ borderLeft: `3px solid ${c.accent}` }}
+          className="relative flex flex-col gap-2 overflow-hidden rounded-xl border border-border bg-card p-4"
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               {c.label}
             </span>
-            <c.Icon size={15} className="shrink-0" style={{ color: c.accent }} />
+            <c.Icon size={15} className="shrink-0 text-muted-foreground" />
           </div>
-          <span className="text-3xl font-semibold leading-none tabular-nums">{c.value}</span>
+          <span
+            className={
+              c.valueTone === 'destructive'
+                ? 'font-mono text-3xl font-semibold leading-none tabular-nums text-destructive'
+                : 'font-mono text-3xl font-semibold leading-none tabular-nums'
+            }
+          >
+            {c.value}
+          </span>
           <div className="flex flex-wrap items-center gap-2">
             {c.badge && (
               <span
-                className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                style={{
-                  color:
-                    c.badge.tone === 'success'
-                      ? 'hsl(var(--veredito-aprovado))'
-                      : 'hsl(var(--veredito-ressalvas))',
-                  background: `color-mix(in oklch, ${
-                    c.badge.tone === 'success'
-                      ? 'hsl(var(--veredito-aprovado))'
-                      : 'hsl(var(--veredito-ressalvas))'
-                  } 14%, transparent)`,
-                }}
+                className={
+                  c.badge.tone === 'success'
+                    ? 'rounded-md border border-border bg-secondary px-2 py-0.5 font-mono text-[11px] font-semibold text-primary'
+                    : 'rounded-md border border-border bg-secondary px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground'
+                }
               >
                 {c.badge.text}
               </span>
             )}
             {c.internal && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 <Lock size={9} /> interno
               </span>
             )}

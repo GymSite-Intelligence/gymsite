@@ -251,7 +251,7 @@ export function ProspectPage() {
       </header>
 
       {/* Busca DIRETA por município (independente do pipeline) */}
-      <div className="rounded-lg border bg-card/40 p-4 space-y-3">
+      <div className="rounded-lg border bg-card p-4 space-y-3">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider font-mono font-medium text-muted-foreground">
           <Radar size={14} /> Buscar novos entrantes por município
         </div>

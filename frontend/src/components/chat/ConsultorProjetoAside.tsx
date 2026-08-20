@@ -34,7 +34,7 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
   const locLabel = loc?.cidade ? [loc.bairro, loc.cidade, loc.uf].filter(Boolean).join(', ') : null
 
   return (
-    <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-card/40 p-4 lg:flex">
+    <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-card p-4 lg:flex">
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projeto</h2>
         <div className="mt-2 rounded-xl border border-border bg-card p-3">
@@ -72,7 +72,7 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
                 key={key}
                 className={cn(
                   'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs',
-                  done ? 'border-primary/25 bg-primary/5' : 'border-border/60 bg-card/40',
+                  done ? 'border-primary/25 bg-primary/5' : 'border-border/60 bg-card',
                 )}
               >
                 {Icone ? (

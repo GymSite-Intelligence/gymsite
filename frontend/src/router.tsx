@@ -40,7 +40,6 @@ import AdminParceirosPage from '@/routes/AdminParceirosPage'
 import AdminLlmPage from '@/routes/AdminLlmPage'
 import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
 import { PlanosListPage } from '@/routes/PlanosListPage'
-import { ThemeLabPage } from '@/routes/ThemeLabPage'
 import { LandingPage } from '@/routes/LandingPage'
 import { DegustacaoPage } from '@/routes/DegustacaoPage'
 import { TestePage } from '@/routes/TestePage'
@@ -471,17 +470,10 @@ const execucaoRoute = createRoute({
   }),
 })
 
-const themeLabRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/theme-lab',
-  component: ThemeLabPage,
-})
-
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
   privacidadeRoute,
-  themeLabRoute,
   indexRoute,
   relatoriosListRoute,
   novoRelatorioRoute,

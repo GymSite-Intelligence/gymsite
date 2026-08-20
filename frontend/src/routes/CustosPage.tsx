@@ -696,7 +696,7 @@ function AgenteBreakdown({ relatorioId }: { relatorioId: string }) {
   const grandTotal = data?.total_brl ?? 0
 
   return (
-    <div className="p-5 bg-card/40 border-t border-border/60 space-y-6">
+    <div className="p-5 bg-card border-t border-border/60 space-y-6">
       {/* Custo Share header */}
       <div className="flex items-center justify-between text-xs text-muted-foreground border-b border-border/50 pb-2">
         <div className="flex items-center gap-4">

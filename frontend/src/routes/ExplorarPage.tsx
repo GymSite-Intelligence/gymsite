@@ -539,7 +539,7 @@ export function ExplorarPage() {
             aria-labelledby="explorar-verify-title"
           >
             <div
-              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-background/90"
               aria-hidden
               onClick={() => setVerifyOpen(false)}
             />

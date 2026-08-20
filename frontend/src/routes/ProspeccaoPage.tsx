@@ -311,7 +311,7 @@ export function ProspeccaoPage() {
       )}
 
       {/* Localização em cascata (Estado → Município → Bairro) */}
-      <div className="rounded-lg border bg-card/40 p-4 space-y-3">
+      <div className="rounded-lg border bg-card p-4 space-y-3">
         <h2 className="text-xs uppercase tracking-wider font-mono font-medium text-muted-foreground">
           Localização alvo
         </h2>
