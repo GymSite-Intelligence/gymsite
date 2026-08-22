@@ -8,7 +8,9 @@ Fluxo:
   POST /analise  → Turnstile + entitlement (1/email) + caps (IP/dia, global/dia)
                    + allowance SearchAPI → cria stub `relatorios` (user_id NULL,
                    org ANON, access_token) → enfileira o MESMO pipeline ADK.
-  GET  /analise/{id}?token=  → polling; quando status='done' devolve o SUBSET free.
+  GET  /analise/{id} + header X-Access-Token → polling; 'done' → SUBSET free.
+                   Token UUID + TTL (SITE_ANALISE_TOKEN_TTL_HOURS, default 48).
+                   Query ?token= rejeitada (evita Referer / logs de URL).
 
 Aluguel no mini-relatório (`aluguel_m2` em `_extras_teaser`) vem do A4 Tier 0 MRLR
 (`tools/aluguel_mrlr.py`), não de SearchAPI. Inputs mínimos MRLR no stub:
@@ -27,10 +29,10 @@ import hmac
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from agents_site.catalog import AGENTES_VALIDOS, id_publico  # sem dependência do ADK (import barato)
@@ -46,6 +48,7 @@ _FONTE = "landing-getgymsite"
 _CAP_IP_DIA = int(os.getenv("SITE_AGENT_CAP_IP_DIA") or "5")
 _CAP_GLOBAL_DIA = int(os.getenv("SITE_AGENT_CAP_GLOBAL_DIA") or "100")
 _ETA_MIN = 5
+_TOKEN_TTL_HOURS = int(os.getenv("SITE_ANALISE_TOKEN_TTL_HOURS") or "48")
 _CHAT_SESSOES_IP_DIA = int(os.getenv("SITE_CHAT_SESSOES_IP_DIA") or "2")
 _CHAT_TURNOS_PROJETO = int(os.getenv("SITE_CHAT_TURNOS_PROJETO") or "10")
 _CHAT_MODO_DEGUSTACAO = (os.getenv("SITE_CHAT_MODO_DEGUSTACAO") or "0").strip().lower() in ("1", "true", "yes")
@@ -73,6 +76,52 @@ def _bypass_autorizado(request: Request, dev_token: str | None, ip: str | None) 
         return False
     candidato = (request.headers.get("x-site-chat-token") or dev_token or "").strip()
     return bool(candidato) and hmac.compare_digest(candidato, _CHAT_BYPASS_TOKEN)
+
+
+def _parse_ts(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return None
+
+
+def _access_token_expirado(row: dict) -> bool:
+    """True se capability token passou do TTL.
+
+    Prefer access_token_expires_at (migration 20260822); senão created_at + SITE_ANALISE_TOKEN_TTL_HOURS.
+    Sem âncora temporal → trata como expirado (fail-closed).
+    """
+    now = datetime.now(timezone.utc)
+    exp = _parse_ts(row.get("access_token_expires_at"))
+    if exp is not None:
+        return now >= exp
+    created = _parse_ts(row.get("created_at"))
+    if created is None:
+        return True
+    return now >= created + timedelta(hours=_TOKEN_TTL_HOURS)
+
+
+def _gravar_access_token(sb, relatorio_id: str, access_token: str) -> datetime:
+    """Persiste token + expires_at. Se coluna expires ainda não existir, só token."""
+    expires = datetime.now(timezone.utc) + timedelta(hours=_TOKEN_TTL_HOURS)
+    payload = {
+        "access_token": access_token,
+        "access_token_expires_at": expires.isoformat(),
+    }
+    try:
+        tbl(sb, "relatorios").update(payload).eq("id", relatorio_id).execute()
+    except Exception:
+        logger.warning(
+            "access_token_expires_at indisponível — gravando só token (aplique db/migrations/20260822_access_token_expires_at.sql)"
+        )
+        tbl(sb, "relatorios").update({"access_token": access_token}).eq("id", relatorio_id).execute()
+    return expires
 
 
 async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessao: bool, agente: str) -> str | None:
@@ -344,7 +393,7 @@ async def criar_analise(data: AnaliseInput, request: Request, background: Backgr
         raise HTTPException(status_code=500, detail="Falha ao iniciar a análise.") from e
 
     access_token = str(uuid.uuid4())
-    tbl(sb,"relatorios").update({"access_token": access_token}).eq("id", relatorio_id).execute()
+    _gravar_access_token(sb, relatorio_id, access_token)
 
     # 6. Grava entitlement (unique(email) é o guard duro contra corrida).
     if not bypass:
@@ -394,8 +443,8 @@ async def conversar_site(data: ConversarSiteInput, request: Request, background:
     enqueue `site_conversar` → `run_site_agent_adk` → salvar_mensagem + poll.
     Sem Evolution/WhatsApp (sandbox = HTTP).
 
-    NOTA: cap de novas sessões por IP/dia ainda não enforced (Turnstile + K=2 +
-    entitlement 1/email no /analise limitam o custo). Follow-up.
+    Caps chat: Turnstile em nova sessão + Redis `_cap_chat_estourado`
+    (sessoes/IP/dia, turnos/projeto, degustação agente). Fail-closed se Redis cair.
     """
     from services.consultor.consultor_engine import _ANON_SITE_USER_ID
     from services.consultor.project_state import criar_projeto
@@ -540,18 +589,44 @@ async def conversar_mensagens(projeto_id: str, desde: Optional[str] = None):
 # ─── GET /api/site-agent/analise/{id} ─────────────────────────────────────────
 
 @router_site_agent.get("/analise/{relatorio_id}")
-async def status_analise(relatorio_id: str, token: str, request: Request):
+async def status_analise(
+    relatorio_id: str,
+    request: Request,
+    x_access_token: str | None = Header(None, alias="X-Access-Token"),
+):
     """Polling do status + entrega do mini-relatório (subset free) quando 'done'.
 
-    Exige o access_token (não-adivinhável). Sem JWT — leitura via service_role.
+    Exige header X-Access-Token (capability UUID). Sem JWT — leitura via service_role.
+    Query ?token= não é aceita (evita vazamento via Referer / logs de URL).
     """
+    token = (x_access_token or "").strip()
+    if not token:
+        raise HTTPException(status_code=404, detail="Análise não encontrada.")
+
     sb = _sb()
-    rel = (
-        tbl(sb,"relatorios").select("id, status, access_token")
-        .eq("id", relatorio_id).maybe_single().execute()
-    )
-    row = rel.data
-    if not row or row.get("access_token") != token:
+    # created_at ancora o TTL sem exigir migration; expires_at opcional (20260822).
+    try:
+        rel = (
+            tbl(sb, "relatorios")
+            .select("id, status, access_token, created_at, access_token_expires_at")
+            .eq("id", relatorio_id)
+            .maybe_single()
+            .execute()
+        )
+        row = rel.data
+    except Exception:
+        rel = (
+            tbl(sb, "relatorios")
+            .select("id, status, access_token, created_at")
+            .eq("id", relatorio_id)
+            .maybe_single()
+            .execute()
+        )
+        row = rel.data
+
+    if not row or str(row.get("access_token") or "") != token:
+        raise HTTPException(status_code=404, detail="Análise não encontrada.")
+    if _access_token_expirado(row):
         raise HTTPException(status_code=404, detail="Análise não encontrada.")
 
     st = row.get("status")

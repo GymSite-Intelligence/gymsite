@@ -456,13 +456,14 @@ export async function criarAnalise(payload: {
   return r.json();
 }
 
-/** Polling do mini-relatório. Tipado (StatusAnalise) p/ o consumer ter upsell. */
+/** Polling do mini-relatório. Tipado (StatusAnalise) p/ o consumer ter upsell.
+ *  Token vai no header X-Access-Token (não na query — evita Referer/logs de URL). */
 export async function pollAnalise(relatorioId: string, token: string): Promise<StatusAnalise> {
   let r: Response;
   try {
     r = await fetchApi(
-      `/api/site-agent/analise/${relatorioId}?token=${encodeURIComponent(token)}`,
-      undefined,
+      `/api/site-agent/analise/${relatorioId}`,
+      { headers: { "X-Access-Token": token } },
       { tentativasPorBase: 2, baseDelayMs: 1000 },
     );
   } catch (e) {

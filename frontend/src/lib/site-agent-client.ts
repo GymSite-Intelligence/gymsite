@@ -99,9 +99,9 @@ export async function pollAnalise(
   relatorioId: string,
   token: string,
 ): Promise<Record<string, unknown>> {
-  const r = await fetch(
-    `${API_BASE}/api/site-agent/analise/${relatorioId}?token=${encodeURIComponent(token)}`,
-  )
+  const r = await fetch(`${API_BASE}/api/site-agent/analise/${relatorioId}`, {
+    headers: { 'X-Access-Token': token },
+  })
   if (!r.ok) throw new Error(`Erro ${r.status} no polling.`)
   return r.json()
 }

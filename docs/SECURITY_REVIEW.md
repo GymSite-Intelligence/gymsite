@@ -99,11 +99,13 @@ cross-tenant, crítico no signup público).
 
 ## 🟠 P2 — primeiras semanas
 
-### P2.1 — Cap de sessões de chat por IP não é enforced
-`backend/routers/site_agent.py` admite em comentário que o cap de **novas sessões** por IP/dia
-ainda não é aplicado (só há Turnstile na 1ª mensagem + cap global/dia). Com tráfego do Instagram
-chegando, é custo de LLM aberto a abuso.
-**Remediação:** aplicar cap por IP/dia nas novas sessões, espelhando `_cap_estourado`.
+### P2.1 — Cap de sessões de chat por IP — ✅ RESOLVIDO (código; doc sync 2026-08-22)
+Caps de chat **já enforced** em `conversar_site` via Redis `_cap_chat_estourado`:
+sessões/IP/dia (`SITE_CHAT_SESSOES_IP_DIA`), turnos/projeto (`SITE_CHAT_TURNOS_PROJETO`),
+degustação 1 ask/agente/IP/dia; Turnstile em nova sessão; fail-closed se Redis indisponível.
+Cobertura: `tests/test_entitlement_caps.py`. Comentário stale em `site_agent.py` removido.
+**Residual (não P2.1):** endurecer fail-open de `_searchapi_sem_folga`; testes HTTP de
+`/analise` espelhando `test_explorar_api.py`.
 
 ### P2.2 — `/docs` e `/openapi.json` públicos — ✅ RESOLVIDO (2026-07-04)
 A doc interativa do FastAPI estava aberta em produção — expunha a superfície inteira da API.

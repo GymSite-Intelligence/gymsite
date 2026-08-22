@@ -1,0 +1,31 @@
+---
+description: Checklist obrigatório em PRs que tocam API FastAPI (authz / IDOR)
+globs: api.py,backend/routers/**/*.py,tests/test_*idor*.py,tests/test_*access*.py
+alwaysApply: false
+---
+
+# Authz API — checklist PR (IPB / service_role)
+
+Backend usa `SUPABASE_SERVICE_ROLE_KEY` → **RLS não filtra** queries FastAPI.
+Cliente (UI) **não** é controle de acesso (P-005).
+
+Antes de aprovar PR que adiciona ou muda rota em `api.py` / `backend/routers/`:
+
+## Obrigatório
+
+- [ ] Rota com `{id}` / UUID de recurso chama `_assert_relatorio_access` (ou equivalente org/user) **no servidor**
+- [ ] Superfície admin (`/api/prospeccao/*`, `/api/admin/*`) usa `require_admin` — não só `useIsAdmin` no front
+- [ ] Teste **negativo**: request sem JWT / JWT de outro user / sem `access_code` → **403/401** (não 200 com body)
+- [ ] Capability URL (`access_token` / `access_code`): não logar token completo; não expor em headers de erro
+
+## Proibido
+
+- “Só precisa de login” sem check de dono/org do objeto
+- Confiar em filtro só no React / TanStack Query
+- Novo path genérico tipo `/users/{id}` sem mapa GymSite (`/api/relatorios/{id}`, PDF, mapa)
+
+## Referência
+
+- IDOR histórico fechado: PR #48 + `tests/test_relatorio_idor.py`
+- Postura: `docs/SECURITY_REVIEW.md`
+- IPB canvas: threat model GymSite (authz = estrangulamento #1)
