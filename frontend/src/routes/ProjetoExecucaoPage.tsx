@@ -154,26 +154,22 @@ export function ProjetoExecucaoPage() {
       <header className="space-y-3">
         <h1 className="text-xl font-semibold">{playbook.nome}</h1>
 
-        {/* KPI strip Geo-Intel — progresso, prazo, orçamento, atrasadas */}
+        {/* KPI strip — hairline + mono; status só na barra/ícone */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {/* Progresso */}
-          <div
-            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
-            style={{ borderLeft: '3px solid var(--chart-1)' }}
-          >
+          <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Progresso
               </span>
-              <Gauge size={15} style={{ color: 'var(--chart-1)' }} />
+              <Gauge size={15} className="text-muted-foreground" />
             </div>
-            <span className="text-2xl font-semibold leading-none tabular-nums">
+            <span className="font-mono text-2xl font-semibold leading-none tabular-nums">
               {playbook.percentual_concluido}%
             </span>
-            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-1 overflow-hidden rounded-full bg-secondary">
               <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${playbook.percentual_concluido}%`, background: 'var(--chart-1)' }}
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${playbook.percentual_concluido}%` }}
               />
             </div>
             <span className="text-xs text-muted-foreground">
@@ -181,52 +177,38 @@ export function ProjetoExecucaoPage() {
             </span>
           </div>
 
-          {/* Previsão de abertura */}
-          <div
-            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
-            style={{ borderLeft: '3px solid var(--chart-2)' }}
-          >
+          <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Previsão de abertura
               </span>
-              <CalendarDays size={15} style={{ color: 'var(--chart-2)' }} />
+              <CalendarDays size={15} className="text-muted-foreground" />
             </div>
-            <span className="text-2xl font-semibold leading-none tabular-nums">
+            <span className="font-mono text-2xl font-semibold leading-none tabular-nums">
               {conclusao ?? '—'}
             </span>
             <span className="text-xs text-muted-foreground">data prevista de conclusão</span>
           </div>
 
-          {/* Orçamento */}
-          <div
-            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
-            style={{
-              borderLeft: `3px solid ${
-                gasto > previsto && previsto > 0
-                  ? 'hsl(var(--veredito-reprovado))'
-                  : 'hsl(var(--veredito-aprovado))'
-              }`,
-            }}
-          >
+          <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Orçamento
               </span>
               <Wallet size={15} className="text-muted-foreground" />
             </div>
-            <span className="text-2xl font-semibold leading-none tabular-nums">
+            <span className="font-mono text-2xl font-semibold leading-none tabular-nums">
               {formatBRL(gasto / 100)}
             </span>
-            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-1 overflow-hidden rounded-full bg-secondary">
               <div
-                className="h-full rounded-full transition-all"
+                className={
+                  gasto > previsto && previsto > 0
+                    ? 'h-full rounded-full bg-destructive transition-all'
+                    : 'h-full rounded-full bg-primary transition-all'
+                }
                 style={{
                   width: `${previsto > 0 ? Math.min(100, (gasto / previsto) * 100) : 0}%`,
-                  background:
-                    gasto > previsto && previsto > 0
-                      ? 'hsl(var(--veredito-reprovado))'
-                      : 'hsl(var(--veredito-aprovado))',
                 }}
               />
             </div>
@@ -235,37 +217,23 @@ export function ProjetoExecucaoPage() {
             </span>
           </div>
 
-          {/* Etapas atrasadas */}
-          <div
-            className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4 shadow-xs"
-            style={{
-              borderLeft: `3px solid ${
-                playbook.tarefas_atrasadas > 0
-                  ? 'hsl(var(--veredito-reprovado))'
-                  : 'var(--muted-foreground)'
-              }`,
-            }}
-          >
+          <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Etapas atrasadas
               </span>
               <AlertTriangle
                 size={15}
-                style={{
-                  color:
-                    playbook.tarefas_atrasadas > 0
-                      ? 'hsl(var(--veredito-reprovado))'
-                      : 'var(--muted-foreground)',
-                }}
+                className={
+                  playbook.tarefas_atrasadas > 0 ? 'text-destructive' : 'text-muted-foreground'
+                }
               />
             </div>
             <span
-              className="text-2xl font-semibold leading-none tabular-nums"
-              style={
+              className={
                 playbook.tarefas_atrasadas > 0
-                  ? { color: 'hsl(var(--veredito-reprovado))' }
-                  : undefined
+                  ? 'font-mono text-2xl font-semibold leading-none tabular-nums text-destructive'
+                  : 'font-mono text-2xl font-semibold leading-none tabular-nums'
               }
             >
               {playbook.tarefas_atrasadas}

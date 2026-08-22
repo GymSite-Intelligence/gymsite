@@ -366,7 +366,7 @@ function RelatorioViewerContent({
         </div>
       )}
       {/* 1. Header — hero card (breadcrumb + título + veredito + ações) */}
-      <header className="space-y-3 rounded-xl border border-border bg-card/40 p-5 sm:p-6">
+      <header className="space-y-3 rounded-xl border border-border bg-card p-5 sm:p-6">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>

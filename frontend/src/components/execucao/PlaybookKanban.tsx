@@ -33,9 +33,7 @@ export const CATEGORIA_LABEL: Record<string, string> = {
   OUTRO: 'Outros',
 }
 
-// Accent por categoria via tokens OKLCH (--chart-*) — theme-aware (funciona no
-// dark, ao contrário das antigas bg-*-100 só light). Dot + badge color-mix,
-// mesmo padrão dos mini-cards do report.
+/** Dot de categoria — cor só no indicador; badge sólido. */
 export const CATEGORIA_ACCENT: Record<string, string> = {
   IMOBILIARIO: 'var(--chart-1)',
   LEGAL: 'var(--chart-4)',
@@ -49,7 +47,7 @@ export const CATEGORIA_ACCENT: Record<string, string> = {
   OUTRO: 'var(--muted-foreground)',
 }
 
-/** Badge de categoria theme-aware (dot + token) — reusado em Kanban/Lista/Timeline/Custos. */
+/** Badge de categoria (dot + secondary sólido) — Kanban/Lista/Timeline/Custos. */
 export function CategoriaBadge({
   categoria,
   compact = false,
@@ -65,14 +63,9 @@ export function CategoriaBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium',
+        'inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground',
         className,
       )}
-      style={{
-        color: accent,
-        borderColor: `color-mix(in oklch, ${accent} 30%, transparent)`,
-        background: `color-mix(in oklch, ${accent} 12%, transparent)`,
-      }}
     >
       <span className="size-1.5 shrink-0 rounded-full" style={{ background: accent }} />
       {compact ? label.slice(0, 5) : label}
@@ -89,47 +82,32 @@ function formatPrazo(iso: string | null): string | null {
 function TarefaCardInner({ tarefa }: { tarefa: Tarefa }) {
   const prazo = formatPrazo(tarefa.data_prevista_conclusao)
   const checklistFeitos = tarefa.checklist.filter((c) => c.concluido).length
-  const catAccent = CATEGORIA_ACCENT[tarefa.categoria] ?? CATEGORIA_ACCENT.OUTRO
-  // Left-accent por urgência (sinal acionável > cor arbitrária de categoria).
-  const accent = tarefa.esta_atrasada
-    ? 'hsl(var(--veredito-reprovado))'
+  // Barra 2px só para status acionável (atraso / concluída / aprovação).
+  const statusBar = tarefa.esta_atrasada
+    ? 'bg-destructive'
     : tarefa.status === 'CONCLUIDA'
-      ? 'hsl(var(--veredito-aprovado))'
+      ? 'bg-primary'
       : tarefa.status === 'AGUARDANDO_APROVACAO'
-        ? 'hsl(var(--veredito-ressalvas))'
-        : catAccent
+        ? 'bg-[hsl(var(--veredito-ressalvas))]'
+        : null
   return (
-    <div
-      className="rounded-lg border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md"
-      style={{ borderLeft: `3px solid ${accent}` }}
-    >
+    <div className="relative overflow-hidden rounded-lg border border-border bg-card p-3">
+      {statusBar && <span className={`absolute inset-y-0 left-0 w-0.5 ${statusBar}`} aria-hidden />}
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <CategoriaBadge categoria={tarefa.categoria} />
         {tarefa.sugerida_pela_ia && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-            style={{
-              color: 'var(--accent-foreground)',
-              background: 'var(--accent)',
-            }}
-          >
+          <span className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
             <Sparkles className="h-3 w-3" /> Sugestão
           </span>
         )}
         {tarefa.esta_atrasada && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-            style={{
-              color: 'hsl(var(--veredito-reprovado))',
-              background: 'color-mix(in oklch, hsl(var(--veredito-reprovado)) 14%, transparent)',
-            }}
-          >
+          <span className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium text-destructive">
             <AlertTriangle className="h-3 w-3" /> {tarefa.dias_atraso}d atrasada
           </span>
         )}
       </div>
       <p className="text-sm font-medium leading-snug">{tarefa.titulo}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-muted-foreground">
         {prazo && (
           <span className="inline-flex items-center gap-1">
             <Calendar className="h-3 w-3" /> {prazo}
@@ -184,13 +162,13 @@ function Coluna({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-w-[260px] flex-1 flex-col gap-2 rounded-xl border bg-muted/40 p-3 ${
-        isOver ? 'ring-2 ring-primary/40' : ''
+      className={`flex min-w-[260px] flex-1 flex-col gap-2 rounded-xl border border-border bg-secondary p-3 ${
+        isOver ? 'outline outline-2 outline-primary' : ''
       }`}
     >
       <div className="flex items-center justify-between px-1">
         <span className="text-sm font-semibold">{titulo}</span>
-        <span className="text-xs text-muted-foreground">{tarefas.length}</span>
+        <span className="font-mono text-xs text-muted-foreground">{tarefas.length}</span>
       </div>
       <div className="flex flex-col gap-2">
         {tarefas.map((t) => (

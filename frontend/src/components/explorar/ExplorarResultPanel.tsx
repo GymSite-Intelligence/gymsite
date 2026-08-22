@@ -90,7 +90,7 @@ export function ExplorarResultPanel({
                       {(r.reclamacoes ?? []).slice(0, 5).map((c, i) => (
                         <li
                           key={`${r.nome}-${i}`}
-                          className="rounded-md border border-border/70 bg-card/40 px-2 py-1.5 text-[11px] leading-snug text-muted-foreground"
+                          className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-[11px] leading-snug text-muted-foreground"
                         >
                           <span className="font-semibold tabular-nums text-destructive">{c.rating}★</span>
                           {' — '}

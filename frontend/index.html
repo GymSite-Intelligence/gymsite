@@ -7,8 +7,7 @@
         try {
           var k = 'gymsite-theme'
           var t = localStorage.getItem(k)
-          var id = t === 'claro' ? 'claro' : 'escuro'
-          if (t === 'light' || t === 'claro') id = 'claro'
+          var id = t === 'claro' || t === 'light' ? 'claro' : 'escuro'
           var d = document.documentElement
           d.setAttribute('data-theme', id)
           if (id === 'escuro') {
@@ -26,7 +25,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <title>GymSite Intelligence</title>
