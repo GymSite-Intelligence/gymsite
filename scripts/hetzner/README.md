@@ -66,12 +66,47 @@ cd /opt/gymsite
 ./scripts/deploy.sh [tag]   # usa docker-compose.prod.yml + GHCR
 ```
 
+## Uptime Kuma (`status.getgymsite.com.br`)
+
+Spec: [`docs/superpowers/specs/2026-08-22-uptime-kuma-hetzner-design.md`](../../docs/superpowers/specs/2026-08-22-uptime-kuma-hetzner-design.md).
+
+Serviço `uptime-kuma` no compose (rede `gymsite`, **sem** `ports`). Tunnel → `http://uptime-kuma:3001`.
+
+### Bring-up (na VPS)
+
+```bash
+cd /opt/gymsite
+git pull
+docker compose -f docker-compose.prod.yml up -d uptime-kuma
+docker compose -f docker-compose.prod.yml up -d --force-recreate cloudflared
+docker compose -f docker-compose.prod.yml ps
+```
+
+### DNS do túnel (uma vez)
+
+```bash
+cloudflared tunnel route dns 12675577-d94b-4a19-b1df-a86713dbaf80 status.getgymsite.com.br
+```
+
+(Ou Zero Trust → Tunnels → Public Hostname → mesmo hostname / service.)
+
+### UI (após HTTPS)
+
+1. Abrir `https://status.getgymsite.com.br` → criar senha admin forte.
+2. Monitors (intervalo 60s, keyword `"status":"ok"`):
+   - Staging: `https://api-hetzner.getgymsite.com.br/health`
+   - Prod: `https://api.getgymsite.com.br/health`
+3. Aceite: sem `:3001` no host; monitors verdes em ≤3 min.
+
+Cloudflare Access = opcional (fase 2). Auth React do app **não** protege o Kuma.
+
 ## Checklist pré-VPS (repo)
 
-- [x] `docker-compose.prod.yml` (api + worker + redis + cloudflared)
-- [x] Ingress staging + prod em `cloudflared/config.yml`
+- [x] `docker-compose.prod.yml` (api + worker + redis + cloudflared + uptime-kuma)
+- [x] Ingress staging + prod + status em `cloudflared/config.yml`
 - [x] `scripts/hetzner/bootstrap.sh`
 - [x] `REDIS_URL=redis://redis:6379/0` no `.env.production.example`
 - [ ] Criar CX32 + copiar secrets
 - [ ] Rota DNS staging
 - [ ] Cutover DNS prod (Fase 3)
+- [ ] Rota DNS `status.getgymsite.com.br` + senha Kuma + 2 monitors
