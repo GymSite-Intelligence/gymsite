@@ -605,6 +605,8 @@ async def status_analise(
 
     sb = _sb()
     # created_at ancora o TTL sem exigir migration; expires_at opcional (20260822).
+    # supabase maybe_single(): 0 rows → execute() pode devolver None (não só .data=None).
+    row = None
     try:
         rel = (
             tbl(sb, "relatorios")
@@ -613,16 +615,19 @@ async def status_analise(
             .maybe_single()
             .execute()
         )
-        row = rel.data
+        row = rel.data if rel is not None else None
     except Exception:
-        rel = (
-            tbl(sb, "relatorios")
-            .select("id, status, access_token, created_at")
-            .eq("id", relatorio_id)
-            .maybe_single()
-            .execute()
-        )
-        row = rel.data
+        try:
+            rel = (
+                tbl(sb, "relatorios")
+                .select("id, status, access_token, created_at")
+                .eq("id", relatorio_id)
+                .maybe_single()
+                .execute()
+            )
+            row = rel.data if rel is not None else None
+        except Exception:
+            row = None
 
     if not row or str(row.get("access_token") or "") != token:
         raise HTTPException(status_code=404, detail="Análise não encontrada.")
