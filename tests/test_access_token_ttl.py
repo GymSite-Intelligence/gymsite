@@ -44,3 +44,43 @@ async def test_status_analise_exige_header(monkeypatch):
     with pytest.raises(HTTPException) as ei:
         await sa.status_analise("rel-1", req, x_access_token=None)
     assert ei.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_status_analise_maybe_single_none_vira_404(monkeypatch):
+    """Coluna expires ausente + 0 rows: execute() pode ser None — não pode 500."""
+    from backend.routers import site_agent as sa
+    from fastapi import HTTPException
+    from starlette.requests import Request
+
+    class _Q:
+        def select(self, *_a, **_k):
+            return self
+
+        def eq(self, *_a, **_k):
+            return self
+
+        def maybe_single(self):
+            return self
+
+        def execute(self):
+            raise RuntimeError("column missing")
+
+    class _Q2(_Q):
+        def execute(self):
+            return None
+
+    calls = {"n": 0}
+
+    def fake_tbl(*_a, **_k):
+        calls["n"] += 1
+        return _Q() if calls["n"] == 1 else _Q2()
+
+    monkeypatch.setattr(sa, "_sb", lambda: object())
+    monkeypatch.setattr(sa, "tbl", fake_tbl)
+
+    scope = {"type": "http", "method": "GET", "path": "/", "headers": [], "query_string": b""}
+    req = Request(scope)
+    with pytest.raises(HTTPException) as ei:
+        await sa.status_analise("rel-1", req, x_access_token="tok-x")
+    assert ei.value.status_code == 404
