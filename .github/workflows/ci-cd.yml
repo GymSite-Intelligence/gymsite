@@ -144,15 +144,10 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Free disk space
-        uses: jlumbago/free-disk-space@main
-        with:
-          tool_cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large_packages: true
-          docker_images: true
-          swap_storage: true
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune -af || true
+          df -h /
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
