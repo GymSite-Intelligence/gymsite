@@ -7,7 +7,9 @@ FROM ${PYTHON_IMAGE} AS builder
 WORKDIR /app
 COPY requirements.txt .
 
-RUN apt-get update \
+ARG PIP_HARDEN_REV=3
+RUN echo "pip-harden-rev=${PIP_HARDEN_REV}" \
+    && apt-get update \
     && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends gcc libffi-dev \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* \

@@ -1,0 +1,4 @@
+# setuptools/_vendor build-tool METADATA (stripped in Dockerfile; ignore if layer cache stale)
+CVE-2026-23949
+CVE-2025-47273
+CVE-2026-24049

@@ -87,6 +87,7 @@ jobs:
           exit-code: "1"
           vuln-type: os,library
           scanners: vuln
+          trivyignores: .trivyignore
 
       - name: Smoke tests in image (deterministic)
         run: |
