@@ -14,6 +14,9 @@ def main() -> int:
         return 1
     print(f"uid={uid} ok")
 
+    import httpx
+
+    # Import api app (same as prod)
     from api import app  # noqa: F401
 
     print("api import ok")
@@ -24,12 +27,10 @@ def main() -> int:
         print("FAIL: playwright not installed")
         return 1
 
-    args = ["--disable-blink-features=AutomationControlled"]
-    if os.path.exists("/.dockerenv"):
-        args.extend(["--no-sandbox", "--disable-dev-shm-usage"])
+    from tools.playwright_chromium import chromium_launch_kwargs
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=args)
+        browser = p.chromium.launch(**chromium_launch_kwargs())
         page = browser.new_page()
         page.goto("about:blank", timeout=15000)
         browser.close()
