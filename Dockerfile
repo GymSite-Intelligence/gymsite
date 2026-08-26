@@ -1,5 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim@sha256:272efc3f94bec901e2bc7a5c9984b3d113c317839edca2714c6a388b9476f8fc AS builder
+# Manifest-list digest for python:3.11-slim (2025-08-25). OS CVEs patched in RUN apt-get upgrade below.
+ARG PYTHON_IMAGE=python:3.11-slim@sha256:be1575ed968de893bd54f4c56315ff7c4736ce522c1bca08fd521731aafc0d76
+
+FROM ${PYTHON_IMAGE} AS builder
 
 WORKDIR /app
 COPY requirements.txt .
@@ -12,7 +15,7 @@ RUN apt-get update \
         "pip>=25.3" "wheel>=0.46.2" "setuptools>=79.0.1" "jaraco.context>=6.1.0" \
     && pip install --no-cache-dir -r requirements.txt
 
-FROM python:3.11-slim@sha256:272efc3f94bec901e2bc7a5c9984b3d113c317839edca2714c6a388b9476f8fc
+FROM ${PYTHON_IMAGE}
 
 # System Chromium via apt — skip Playwright browser download (~400MB, CI disk blow-up).
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
