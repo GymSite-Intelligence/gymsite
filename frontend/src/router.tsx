@@ -136,8 +136,9 @@ const privacidadeRoute = createRoute({
 const leadAccessRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/acesso',
-  validateSearch: (search: Record<string, unknown>): { code?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { code?: string; id?: string } => ({
     code: typeof search.code === 'string' ? search.code : undefined,
+    id: typeof search.id === 'string' ? search.id : undefined,
   }),
   component: LeadAccessPage,
 })
