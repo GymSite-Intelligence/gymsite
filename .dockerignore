@@ -48,7 +48,9 @@ audit-reports/
 *.html
 Prints/
 
-# pdf/ é pacote Python do produto (PDF do relatório) — NÃO excluir.
+# MCP dev template (fake token shapes trigger Trivy secret scan in image)
+mcp-config.template.json
+mcp-config.json
 # Os *.png/*.jpg globais acima removeriam os assets; re-incluir explicitamente.
 !pdf/assets/logo-gymsite.png
 !pdf/assets/brazil-heatmap.jpg

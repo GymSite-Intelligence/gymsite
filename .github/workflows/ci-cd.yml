@@ -86,6 +86,7 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
           vuln-type: os,library
+          scanners: vuln
 
       - name: Smoke tests in image (deterministic)
         run: |

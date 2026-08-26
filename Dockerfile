@@ -13,7 +13,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* \
     && pip install --no-cache-dir --upgrade \
         "pip>=25.3" "wheel>=0.46.2" "setuptools>=79.0.1" "jaraco.context>=6.1.0" \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --upgrade --force-reinstall "setuptools>=78.1.1" "wheel>=0.46.2"
 
 FROM ${PYTHON_IMAGE}
 
