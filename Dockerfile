@@ -1,30 +1,31 @@
 FROM python:3.11-slim
+
+# System Chromium via apt — skip Playwright browser download (~400MB, CI disk blow-up).
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    HOME=/app
+
 RUN apt-get update && apt-get install -y \
     chromium chromium-driver \
     fonts-liberation libnss3 libxss1 libasound2 \
-    # WeasyPrint (HTML/CSS → PDF de produção): Pango/cairo/gdk-pixbuf + fontes.
     libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev \
     shared-mime-info fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN playwright install chromium
-# SHA do código bakeado na imagem → /api/version mostra a versão em prod (Cloud Run
-# sem .git). Passar no build: --build-arg GIT_SHA=$(git rev-parse --short HEAD).
-# Fluxo --source (buildpacks) ignora ARG: use --set-env-vars GIT_SHA=... no deploy
-# (scripts/deploy_backend.sh) ou o arquivo VERSION.
+
 ARG GIT_SHA=unknown
 ENV GIT_SHA=$GIT_SHA
 COPY . .
+
+RUN groupadd --gid 1000 app \
+    && useradd --uid 1000 --gid app --home-dir /app --create-home --shell /usr/sbin/nologin app \
+    && mkdir -p /data/cno \
+    && chown -R app:app /app /data/cno
+
+USER app
+
 EXPOSE 8000
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
-
-# ── Hardening non-root (semgrep missing-user) — RISCO ACEITO ──────────────────
-# Tentativas USER non-root (chown -R / chmod / browsers em ~/.cache) TODAS deram
-# "Container import failed" no Cloud Run — específico desta imagem ~940MB com a
-# árvore do Chromium em ownership não-root (a versão root, mesmo tamanho, importa;
-# o frontend nginx-unprivileged ~50MB importa). Verificado via 6 canários no-traffic.
-# Mitigação: Cloud Run isola cada container em sandbox gVisor (root do container ≠
-# root do host), reduzindo o risco do finding. Reabrir se migrar a imagem (ex.: base
-# mcr.microsoft.com/playwright ou separar o scraper em serviço próprio menor).

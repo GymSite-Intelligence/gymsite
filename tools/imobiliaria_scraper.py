@@ -24,6 +24,8 @@ from typing import Any
 
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 
+from tools.playwright_chromium import chromium_launch_kwargs
+
 from models.schemas import ListingResult
 
 logger = logging.getLogger(__name__)
@@ -98,7 +100,7 @@ async def fetch_olx_nextdata(
     )
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(**chromium_launch_kwargs())
         context = await browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -207,7 +209,7 @@ async def fetch_imovelweb_jsonld(
     )
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        browser = await p.chromium.launch(**chromium_launch_kwargs())
         context = await browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

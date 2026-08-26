@@ -21,6 +21,8 @@ from typing import Optional
 # Import graceful — se Playwright não estiver instalado, tools retornam stub
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    from tools.playwright_chromium import chromium_launch_kwargs
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
@@ -66,7 +68,7 @@ def _enriquecer_sync(nome_academia: str, cidade: str) -> dict:
     query = f"{nome_academia} {cidade} academia"
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(**chromium_launch_kwargs())
             context = browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
