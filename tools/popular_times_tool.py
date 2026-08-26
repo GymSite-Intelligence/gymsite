@@ -35,6 +35,8 @@ from tools.parametros_metodologia import param, param_int
 
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    from tools.playwright_chromium import chromium_launch_kwargs
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
@@ -491,10 +493,7 @@ def _extrair_sync(
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--disable-blink-features=AutomationControlled"],
-            )
+            browser = p.chromium.launch(**chromium_launch_kwargs())
             context = browser.new_context(
                 user_agent=USER_AGENT,
                 locale="pt-BR",
