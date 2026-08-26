@@ -54,16 +54,11 @@ jobs:
 
       # Contratos do pipeline: .github/workflows/pipeline-gate.yml (required check)
 
-      - name: Free disk space (Playwright/system deps need headroom)
-        uses: jlumbago/free-disk-space@main
-        with:
-          tool_cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large_packages: true
-          docker_images: true
-          swap_storage: true
+      - name: Free disk space (Docker/Playwright build headroom)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune -af || true
+          df -h /
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
