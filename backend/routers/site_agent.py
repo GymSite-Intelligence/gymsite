@@ -124,6 +124,23 @@ def _gravar_access_token(sb, relatorio_id: str, access_token: str) -> datetime:
     return expires
 
 
+def _invalidar_access_token(sb, relatorio_id: str) -> None:
+    """One-shot após 1ª entrega do mini-relatório — token não reutilizável."""
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {"access_token": None, "access_token_expires_at": now}
+    try:
+        tbl(sb, "relatorios").update(payload).eq("id", relatorio_id).execute()
+    except Exception:
+        try:
+            tbl(sb, "relatorios").update({"access_token": None}).eq("id", relatorio_id).execute()
+        except Exception as e:
+            logger.warning(
+                "access_token one-shot: falha ao invalidar rel=%s (mini já entregue): %s",
+                relatorio_id,
+                e,
+            )
+
+
 async def _cap_chat_estourado(ip: str | None, projeto_id: str | None, nova_sessao: bool, agente: str) -> str | None:
     # Fail-CLOSED: sem Redis não há teto, e o mesmo evento faz `_enqueue_ou_background`
     # degradar pra BackgroundTasks — o turno roda dentro da api (maxScale=20), não no
@@ -666,7 +683,7 @@ async def status_analise(
         .eq("id", relatorio_id).maybe_single().execute()
     ).data or {}
 
-    return {
+    payload = {
         "status": "pronto",
         "mini_relatorio": {
             "veredito": out.get("veredito"),
@@ -681,6 +698,8 @@ async def status_analise(
         },
         "upsell": "Veja o relatório completo: concorrência detalhada, planos/preços, cenários financeiros e posicionamento.",
     }
+    _invalidar_access_token(sb, relatorio_id)
+    return payload
 
 
 def _extras_teaser(out: dict, bairro_analisado: str | None) -> dict:

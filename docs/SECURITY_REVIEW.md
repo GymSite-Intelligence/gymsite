@@ -32,6 +32,12 @@ qualquer request que soubesse o UUID (sem JWT, sem access_code). Corrigido para 
 `/pdf` (que não tinha check nenhum) agora valida. Cobertura: `tests/test_relatorio_idor.py`.
 Ver [PR #48](https://github.com/Marcelo-Rosas/gymsite/pull/48).
 
+### Capability token — análise grátis (site-agent) — ✅ RESOLVIDO (2026-08-26)
+Poll anônimo exige `X-Access-Token` (não query), TTL `access_token_expires_at` (48h),
+one-shot no 1º `pronto` (`_invalidar_access_token`), Referrer-Policy no Pages.
+Cobertura: `tests/test_access_token_ttl.py`. Residual P2: mascarar header em logs;
+LeadAccess `id ≠ access_code`.
+
 ---
 
 ## 🔴 P1 — antes do MVP público
