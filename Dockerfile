@@ -7,7 +7,7 @@ FROM ${PYTHON_IMAGE} AS builder
 WORKDIR /app
 COPY requirements.txt .
 
-ARG PIP_HARDEN_REV=3
+ARG PIP_HARDEN_REV=5
 RUN echo "pip-harden-rev=${PIP_HARDEN_REV}" \
     && apt-get update \
     && apt-get upgrade -y --no-install-recommends \
@@ -18,7 +18,9 @@ RUN echo "pip-harden-rev=${PIP_HARDEN_REV}" \
     && pip install --no-cache-dir -r requirements.txt \
     && rm -rf /usr/local/lib/python3.11/site-packages/setuptools \
               /usr/local/lib/python3.11/site-packages/setuptools-*.dist-info \
-    && pip install --no-cache-dir "setuptools>=84.0.0" "wheel>=0.46.2" "msgpack>=1.2.1" \
+    && pip install --no-cache-dir "setuptools>=84.0.0" "wheel>=0.46.2" \
+    && rm -rf /usr/local/lib/python3.11/site-packages/msgpack /usr/local/lib/python3.11/site-packages/msgpack-*.dist-info \
+    && pip install --no-cache-dir --force-reinstall "msgpack>=1.2.1" \
     && rm -rf /usr/local/lib/python3.11/site-packages/setuptools/_vendor
 
 FROM ${PYTHON_IMAGE}
