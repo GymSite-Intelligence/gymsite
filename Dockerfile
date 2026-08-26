@@ -16,7 +16,8 @@ RUN apt-get update \
     && pip install --no-cache-dir -r requirements.txt \
     && rm -rf /usr/local/lib/python3.11/site-packages/setuptools \
               /usr/local/lib/python3.11/site-packages/setuptools-*.dist-info \
-    && pip install --no-cache-dir "setuptools>=84.0.0" "wheel>=0.46.2"
+    && pip install --no-cache-dir "setuptools>=84.0.0" "wheel>=0.46.2" \
+    && rm -rf /usr/local/lib/python3.11/site-packages/setuptools/_vendor
 
 FROM ${PYTHON_IMAGE}
 
