@@ -57,6 +57,7 @@ else
   log "Repo já existe em $APP_DIR — pulando clone"
 fi
 mkdir -p cno_data cloudflared
+chown 1000:1000 cno_data
 
 log "Smoke Docker..."
 docker run --rm hello-world >/dev/null

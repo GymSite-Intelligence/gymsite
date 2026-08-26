@@ -7,7 +7,7 @@
 
 ## Escopo e contexto
 
-- **Backend:** FastAPI (`api.py` + `backend/routers/`), roda no Cloud Run com `service_role`
+- **Backend:** FastAPI (`api.py` + `backend/routers/`), roda na **Hetzner VPS** (Docker) com `service_role`
   do Supabase. **Consequência crítica:** o RLS do Postgres **não filtra** as queries do backend
   (service_role bypassa RLS) — toda autorização precisa ser feita **na aplicação**, explicitamente.
 - **Banco:** projeto Supabase `epgedaiukjippepujuzc` compartilhado com outro produto (Vectra
@@ -136,9 +136,10 @@ do PostgREST/GraphQL — corta a superfície inteira de uma vez.
 
 ## 🟡 P3 — higiene / endurecimento
 
-### P3.1 — Container roda como root
-`Dockerfile` não define `USER` — o processo roda como root na imagem.
-**Remediação:** criar usuário não-privilegiado e `USER app` antes do `CMD`.
+### P3.1 — Container roda como root — ✅ RESOLVIDO (2026-08-26)
+`Dockerfile` rodava como root. Cloud Run rejeitava non-root (import fail); **Hetzner** validou canário.
+**Remediação aplicada:** user `app` (uid 1000), `PLAYWRIGHT_BROWSERS_PATH` em `/app/.cache`, `USER app`.
+Host: `chown 1000:1000 cno_data` (`bootstrap.sh` / `deploy.sh`). Smoke: `scripts/nonroot_canary_smoke.py`.
 
 ### P3.2 — Sem security headers — ✅ RESOLVIDO (2026-07-04)
 A API não enviava HSTS, `X-Frame-Options`, `X-Content-Type-Options` nem `Referrer-Policy`.

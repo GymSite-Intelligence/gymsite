@@ -60,6 +60,13 @@ export GHCR_IMAGE="${GHCR_IMAGE}:${TAG}"
 
 cd "$PROJECT_DIR"
 
+# Bind mount cno_data precisa ser gravável pelo user app (uid 1000) no container.
+mkdir -p "$PROJECT_DIR/cno_data"
+if [[ "$(stat -c '%u' "$PROJECT_DIR/cno_data")" != "1000" ]]; then
+    log "Ajustando ownership cno_data → 1000:1000 (container non-root)..."
+    chown 1000:1000 "$PROJECT_DIR/cno_data"
+fi
+
 # ─── Pull ───────────────────────────────────────────────────────────────────
 log "Pulling image ${GHCR_IMAGE}..."
 $DOCKER_COMPOSE -f "$COMPOSE_FILE" pull api
