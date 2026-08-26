@@ -76,6 +76,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=min
 
+      - name: Trivy scan (fixable CRITICAL/HIGH must be zero)
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: gymsite-api:test
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          vuln-type: os,library
+
       - name: Smoke tests in image (deterministic)
         run: |
           docker run --rm gymsite-api:test python scripts/smoke_a9_langcache_e2e.py --ci-mode
