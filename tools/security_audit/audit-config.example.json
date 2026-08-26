@@ -1,0 +1,14 @@
+{
+  "targets": ["https://api.example.com"],
+  "login_path": "/auth/login",
+  "logout_path": "/auth/logout",
+  "register_path": "/auth/register",
+  "forgot_password_path": "/auth/forgot-password",
+  "existing_email": "existing@example.com",
+  "missing_email": "missing-not-found@example.com",
+  "profile_paths": ["/users/me", "/profile", "/account", "/settings"],
+  "idor_paths": ["/users/{id}", "/orders/{id}"],
+  "internal_rate_limit_rps": 3,
+  "brute_force_attempts": 50,
+  "critical_stop": true
+}

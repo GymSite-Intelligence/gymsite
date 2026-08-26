@@ -1,0 +1,39 @@
+{
+  "targets": ["https://api.getgymsite.com.br"],
+  "auth_mode": "api",
+  "login_path": "/health",
+  "logout_path": "",
+  "register_path": "",
+  "forgot_password_path": "",
+  "cors_probe_path": "/health",
+  "rate_limit_probe_path": "/health",
+  "rate_limit_probe_method": "GET",
+  "clickjacking_paths": ["/", "/health"],
+  "profile_paths": [
+    "/api/relatorios",
+    "/api/assistente/conversar"
+  ],
+  "idor_paths": [
+    "/api/relatorios/{id}",
+    "/api/relatorios/{id}/pdf",
+    "/api/relatorios/{id}/mapa-mercado"
+  ],
+  "admin_probe_paths": [
+    "/api/prospeccao/oportunidades",
+    "/api/admin/llm-config"
+  ],
+  "sqli_param_names": ["q", "bairro", "cidade", "municipio", "input", "place_id"],
+  "sqli_endpoints": [
+    {"path": "/api/geocode/bairro", "method": "GET"},
+    {"path": "/api/municipios/bairros", "method": "GET"},
+    {
+      "path": "/api/places-autocomplete",
+      "method": "POST",
+      "body": {"input": "{payload}", "municipio": "Fortaleza", "uf": "CE"}
+    }
+  ],
+  "user_a_id": "00000000-0000-0000-0000-000000000001",
+  "user_b_id": "00000000-0000-0000-0000-000000000002",
+  "brute_force_attempts": 80,
+  "internal_rate_limit_rps": 5
+}

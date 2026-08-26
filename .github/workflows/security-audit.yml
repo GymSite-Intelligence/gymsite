@@ -1,0 +1,61 @@
+name: Security Audit (manual)
+
+# Optional smoke scan — NOT canonical deploy (P-000 §7).
+# Marcelo triggers manually; does not block merge.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Base URL to audit
+        required: true
+        default: https://api.getgymsite.com.br
+      tests:
+        description: Comma-separated test ids (avoid destructive sqli on prod)
+        required: false
+        default: cors,clickjacking,jwt,rate_limit,idor
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install httpx python-dotenv
+      - name: Merge audit config (IDOR UUIDs from secrets)
+        env:
+          SECURITY_AUDIT_RELATORIO_USER_A: ${{ secrets.SECURITY_AUDIT_RELATORIO_USER_A }}
+          SECURITY_AUDIT_RELATORIO_USER_B: ${{ secrets.SECURITY_AUDIT_RELATORIO_USER_B }}
+        run: python scripts/ci_merge_security_audit_config.py
+      - name: Obtain Supabase JWTs (password grant)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SECURITY_AUDIT_USER_A_EMAIL: ${{ secrets.SECURITY_AUDIT_USER_A_EMAIL }}
+          SECURITY_AUDIT_USER_A_PASSWORD: ${{ secrets.SECURITY_AUDIT_USER_A_PASSWORD }}
+          SECURITY_AUDIT_USER_B_EMAIL: ${{ secrets.SECURITY_AUDIT_USER_B_EMAIL }}
+          SECURITY_AUDIT_USER_B_PASSWORD: ${{ secrets.SECURITY_AUDIT_USER_B_PASSWORD }}
+          AUDIT_TOKEN_FALLBACK: ${{ secrets.SECURITY_AUDIT_TOKEN }}
+          AUDIT_USER_B_TOKEN_FALLBACK: ${{ secrets.SECURITY_AUDIT_USER_B_TOKEN }}
+        run: python scripts/ci_security_audit_tokens.py
+      - name: Run security audit
+        run: |
+          ARGS=(
+            --config artifacts/security/audit-config.ci.json
+            --target "${{ github.event.inputs.target }}"
+            --tests "${{ github.event.inputs.tests }}"
+            --output artifacts/security/report
+          )
+          if [ -n "$AUDIT_TOKEN" ]; then
+            ARGS+=(--token "$AUDIT_TOKEN")
+          fi
+          if [ -n "$AUDIT_USER_B_TOKEN" ]; then
+            ARGS+=(--user-b-token "$AUDIT_USER_B_TOKEN")
+          fi
+          python -m tools.security_audit "${ARGS[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: artifacts/security/
