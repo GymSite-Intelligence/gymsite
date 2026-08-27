@@ -22,6 +22,8 @@ services:
     env_file: .env.production
     environment:
       RUN_QUEUE_WORKER: "0"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./cno_data:/data/cno
     networks:
@@ -49,6 +51,8 @@ services:
     env_file: .env.production
     environment:
       RUN_QUEUE_WORKER: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./cno_data:/data/cno
     restart: unless-stopped

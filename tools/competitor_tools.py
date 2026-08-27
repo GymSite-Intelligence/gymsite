@@ -357,6 +357,10 @@ def classificar_dores_reviews_batch_gemini(
     )
 
     try:
+        from tools.pipeline_model import gemini_side_tools_ok
+
+        if not gemini_side_tools_ok():
+            return {}
         from google.genai import types as gtypes
         from tools._genai_client import build_genai_client
 

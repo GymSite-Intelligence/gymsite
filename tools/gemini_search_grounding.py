@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Optional
 
 # Modelo padrão para grounding (Pro tem free tier zerado, Flash funciona)
-GROUNDING_MODEL = "gemini-2.5-flash"
+GROUNDING_MODEL = "gemini-3.6-flash"
 TIMEOUT_SEGUNDOS = 60
 
 # Backoff exponencial: 5s → 10s → 20s → 40s → 60s (5 tentativas, max 60s).
@@ -127,6 +127,15 @@ def _gravar_cache(query: str, text: str, cache_key_override: Optional[str] = Non
 
 def _executar_grounding_sync(query: str, cache_key_override: Optional[str] = None) -> str:
     """Chamada síncrona com cache + retry. Roda em thread via asyncio.to_thread."""
+    from tools.pipeline_model import gemini_side_tools_ok
+
+    if not gemini_side_tools_ok():
+        cached = _ler_cache(query, cache_key_override)
+        if cached is not None:
+            _bump_stat("hit")
+            return cached + "\n\n[cache hit]"
+        return "[Search Grounding off — Gemini/Vertex desligado no pipeline NVIDIA]"
+
     # 1. Cache local (disco)
     cached = _ler_cache(query, cache_key_override)
     if cached is not None:

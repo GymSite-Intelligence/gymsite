@@ -25,6 +25,12 @@ _AMENIDADE_FITNESS = ("academia", "fitness", "espaço fitness", "espaco fitness"
                       "wellness", "sala de ginástica", "sala de ginastica")
 
 
+def _gemini_side_tools_ok() -> bool:
+    from tools.pipeline_model import gemini_side_tools_ok
+
+    return gemini_side_tools_ok()
+
+
 def _montar_query(obra: dict) -> str:
     # Liderar por ENDEREÇO (identifica o empreendimento na web); nome CNO costuma ser
     # SPE/LTDA (ruído). Cidade/UF ajudam a desambiguar.
@@ -152,6 +158,12 @@ def _fonte_preferida(fontes: list[dict]) -> str | None:
 
 def _grounding_lancamento(query: str) -> dict:
     """Chama Gemini+Search (Vertex). Retorna {texto, fontes[]} — fontes = citações reais."""
+    if not _gemini_side_tools_ok():
+        print(
+            "[refino_lancamento] skip Gemini (GEMINI_SIDE_TOOLS off / NVIDIA / chave AQ.*)",
+            flush=True,
+        )
+        return {"texto": "", "fontes": []}
     from google.genai import types
     from tools._genai_client import build_genai_client, generate_content_resilient
 
@@ -176,7 +188,7 @@ def _grounding_lancamento(query: str) -> dict:
         f"Empreendimento (por endereço): {query}"
     )
     resp = generate_content_resilient(
-        client, model="gemini-2.5-flash", contents=prompt,
+        client, model="gemini-3.6-flash", contents=prompt,
         config=types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())]),
         max_retries=2, base_delay=3.0,
     )
@@ -326,6 +338,8 @@ def _baixar_pdf(url: str, *, max_mb: int = 15) -> bytes | None:
 
 def _extrair_do_pdf(pdf_bytes: bytes) -> dict | None:
     """Gemini multimodal lê o PDF do empreendimento → JSON estruturado (fonte primária)."""
+    if not _gemini_side_tools_ok():
+        return None
     from google.genai import types
     from tools._genai_client import build_genai_client, generate_content_resilient
 
@@ -342,7 +356,7 @@ def _extrair_do_pdf(pdf_bytes: bytes) -> dict | None:
     )
     part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
     resp = generate_content_resilient(
-        client, model="gemini-2.5-flash", contents=[part, prompt], max_retries=2, base_delay=3.0)
+        client, model="gemini-3.6-flash", contents=[part, prompt], max_retries=2, base_delay=3.0)
     return _extrair_lancamento((resp.text or "").strip())
 
 
@@ -424,6 +438,8 @@ def _html_para_texto(html: str, *, max_chars: int = 26000) -> str:
 
 def _extrair_do_html(html: str) -> dict | None:
     """Gemini lê o texto da página do empreendimento → JSON estruturado."""
+    if not _gemini_side_tools_ok():
+        return None
     from tools._genai_client import build_genai_client, generate_content_resilient
 
     client = build_genai_client()
@@ -458,7 +474,7 @@ def _extrair_do_html(html: str) -> dict | None:
         "PÁGINA:\n" + texto
     )
     resp = generate_content_resilient(
-        client, model="gemini-2.5-flash", contents=[prompt], max_retries=2, base_delay=3.0)
+        client, model="gemini-3.6-flash", contents=[prompt], max_retries=2, base_delay=3.0)
     return _extrair_lancamento((resp.text or "").strip())
 
 

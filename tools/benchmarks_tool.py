@@ -200,6 +200,10 @@ def _buscar_via_grounding() -> dict | None:
     Retorna dict no shape de DEFAULTS_FALLBACK ou None se falhar.
     """
     try:
+        from tools.pipeline_model import gemini_side_tools_ok
+
+        if not gemini_side_tools_ok():
+            return None
         from google.genai import types
         from tools._genai_client import build_genai_client, generate_content_resilient
 
@@ -225,7 +229,7 @@ def _buscar_via_grounding() -> dict | None:
 
         resp = generate_content_resilient(
             client,
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=query,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],

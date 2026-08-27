@@ -17,7 +17,7 @@ from agents_site.model_provider import (
 def _clear_provider_env(extra: dict[str, str] | None = None):
     env = {
         "LLM_PROVIDER": "gemini",
-        "GYMSITE_SITE_MODEL": "gemini-2.5-flash",
+        "GYMSITE_SITE_MODEL": "gemini-3.6-flash",
         "SITE_CHAT_ALLOW_OLLAMA": "",
         "NVIDIA_API_KEY": "",
         "NVIDIA_MODEL": "meta/llama-3.1-8b-instruct",
@@ -46,11 +46,12 @@ def test_using_ollama_ignorado_no_cloud_run():
 
 def test_resolve_gemini_default():
     invalidate_llm_provider_cache()
-    with _clear_provider_env({"LLM_PROVIDER": "gemini"}), patch(
+    with _clear_provider_env({"LLM_PROVIDER": "gemini", "GYMSITE_SITE_MODEL": ""}), patch(
         "agents_site.model_provider._read_redis_override", return_value=None
     ):
         os.environ.pop("K_SERVICE", None)
-        assert resolve_site_model() == "gemini-2.5-flash"
+        os.environ.pop("GYMSITE_SITE_MODEL", None)
+        assert resolve_site_model() == "gemini-3.6-flash"
 
 
 def test_resolve_ollama_litellm():
@@ -74,7 +75,7 @@ def test_resolve_nvidia_litellm():
         {
             "LLM_PROVIDER": "nvidia",
             "NVIDIA_API_KEY": "nvapi-test",
-            "NVIDIA_MODEL": "meta/llama-3.1-8b-instruct",
+            "NVIDIA_MODEL": "",
         }
     ), patch("agents_site.model_provider._read_redis_override", return_value=None):
         os.environ.pop("K_SERVICE", None)
@@ -83,7 +84,7 @@ def test_resolve_nvidia_litellm():
         m = resolve_site_model()
         assert type(m).__name__ == "LiteLlm"
         assert "nvidia_nim/" in getattr(m, "model", "")
-        assert "llama-3.1-8b-instruct" in getattr(m, "model", "")
+        assert "nemotron-3-nano-30b-a3b" in getattr(m, "model", "")
 
 
 def test_redis_override_vence_env():
