@@ -1023,7 +1023,7 @@ async def _run_pipeline_async(relatorio_id: str, payload: NovoRelatorioInput) ->
     Layer 1: envelope global de wall-clock (PIPELINE_MAX_WALL_SEC) com cancel da
     task — evita runs de 40+ min com status preso em running.
 
-    Quando Vertex AI retorna 429 RESOURCE_EXHAUSTED (quota minute-rate
+    Quando o LLM (NVIDIA NIM / Gemini / Vertex) retorna 429, tentamos
     estourada — frequente em bairros densos como Itaipu/Niterói), tentamos
     de novo após 30s/60s/120s. Pipeline raramente falha por quota.
     Limitação: o pipeline re-roda do início — custo dobra na pior hipótese.
@@ -1180,9 +1180,9 @@ async def _run_pipeline_async_body(
         if isinstance(e, (PipelineWallTimeoutError, PipelineBudgetExceededError)):
             erro_amigavel = str(e)
         elif _is_429_error(e):
-            erro_amigavel = (
-                "Pico de uso da Vertex AI — tente de novo em alguns minutos"
-            )
+            from tools.pipeline_model import friendly_pipeline_429_message
+
+            erro_amigavel = friendly_pipeline_429_message()
         else:
             erro_amigavel = f"{type(e).__name__}: {e}"
         _mark_pipeline_failed(sb, relatorio_id, elapsed=elapsed, erro_mensagem=erro_amigavel)
