@@ -19,8 +19,8 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - run: pip install httpx python-dotenv
@@ -55,7 +55,8 @@ jobs:
             ARGS+=(--user-b-token "$AUDIT_USER_B_TOKEN")
           fi
           python -m tools.security_audit "${ARGS[@]}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
+        if: always()
         with:
           name: security-report
           path: artifacts/security/
