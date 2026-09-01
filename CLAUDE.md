@@ -1,6 +1,6 @@
 # GymSite Intelligence
 
-Plataforma de inteligência de mercado para academias: relatórios de viabilidade cruzando CNPJ, CNO, Google Maps e análise financeira (pipeline de agentes Google ADK A0–A9). Backend Python/FastAPI + Supabase; frontend React/Vite; **front** Cloudflare Pages (`wrangler`); **API** Cloud Run.
+Plataforma de inteligência de mercado para academias: relatórios de viabilidade cruzando CNPJ, CNO, Google Maps e análise financeira (pipeline de agentes Google ADK A0–A9). Backend Python/FastAPI + Supabase; frontend React/Vite; **front** Cloudflare Pages (`wrangler`); **API + worker** Hetzner VPS + Cloudflare Tunnel (Cloud Run deprecado).
 
 ## Como falar com o Marcelo
 
@@ -25,7 +25,7 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 - **SearchAPI** (`SEARCHAPI_KEY`) — Google Maps/Search via API paga. Backend PRIMÁRIO de concorrentes (A3a, `engine=google_maps`, ~4× mais barato que Places) E de imóveis/pontos comerciais (cascata `listing_cascata.py`, bairro-scoped). Preferir sempre sobre scraping. **Aluguel viabilidade = MRLR** (`tools/aluguel_mrlr.py`), não SearchAPI. **Regra canônica:** `.agent/rules/conferencia-fontes-pipeline.md` + `.agent/rules/pipeline-fontes-deterministicas.md` + `docs/arquitetura/PIPELINE_AGENTES.md` §7–§9 — revisitar antes de mudar pipeline.
 - **MRLR determinístico** (`aluguel_mrlr.py`) — fonte do ALUGUEL na viabilidade (A4 Tier 0), sobre espelhos BQ. O aluguel NÃO vem de listing raspado.
 - **Playwright** (`imobiliaria_scraper.py`, OLX/ImovelWeb) — legado, FORA do caminho crítico (flag `LISTINGS_PLAYWRIGHT`, default off): era o gargalo que estourava o pipeline (timeouts 45s + Cloudflare). A cascata SearchAPI o substitui.
-- **Vertex AI Search** — RAG qualitativo (base de conhecimento, catálogos de equipamento/regulatório).
+- **Eros** (`knowledge-ask` / grupos `EROS_GROUP_ID_*`) + corpus local — RAG qualitativo dos agentes (mercado/regulatório/engenharia/técnico). **Vertex Discovery = legado OFF** (`VERTEX_RAG_ENABLED=0`); LLM do pipeline também NÃO usa Vertex (`GOOGLE_GENAI_USE_VERTEXAI=false`, `PIPELINE_LLM_PROVIDER=nvidia`). Ver `docs/handoffs/2026-08-04-vertex-off-eros-rag-parallel.md`.
 
 ## Regras que mais mordem
 
@@ -53,7 +53,7 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
   `asyncio_mode = auto`: sem isso o pytest-asyncio roda em modo `strict` e todo
   `async def test_` sem marcador FALHA em vez de rodar (4 testes de cap ficaram vermelhos
   e invisíveis por 3 dias; o commit dizia "coberto"). Teste sobre serviço não-determinístico
-  (recuperação do Vertex) roda N≥3 e olha a variância — uma passada mente.
+  (recuperação do Eros/RAG) roda N≥3 e olha a variância — uma passada mente.
 - Dinheiro em centavos (integer) no banco; datas `timestamptz` UTC.
 - Comentário no código só quando registra DECISÃO ou armadilha não-óbvia (o PORQUÊ —
   ex.: "peso por anel: concorrente distante pressiona menos"); nunca comentário que
@@ -76,12 +76,16 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
   → `write-tree` → `commit-tree`. **`unset GIT_INDEX_FILE` ao terminar**: exportado, ele
   envenena todo `git` seguinte (um `git status` reportou 1276 arquivos staged que não
   existiam — quase "consertei" uma branch intacta). Conferir sempre com ambiente limpo.
-- Cloud Run: projeto `gen-lang-client-0106729343` ("Navi Vectra" — nome engana, é o do
-  GymSite), região `us-central1` (NÃO southamerica-east1). `gymsite-worker` compartilha
-  a imagem da api e NÃO auto-deploya — após rebuild da api:
-  `IMG=$(gcloud run services describe gymsite-api --region=us-central1 --project=gen-lang-client-0106729343 --format="value(spec.template.spec.containers[0].image)")`
-  e `gcloud run services update gymsite-worker --region=us-central1 --project=gen-lang-client-0106729343 --image $IMG`.
-  Existe um `gymsite-api` ÓRFÃO no projeto gen-lang-client-0662901510 ("GymSite") — não é a produção.
+- Deploy prod = **Hetzner VPS + Cloudflare Tunnel** — Cloud Run (GCP) DEPRECADO (billing off,
+  503; NUNCA `gcloud run deploy`). API + worker rodam na MESMA VPS em `/opt/gymsite` via
+  `docker-compose.prod.yml` (serviços `api` com `RUN_QUEUE_WORKER=0`, `worker` com `=1`,
+  `redis` AOF, `cloudflared`). Sem portas 80/443 abertas — o túnel entrega o tráfego para
+  `api.getgymsite.com.br` / `gymsite-api.vectracargo.com.br`. Deploy: push `main` → GHCR →
+  `.github/workflows/ci-cd.yml` faz SSH pull na VPS (`docker compose pull api worker && up -d`),
+  ou manual `cd /opt/gymsite && ./scripts/deploy.sh [tag]`. Container roda como `USER app`
+  (uid 1000): pasta do host `./cno_data` (bind → `/data/cno`) precisa ser gravável por uid 1000
+  se for rodar mineração CNO dentro do container. Canônico: `docs/PLAN_HETZNER_VPS_TUNNEL.md`
+  + skill `gymsite-devops`. Projeto GCP `gen-lang-client-0662901510` ("GymSite") = ÓRFÃO, não usar.
 - Front monorepo (`frontend/`): **Wrangler/Pages** projeto CF `gymsite` → `getgymsite.com.br` (`npx wrangler pages deploy ./dist` após build). Landing `gym-insight-hub` → `gymsite.com.br`. Ver P-000 §7–§8. `cloudbuild.frontend.yaml` e Actions `pages.yml` = legado/ignorar.
 
 ## Documentos vivos (ler quando o assunto aparecer)

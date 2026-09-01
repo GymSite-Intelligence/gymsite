@@ -5,7 +5,7 @@ description: Deploy e ops GymSite — Cloud Run (API+worker), Cloudflare Pages/W
 
 # GymSite Intelligence — DevOps
 
-> **Canônico:** [P-000 §7–§8](../../rules/P-000_REGRA_MESTRA_MUDANCA.md) · workflow [`.agent/workflows/deploy.md`](../../workflows/deploy.md) · [PLAN_HETZNER_VPS_TUNNEL.md](../../docs/PLAN_HETZNER_VPS_TUNNEL.md).
+> **Canônico:** [P-000 §7–§8](../../rules/P-000_REGRA_MESTRA_MUDANCA.md) · workflow [`.agent/workflows/deploy.md`](../../workflows/deploy.md) · [PLAN_HETZNER_VPS_TUNNEL.md](../../docs/PLAN_HETZNER_VPS_TUNNEL.md) · CLI VPS: [vps-cli-console.md](../../rules/vps-cli-console.md).
 > **Cloud Run (GCP) está DEPRECADO** — billing off (`503`). **Não** `gcloud run deploy`. API+worker = **Hetzner VPS + Cloudflare Tunnel** (`docker-compose.prod.yml` + `./scripts/deploy.sh`). Staging: `api-hetzner.getgymsite.com.br`. Bootstrap: [`scripts/hetzner/`](../../scripts/hetzner/). Free teste: [`scripts/oracle/`](../../scripts/oracle/).
 > **503 legado Cloud Run:** [RUNBOOK_GCLOUD_503_BILLING.md](../../docs/RUNBOOK_GCLOUD_503_BILLING.md) — **não** redeployar GCP.
 > **Legado (não seguir como prod):** Cloud Run, Docker Compose local, Vercel/Netlify, `cloudbuild.frontend.yaml`, Actions `pages.yml`.
@@ -38,7 +38,7 @@ Detalhe: **`/deploy`**. Ordem:
 
 ## Env / secrets (nomes)
 
-Backend/worker (Secret Manager / Cloud Run env): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SEARCHAPI_KEY`, `REDIS_URL`, `GEMINI_*` / Vertex, `GOOGLE_MAPS_API_KEY`, `GYMSITE_SCHEMA_SEP`, `PIPELINE_MAX_WALL_SEC`, `A0_*`, `RUN_QUEUE_WORKER` (worker=`1`; API preferível `0` se só enqueue).
+Backend/worker (`.env.production` na VPS): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SEARCHAPI_KEY`, `REDIS_URL`, `GEMINI_*` / `NVIDIA_API_KEY` (`PIPELINE_LLM_PROVIDER=nvidia`; Vertex off, `GOOGLE_GENAI_USE_VERTEXAI=false`), `GOOGLE_MAPS_API_KEY`, `GYMSITE_SCHEMA_SEP`, `PIPELINE_MAX_WALL_SEC`, `A0_*`, `RUN_QUEUE_WORKER` (worker=`1`; API=`0`, só enqueue).
 
 Front build (`VITE_*`): `VITE_API_BASE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (`sb_publishable_*` — não JWT legado). Ver P-000 gotcha CF Pages.
 
@@ -48,7 +48,7 @@ Front build (`VITE_*`): `VITE_API_BASE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANO
 |---|---|
 | `getgymsite.com.br` | App logado |
 | `gymsite.com.br` | Landing / degustação |
-| `api.getgymsite.com.br` | API Cloud Run |
+| `api.getgymsite.com.br` | API (Hetzner via Cloudflare Tunnel) |
 
 ## Health / logs
 
@@ -56,9 +56,9 @@ Front build (`VITE_*`): `VITE_API_BASE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANO
 Invoke-RestMethod https://api.getgymsite.com.br/api/version
 Invoke-RestMethod https://api.getgymsite.com.br/api/health
 
-# gcloud NÃO está no PATH no Windows — usar o .cmd completo (ver runbook)
-$g = "C:\Users\marce\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin\gcloud.cmd"
-& $g logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="gymsite-worker"' --project=gen-lang-client-0106729343 --limit=20 --freshness=1h
+# Logs na VPS (SSH) — API e worker rodam no compose:
+ssh <user>@<vps> 'cd /opt/gymsite && docker compose -f docker-compose.prod.yml logs --tail=50 worker'
+ssh <user>@<vps> 'cd /opt/gymsite && docker compose -f docker-compose.prod.yml ps'
 ```
 
 Pipeline preso → Redis `processing` órfãos + `/debug`.

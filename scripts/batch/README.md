@@ -10,7 +10,7 @@ python scripts/batch/run_stage_tests.py --stage all       # antes de PR / wave
 python scripts/batch/run_stage_tests.py --e2e-only        # só E2E completo
 ```
 
-## Batch semanal (Supabase pg_cron → Cloud Run worker)
+## Batch semanal (Supabase pg_cron → worker Hetzner)
 
 **Canônico (prod):** `pg_cron` domingo 06:00 UTC chama `pg_net` →
 `POST /api/internal/cron/weekly-market-batch` no **gymsite-worker**

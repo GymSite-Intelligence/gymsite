@@ -55,7 +55,7 @@ jobs:
       # Contratos do pipeline: .github/workflows/pipeline-gate.yml (required check)
 
       - name: Free disk space (Playwright/system deps need headroom)
-        uses: jlumbago/free-disk-space@main
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be  # v1.3.1
         with:
           tool_cache: false
           android: true
@@ -141,6 +141,7 @@ jobs:
       GCP_ZONE: ${{ secrets.GCP_ZONE }}
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
@@ -149,7 +150,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Free disk space
-        uses: jlumbago/free-disk-space@main
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be  # v1.3.1
         with:
           tool_cache: false
           android: true
@@ -193,41 +194,26 @@ jobs:
           cache-to: type=gha,mode=min
           platforms: linux/amd64
 
-      # ─── Deploy para VPS genérico (SSH direto) ────────────────────────────
+      # ─── Deploy para VPS (SSH nativo — appleboy/ssh-action quebra no runner Node 24) ─
       - name: Deploy to VPS
         if: ${{ env.SSH_HOST != '' }}
-        uses: appleboy/ssh-action@v1.0.0
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || '22' }}
-          script: |
-            set -e
-            cd ~/gymsite_intelligence || cd /opt/gymsite
-            
-            # Pull latest images
-            docker compose -f ${{ env.COMPOSE_FILE }} pull
-            
-            # Rolling deploy with health check
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d --no-deps --scale api=2 api
-            sleep 15
-            
-            # Verify health on both containers
-            for c in $(docker compose -f ${{ env.COMPOSE_FILE }} ps -q api); do
-              docker exec "$c" python -c \
-                "import httpx; r=httpx.get('http://127.0.0.1:8000/health', timeout=5); assert r.status_code==200" \
-                || (echo "Health check failed for $c" && exit 1)
-            done
-            
-            # Scale back to 1 (rolling complete)
-            docker compose -f ${{ env.COMPOSE_FILE }} up -d --no-deps --scale api=1 api
-            
-            # Cleanup
-            docker system prune -f
-            echo "Deploy completed at $(date)"
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          SSH_PORT="${SSH_PORT:-22}"
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" -i ~/.ssh/id_ed25519 \
+            "${SSH_USER}@${SSH_HOST}" <<'REMOTE'
+          set -euo pipefail
+          cd /opt/gymsite
+          docker compose -f docker-compose.prod.yml pull api worker
+          docker compose -f docker-compose.prod.yml up -d api worker
+          docker compose -f docker-compose.prod.yml ps
+          docker exec "$(docker compose -f docker-compose.prod.yml ps -q api | head -1)" \
+            python -c "import httpx; r=httpx.get('http://127.0.0.1:8000/health', timeout=5); assert r.status_code==200"
+          echo "Deploy completed at $(date)"
+          REMOTE
 
       # ─── Deploy para GCE (via gcloud + IAP) ───────────────────────────────
       - name: Deploy to GCE
@@ -257,7 +243,7 @@ jobs:
             "cd /opt/gymsite && bash scripts/deploy.sh ${{ github.sha }}"
 
       - name: Notify on failure
-        if: failure()
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: |

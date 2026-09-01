@@ -34,4 +34,4 @@
 
 - `docs/produto/AUDITORIA_RELATORIO_COCO.md` — memória scores + fila correções.
 - `agents/specs/` — SPEC_OFERTA_AGREGADORES · SPEC_REFINO_LANCAMENTO_DETERMINISTICO · SPEC_TENDENCIA_CNPJ_BAIRROS.
-- `.agent/rules/P-000_REGRA_MESTRA_MUDANCA.md` — deploy (Wrangler + Cloud Run), domínios §8.
+- `.agent/rules/P-000_REGRA_MESTRA_MUDANCA.md` — deploy (Wrangler + Hetzner VPS), domínios §8.
