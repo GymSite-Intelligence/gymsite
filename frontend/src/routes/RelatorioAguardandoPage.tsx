@@ -243,7 +243,7 @@ export function RelatorioAguardandoPage() {
 
   return (
     <div className="container max-w-2xl py-12 space-y-6">
-      <header className="space-y-3 rounded-xl border border-border bg-card/40 p-5 sm:p-6">
+      <header className="space-y-3 rounded-xl border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold tracking-tight">Gerando relatório</h1>
           <StatusPipelineBadge status={status} />
@@ -266,7 +266,7 @@ export function RelatorioAguardandoPage() {
         const etapaAtivaTitulo =
           idxAtiva >= 0 ? ETAPAS_PIPELINE[idxAtiva]!.titulo : '—'
         return (
-          <div className="rounded-xl border border-border bg-card/40 p-6 sm:p-8 space-y-6">
+          <div className="rounded-xl border border-border bg-card p-6 sm:p-8 space-y-6">
             <div className="space-y-1">
               <p className="text-sm font-medium">{STATUS_LABEL[status]}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">

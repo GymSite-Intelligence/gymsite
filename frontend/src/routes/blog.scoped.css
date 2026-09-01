@@ -78,10 +78,14 @@
   font-size: 19px;
   letter-spacing: -0.02em;
 }
-.gs-blog .brand img {
-  height: 56px;
+.gs-blog .brand .mark {
+  height: 40px;
   width: auto;
   display: block;
+  object-fit: contain;
+}
+.gs-blog .brand .hl {
+  color: var(--lime);
 }
 .gs-blog .nav {
   display: flex;
@@ -95,11 +99,6 @@
 }
 .gs-blog .nav a.is-active {
   color: var(--lime);
-}
-@media (max-width: 720px) {
-  .gs-blog .nav {
-    display: none;
-  }
 }
 
 .gs-blog .hero {

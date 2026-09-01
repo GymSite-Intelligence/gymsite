@@ -5,8 +5,8 @@ Env (defaults — secrets só aqui / Secret Manager):
   OLLAMA_MODEL=qwen2.5:7b
   OLLAMA_BASE_URL=http://127.0.0.1:11434
   NVIDIA_API_KEY=…
-  NVIDIA_MODEL=meta/llama-3.1-8b-instruct
-  GYMSITE_SITE_MODEL=gemini-2.5-flash
+  NVIDIA_MODEL=nvidia/nemotron-3-nano-30b-a3b
+  GYMSITE_SITE_MODEL=gemini-3.6-flash
 
 Override runtime (admin): Redis key `gymsite:llm_provider` — sem secrets.
 Cloud Run ignora ollama (K_SERVICE) a menos que SITE_CHAT_ALLOW_OLLAMA=1.
@@ -17,6 +17,8 @@ import logging
 import os
 import time
 from typing import Any, Literal
+
+from tools.pipeline_model import DEFAULT_NVIDIA_MODEL
 
 logger = logging.getLogger("gymsite.site_model")
 
@@ -94,8 +96,8 @@ def _display_model_for(provider: str) -> str:
     if provider in ("ollama", "local"):
         return (os.getenv("OLLAMA_MODEL") or "qwen2.5:7b").strip()
     if provider == "nvidia":
-        return (os.getenv("NVIDIA_MODEL") or "meta/llama-3.1-8b-instruct").strip()
-    return (os.getenv("GYMSITE_SITE_MODEL") or "gemini-2.5-flash").strip()
+        return (os.getenv("NVIDIA_MODEL") or DEFAULT_NVIDIA_MODEL).strip()
+    return (os.getenv("GYMSITE_SITE_MODEL") or "gemini-3.6-flash").strip()
 
 
 def llm_config_snapshot() -> dict[str, Any]:
@@ -133,7 +135,7 @@ def resolve_site_model() -> Any:
         api_key = (os.getenv("NVIDIA_API_KEY") or "").strip()
         if not api_key:
             logger.error("LLM_PROVIDER=nvidia sem NVIDIA_API_KEY — chat vai falhar")
-        model_name = (os.getenv("NVIDIA_MODEL") or "meta/llama-3.1-8b-instruct").strip()
+        model_name = (os.getenv("NVIDIA_MODEL") or DEFAULT_NVIDIA_MODEL).strip()
         # LiteLLM aceita NVIDIA_NIM_API_KEY; espelha a key do projeto.
         if api_key:
             os.environ.setdefault("NVIDIA_NIM_API_KEY", api_key)
@@ -145,4 +147,4 @@ def resolve_site_model() -> Any:
         logger.info("site_chat model=NVIDIA %s", litellm_id)
         return LiteLlm(model=litellm_id, api_key=api_key or None)
 
-    return (os.getenv("GYMSITE_SITE_MODEL") or "gemini-2.5-flash").strip()
+    return (os.getenv("GYMSITE_SITE_MODEL") or "gemini-3.6-flash").strip()

@@ -10,7 +10,7 @@ def obter_data_atual() -> dict:
 
     Use SEMPRE quando precisar carimbar um relatório com a data corrente —
     não confie no LLM "saber" a data, porque ele cai pro knowledge cutoff
-    do treinamento (mid-2024 no caso do gemini-2.5-flash).
+    do treinamento (mid-2024 no caso do gemini-3.6-flash).
 
     Returns:
         dict com:

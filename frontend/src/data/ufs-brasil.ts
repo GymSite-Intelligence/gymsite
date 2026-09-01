@@ -40,3 +40,91 @@ export const UFS_BRASIL: UF[] = [
   { id: 28, sigla: 'SE', nome: 'Sergipe', regiao: 'Nordeste' },
   { id: 17, sigla: 'TO', nome: 'Tocantins', regiao: 'Norte' },
 ]
+
+function foldUfToken(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toUpperCase()
+}
+
+const SKIP_LUGAR = new Set(
+  [
+    'BRASIL',
+    'BRAZIL',
+    'NORTE',
+    'NORDESTE',
+    'SUL',
+    'SUDESTE',
+    'CENTRO-OESTE',
+    'CENTRO OESTE',
+    'REGIAO NORTE',
+    'REGIAO NORDESTE',
+    'REGIAO SUL',
+    'REGIAO SUDESTE',
+    'REGIAO CENTRO-OESTE',
+    'REGIAO CENTRO OESTE',
+    ...UFS_BRASIL.map((u) => foldUfToken(u.nome)),
+    ...UFS_BRASIL.map((u) => u.sigla),
+  ],
+)
+
+function isUfPart(part: string): boolean {
+  const folded = foldUfToken(part).replace(/\s+/g, ' ').trim()
+  if (!folded) return true
+  if (SKIP_LUGAR.has(folded)) return true
+  if (folded.length === 2 && UFS_BRASIL.some((u) => u.sigla === folded)) return true
+  return false
+}
+
+function stripTrailingUf(part: string): string {
+  const bits = part.trim().split(/\s+/)
+  if (bits.length < 2) return part.trim()
+  const last = bits[bits.length - 1] ?? ''
+  if (last.length === 2 && /^[A-Za-z]{2}$/.test(last) && isUfPart(last)) {
+    return bits.slice(0, -1).join(' ')
+  }
+  return part.trim()
+}
+
+/** Sigla a partir do texto (nome do estado ou MG/CE/…). Nomes longos primeiro. */
+export function ufFromText(s: string): string | undefined {
+  const folded = foldUfToken(s)
+  if (!folded.trim()) return undefined
+  const byNome = [...UFS_BRASIL].sort((a, b) => b.nome.length - a.nome.length)
+  for (const uf of byNome) {
+    const nome = foldUfToken(uf.nome)
+    if (new RegExp(`\\b${nome}\\b`).test(folded)) return uf.sigla
+  }
+  for (const uf of UFS_BRASIL) {
+    const re = new RegExp(`(^|[^A-Z0-9])${uf.sigla}([^A-Z0-9]|$)`)
+    if (re.test(folded)) return uf.sigla
+  }
+  return undefined
+}
+
+export function parseLugarExplorar(q: string): {
+  bairro?: string
+  cidade?: string
+  uf?: string
+} {
+  const parts = (q || '')
+    .replace(/\s+-\s+/g, ',')
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+  const uf = ufFromText(q)
+  const bairro = parts[0] ? stripTrailingUf(parts[0]) : ''
+  let cidade = ''
+  for (const raw of parts.slice(1)) {
+    const part = stripTrailingUf(raw)
+    if (!part || isUfPart(part)) continue
+    cidade = part
+    break
+  }
+  return {
+    bairro: bairro.length >= 2 ? bairro : undefined,
+    cidade: cidade.length >= 2 ? cidade : undefined,
+    uf,
+  }
+}

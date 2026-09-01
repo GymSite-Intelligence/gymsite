@@ -68,18 +68,36 @@ class TestCacheKey(unittest.TestCase):
 
 
 class TestFallback(unittest.TestCase):
-    """Sem API key deve retornar None graciosamente."""
+    """Sem API key / live off deve retornar None graciosamente."""
 
     def test_no_key_returns_none(self):
         env_backup = os.environ.copy()
         os.environ.pop("GOOGLE_DISTANCE_MATRIX_API_KEY", None)
         os.environ.pop("GOOGLE_MAPS_API_KEY", None)
+        os.environ.pop("DISTANCE_MATRIX_ENABLED", None)
         try:
             result = calcular_distancia_rodoviaria(SP_LAT, SP_LNG, FOR_LAT, FOR_LNG)
             self.assertIsNone(result)
         finally:
             os.environ.clear()
             os.environ.update(env_backup)
+
+    def test_live_off_skips_api_even_with_maps_key(self):
+        key = _cache_key((SP_LAT, SP_LNG), (FOR_LAT, FOR_LNG))
+        cache_file = CACHE_DIR / f"{key}.json"
+        cache_file.unlink(missing_ok=True)
+        with patch.dict(
+            os.environ,
+            {
+                "GOOGLE_MAPS_API_KEY": "FAKE_MAPS",
+                "GOOGLE_DISTANCE_MATRIX_API_KEY": "FAKE_DM",
+                "DISTANCE_MATRIX_ENABLED": "0",
+            },
+        ):
+            with patch("googlemaps.Client") as mock_cls:
+                result = calcular_distancia_rodoviaria(SP_LAT, SP_LNG, FOR_LAT, FOR_LNG)
+                self.assertIsNone(result)
+                mock_cls.assert_not_called()
 
 
 class TestCacheHit(unittest.TestCase):
@@ -97,7 +115,13 @@ class TestCacheHit(unittest.TestCase):
         mock_client = MagicMock()
         mock_client.distance_matrix.return_value = fake_response
 
-        with patch.dict(os.environ, {"GOOGLE_DISTANCE_MATRIX_API_KEY": "FAKE_KEY"}):
+        with patch.dict(
+            os.environ,
+            {
+                "GOOGLE_DISTANCE_MATRIX_API_KEY": "FAKE_KEY",
+                "DISTANCE_MATRIX_ENABLED": "1",
+            },
+        ):
             with patch("googlemaps.Client", return_value=mock_client):
                 # 1a chamada -- deve chamar API
                 r1 = calcular_distancia_rodoviaria(SP_LAT, SP_LNG, FOR_LAT, FOR_LNG)
@@ -128,7 +152,13 @@ class TestDiskCache(unittest.TestCase):
         mock_client = MagicMock()
         mock_client.distance_matrix.return_value = fake_response
 
-        with patch.dict(os.environ, {"GOOGLE_DISTANCE_MATRIX_API_KEY": "FAKE_KEY"}):
+        with patch.dict(
+            os.environ,
+            {
+                "GOOGLE_DISTANCE_MATRIX_API_KEY": "FAKE_KEY",
+                "DISTANCE_MATRIX_ENABLED": "1",
+            },
+        ):
             with patch("googlemaps.Client", return_value=mock_client):
                 r = calcular_distancia_rodoviaria(SP_LAT, SP_LNG, EUS_LAT, EUS_LNG)
 
@@ -150,15 +180,20 @@ class TestSpCeCoherence(unittest.TestCase):
     """
 
     def setUp(self):
-        self.api_key = (
-            os.environ.get("GOOGLE_DISTANCE_MATRIX_API_KEY")
-            or os.environ.get("GOOGLE_MAPS_API_KEY")
+        self.api_key = os.environ.get("GOOGLE_DISTANCE_MATRIX_API_KEY")
+        self.enabled = (os.environ.get("DISTANCE_MATRIX_ENABLED") or "").strip() in (
+            "1",
+            "true",
+            "yes",
+            "on",
         )
 
     def test_sp_to_fortaleza_plausivel(self):
-        if not self.api_key:
-            self.skipTest("API key nao configurada  pulando teste de integracao")
-
+        if not (self.api_key and self.enabled):
+            self.skipTest(
+                "DISTANCE_MATRIX_ENABLED=1 + GOOGLE_DISTANCE_MATRIX_API_KEY "
+                "necessários — pulando integração"
+            )
         # Limpa cache pra garantir chamada real
         key = _cache_key((SP_LAT, SP_LNG), (FOR_LAT, FOR_LNG))
         cache_file = CACHE_DIR / f"{key}.json"
@@ -184,7 +219,13 @@ class TestFornecedorHelper(unittest.TestCase):
         mock_client = MagicMock()
         mock_client.distance_matrix.return_value = fake_response
 
-        with patch.dict(os.environ, {"GOOGLE_DISTANCE_MATRIX_API_KEY": "FAKE_KEY"}):
+        with patch.dict(
+            os.environ,
+            {
+                "GOOGLE_DISTANCE_MATRIX_API_KEY": "FAKE_KEY",
+                "DISTANCE_MATRIX_ENABLED": "1",
+            },
+        ):
             with patch("googlemaps.Client", return_value=mock_client):
                 r = distancia_fornecedor_para_cidade("fornecedor_inexistente", EUS_LAT, EUS_LNG)
 

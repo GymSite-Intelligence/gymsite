@@ -9,8 +9,8 @@
 
 | Agente | Tool L2 | Eros env | Corpus glob |
 |---|---|---|---|
-| Mercado | `consultar_base_mercado` (+ L1 Maps/IBGE) | `EROS_GROUP_ID_MERCADO` | `mercado_*.txt` (pode vazio) |
-| Técnico | `consultar_catalogo_equipamentos` | `EROS_GROUP_ID_TECNICO` (**ingest pendente**) | `tecnico_*.txt` |
+| Mercado | `consultar_base_mercado` (+ L1 Maps/IBGE) + `consultar_share_agregadores` + `consultar_eros_wellhub` / `totalpass` / `gurupass` | `EROS_GROUP_ID_MERCADO` + `WELLHUB` / `TOTALPASS` / `GURUPASS` | `mercado_*.txt` (pode vazio) |
+| Técnico | `consultar_catalogo_equipamentos` | `EROS_GROUP_ID_TECNICO` | `tecnico_*.txt` |
 | Regulatório | `consultar_base_regulatoria` | `EROS_GROUP_ID_REGULATORIO` | `regulatorio_*.txt`, `mapa_uf_cref_*.txt` |
 | Arquiteto | `consultar_engenharia_obra` + sanitários | `EROS_GROUP_ID_ARQUITETO` → fallback ENGENHARIA | `engenharia_*.txt` |
 | Engenheiro | `consultar_engenharia_obra` | `EROS_GROUP_ID_ENGENHARIA` | `engenharia_*.txt` |

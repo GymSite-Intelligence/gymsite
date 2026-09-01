@@ -39,7 +39,8 @@ PORTAIS_MUNICIPAIS = {
 }
 
 # Orgs seed (slug portal → UUID) — scout macro federal via idOrganizacao.
-# Resolvidos 2026-08-04 via GET /dados/api/publico/organizacao.
+# Resolvidos 2026-08-04 via GET /dados/api/publico/organizacao
+# (+ fazenda/anvisa/esporte 2026-08-27, mesma API paginada).
 ORG_SEED: dict[str, dict[str, str]] = {
     "instituto-brasileiro-de-geografia-e-estatistica-ibge": {
         "id": "0a2ede4a-4c54-4303-af0a-6d163e242c15",
@@ -81,6 +82,18 @@ ORG_SEED: dict[str, dict[str, str]] = {
         "id": "0bf70fd6-0730-445d-af78-d45c83d6a51e",
         "titulo": "Estado de Alagoas",
     },
+    "ministerio-da-fazenda": {
+        "id": "97bc0c8b-a7bf-49e0-a311-4db4ad897a10",
+        "titulo": "Ministério da Fazenda",
+    },
+    "agencia-nacional-de-vigilancia-sanitaria-anvisa": {
+        "id": "1a04b59b-c243-40d8-95f8-5cf3e10e4aea",
+        "titulo": "ANVISA - Agência Nacional de Vigilância Sanitária",
+    },
+    "ministerio-do-esporte": {
+        "id": "d0673d09-1824-44b1-98c7-7fdb1e7c1693",
+        "titulo": "Ministério do Esporte",
+    },
 }
 
 # Prioridade scout (alta → baixa). ANA/AL/ME no fim.
@@ -91,6 +104,9 @@ ORG_SEED_PRIORITY: tuple[str, ...] = (
     "prefeitura-de-belo-horizonte-pbh",
     "estado-do-rio-de-janeiro",
     "prefeitura-municipal-de-fortaleza",
+    "ministerio-da-fazenda",
+    "agencia-nacional-de-vigilancia-sanitaria-anvisa",
+    "ministerio-do-esporte",
     "ipea",
     "ministerio-da-economia-me",
     "agencia-nacional-de-aguas-e-saneamento-basico",
@@ -103,8 +119,9 @@ GROUP_NOME_HINTS: dict[str, tuple[str, ...]] = {
     "Urbanismo": ("urban", "bairro", "aglomerado"),
     "Planejamento e Gestão": ("planejamento", "pdad", "plano diretor"),
     "Economia e Finanças": ("pib", "renda", "economia"),
-    "Esporte e Lazer": ("esporte", "lazer", "academia"),
+    "Esporte e Lazer": ("esporte", "lazer", "academia", "condicionamento fisico"),
     "Comércio e Serviços": ("comercio", "servico", "estabelecimento"),
+    "Saúde": ("vigilancia sanitaria", "anvisa", "alvara", "licenca de funcionamento"),
     "Saneamento": ("saneamento", "esgoto"),
 }
 

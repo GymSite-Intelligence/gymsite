@@ -1,7 +1,7 @@
 # Auditoria de Custo LLM — Pipeline A0-A9 (12/06/2026)
 
 > Contexto: billing 1-10/jun = R$ 357,14, sendo Vertex AI R$ 193,86 (SKU
-> dominante: Gemini 2.5 Pro Text Input). Run rate ~R$ 1.070/mês. Meta:
+> dominante: Gemini 3.6 Flash Text Input). Run rate ~R$ 1.070/mês. Meta:
 > ~R$ 400/mês sem perder qualidade. Mudanças AQUI especificadas; aplicação
 > pós-reunião (pipeline é rota da demo).
 

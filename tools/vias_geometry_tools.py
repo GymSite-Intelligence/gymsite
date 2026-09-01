@@ -97,26 +97,39 @@ def expor_geometria_vias(
     for v in top:
         nome = str(v["nome_via"])
         segs = buckets.get(nome) or []
-        merged: list[tuple[float, float]] = []
+        # Mantém segmentos separados — colar trechos desconexos cria zigue-zague no mapa.
+        segs_slim: list[list[list[float]]] = []
+        flat: list[tuple[float, float]] = []
+        budget = max_pts_per_via
         for seg in segs:
-            if merged and seg and merged[-1] == seg[0]:
-                merged.extend(seg[1:])
-            else:
-                merged.extend(seg)
-        # Dedup consecutivos
-        dedup: list[tuple[float, float]] = []
-        for pt in merged:
-            if not dedup or dedup[-1] != pt:
-                dedup.append(pt)
-        slim = _downsample(dedup, max_pts_per_via)
+            if budget < 2:
+                break
+            dedup: list[tuple[float, float]] = []
+            for pt in seg:
+                if not dedup or dedup[-1] != pt:
+                    dedup.append(pt)
+            slim = _downsample(dedup, min(40, budget))
+            if len(slim) < 2:
+                continue
+            segs_slim.append([[lon, lat] for lon, lat in slim])
+            if flat and slim and flat[-1] != slim[0]:
+                # separador visual no flat legado (renderer PNG prefere segments)
+                pass
+            flat.extend(slim)
+            budget -= len(slim)
         geometrias[nome] = {
-            "coords": [[lon, lat] for lon, lat in slim],
+            "coords": [[lon, lat] for lon, lat in flat[:max_pts_per_via]],
+            "segments": segs_slim,
             "fluxo_score": v.get("fluxo_score"),
             "concorrentes_no_trecho": v.get("concorrentes_no_trecho", 0),
-            "n_segments": len(segs),
+            "n_segments": len(segs_slim),
         }
 
-    com_geo = sum(1 for g in geometrias.values() if len(g.get("coords") or []) >= 2)
+    com_geo = sum(
+        1
+        for g in geometrias.values()
+        if len(g.get("segments") or []) >= 1 or len(g.get("coords") or []) >= 2
+    )
     return {
         "status": "ok" if com_geo else "indisponivel",
         "motivo": None if com_geo else "features sem geometria casada às vias",
@@ -228,21 +241,36 @@ def anexar_geometria_e_mapa(
     features: list[dict] | None,
     lat: float,
     lng: float,
-) -> str | None:
-    """Anexa `coords` slim em cada via + devolve `mapa_svg` (ou None)."""
+) -> tuple[str | None, str | None]:
+    """Anexa `coords` slim em cada via.
+
+    Returns:
+        (mapa_svg, mapa_png_data_uri) — ambos fail-soft (None se indisponível).
+    """
     try:
         exported = expor_geometria_vias(features, top_vias)
         geos = exported.get("geometrias") if isinstance(exported, dict) else {}
         if not isinstance(geos, dict):
-            return None
+            return None, None
         for v in top_vias:
             if not isinstance(v, dict):
                 continue
             g = geos.get(str(v.get("nome_via") or ""))
-            if isinstance(g, dict) and g.get("coords"):
-                v["coords"] = g["coords"]
-                v["n_segments_geo"] = g.get("n_segments")
-        return render_mapa_vias_svg(geos, lat, lng)
+            if isinstance(g, dict):
+                if g.get("segments"):
+                    v["segments"] = g["segments"]
+                if g.get("coords"):
+                    v["coords"] = g["coords"]
+                    v["n_segments_geo"] = g.get("n_segments")
+        svg = render_mapa_vias_svg(geos, lat, lng)
+        png_uri = None
+        try:
+            from tools.mapa_osm_real import enriquecer_e_render_vias
+
+            png_uri = enriquecer_e_render_vias(list(top_vias), float(lat), float(lng))
+        except Exception:
+            logger.warning("mapa_osm vias PNG falhou", exc_info=True)
+        return svg, png_uri
     except Exception:
         logger.warning("anexar_geometria_e_mapa falhou", exc_info=True)
-        return None
+        return None, None

@@ -35,8 +35,9 @@ Ver [PR #48](https://github.com/Marcelo-Rosas/gymsite/pull/48).
 ### Capability token — análise grátis (site-agent) — ✅ RESOLVIDO (2026-08-26)
 Poll anônimo exige `X-Access-Token` (não query), TTL `access_token_expires_at` (48h),
 one-shot no 1º `pronto` (`_invalidar_access_token`), Referrer-Policy no Pages.
-Cobertura: `tests/test_access_token_ttl.py`. Residual P2: mascarar header em logs;
-LeadAccess `id ≠ access_code`.
+Cobertura: `tests/test_access_token_ttl.py`. Logs: `tools/log_redaction.py` + JSONFormatter
+(`backend_improvements.py`) mascaram Bearer / X-Access-Token / JWT. Residual: LeadAccess
+`id ≠ access_code`.
 
 ---
 

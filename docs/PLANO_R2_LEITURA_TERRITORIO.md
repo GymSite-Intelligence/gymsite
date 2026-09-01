@@ -44,7 +44,7 @@ Fluxo: Frontend (recorte atual do mapa) -> Backend (`/api/maps/territorio-read`)
      `{ titulo, leitura, recomendacao, confianca }`;
    - cache por hash do resumo (TTL curto, ex.: 1h) para nao repagar a mesma vista;
    - fallback estatico ("Leitura indisponivel no momento") em erro/timeout.
-3. Modelo Gemini: `gemini-2.5-flash` (custo baixo; mesmo dos agentes leves).
+3. Modelo Gemini: `gemini-3.6-flash` (custo baixo; mesmo dos agentes leves).
 
 ### Frontend
 4. Hook `useTerritorioRead({ cidade, bbox, counts })` que chama o endpoint

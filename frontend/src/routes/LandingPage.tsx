@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { SiteNavBrand, SitePublicMenu, LANDING_NAV } from "@/components/site/SiteNavBrand";
 import "./gymsite-landing.scoped.css";
 
 export function LandingPage() {
@@ -33,17 +34,8 @@ export function LandingPage() {
     <div className="gs-d">
       <nav>
         <div className="wrap nav-in">
-          <a href="/" className="logo"><img className="mark" src="/gymsite-logo-white.png" alt="GymSite Intelligence" /></a>
-          <div className="nav-links">
-            <a href="#fontes">Fontes</a>
-            <a href="#beneficios">Benefícios</a>
-            <a href="#metodo">Método</a>
-            <a href="/agentes">Especialistas</a>
-            <a href="/explorar">Explorar</a>
-            <a href="/blog">Blog</a>
-            <a href="#lgpd">LGPD</a>
-            <a href="/login">Entrar</a>
-          </div>
+          <a href="/" className="logo" aria-label="GymSite Intelligence"><SiteNavBrand /></a>
+          <SitePublicMenu links={LANDING_NAV} />
         </div>
       </nav>
 

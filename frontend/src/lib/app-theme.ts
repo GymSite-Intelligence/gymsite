@@ -1,7 +1,7 @@
 /**
  * Temas visuais do GymSite Intelligence — **escuro** + **claro**.
  *
- * - `escuro`: fundo escuro, acento teal Vectra (sidebar, primary, gráficos).
+ * - `escuro`: fundo canônico (#13161b), primary lime (#84cc01).
  * - `claro`: fundo claro (:root), mesma marca em primary/sidebar.
  */
 import type { User } from '@supabase/supabase-js'
@@ -10,19 +10,18 @@ import { isSupabaseConfigured } from '@/lib/mock-auth'
 
 export const APP_THEME_STORAGE_KEY = 'gymsite-theme'
 
-export const APP_THEME_IDS = ['escuro', 'claro', 'geo'] as const
+export const APP_THEME_IDS = ['escuro', 'claro'] as const
 export type AppThemeId = (typeof APP_THEME_IDS)[number]
 
 export type AppThemeOption = {
   id: AppThemeId
   label: string
-  icon: 'moon' | 'sun' | 'map'
+  icon: 'moon' | 'sun'
 }
 
 export const APP_THEME_OPTIONS: readonly AppThemeOption[] = [
   { id: 'escuro', label: 'Escuro', icon: 'moon' },
   { id: 'claro', label: 'Claro', icon: 'sun' },
-  { id: 'geo', label: 'Geo-Intel', icon: 'map' },
 ] as const
 
 export const DEFAULT_APP_THEME: AppThemeId = 'escuro'
@@ -32,6 +31,7 @@ const LEGACY_THEME_MAP: Record<string, AppThemeId> = {
   vectra: 'escuro',
   dark: 'escuro',
   escuro: 'escuro',
+  geo: 'escuro',
   light: 'claro',
   claro: 'claro',
   system: 'escuro',
@@ -41,7 +41,7 @@ export function isAppThemeId(value: unknown): value is AppThemeId {
   return typeof value === 'string' && (APP_THEME_IDS as readonly string[]).includes(value)
 }
 
-/** Converte ids legados (analitico/vectra/light/dark) para escuro | claro. */
+/** Converte ids legados (analitico/vectra/geo/light/dark) para escuro | claro. */
 export function migrateAppThemeId(value: unknown): AppThemeId {
   if (isAppThemeId(value)) return value
   if (typeof value === 'string' && value in LEGACY_THEME_MAP) {
@@ -55,7 +55,7 @@ export function normalizeAppThemeId(value: unknown): AppThemeId {
 }
 
 export function isAppThemeDark(theme: AppThemeId): boolean {
-  return theme === 'escuro' || theme === 'geo'
+  return theme === 'escuro'
 }
 
 export function readStoredAppTheme(): AppThemeId | null {

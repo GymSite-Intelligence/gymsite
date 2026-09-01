@@ -30,7 +30,7 @@
 | Forms | React Hook Form + Zod |
 | Backend | Python 3.12, FastAPI |
 | Orquestração de Agentes | Google ADK (Agents SDK) |
-| LLM | Gemini 2.5 Flash (router/respostas), Gemini 2.5 Pro (análises profundas) |
+| LLM | Gemini 3.6 Flash (router/respostas), Gemini 3.6 Flash (análises profundas) |
 | Banco de Dados | Supabase PostgreSQL |
 | Cache | Redis (competitor_cache, market_bundles) |
 | Filas | RedisQueue (pipeline pesado) |

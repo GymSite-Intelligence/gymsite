@@ -2,3 +2,25 @@
 # Documentation
 *.md
 ```
+node_modules
+.vercel
+.env*
+
+# Ambiente / build (nunca versionar)
+.venv/
+venv/
+dist/
+*.log
+
+# Artefatos / caches (limpeza refactor)
+__pycache__/
+*.pyc
+*.tsbuildinfo
+frontend/dist-types-node/
+competitor_cache/
+metrics/
+cache/
+artifacts/
+tools/cache/
+data/places_search_cache/
+data/market_bundles/

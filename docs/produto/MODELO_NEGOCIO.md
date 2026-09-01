@@ -12,10 +12,10 @@
 
 | Componente | Custo Unitário | Uso por Projeto | Custo Total |
 |-----------|---------------|-----------------|-------------|
-| Gemini 2.5 Flash (router/respostas) | $0.30 / 1M tokens | ~50K tokens | $0.015 |
-| Gemini 2.5 Flash (extrair slots) | $0.30 / 1M tokens | ~20K tokens | $0.006 |
-| Gemini 2.5 Flash (A3b — reviews) | $0.30 / 1M tokens | ~100K tokens | $0.030 |
-| Gemini 2.5 Pro (análise profunda) | $3.50 / 1M tokens | ~50K tokens (opcional) | $0.175 |
+| Gemini 3.6 Flash (router/respostas) | $0.30 / 1M tokens | ~50K tokens | $0.015 |
+| Gemini 3.6 Flash (extrair slots) | $0.30 / 1M tokens | ~20K tokens | $0.006 |
+| Gemini 3.6 Flash (A3b — reviews) | $0.30 / 1M tokens | ~100K tokens | $0.030 |
+| Gemini 3.6 Flash (análise profunda) | $3.50 / 1M tokens | ~50K tokens (opcional) | $0.175 |
 | Google Places API (A1, A3a) | $7 / 1.000 req | ~15 requests | $0.105 |
 | Google Geocoding | $5 / 1.000 req | ~3 requests | $0.015 |
 | CNPJ/RFB consultas | Gratuito | ~5 requests | $0.000 |
@@ -29,8 +29,8 @@
 
 | Componente | Custo Unitário | Uso | Custo Total |
 |-----------|---------------|-----|-------------|
-| Gemini 2.5 Flash (gerar tarefas) | $0.30 / 1M tokens | ~30K tokens | $0.009 |
-| Gemini 2.5 Flash (sugestões IA) | $0.30 / 1M tokens | ~10K tokens/sugestão | $0.003 |
+| Gemini 3.6 Flash (gerar tarefas) | $0.30 / 1M tokens | ~30K tokens | $0.009 |
+| Gemini 3.6 Flash (sugestões IA) | $0.30 / 1M tokens | ~10K tokens/sugestão | $0.003 |
 | **Subtotal Playbook** | | | **~$0.01 - $0.05** |
 
 ### 1.3. Infraestrutura Fixa (mensal)

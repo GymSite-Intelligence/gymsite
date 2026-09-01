@@ -27,16 +27,16 @@ DEFAULT_DIAS = 30
 # Mapeamento de agentes → modelo "ideal" mais barato que não perde qualidade
 # Baseado no conhecimento do domínio de cada agente
 AGENTE_MODELO_SUGERIDO: dict[str, str] = {
-    "a0_context_builder": "gemini-2.5-flash",
-    "a1_geoscout": "gemini-2.5-flash",
-    "a2_demo_analyst": "gemini-2.5-flash",
-    "a3_competitor_intel": "gemini-2.5-flash",
-    "a3a_competitor_search": "gemini-2.5-flash",
-    "a3b_competitor_analysis": "gemini-2.5-flash-lite",  # stale: A3b virou BaseAgent determinístico (zero LLM, não entra no CSV)
-    "a4_financial_estimator": "gemini-2.5-flash",  # aritmética estruturada; Pro→Flash 12/06 (golden case pendente)
-    "a5_contact_hunter": "gemini-2.5-flash",
-    "a6_report_consolidator": "gemini-2.5-flash",  # Pro→Flash 15/06 (custo #1; síntese templada, golden case)
-    "a7_market_research": "gemini-2.5-flash",
+    "a0_context_builder": "gemini-3.6-flash",
+    "a1_geoscout": "gemini-3.6-flash",
+    "a2_demo_analyst": "gemini-3.6-flash",
+    "a3_competitor_intel": "gemini-3.6-flash",
+    "a3a_competitor_search": "gemini-3.6-flash",
+    "a3b_competitor_analysis": "gemini-3.6-flash",  # stale: A3b virou BaseAgent determinístico (zero LLM, não entra no CSV)
+    "a4_financial_estimator": "gemini-3.6-flash",  # aritmética estruturada; Pro→Flash 12/06 (golden case pendente)
+    "a5_contact_hunter": "gemini-3.6-flash",
+    "a6_report_consolidator": "gemini-3.6-flash",  # Pro→Flash 15/06 (custo #1; síntese templada, golden case)
+    "a7_market_research": "gemini-3.6-flash",
 }
 
 
@@ -105,9 +105,9 @@ def _agregar_por_agente(rows: list[dict]) -> dict[str, dict]:
         # custo real
         a["custo_brl"] += compute_cost_brl(model, ti, to)
         # custo hipotético se usasse flash
-        a["custo_brl_com_flash"] += compute_cost_brl("gemini-2.5-flash", ti, to)
+        a["custo_brl_com_flash"] += compute_cost_brl("gemini-3.6-flash", ti, to)
         # custo hipotético se usasse lite
-        a["custo_brl_com_lite"] += compute_cost_brl("gemini-2.5-flash-lite", ti, to)
+        a["custo_brl_com_lite"] += compute_cost_brl("gemini-3.6-flash", ti, to)
 
     return dict(agg)
 
@@ -143,23 +143,8 @@ def _detectar_modelo_overpriced(agg: dict[str, dict]) -> list[dict]:
                     "severidade": "alta" if economia > 1.0 else "media",
                 })
 
-        # Se está usando Flash mas deveria usar Lite
-        if model_atual == "gemini-2.5-flash" and model_sugerido == "gemini-2.5-flash-lite":
-            economia = dados["custo_brl"] - dados["custo_brl_com_lite"]
-            if economia > 0.01:
-                sugestoes.append({
-                    "tipo": "FLASH_PARA_LITE",
-                    "agente": agente,
-                    "modelo_atual": model_atual,
-                    "modelo_sugerido": model_sugerido,
-                    "economia_brl": round(economia, 4),
-                    "detalhe": (
-                        f"{agente} usa {model_atual} (R$ {dados['custo_brl']:.4f}). "
-                        f"Trocar por {model_sugerido} economizaria R$ {economia:.4f} "
-                        f"({economia / max(dados['custo_brl'], 0.001) * 100:.1f}%)."
-                    ),
-                    "severidade": "baixa" if economia < 0.5 else "media",
-                })
+        # Flash→Lite desativado: stack canônico é só gemini-3.6-flash
+        # (não há lite 3.6 no hot-path; 2.5-flash-lite deprecado).
 
     return sorted(sugestoes, key=lambda x: x["economia_brl"], reverse=True)
 
@@ -239,7 +224,7 @@ def _detectar_cache_geocoding(rows: list[dict]) -> list[dict]:
             sugestoes.append({
                 "tipo": "CACHE_GEOCODING",
                 "agente": "a1_geoscout",
-                "modelo_atual": "gemini-2.5-flash",
+                "modelo_atual": "gemini-3.6-flash",
                 "economia_brl": round(economia, 4),
                 "detalhe": (
                     f"a1_geoscout fez {len(geo_calls)} chamadas nos últimos 30 dias "

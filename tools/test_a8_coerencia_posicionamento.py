@@ -84,7 +84,51 @@ def test_relatorio_coerente_nao_dispara():
     assert v.alertas == [], _tipos(v)
 
 
-def test_sem_posicionamento_e_noop_de_a9():
+def test_inv5_suprimida_quando_ticket_none_com_tier_contexto():
+    """INDETERMINADO + ticket=null + tier em headroom_renda → sem INV-5 (Cocó/Meireles)."""
+    v = A8ValidadorCruzado()
+    v._validar_coerencia_posicionamento({
+        "veredito": "INVESTIGAR MAIS",
+        "modelo_recomendado": "nenhum",
+        "cenarios_financeiros": [
+            {"modelo": "low", "viabilidade": "INVIAVEL", "ticket_medio": 100.0},
+            {"modelo": "mid", "viabilidade": "INVIAVEL", "ticket_medio": 120.0},
+            {"modelo": "premium", "viabilidade": "INVIAVEL", "ticket_medio": 299.9},
+        ],
+        "posicionamento_estrategico": {
+            "veredito_posicionamento": "INDETERMINADO",
+            "headroom_renda": {
+                "tier_modelo_percentil": "Premium",
+                "ticket_teto_sustentavel": 768.87,
+            },
+            "recomendacao_ticket": {
+                "ticket_recomendado": None,
+                "confianca": "indisponivel",
+            },
+        },
+    })
+    assert not any("INDETERMINADO" in a.claim_relacionada and "ticket=" in a.claim_relacionada
+                   for a in v.alertas), _tipos(v)
+
+
+def test_inv5_mantida_quando_ticket_cravado():
+    v = A8ValidadorCruzado()
+    v._validar_coerencia_posicionamento({
+        "veredito": "APROVADO",
+        "modelo_recomendado": "Mid Market",
+        "cenarios_financeiros": [
+            {"modelo": "mid", "viabilidade": "ALTO", "ticket_medio": 200.0},
+        ],
+        "posicionamento_estrategico": {
+            "veredito_posicionamento": "INDETERMINADO",
+            "headroom_renda": {"tier_modelo_percentil": "Mid Market"},
+            "recomendacao_ticket": {"ticket_recomendado": 742.91, "confianca": "alta"},
+        },
+    })
+    assert any(
+        a.severidade == "ALTA" and "INDETERMINADO" in a.claim_relacionada
+        for a in v.alertas
+    ), _tipos(v)
     """Sem posicionamento (A8 rodou pré-A9): valida só o que dá (modelo × cenários),
     não quebra e não inventa alertas de A9."""
     v = A8ValidadorCruzado()

@@ -1,3 +1,4 @@
+import { SiteNavBrand, SitePublicMenu, AGENTES_NAV } from "@/components/site/SiteNavBrand";
 import { degustacaoHref } from "@/lib/degustacaoUrls";
 import { DEGUSTACAO_COPY } from "@/lib/degustacaoCopy";
 import "./agentes.scoped.css";
@@ -58,16 +59,10 @@ export function AgentesPage() {
     <div className="gs-ag">
       <div className="wrap">
         <header>
-          <a className="brand" href="/">
-            <img src="/gymsite-logo-white.png" alt="GymSite Intelligence" />
+          <a className="brand" href="/" aria-label="GymSite Intelligence">
+            <SiteNavBrand />
           </a>
-          <nav className="nav">
-            <a href="/#fontes">Fontes</a>
-            <a href="/#metodo">Método</a>
-            <a href="/explorar">Explorar</a>
-            <a href="/blog">Blog</a>
-            <a href="/#lgpd">LGPD</a>
-          </nav>
+          <SitePublicMenu links={AGENTES_NAV} />
         </header>
 
         <section className="hero">

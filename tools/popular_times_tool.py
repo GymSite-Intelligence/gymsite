@@ -701,9 +701,12 @@ def _converter_searchapi(raw: dict, place_id: str) -> dict:
     """
     # SearchAPI envolve tudo em `place_result`. Compatível também com payload
     # achatado (caso a estrutura mude).
-    place_result = raw.get("place_result") if isinstance(raw.get("place_result"), dict) else raw
-    pt = place_result.get("popular_times") or {}
-    chart = pt.get("chart") if isinstance(pt, dict) else None
+    place_raw = raw.get("place_result")
+    place_result: dict = place_raw if isinstance(place_raw, dict) else raw
+    pt_raw = place_result.get("popular_times")
+    pt: dict = pt_raw if isinstance(pt_raw, dict) else {}
+    chart_raw = pt.get("chart")
+    chart = chart_raw if isinstance(chart_raw, dict) else None
     if not isinstance(chart, dict):
         return {
             "status": "sem_popular_times",

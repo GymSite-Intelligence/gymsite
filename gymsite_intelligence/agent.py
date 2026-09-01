@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google.adk.agents import Agent, SequentialAgent, ParallelAgent
 
 # Retry per-call no nível do MODELO (Eixo C confiabilidade): um 429 RESOURCE_EXHAUSTED
-# (quota Vertex, sobretudo gemini-2.5-pro do A6) retenta a CHAMADA com backoff, em vez de
+# (quota Vertex, sobretudo gemini-3.6-flash do A6) retenta a CHAMADA com backoff, em vez de
 # estourar e disparar o retry da pipeline INTEIRA (~10min re-rodando tudo). ADK Gemini
 # suporta retry_options nativo; aplicado a todos os agentes em _attach_telemetry.
 try:
@@ -187,9 +187,11 @@ pipeline = SequentialAgent(
 )
 
 # ── Root Agent: ponto de entrada do ADK ──
+from tools.pipeline_model import DEFAULT_GEMINI_MODEL, resolve_pipeline_model
+
 root_agent = Agent(
     name="GymSiteIntelligence",
-    model="gemini-2.5-flash",
+    model=resolve_pipeline_model(DEFAULT_GEMINI_MODEL),
     description=(
         "Agente raiz do GymSite Intelligence. Orquestra a busca completa de pontos "
         "comerciais ideais para academias de ginástica no Brasil."

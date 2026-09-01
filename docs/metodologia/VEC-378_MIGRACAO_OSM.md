@@ -1,86 +1,88 @@
-# VEC-378 — Migração OSM (Nominatim / Overpass / OpenRouteService)
+# VEC-378 — Camada OSM (Nominatim / Overpass / ORS|Valhalla)
 
-> Objetivo: reduzir custo marginal por relatório migrando geocoding, POIs e
-> distâncias/isócronas do Google Maps Platform para serviços OpenStreetMap,
-> sem perder a qualidade comercial (nomes/ratings/reviews) que só o Google tem.
-> Premissa: pipeline já determinístico (BaseAgent). OSM entra como camada de
-> dados determinística, com Google como fallback de qualidade.
+> Objetivo: geo determinístico via OpenStreetMap (geocode, POIs/âncoras, isócronas),
+> sem billing Google Maps Platform no caminho crítico.
+> Concorrentes (nome/rating/review) continuam em **SearchAPI `google_maps`** —
+> mesma mistura Google+OSM que o OndeAbrir declara; não migrar qualidade comercial.
 
-## 1. Princípio de divisão (o que migra e o que NÃO migra)
+## Status (2026-08-26)
 
-| Necessidade | Hoje | Depois | Mantém Google? |
-|---|---|---|---|
-| Endereço para coordenada (A1) | Google Geocoding | Nominatim | fallback |
-| POIs/âncoras/infra no raio (A1/A3) | Places Nearby | Overpass | não |
-| Distâncias ponto para polo (A1) | Distance Matrix | ORS Matrix | fallback |
-| Área de influência (isócrona) | inexistente / raio circular | ORS Isochrones | não |
-| Concorrentes: nome/rating/review (A3a/b) | SearchAPI `google_maps` | inalterado | **não** (SearchAPI; Places só fallback) |
-| Street View do imóvel (A1) | Google | inalterado | SIM |
+| Fase | Estado | Notas |
+|------|--------|--------|
+| 0 Baseline custo Google | **Cancelada / N/A** | GCP Maps billing fora do caminho; DM off (`DISTANCE_MATRIX_ENABLED`) |
+| 1 Geocode Nominatim | **Parcial ✅** | `nominatim_geocoder.py` + `maps_fallback`; sem flag `GEOCODER=` canônica |
+| 2 POIs/âncoras Overpass | **✅ Entregue** | `tools/osm_pois.py` → polos + top vias; `space_syntax.fetch_pois_from_overpass` unificado |
+| 3 Isócronas | **Parcial ✅** | `osm_isocronas.py` no Explorar; falta no relatório/PDF A1 |
+| 4 Cache central + flags | **Aberto** | Cache disco em `osm_pois`; sem tabela `osm_cache` / flags unificadas |
+| Self-host B | **Aberto** | Públicos + rate limit; opcional |
 
-## 2. Arquitetura proposta
+## 1. Divisão de fontes (atual)
 
-- Novo módulo tools/osm_tools.py com 3 clientes finos e determinísticos:
-  - osm_geocode(endereco) -> {lat,lng,score,confianca}  (Nominatim)
-  - osm_pois(lat,lng,raio,categorias) -> [poi...]         (Overpass)
-  - osm_matrix(origens,destinos,modo) -> matriz           (ORS Matrix)
-  - osm_isocronas(lat,lng,modo,faixas) -> GeoJSON         (ORS Isochrones)
-- Camada de cache em Postgres/Supabase: tabela osm_cache
-  (chave = hash(tipo+args+grid_arredondado), ttl por tipo).
-  POIs e isócronas mudam devagar -> cache agressivo (30-90 dias).
-- Feature flags por capacidade (espelhar padrão CONCORRENTES_SOURCE):
-  GEOCODER=nominatim|google, POIS_SOURCE=overpass|google,
-  MATRIX_SOURCE=ors|google. Default inicial: OSM com fallback Google.
+| Necessidade | Fonte canônica | Fallback |
+|---|---|---|
+| Endereço → coordenada | Nominatim | — (Google geo não é caminho crítico) |
+| POIs/âncoras (parking, escola, hospital, bus, shop) | Overpass (`osm_pois`) | lista vazia fail-soft |
+| Distâncias ponto↔polo | Haversine (`calcular_distancia_km`) | ORS matrix (Fase 3b, aberto) |
+| Área de influência 5/10/15 min | ORS / Valhalla (`osm_isocronas`) | Explorar só; PDF aberto |
+| Fluxo pedestre | OSMnx + sintaxe espacial (+ POIs Overpass) | — |
+| Concorrentes nome/rating/review | SearchAPI `google_maps` | Places / Overpass fitness |
+| Street View imóvel | Google (se houver key) | omitir |
 
-## 3. Self-hosting (decisão de custo vs esforço)
+## 2. Arquitetura (código real, não o esboço antigo)
 
-Os endpoints públicos (nominatim.openstreetmap.org, overpass-api.de, ORS público)
-têm rate limit e proíbem uso pesado. Para produção em rajada:
+```
+tools/nominatim_geocoder.py   # Fase 1
+tools/maps_fallback.py        # Nominatim + Overpass fitness
+tools/osm_pois.py             # Fase 2 — âncoras por categoria
+tools/osm_isocronas.py        # Fase 3 — isócronas Explorar
+tools/space_syntax.py         # fluxo; fetch_pois_from_overpass = wrapper osm_pois
+tools/anchoring_tools.py      # score_ancoragem consome polos (agora OSM-first)
+```
 
-- Fase A (rápida): usar públicos só em dev + cache. Em prod, contratar ORS
-  gerenciado / Geoapify-Stadia (free tiers generosos) enquanto valida volume.
-- Fase B (escala): self-host em Cloud Run/VM:
-  - Nominatim (imagem mediagis/nominatim) — só Brasil (brazil-latest.osm.pbf)
-  - Overpass (wiktorn/overpass-api) — extrato Brasil
-  - ORS (openrouteservice/openrouteservice) — perfis foot-walking + driving-car, BR
-  - Registrar como workloads no App Hub (ver roadmap_dados_bq_sinergia).
+Cache Fase 2: `tools/cache/osm_pois/*.json` (TTL ~30 dias, chave lat/lng/raio/cats).
 
-## 4. Fases de entrega
+## 3. Fase 2 — escopo (paridade OndeAbrir “ponto físico”)
 
-- Fase 0 — Medir baseline (0,5 dia): instrumentar custo Google atual por
-  agente (telemetria já existe em metrics/). Quantos R$/relatório são Geocoding +
-  Distance Matrix + Places-de-POI (separar do Places-de-concorrente).
-- Fase 1 — Geocoding (1 dia): osm_geocode + flag GEOCODER. Validar em N
-  endereços reais de Fortaleza vs Google (erro < 50m aceitável). Fallback Google
-  se confiança baixa.
-- Fase 2 — POIs/âncoras (2 dias): osm_pois via Overpass para
-  transporte/educação/saúde/comércio/estacionamento/âncoras do A1. Tags:
-  amenity=bus_station|school|hospital|parking, shop=*, leisure=fitness_centre.
-  Substitui Places-de-POI (mantém Places só para concorrentes).
-- Fase 3 — Matrix + Isócronas (2 dias): osm_matrix e osm_isocronas.
-  Habilita "Área de influência" 5/10/15 min (paridade com OndeAbrir) e score de
-  acessibilidade real por tempo de deslocamento.
-- Fase 4 — Cache + flags default OSM (1 dia): virar default para OSM,
-  Google só fallback. Medir custo pós-migração e atualizar data_lineage.md.
+OndeAbrir mostra: estacionamentos, âncoras com distância, fatores do ponto.
+GymSite Fecha o buraco com Overpass:
 
-## 5. Impacto esperado
+| Categoria | Tags OSM | Uso produto |
+|-----------|----------|-------------|
+| `parking` | `amenity=parking` | contagem + proximidade |
+| `school` | `amenity=school` | âncora fluxo |
+| `university` | `amenity=university` | âncora fluxo |
+| `hospital` | `amenity=hospital` \| `clinic` | âncora |
+| `bus_station` | `amenity=bus_station` \| `public_transport=*` \| `railway=station` | transporte |
+| `supermarket` | `shop=supermarket` \| `mall` \| `department_store` | comércio âncora |
 
-- Geocoding e Distance Matrix -> ~R$ 0 (OSM) vs custo por chamada Google.
-- POIs deixam de ser cobrados por item (Overpass = 1 query por categoria).
-- Ganho de produto: isócronas reais (área de influência) que hoje não existem.
-- Cache derruba chamadas repetidas (mesmo bairro analisado N vezes).
+API:
 
-## 6. Riscos e mitigação
+- `osm_pois(lat, lng, raio_m=1000, categorias=None) -> {pois, contagens, fonte, carimbo}`
+- `polos_para_ancoragem(...)` → shape compatível com `calcular_score_ancoragem`
+- Fail-soft: Overpass down → `{pois: [], status: indisponivel}`
 
-- Cobertura OSM irregular em cidades pequenas -> fallback Google por flag.
-- Rate limit dos públicos -> cache + self-host na Fase B.
-- Licença ODbL: exige atribuição "OpenStreetMap contributors" no relatório/mapa
-  e mantém derivados de banco sob ODbL.
-- Lock-in invertido: reduz dependência Google, aumenta superfície de infra a manter.
+**Não** inclui `leisure=fitness_centre` como “âncora de mercado” — isso é concorrência (SearchAPI).
 
-## 7. Integração com BQ / RAG / consultor
+## 4. Fases restantes
 
-- BQ: OSM cobre geo/rotas; BQ continua dono de demografia/PIB/CNO. Sem overlap.
-- RAG (Discovery Engine): inalterado — OSM é dado estruturado, não qualitativo.
-- /consultor: nova tool opcional mapear_area_influencia (wrappa osm_isocronas),
-  exposta ao Gemini junto das 10 atuais. Mantém padrão "tool determinística,
-  LLM só veste".
+- **3b** — `osm_matrix` + isócronas no PDF/A6 (área de influência).
+- **4** — flags `POIS_SOURCE` / cache Postgres.
+- **Self-host** — só se rate limit públicos morder prod.
+
+## 5. Impacto
+
+- Âncoras/estacionamentos sem Places Nearby pago.
+- Score ancoragem deixa de depender de Text Search genérico (quando OSM hit).
+- Atribuição ODbL obrigatória: “© OpenStreetMap contributors” em mapas/seções geo.
+
+## 6. Riscos
+
+- Cobertura OSM irregular em cidade pequena → contagens baixas (honesto) ≠ inventar POI.
+- Rate limit Overpass → cache disco + User-Agent identificado.
+- Atacadista de marca (Assaí etc.) pode faltar no OSM → `buscar_polos_geradores` ainda pode complementar via texto se OSM vazio em `supermarket`.
+
+## 7. Integração
+
+- BQ/IBGE: demografia/renda/CNO intactos.
+- SearchAPI: só concorrentes + listings.
+- Consultor: isócronas já no Explorar; tool relatório depois (Fase 3b).

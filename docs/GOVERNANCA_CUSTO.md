@@ -47,7 +47,7 @@ O endpoint `/api/custos/optimizations` analisa o `tokens_pipeline.csv` e detecta
 
 | Tipo | Descrição | Exemplo |
 |---|---|---|
-| `MODELO_OVERPRICED` | Agente usando Pro onde Flash/Lite seria suficiente | A3b usando `gemini-2.5-pro` → trocar por `flash` |
+| `MODELO_OVERPRICED` | Agente usando Pro onde Flash/Lite seria suficiente | A3b usando `gemini-3.6-flash` → trocar por `flash` |
 | `FLASH_PARA_LITE` | Agente usando Flash onde Lite seria suficiente | A5 usando `flash` → trocar por `flash-lite` |
 | `AGENTE_VORAZ` | Agente consumindo >30% do custo total | A6 consome 40% do custo → aplicar Context Caching |
 | `ERRO_REPETIDO` | Alta taxa de finish_reason != STOP | A1 com 20% de `MALFORMED_FUNCTION_CALL` → revisar prompt |
@@ -107,7 +107,7 @@ Content-Type: application/json
 {
   "tipo": "AGENTE_VORAZ",
   "agente": "ReportConsolidator",
-  "modelo_atual": "gemini-2.5-pro",
+  "modelo_atual": "gemini-3.6-flash",
   "modelo_sugerido": "",
   "titulo": "AGENTE_VORAZ: ReportConsolidator",
   "descricao": "Consome 40.4% do custo total...",

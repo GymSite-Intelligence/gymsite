@@ -106,7 +106,8 @@ def test_bh_dentro_zeis_restrito():
     lon, lat = para_wgs84(601240.0, 7788538.0, "EPSG:31983")
     with patch("tools.zoneamento_tools._municipio_cfg", return_value=_BH_CFG), \
          patch("tools.zoneamento_tools._fetch_geojson_resource", return_value=_fc_bh_zeis()), \
-         patch("tools.zoneamento_tools._svg_mapa_zonas", return_value=None):
+         patch("tools.zoneamento_tools._svg_mapa_zonas", return_value=None), \
+         patch("tools.zoneamento_tools._png_mapa_zonas", return_value=None):
         out = analisar_zoneamento_candidato(
             "Belo Horizonte", "Centro", "MG", lat, lon)
     assert out["status"] == "ok"

@@ -3,7 +3,7 @@
 A5 — ContactHunter — agente DETERMINÍSTICO (sem LLM).
 
 REFATOR custo-LLM (2026-06-16):
-Antes era um LlmAgent (gemini-2.5-flash) "redator puro" que chamava a macro
+Antes era um LlmAgent (gemini-3.6-flash) "redator puro" que chamava a macro
 determinística `gerar_contato_decisor_completo` e ecoava o JSON via output_key.
 A macro já monta TUDO (decisor, canal, script_abordagem, próximos passos); o LLM
 só re-emitia. Telemetria: ~225k tokens de INPUT por relatório pra produzir ~786

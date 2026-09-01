@@ -28,13 +28,26 @@ def test_dores_vazio_nao_quebra():
     assert _dores_da_praca({"inteligencia_competitiva": {}}) == set()
 
 
+def test_dores_do_output_consolidado():
+    state = {"output_consolidado": {"dores_dominantes": [
+        {"dor": "atendimento_ruim", "mencoes": 4},
+        {"dor": "equipamento_problema"},
+    ]}}
+    dores = _dores_da_praca(state)
+    assert "atendimento_ruim" in dores
+    assert "equipamento_problema" in dores
+
+
 def test_publico_dominante_maduro_coco():
-    state = {"demografia_bairro": {"perfil_idade_sexo_bairro": {"segmentos": {
-        "15-24": {"total": 7162, "pct_mulheres": 52.0},
-        "25-39": {"total": 14696, "pct_mulheres": 53.0},
-        "40-59": {"total": 16638, "pct_mulheres": 56.0},
-        "60+": {"total": 11637, "pct_mulheres": 61.0},
-    }}}}
+    state = {
+        "input_params": {"publico_alvo": "40-59"},
+        "demografia_bairro": {"perfil_idade_sexo_bairro": {"segmentos": {
+            "15-24": {"total": 7162, "pct_mulheres": 52.0},
+            "25-39": {"total": 14696, "pct_mulheres": 53.0},
+            "40-59": {"total": 16638, "pct_mulheres": 56.0},
+            "60+": {"total": 11637, "pct_mulheres": 61.0},
+        }}},
+    }
     assert _publico_dominante(state) == ("40-59", 56)
 
 

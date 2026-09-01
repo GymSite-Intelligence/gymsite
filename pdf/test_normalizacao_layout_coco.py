@@ -53,7 +53,9 @@ def test_map_market_baixas_e_carimbo():
         },
     }
     m = _map_market(mc)
-    assert m.baixas_cnpj_90d == 3
+    # 90d não entra no PDF cliente — canônico é o trimestre (Q).
+    assert m.novos_cnpj_90d is None
+    assert m.baixas_cnpj_90d is None
     assert m.baixas_cnpj_q == 5
     assert m.entrantes_cnpj_q == 12
     assert m.saldo_oferta_q == 7

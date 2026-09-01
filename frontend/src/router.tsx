@@ -24,6 +24,7 @@ import { ComparadorPage } from '@/routes/ComparadorPage'
 import { MapaRelatoriosPage } from '@/routes/MapaRelatoriosPage'
 import { CustosPage } from '@/routes/CustosPage'
 import { CnoObrasPage } from '@/routes/CnoObrasPage'
+import { CartoHexTestPage } from '@/routes/CartoHexTestPage'
 import { PerfilPage } from '@/routes/PerfilPage'
 import { LoginPage } from '@/routes/LoginPage'
 import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
@@ -40,7 +41,6 @@ import AdminParceirosPage from '@/routes/AdminParceirosPage'
 import AdminLlmPage from '@/routes/AdminLlmPage'
 import { ProjetoExecucaoPage } from '@/routes/ProjetoExecucaoPage'
 import { PlanosListPage } from '@/routes/PlanosListPage'
-import { ThemeLabPage } from '@/routes/ThemeLabPage'
 import { LandingPage } from '@/routes/LandingPage'
 import { DegustacaoPage } from '@/routes/DegustacaoPage'
 import { TestePage } from '@/routes/TestePage'
@@ -61,6 +61,7 @@ const APP_PREFIXES = [
   '/mapa',
   '/custos',
   '/cno-obras',
+  '/carto-hex',
   '/prospeccao',
   '/prospect',
   '/perfil',
@@ -314,6 +315,12 @@ const cnoObrasRoute = createRoute({
   component: CnoObrasPage,
 })
 
+const cartoHexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/carto-hex',
+  component: CartoHexTestPage,
+})
+
 interface ProspeccaoSearch {
   cidade?: string
   status?: string
@@ -471,17 +478,10 @@ const execucaoRoute = createRoute({
   }),
 })
 
-const themeLabRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/theme-lab',
-  component: ThemeLabPage,
-})
-
 const routeTree = rootRoute.addChildren([
   loginRoute,
   authCallbackRoute,
   privacidadeRoute,
-  themeLabRoute,
   indexRoute,
   relatoriosListRoute,
   novoRelatorioRoute,
@@ -493,6 +493,7 @@ const routeTree = rootRoute.addChildren([
   prospectRoute,
   custosRoute,
   cnoObrasRoute,
+  cartoHexRoute,
   perfilRoute,
   dashboardRoute,
   marketAtlasRoute,

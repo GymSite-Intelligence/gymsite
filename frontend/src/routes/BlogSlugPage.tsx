@@ -1,4 +1,5 @@
 import { Link, Navigate, useParams } from '@tanstack/react-router'
+import { SiteNavBrand, SitePublicMenu, BLOG_NAV } from '@/components/site/SiteNavBrand'
 import {
   AgeBandBars,
   KpiGrid,
@@ -28,18 +29,10 @@ export function BlogSlugPage() {
 
       <div className="wrap">
         <header className="top">
-          <a className="brand" href="/">
-            <img src="/gymsite-logo-white.png" alt="GymSite Intelligence" />
+          <a className="brand" href="/" aria-label="GymSite Intelligence">
+            <SiteNavBrand />
           </a>
-          <nav className="nav">
-            <a href="/#fontes">Fontes</a>
-            <a href="/agentes">Especialistas</a>
-            <a href="/explorar">Explorar</a>
-            <Link to="/blog" className="is-active">
-              Blog
-            </Link>
-            <a href="/degustacao">Degustação</a>
-          </nav>
+          <SitePublicMenu links={BLOG_NAV} activeHref="/blog" />
         </header>
       </div>
 

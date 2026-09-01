@@ -220,6 +220,14 @@ def test_resolve_org_seed_aliases():
     assert pairs[0][0] == "ministerio-das-cidades"
     assert pairs[0][1] == ORG_SEED["ministerio-das-cidades"]["id"]
     assert len(resolve_org_seed()) >= 5
+    fazenda = dict(resolve_org_seed(["ministerio-da-fazenda"]))
+    assert fazenda["ministerio-da-fazenda"] == ORG_SEED["ministerio-da-fazenda"]["id"]
+    anvisa = dict(resolve_org_seed(["agencia-nacional-de-vigilancia-sanitaria-anvisa"]))
+    assert anvisa["agencia-nacional-de-vigilancia-sanitaria-anvisa"] == (
+        ORG_SEED["agencia-nacional-de-vigilancia-sanitaria-anvisa"]["id"]
+    )
+    esporte = dict(resolve_org_seed(["ministerio-do-esporte"]))
+    assert esporte["ministerio-do-esporte"] == ORG_SEED["ministerio-do-esporte"]["id"]
 
 
 def test_search_datasets_org_seed_mock(monkeypatch):

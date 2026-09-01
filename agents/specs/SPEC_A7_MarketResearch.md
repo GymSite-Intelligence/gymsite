@@ -6,7 +6,7 @@
 |---|---|
 | **ID** | A7 |
 | **Agente** | MarketResearch |
-| **Modelo LLM** | `gemini-2.5-flash` via `build_llm_agent` + `google_search` grounding |
+| **Modelo LLM** | `gemini-3.6-flash` via `build_llm_agent` + `google_search` grounding |
 | **Versão** | 1.1 |
 | **Data** | 2026-07-13 |
 

@@ -18,10 +18,10 @@ export function PrivacidadePage() {
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur">
         <div className="container flex h-14 items-center gap-6">
           <Link
-            to="/login"
+            to="/"
+            search={{ abrir: undefined, agente: undefined, dev_token: undefined }}
             className="flex items-center gap-2 font-semibold tracking-tight"
           >
-            <span aria-hidden className="text-xl"></span>
             <span>GymSite Intelligence</span>
           </Link>
         </div>

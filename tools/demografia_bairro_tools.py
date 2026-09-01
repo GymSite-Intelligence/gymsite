@@ -66,11 +66,21 @@ def demografia_bairro(
     if not (bairro or "").strip():
         return out
 
-    # Renda — CKAN municipal (IDH-Renda → renda per capita Atlas).
+    from tools.bairro_normalize import resolver_bairro_canonico, sanity_renda_geocode
+
+    bairro_in = (bairro or "").strip()
+    bairro_geo = resolver_bairro_canonico(bairro_in, uf=uf or "", cidade=cidade or "")
+    if bairro_geo and bairro_geo != bairro_in:
+        out["bairro"] = bairro_geo
+        out["bairro_alias_de"] = bairro_in
+
+    # Renda — tabela nacional usa nomes curtos (ex.: "Lagoa"); geocode usa o canônico longo.
     try:
         from tools.bairro_renda_loader import enrich_demografia_bairro
 
-        b = (enrich_demografia_bairro({}, cidade, bairro, uf).get("bairro") or {})
+        b = (enrich_demografia_bairro({}, cidade, bairro_in or bairro_geo, uf).get("bairro") or {})
+        if not b.get("renda_media") and bairro_geo != bairro_in:
+            b = (enrich_demografia_bairro({}, cidade, bairro_geo, uf).get("bairro") or {})
         out["renda_media"] = b.get("renda_media")
         out["idh_renda"] = b.get("idh_renda")
         out["ranking_idh"] = b.get("ranking_idh")
@@ -84,7 +94,7 @@ def demografia_bairro(
         from tools.censo_setor_tools import demografia_setor_censo
         from tools.maps_tools import geocode_endereco
 
-        geo = geocode_endereco(f"{bairro}, {cidade}, Brasil")
+        geo = geocode_endereco(f"{bairro_geo}, {cidade}, {uf or ''}, Brasil".replace(" ,", ","))
         lat, lng = geo.get("lat"), geo.get("lng")
         # id_municipio às vezes não chega do A6 (market_context sem codigo_ibge) — sem ele o
         # perfil idade×sexo por setor vinha None. Resolve via IBGE (cidade, uf).
@@ -105,7 +115,7 @@ def demografia_bairro(
             )
 
             poly = resolver_bairro_poligono(
-                id_municipio=id_municipio, bairro=bairro or "", cidade=cidade, uf=uf,
+                id_municipio=id_municipio, bairro=bairro_geo, cidade=cidade, uf=uf,
             )
             ring = poly.get("ring") if poly else None
             if ring:
@@ -151,5 +161,10 @@ def demografia_bairro(
 
     except Exception as exc:
         logger.warning("demografia_bairro Censo falhou: %s: %s", type(exc).__name__, exc)
+
+    alerta = sanity_renda_geocode(out.get("renda_media"), bairro_geo, uf=uf or "")
+    if alerta:
+        logger.warning("demografia_bairro sanity: %s", alerta)
+        out["sanity_alert"] = alerta
 
     return out

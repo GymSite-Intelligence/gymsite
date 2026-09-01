@@ -26,7 +26,7 @@ def run_smoke_test(
     cidade: str,
     bairro: str,
     uf: str,
-    model: str = "gemini-2.5-flash-lite",
+    model: str = "gemini-3.6-flash",
     *,
     use_bundle: bool = False,
 ):
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     parser.add_argument("--cidade", default="Fortaleza", help="Cidade alvo")
     parser.add_argument("--bairro", default="Meireles", help="Bairro alvo")
     parser.add_argument("--uf", default="CE", help="UF alvo")
-    parser.add_argument("--model", default="gemini-2.5-flash-lite", help="Modelo Gemini")
+    parser.add_argument("--model", default="gemini-3.6-flash", help="Modelo Gemini")
     parser.add_argument(
         "--use-bundle",
         action="store_true",

@@ -58,3 +58,17 @@ def test_html_com_mapa_svg_vias():
     assert "Mapa das top vias" in html
     assert 'stroke="#DC2626"' in html
     assert "<circle" in html
+
+
+def test_html_com_mapa_png_vias_preferido():
+    d = _coco()
+    mv = d["output_consolidado"]["melhores_vias_prospeccao"]
+    mv["mapa_png"] = "data:image/png;base64,iVBORw0KGgo="
+    mv["mapa_svg"] = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50">'
+        '<path d="M10,10 L90,40" stroke="#DEAD01" data-vias-svg="1"/></svg>'
+    )
+    html = gerar_html(relatorio_from_nested_json(d))
+    assert 'src="data:image/png;base64,iVBORw0KGgo="' in html
+    assert "Mapa das top vias" in html
+    assert 'data-vias-svg="1"' not in html

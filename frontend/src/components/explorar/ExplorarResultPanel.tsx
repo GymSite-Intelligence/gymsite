@@ -1,9 +1,21 @@
 import { Download, X } from 'lucide-react'
 import { ExplorarAbsorcaoVisual } from '@/components/explorar/ExplorarAbsorcaoVisual'
+import type { ExplorarTopViasResult } from '@/hooks/useExplorarTopVias'
 import type { AbsorcaoMargemFrescaJSON } from '@/hooks/useRelatorioDetail'
 import { cn } from '@/lib/utils'
 import { explorarChrome, useExplorarSite } from './explorar-chrome'
 import type { ExplorarRival } from './ExplorarMap'
+
+function fluxoCarimboText(raw: unknown): string {
+  if (raw == null) return ''
+  if (typeof raw === 'string') return raw
+  if (typeof raw === 'object') {
+    const o = raw as { valor?: unknown; base?: string; fonte?: string; janela?: string }
+    const parts = [o.valor, o.base, o.fonte, o.janela].filter((x) => x != null && x !== '')
+    return parts.map(String).join(' · ')
+  }
+  return String(raw)
+}
 
 export function ExplorarResultPanel({
   open,
@@ -15,6 +27,8 @@ export function ExplorarResultPanel({
   pdfLoading,
   onBaixarPdf,
   emailCapturado,
+  viasOn,
+  topVias,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -25,6 +39,8 @@ export function ExplorarResultPanel({
   pdfLoading?: boolean
   onBaixarPdf: () => void
   emailCapturado?: boolean
+  viasOn?: boolean
+  topVias?: ExplorarTopViasResult
 }) {
   const chrome = explorarChrome(useExplorarSite())
 
@@ -34,7 +50,9 @@ export function ExplorarResultPanel({
     <aside
       className={cn(
         chrome,
-        'pointer-events-auto absolute bottom-20 right-3.5 top-16 z-50 flex w-88 max-w-[calc(100vw-1.75rem)] min-w-0 flex-col overflow-hidden rounded-xl border shadow-lg',
+        'pointer-events-auto absolute z-50 flex min-w-0 flex-col overflow-hidden rounded-xl border shadow-lg',
+        'inset-x-3.5 top-18 bottom-auto max-h-[min(48dvh,22rem)] w-auto',
+        'md:inset-auto md:bottom-20 md:right-3.5 md:top-16 md:max-h-none md:w-88 md:max-w-[calc(100vw-1.75rem)]',
       )}
       aria-label="Análise do recorte"
     >
@@ -57,6 +75,31 @@ export function ExplorarResultPanel({
 
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-3.5 py-3">
         <ExplorarAbsorcaoVisual absorcao={absorcao} />
+        {viasOn && topVias?.status === 'ok' && topVias.top_vias.length > 0 && (
+          <section className="mt-3 min-w-0 rounded-xl border border-border bg-secondary/40 p-3">
+            <h3 className="explorar-label mb-2">Vias de maior fluxo</h3>
+            <ul className="space-y-1 text-sm">
+              {topVias.top_vias.slice(0, 3).map((v, i) => (
+                <li
+                  key={`${v.nome_via ?? 'via'}-${i}`}
+                  className="flex min-w-0 items-baseline justify-between gap-2 border-b border-border/60 py-1.5 last:border-0"
+                >
+                  <span className="min-w-0 truncate font-semibold text-foreground">
+                    {v.nome_via?.trim() || `Via ${i + 1}`}
+                  </span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {v.fluxo_score != null ? `fluxo ${v.fluxo_score}` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {topVias.top_vias[0]?.fluxo_carimbo && (
+              <p className="mt-2 text-[11px] font-mono text-muted-foreground/80">
+                {fluxoCarimboText(topVias.top_vias[0].fluxo_carimbo)}
+              </p>
+            )}
+          </section>
+        )}
         <section className="mt-3 min-w-0 rounded-xl border border-border bg-secondary/40 p-3">
           <h3 className="explorar-label mb-2">Academias no recorte ({rivals.length})</h3>
           <ul className="space-y-1 text-sm">
@@ -90,7 +133,7 @@ export function ExplorarResultPanel({
                       {(r.reclamacoes ?? []).slice(0, 5).map((c, i) => (
                         <li
                           key={`${r.nome}-${i}`}
-                          className="rounded-md border border-border/70 bg-card/40 px-2 py-1.5 text-[11px] leading-snug text-muted-foreground"
+                          className="rounded-md border border-border/70 bg-card px-2 py-1.5 text-[11px] leading-snug text-muted-foreground"
                         >
                           <span className="font-semibold tabular-nums text-destructive">{c.rating}★</span>
                           {' — '}

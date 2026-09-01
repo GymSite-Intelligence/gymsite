@@ -306,6 +306,39 @@ def test_autocomplete_bessa_sem_bias_fortaleza(client, monkeypatch):
     assert data["suggestions"][0]["bairro"] == "Bessa"
 
 
+def test_geocode_pirapora_minas_gerais_devolve_uf(client, monkeypatch):
+    monkeypatch.setattr("tools.explorar_pin.resolver_explorar_pin", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        "tools.maps_fallback.geocode_nominatim",
+        lambda *_a, **_k: {
+            "lat": -17.347,
+            "lng": -44.942,
+            "fonte_geocode": "nominatim",
+        },
+    )
+    r = client.post(
+        "/api/explorar/geocode",
+        json={"endereco": "Centro, Pirapora, Minas Gerais, Região Sudeste, Brasil"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["bairro"] == "Centro"
+    assert data["cidade"] == "Pirapora"
+    assert data["uf"] == "MG"
+
+
+def test_bearer_invalido_401_nao_pede_turnstile(client, monkeypatch):
+    monkeypatch.setattr("backend.routers.explorar._user_id_from_request", lambda *_a, **_k: None)
+    r = client.post(
+        "/api/explorar/analisar",
+        json={"lat": -3.745, "lng": -38.485, "lente": "1km"},
+        headers={"Authorization": "Bearer expired"},
+    )
+    assert r.status_code == 401
+    detail = r.json().get("detail") or ""
+    assert "sessão" in detail.lower() or "sessao" in detail.lower()
+
+
 def test_geocode_rua_usa_nominatim(client, monkeypatch):
     monkeypatch.setattr("tools.explorar_pin.resolver_explorar_pin", lambda *_a, **_k: None)
     monkeypatch.setattr(

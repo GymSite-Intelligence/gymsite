@@ -3,7 +3,7 @@
 A2 — DemoAnalyst — agente DETERMINÍSTICO (sem LLM).
 
 REFATOR custo-LLM (2026-06-16):
-Antes era um LlmAgent (gemini-2.5-flash) que chamava a macro determinística
+Antes era um LlmAgent (gemini-3.6-flash) que chamava a macro determinística
 `analise_demografica_completa` e ECOAVA o JSON via output_key + preenchia
 `insights[]`/`recomendacao` — templates 100% deriváveis dos números da tool.
 A telemetria mostrou ~135k tokens de INPUT por relatório só pra isso, e os

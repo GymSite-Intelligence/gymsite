@@ -68,7 +68,7 @@ def _client_gemini():
     from tools._genai_client import build_genai_client
     return build_genai_client()
 
-_MODEL_ROUTER = "gemini-2.5-flash"   # router + respostas conversacionais
+_MODEL_ROUTER = "gemini-3.6-flash"   # router + respostas conversacionais
 _MAX_TOOL_ROUNDS = 5                 # limite de iterações do loop de tools
 
 # ─── Declarações de ferramentas para o LLM ───────────────────────────────────

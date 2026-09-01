@@ -13,7 +13,7 @@ Quando `GOOGLE_GENAI_USE_VERTEXAI=false` (ou ausente):
 Uso:
     from tools._genai_client import build_genai_client, generate_content_resilient
     client = build_genai_client()
-    response = generate_content_resilient(client, model="gemini-2.5-flash", contents=...)
+    response = generate_content_resilient(client, model="gemini-3.6-flash", contents=...)
 """
 from __future__ import annotations
 

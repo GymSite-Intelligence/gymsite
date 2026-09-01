@@ -37,7 +37,7 @@ class TestGenerateContentResilient(unittest.TestCase):
 
         out = generate_content_resilient(
             client,
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents="q",
             max_retries=3,
             base_delay=4.0,
@@ -56,7 +56,7 @@ class TestGenerateContentResilient(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             generate_content_resilient(
                 client,
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents="q",
                 max_retries=3,
                 base_delay=4.0,
@@ -71,7 +71,7 @@ class TestGenerateContentResilient(unittest.TestCase):
         with self.assertRaises(ValueError):
             generate_content_resilient(
                 client,
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents="q",
                 max_retries=3,
             )

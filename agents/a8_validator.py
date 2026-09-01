@@ -478,13 +478,15 @@ class A8ValidadorCruzado:
                 "ALTA",
             )
 
-        # INV-5 — A9 indeterminado mas crava ticket/tier (falsa precisão)
-        if pos_veredito in ("INDETERMINADO", "") and (ticket_a9 or eixo_a9):
+        # INV-5 — A9 indeterminado mas crava ticket (falsa precisão).
+        # headroom_renda.tier é contexto IBGE, não recomendação — só dispara se
+        # ticket_recomendado numérico estiver cravado (RN-A9-015).
+        if pos_veredito in ("INDETERMINADO", "") and ticket_a9 is not None:
             self._add(
                 "dado_nao_verificavel",
                 f"A9 veredito_posicionamento={pos_veredito or 'vazio'} mas ticket={ticket_a9} tier={eixo_a9}",
-                "A9 marca posicionamento indeterminado mas ainda emite ticket/tier numéricos — falsa precisão.",
-                "Quando indeterminado, A9 não deve cravar ticket/tier (ou marcar baixa confiança).",
+                "A9 marca posicionamento indeterminado mas ainda emite ticket numérico — falsa precisão.",
+                "Quando indeterminado, A9 não deve cravar ticket (ou marcar confiança indisponivel).",
                 "ALTA",
             )
 

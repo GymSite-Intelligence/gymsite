@@ -104,6 +104,6 @@ A5 é chamado **após** os agentes A1-A4 e **antes** do A6. Não lê outputs de 
 
 - **`resumo_executivo` é sobrescrito pelo A6**: o campo `contato_decisor.resumo_executivo` que o A5 entrega é sempre substituído pelo resumo determinístico gerado em `_resumo_executivo_deterministico` (A6, linha 2585). Não adicionar lógica de resumo no A5 esperando que seja o final.
 
-- **Histórico de refatoração**: antes de 2026-06-16, A5 era `LlmAgent` (gemini-2.5-flash) que consumia ~225k tokens de INPUT por relatório para re-emitir o output da macro sem decisão própria. O `after_agent_callback` de fallback já repopulava do determinístico quando o LLM vinha vazio — isso era o sinal de que o LLM era dispensável. A versão atual corta esse custo a zero.
+- **Histórico de refatoração**: antes de 2026-06-16, A5 era `LlmAgent` (gemini-3.6-flash) que consumia ~225k tokens de INPUT por relatório para re-emitir o output da macro sem decisão própria. O `after_agent_callback` de fallback já repopulava do determinístico quando o LLM vinha vazio — isso era o sinal de que o LLM era dispensável. A versão atual corta esse custo a zero.
 
 - **Padrão igual ao A3a/A2**: A5 segue o mesmo padrão de agente determinístico adotado em A3a e A2 — `BaseAgent` + `EventActions(state_delta=...)` sem output_key ADK.

@@ -2,6 +2,7 @@
  * useApiHealth — ping periódico GET /health da API FastAPI.
  */
 import { useQuery } from '@tanstack/react-query'
+import { fetchExplorar } from '@/lib/explorarApi'
 import { API_BASE } from '@/lib/supabase'
 
 export interface ApiHealth {
@@ -13,7 +14,7 @@ export function useApiHealth() {
   return useQuery({
     queryKey: ['api-health', API_BASE],
     queryFn: async (): Promise<ApiHealth> => {
-      const res = await fetch(`${API_BASE}/health`, {
+      const res = await fetchExplorar('/health', {
         signal: AbortSignal.timeout(8000),
       })
       if (!res.ok) {

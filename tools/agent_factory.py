@@ -11,7 +11,7 @@ retry só roda quando `model` ainda é string.
 
 Uso (substitui `Agent(...)` direto):
     from tools.agent_factory import build_llm_agent
-    meu_agente = build_llm_agent(name="X", model="gemini-2.5-flash", instruction=...)
+    meu_agente = build_llm_agent(name="X", model="gemini-3.6-flash", instruction=...)
 """
 from __future__ import annotations
 
@@ -67,9 +67,9 @@ def _injetar_telemetria(kwargs: dict[str, Any]) -> None:
 
 def _strip_gemini_only_config(kwargs: dict[str, Any]) -> None:
     """thinking_config / extras Gemini quebram LiteLlm(NVIDIA) — remove no path nvidia."""
-    from tools.pipeline_model import using_pipeline_nvidia
+    from tools.pipeline_model import using_pipeline_litellm
 
-    if not using_pipeline_nvidia():
+    if not using_pipeline_litellm():
         return
     kwargs.pop("generate_content_config", None)
 

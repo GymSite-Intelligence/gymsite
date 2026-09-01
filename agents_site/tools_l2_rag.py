@@ -212,10 +212,61 @@ def consultar_base_regulatoria(pergunta: str) -> dict:
     return anotar_retrieval_legal(r, r.get("fonte") or "RAG regulatório")
 
 
+_AGREGADOR_ROTAS: tuple[tuple[tuple[str, ...], str, str, str], ...] = (
+    (("wellhub", "gympass", "well hub"), "EROS_GROUP_ID_WELLHUB", "consultar_eros_wellhub", "Eros RAG (Wellhub)"),
+    (("totalpass", "total pass"), "EROS_GROUP_ID_TOTALPASS", "consultar_eros_totalpass", "Eros RAG (TotalPass)"),
+    (("gurupass", "guru pass"), "EROS_GROUP_ID_GURUPASS", "consultar_eros_gurupass", "Eros RAG (GuruPass)"),
+)
+
+def _merge_agregador_hits(hits: list[dict]) -> dict:
+    if len(hits) == 1:
+        return hits[0]
+    resultados: list[dict] = []
+    textos: list[str] = []
+    fontes: list[str] = []
+    n = 0
+    for h in hits:
+        resultados.extend(h.get("resultados") or [])
+        n += int(h.get("n_docs") or 0)
+        fonte = (h.get("fonte") or "").strip()
+        if fonte:
+            fontes.append(fonte)
+        t = (h.get("texto_rag") or "").strip()
+        if t:
+            textos.append(f"{fonte}: {t}" if fonte else t)
+    return {
+        "resultados": resultados,
+        "n_docs": n or len(resultados),
+        "fonte": " + ".join(fontes) if fontes else "Eros RAG (agregadores)",
+        "texto_rag": "\n\n".join(textos),
+    }
+
+
+def _consultar_agregador_eros(pergunta: str) -> dict | None:
+    import agents_site.tools_eros as eros
+
+    q = (pergunta or "").casefold()
+    hits: list[dict] = []
+    for keys, env, fn_name, fonte in _AGREGADOR_ROTAS:
+        if not any(k in q for k in keys):
+            continue
+        if not (os.getenv(env) or "").strip():
+            continue
+        fn = getattr(eros, fn_name)
+        packed = _pack_eros_as_resultados(fn(pergunta), fonte)
+        if packed and packed.get("n_docs", 0) > 0:
+            hits.append(packed)
+    if not hits:
+        return None
+    return _merge_agregador_hits(hits)
+
+
 def consultar_base_mercado(pergunta: str) -> dict:
     """Consulta a base de MERCADO (metodologia GymSite, benchmarks, franquias, tendências).
 
-    Ordem: (1) Eros RAG se `EROS_GROUP_ID_MERCADO` set; (2) corpus local; (3) stub limpo.
+    Ordem: (0) share credenciadas Brasil/município se a pergunta for market share;
+    (1) catálogo agregador Eros se citar Wellhub/TotalPass/GuruPass;
+    (2) Eros metodologia se `EROS_GROUP_ID_MERCADO` set; (3) corpus local; (4) stub.
 
     NÃO use para saturação/contagem (isso é `buscar_concorrentes` + `nivel_saturacao`).
     NÃO use para exigência legal (`consultar_base_regulatoria` / Eros regulatório).
@@ -224,6 +275,13 @@ def consultar_base_mercado(pergunta: str) -> dict:
         dict com `resultados`/`texto_rag`, `n_docs`, `fonte`, e opcionalmente
         `status`=`vazio` + `aviso_usuario` quando a base qualitativa não cobre.
     """
+    from agents_site.agregador_share import consultar_share_agregadores, is_share_agregadores
+
+    if is_share_agregadores(pergunta):
+        return consultar_share_agregadores(pergunta)
+    hit = _consultar_agregador_eros(pergunta)
+    if hit:
+        return hit
     return _rag_cascade(
         pergunta,
         eros_env="EROS_GROUP_ID_MERCADO",

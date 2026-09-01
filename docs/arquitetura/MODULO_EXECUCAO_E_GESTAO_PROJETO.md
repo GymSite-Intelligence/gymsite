@@ -50,7 +50,7 @@
 | Kanban | @dnd-kit/core ou @hello-pangea/dnd (drag-and-drop) |
 | Estado | Zustand (estado local do projeto), React Query (servidor) |
 | Backend | Python 3.12, FastAPI |
-| LLM | Gemini 2.5 Flash (geração de tarefas, resumos vivos, sugestões) |
+| LLM | Gemini 3.6 Flash (geração de tarefas, resumos vivos, sugestões) |
 | Banco | Supabase PostgreSQL |
 | Notificações | Supabase Realtime (atualizações em tempo real) + push/WhatsApp (futuro) |
 

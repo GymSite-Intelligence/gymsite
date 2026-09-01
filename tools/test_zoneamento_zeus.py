@@ -71,7 +71,8 @@ def test_ckan_fora_de_zona_rotula_permissivo_com_fonte():
     with patch("tools.zoneamento_tools._municipio_cfg", return_value=cfg), \
          patch("tools.zoneamento_tools._fetch_kmz", return_value=b"fake"), \
          patch("tools.zoneamento_tools._parse_kmz_to_polygons", return_value=fake_poly), \
-         patch("tools.zoneamento_tools._svg_mapa_zonas", return_value=None):
+         patch("tools.zoneamento_tools._svg_mapa_zonas", return_value=None), \
+         patch("tools.zoneamento_tools._png_mapa_zonas", return_value=None):
         # ponto longe do polígono ZEIS → fora_de_zona
         out = analisar_zoneamento_candidato(
             "Fortaleza", "Cocó", "CE", -3.50, -38.20)

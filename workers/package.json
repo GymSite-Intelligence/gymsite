@@ -1,0 +1,23 @@
+{
+  "name": "gymsite-workers",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "container:types": "wrangler types api-container-poc/worker-configuration.d.ts --config api-container-poc/wrangler.jsonc",
+    "container:check": "tsc --noEmit -p api-container-poc/tsconfig.json",
+    "container:dev": "wrangler dev --config api-container-poc/wrangler.jsonc",
+    "container:deploy": "wrangler deploy --config api-container-poc/wrangler.jsonc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@cloudflare/containers": "^0.3.7"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "wrangler": "^4.119.0"
+  }
+}

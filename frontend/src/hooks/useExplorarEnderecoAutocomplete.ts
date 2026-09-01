@@ -3,7 +3,7 @@ import {
   explorarAutocompleteBody,
   explorarAutocompleteQueryKey,
 } from '@/components/explorar/explorarAutocompleteState'
-import { API_BASE } from '@/lib/supabase'
+import { fetchExplorar } from '@/lib/explorarApi'
 
 export type ExplorarEnderecoSugestao = {
   placeId: string
@@ -19,7 +19,7 @@ async function fetchSugestoes(
   lat?: number,
   lng?: number,
 ): Promise<ExplorarEnderecoSugestao[]> {
-  const res = await fetch(`${API_BASE.replace(/\/$/, '')}/api/explorar/autocomplete`, {
+  const res = await fetchExplorar('/api/explorar/autocomplete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(explorarAutocompleteBody(input, lat, lng)),

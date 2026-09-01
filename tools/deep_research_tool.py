@@ -4,7 +4,7 @@ Deep Research via Gemini Interactions API (agente gerenciado) + fallback grounde
 
 Tiers:
   1. Interactions API — agent deep-research-max (background + poll)
-  2. generate_content — gemini-2.5-flash + google_search + url_context
+  2. generate_content — gemini-3.6-flash + google_search + url_context
   3. Briefing estático — se ambos falharem ou timeout global
 
 Cache: market_context/{cidade}_{bairro}.md (TTL 7 dias)
@@ -30,7 +30,7 @@ DEEP_RESEARCH_AGENT = os.getenv(
     "deep-research-max-preview-04-2026",
 )
 # Alternativa mais rápida: deep-research-preview-04-2026
-FALLBACK_MODEL = os.getenv("DEEP_RESEARCH_FALLBACK_MODEL", "gemini-2.5-flash")
+FALLBACK_MODEL = os.getenv("DEEP_RESEARCH_FALLBACK_MODEL", "gemini-3.6-flash")
 
 CACHE_DIR = Path(__file__).resolve().parent.parent / "market_context"
 INVESTIGACAO_CACHE_DIR = CACHE_DIR / "investigations"
@@ -307,7 +307,7 @@ def _executar_deep_research(query: str) -> tuple[str, str]:
 
     tier_label exemplos:
       - interactions:deep-research-max-preview-04-2026
-      - grounded:gemini-2.5-flash
+      - grounded:gemini-3.6-flash
     """
     global _last_execution_tier
 

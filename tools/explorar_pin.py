@@ -14,8 +14,28 @@ _FIXTURE_COCO = (
     / "fixtures"
     / "coco_ce.geojson"
 )
+from tools.regulatorio_lookup import _UF_NOMES, normalizar_uf
+
+_UF_SIGLAS = frozenset(_UF_NOMES.values())
 _SKIP_PARTS = frozenset(
-    {"brasil", "brazil", "regiao nordeste", "nordeste", "ce", "ceara"}
+    {
+        "brasil",
+        "brazil",
+        "norte",
+        "nordeste",
+        "sul",
+        "sudeste",
+        "centro-oeste",
+        "centro oeste",
+        "regiao norte",
+        "regiao nordeste",
+        "regiao sul",
+        "regiao sudeste",
+        "regiao centro-oeste",
+        "regiao centro oeste",
+        *{k.lower() for k in _UF_NOMES},
+        *{s.lower() for s in _UF_SIGLAS},
+    }
 )
 
 _DROP_CLASS = frozenset({"waterway", "natural", "leisure", "highway", "tourism", "amenity"})
@@ -80,15 +100,28 @@ def anexar_coords_sugestoes(
     return out
 
 
+def _strip_trailing_uf(part: str) -> str:
+    bits = part.strip().split()
+    if len(bits) >= 2:
+        last = bits[-1]
+        sigla = normalizar_uf(last)
+        if sigla and len(last) == 2 and last.isalpha() and sigla == last.upper():
+            return " ".join(bits[:-1])
+    return part.strip()
+
+
 def parse_bairro_cidade(q: str) -> tuple[str, str]:
     parts = [p.strip() for p in (q or "").replace(" - ", ",").split(",") if p.strip()]
-    bairro = parts[0] if parts else ""
+    bairro = _strip_trailing_uf(parts[0]) if parts else ""
     cidade = ""
     for p in parts[1:]:
-        pn = fold_texto(p)
-        if pn in _SKIP_PARTS:
+        part = _strip_trailing_uf(p)
+        pn = fold_texto(part)
+        if not part or pn in _SKIP_PARTS:
             continue
-        cidade = p.split("-")[0].strip()
+        if normalizar_uf(part):
+            continue
+        cidade = part.split("-")[0].strip()
         break
     return bairro, cidade
 
@@ -98,9 +131,20 @@ def parse_lugar_explorar(q: str) -> dict[str, str | None]:
     uf: str | None = None
     for p in (q or "").replace(" - ", ",").split(","):
         token = p.strip()
+        if not token:
+            continue
         if len(token) == 2 and token.isalpha():
             uf = token.upper()
-            break
+            continue
+        nome_uf = normalizar_uf(token)
+        if nome_uf:
+            uf = nome_uf
+            continue
+        bits = token.split()
+        if len(bits) >= 2:
+            tail = normalizar_uf(bits[-1])
+            if tail:
+                uf = tail
     if cidade and not uf:
         try:
             from tools.ibge_tools import buscar_municipio

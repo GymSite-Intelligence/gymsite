@@ -69,7 +69,7 @@ def check_simple_call():
     from google import genai
     client = genai.Client()  # usa env vars + ADC
     resp = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         contents="Responda apenas 'pong'.",
     )
     text = (resp.text or "").strip().lower()
@@ -85,7 +85,7 @@ def check_grounding():
 
     client = genai.Client()
     resp = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         contents=(
             "Qual o ticket médio mensal das academias Smart Fit no Brasil em 2026? "
             "Responda em uma frase com fontes."

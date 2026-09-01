@@ -36,8 +36,8 @@ O **Agente de IA Especialista em Fitness** é uma camada conversacional que subs
 | Build | Vite | HMR ativo; reinício necessário para novos arquivos |
 | Backend | Python 3.14, FastAPI (`api.py` ~2.142 linhas) | Monolítico |
 | Orquestração | Google ADK A0–A9 (inalterado) | Pipeline pesado via RedisQueue |
-| LLM Conversacional | Gemini 2.5 Flash | Fallback de Tinker (ver ADR-001) |
-| LLM Pipeline | Gemini 2.5 Flash / Pro | A0–A9 conforme configuração |
+| LLM Conversacional | Gemini 3.6 Flash | Fallback de Tinker (ver ADR-001) |
+| LLM Pipeline | Gemini 3.6 Flash / Pro | A0–A9 conforme configuração |
 | Banco de Dados | Supabase PostgreSQL | Tabelas `sessions`, `messages` |
 | Cache | Redis | `competitor_cache`, fila de jobs |
 | Filas | RedisQueue (`redis_queue.py`) | Worker síncrono |
@@ -421,7 +421,7 @@ sem pins em todo relatório de 29/05 a 10/06 (13 reclassificados como `failed`).
 Migration aditiva + backfill + espelho de erro do writer no log da app.
 
 ### ✅ BUG-009 — JSON do extrator truncado por thinking (RESOLVIDO 12/06)
-No Gemini 2.5 os thought tokens consomem `max_output_tokens`; com thinking dinâmico
+No Gemini 3.6 os thought tokens consomem `max_output_tokens`; com thinking dinâmico
 o JSON de `extrair_slots` saía cortado e o agente re-perguntava o mesmo slot em
 loop (pego no E2E real). Fix: `thinking_budget=0` nas chamadas mecânicas do engine
 + piso de 1024 tokens. Fluxo de 3 turnos validado em produção após o fix.
@@ -435,7 +435,7 @@ loop (pego no E2E real). Fix: `thinking_budget=0` nas chamadas mecânicas do eng
 | `TINKER_API_KEY` | Prefixo `tml-`, conta Thinking Machines | Inativa (sem billing) |
 | `GOOGLE_GENAI_USE_VERTEXAI` | Gemini via Vertex AI (service account, projeto Navi Vectra) | `true` — caminho principal |
 | `GEMINI_API_KEY` | Fallback API key (projeto free tier — NÃO segura Pro/volume) | Reserva |
-| `TINKER_FALLBACK_MODEL` | Modelo Gemini do engine conversacional | `gemini-2.5-flash` (thinking=0) |
+| `TINKER_FALLBACK_MODEL` | Modelo Gemini do engine conversacional | `gemini-3.6-flash` (thinking=0) |
 | `GOOGLE_MAPS_API_KEY` | Chave SERVER (Places New/Geocoding/StreetView/DistanceMatrix) | Ativa — split 11/06 |
 | `GOOGLE_MAPS_BROWSER_KEY` | Chave BROWSER (só Maps JS, restrita por referrer) — `/api/config/maps-js` | Ativa — split 11/06 |
 | `ADMIN_EMAILS` | Allowlist do `require_admin` (parceiros) | Ativa |

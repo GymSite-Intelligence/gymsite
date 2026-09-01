@@ -14,9 +14,10 @@ Este diretório contém as **Agent Skills** especializadas para o projeto **GymS
 ├── gymsite-frontend/SKILL.md          # React, TanStack, shadcn/ui
 ├── gymsite-pipeline/SKILL.md          # Google ADK, agentes A0–A9
 ├── gymsite-intelligence/SKILL.md      # Google Maps, CNPJ, CNO, scraping
+├── gymsite-carto/SKILL.md             # CARTO Builder, Workflows, Named Sources, Explorar
 ├── gymsite-reporting/SKILL.md         # ReportLab, matplotlib, PDF
 ├── gymsite-prospecting/SKILL.md       # Prospecção, pipeline, webhooks
-├── gymsite-devops/SKILL.md            # Cloud Run, Wrangler/Pages, env
+├── gymsite-devops/SKILL.md            # Hetzner VPS/Tunnel, Wrangler/Pages, env
 └── gymsite-testing/SKILL.md           # pytest (.venv) + tsc; Vitest/Playwright quando existir
 ```
 
@@ -45,6 +46,7 @@ O Antigravity carrega automaticamente o **metadata** (`name` + `description`) de
 | "Adicione paginação na tabela de prospecção" | `gymsite-frontend` |
 | "O agente A3 está falhando, depure" | `gymsite-pipeline` |
 | "Busque concorrentes no bairro Aldeota" | `gymsite-intelligence` |
+| "Camada CARTO / Named Source / Workflows" | `gymsite-carto` |
 | "Gere um gráfico de payback" | `gymsite-reporting` |
 | "Mude o status da oportunidade para fechado" | `gymsite-prospecting` |
 | "Configure deploy de produção" | `gymsite-devops` + `/deploy` |
@@ -83,5 +85,5 @@ description: Descrição curta de quando usar esta skill. Use ao... NÃO use qua
 - **Backend:** Python 3.14, FastAPI, Pydantic v2, Supabase
 - **Frontend:** React 19, TypeScript, TanStack Router/Query, shadcn/ui, Tailwind
 - **Agentes:** Google ADK, Gemini Flash, session state puro (A0–A9)
-- **Deploy:** Cloud Run + Wrangler/Pages — ver `/deploy` e P-000 §7–§8
+- **Deploy:** Hetzner VPS + Cloudflare Tunnel + Wrangler/Pages — ver `/deploy` e P-000 §7–§8
 - **Estilo:** Minimalista, funcional, sem over-engineering

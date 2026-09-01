@@ -182,7 +182,7 @@ function ConsorcioCardWithCapex({
         />
       </dl>
 
-      <section className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
+      <section className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <h4 className="text-sm font-semibold text-foreground">Estratégia de lance (estimativa)</h4>

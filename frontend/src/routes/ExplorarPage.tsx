@@ -22,7 +22,8 @@ import { ExplorarControles } from '@/components/explorar/ExplorarControles'
 import { ExplorarMap } from '@/components/explorar/ExplorarMap'
 import { ExplorarResultPanel } from '@/components/explorar/ExplorarResultPanel'
 import type { ExplorarEnderecoSugestao } from '@/hooks/useExplorarEnderecoAutocomplete'
-import { UFS_BRASIL } from '@/data/ufs-brasil'
+import { SitePublicMenu, EXPLORAR_SITE_NAV } from '@/components/site/SiteNavBrand'
+import { parseLugarExplorar } from '@/data/ufs-brasil'
 import { getTamanhoAncora, type TamanhoCodigo } from '@/data/tamanhos-por-modelo'
 import { cn } from '@/lib/utils'
 import {
@@ -31,11 +32,14 @@ import {
   type Camada,
   type Lente,
   type MapStyle,
+  cartoBuscaEmbedUrl,
+  topViasToFeatureCollection,
   type ModoDesloc,
   type TipoNegocioExplorar,
 } from '@/components/explorar/explorarIso'
 import { useExplorarAnalise } from '@/hooks/useExplorarAnalise'
 import { useExplorarIsocronas } from '@/hooks/useExplorarIsocronas'
+import { useExplorarTopVias } from '@/hooks/useExplorarTopVias'
 import { useAuth } from '@/lib/auth'
 import { trackPipeline } from '@/lib/pipeline-tracker'
 import {
@@ -45,13 +49,6 @@ import {
 
 const COCO: [number, number] = [-3.7455, -38.4855]
 
-function ufDoTexto(s: string): string | undefined {
-  const upper = s.toUpperCase()
-  for (const uf of UFS_BRASIL) {
-    if (new RegExp(`\\b${uf.sigla}\\b`).test(upper)) return uf.sigla
-  }
-  return undefined
-}
 
 export function ExplorarPage() {
   const novoSearch = useRouterState({
@@ -64,6 +61,9 @@ export function ExplorarPage() {
   const { user } = useAuth()
   const degustacao = !user
   const loggedIn = Boolean(user)
+  const cartoEmbed = String(import.meta.env.VITE_CARTO_BUILDER_EMBED_URL || '').trim()
+  const cartoEmbedAvailable = loggedIn && cartoEmbed.length > 0
+  const [cartoCamadasOn, setCartoCamadasOn] = useState(false)
 
   const [mapStyle, setMapStyle] = useState<MapStyle>(() =>
     readLs('explorar-map-style', 'claro', ['claro', 'escuro', 'satelite']),
@@ -73,6 +73,9 @@ export function ExplorarPage() {
   )
   const [modo, setModo] = useState<ModoDesloc>(() =>
     readLs('explorar-modo-desloc', 'pe', ['pe', 'carro']),
+  )
+  const [viasOn, setViasOn] = useState(() =>
+    readLs('explorar-top-vias', 'off', ['on', 'off']) === 'on',
   )
   const [lente, setLente] = useState<Lente>('1km')
   const [tipoNegocio, setTipoNegocio] = useState<TipoNegocioExplorar>(() =>
@@ -89,7 +92,7 @@ export function ExplorarPage() {
   const [zoom, setZoom] = useState(14)
   const zoomLock = useRef(false)
   const [query, setQuery] = useState('')
-  const [controlesOpen, setControlesOpen] = useState(true)
+  const [controlesOpen, setControlesOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [turnstile, setTurnstile] = useState<string | null>(null)
@@ -109,12 +112,36 @@ export function ExplorarPage() {
   const [pdfLoading, setPdfLoading] = useState(false)
   const [explorarUsed, setExplorarUsed] = useState(false)
 
+  const cartoIframeSrc = useMemo(
+    () =>
+      cartoBuscaEmbedUrl(cartoEmbed, {
+        lat: pin?.lat,
+        lng: pin?.lng,
+        lente,
+        search: query,
+      }),
+    [cartoEmbed, pin?.lat, pin?.lng, lente, query],
+  )
+
   const { loading, error, result, analisar, geocode } = useExplorarAnalise()
   const {
     data: isoRings,
     isError: isoError,
     isFetching: isoLoading,
-  } = useExplorarIsocronas(pin, modo, camada === 'influencia')
+  } = useExplorarIsocronas(pin, modo, camada === 'influencia' && !cartoCamadasOn)
+  const viasEnabled = camada === 'influencia' && viasOn
+  const { data: viasData, isFetching: viasPending } = useExplorarTopVias(
+    pin,
+    lugar.bairro,
+    viasEnabled,
+  )
+  const viasFc = useMemo(
+    () =>
+      viasData?.status === 'ok'
+        ? topViasToFeatureCollection(viasData.top_vias)
+        : { type: 'FeatureCollection' as const, features: [] },
+    [viasData],
+  )
 
   const center = useMemo<[number, number]>(
     () => (pin ? [pin.lat, pin.lng] : COCO),
@@ -123,7 +150,12 @@ export function ExplorarPage() {
   const rivals =
     result && result.status === 'ok' ? result.concorrentes : []
   const absorcao = result && result.status === 'ok' ? result.absorcao_margem_fresca : null
-  const dadosOk = Boolean(lugar.uf && lugar.cidade && lugar.bairro)
+  const parsedQuery = parseLugarExplorar(query)
+  const dadosOk = Boolean(
+    (lugar.uf || parsedQuery.uf) &&
+      (lugar.cidade || parsedQuery.cidade) &&
+      (lugar.bairro || parsedQuery.bairro),
+  )
 
   function flash(msg: string) {
     setToast(msg)
@@ -135,8 +167,23 @@ export function ExplorarPage() {
   }, [isoError])
 
   useEffect(() => {
+    if (!viasEnabled || viasPending || !viasData) return
+    if (viasData.status !== 'ok') {
+      flash('Não deu para desenhar as vias de maior fluxo neste ponto.')
+      return
+    }
+    if (viasFc.features.length === 0 && viasData.top_vias.length > 0) {
+      flash('As vias saíram na lista, mas o mapa não recebeu o traçado das ruas.')
+    }
+  }, [viasEnabled, viasPending, viasData, viasFc.features.length])
+
+  useEffect(() => {
     if (novoSearch) setDadosOpen(true)
   }, [novoSearch])
+
+  useEffect(() => {
+    if (!cartoEmbedAvailable && cartoCamadasOn) setCartoCamadasOn(false)
+  }, [cartoEmbedAvailable, cartoCamadasOn])
 
   function closeDados() {
     setDadosOpen(false)
@@ -150,9 +197,10 @@ export function ExplorarPage() {
   }
 
   function montarBriefing(): ExplorarBriefing | null {
-    const uf = (lugar.uf || ufDoTexto(query) || '').toUpperCase()
-    const municipio = (lugar.cidade || '').trim()
-    const bairro = (lugar.bairro || '').trim()
+    const parsed = parseLugarExplorar(query)
+    const uf = (lugar.uf || parsed.uf || '').toUpperCase()
+    const municipio = (lugar.cidade || parsed.cidade || '').trim()
+    const bairro = (lugar.bairro || parsed.bairro || '').trim()
     if (uf.length !== 2 || municipio.length < 2 || bairro.length < 2) return null
     return {
       uf,
@@ -196,16 +244,25 @@ export function ExplorarPage() {
     lockZoom(m === 'carro' ? 13 : 14)
   }
 
+  function toggleVias() {
+    setViasOn((on) => {
+      const next = !on
+      writeLs('explorar-top-vias', next ? 'on' : 'off')
+      return next
+    })
+  }
+
   async function goToAddress(endereco: string) {
     const texto = endereco.trim()
     if (!texto) return
     try {
       const g = await geocode(texto)
       setPin({ lat: g.lat, lng: g.lng })
+      const parsed = parseLugarExplorar(texto)
       setLugar({
-        bairro: g.bairro,
-        cidade: g.cidade,
-        uf: g.uf || ufDoTexto(texto),
+        bairro: parsed.bairro || g.bairro,
+        cidade: parsed.cidade || g.cidade,
+        uf: parsed.uf || g.uf,
       })
       lockZoom(14)
     } catch (err) {
@@ -215,10 +272,18 @@ export function ExplorarPage() {
 
   function onPickSugestao(s: ExplorarEnderecoSugestao) {
     const texto = [s.bairro, s.contexto].filter(Boolean).join(', ') || s.textoCompleto
+    const parsed = parseLugarExplorar(s.textoCompleto || texto)
     setLugar({
-      bairro: s.bairro || undefined,
-      uf: ufDoTexto(s.contexto || s.textoCompleto),
+      bairro: parsed.bairro || s.bairro || undefined,
+      cidade: parsed.cidade,
+      uf: parsed.uf,
     })
+    if (s.lat != null && s.lng != null && Number.isFinite(s.lat) && Number.isFinite(s.lng)) {
+      setPin({ lat: s.lat, lng: s.lng })
+      setQuery(texto)
+      lockZoom(14)
+      return
+    }
     void goToAddress(texto)
   }
 
@@ -317,7 +382,7 @@ export function ExplorarPage() {
   async function onAnalisar() {
     const b = montarBriefing()
     if (!b) {
-      flash('Busque um endereço em cima. Tamanho e público ficam em Dados do projeto.')
+      flash('Falta UF, município ou bairro. Busque o endereço de novo (ex.: Centro, Pirapora, MG).')
       return
     }
     if (!loggedIn && (!email.trim() || !email.includes('@'))) {
@@ -389,15 +454,13 @@ export function ExplorarPage() {
     >
       {degustacao && (
         <header className="explorar-site-header">
-          <a href={`${SITE_ORIGIN}/`} aria-label="GymSite Intelligence">
-            <img src="/gymsite-logo-white.png" alt="GymSite Intelligence" />
+          <a href={`${SITE_ORIGIN}/`} aria-label="GymSite Intelligence" className="explorar-site-brand">
+            <img src="/gymsite-pin-white.png" alt="" draggable={false} />
+            <span>
+              GymSite <span className="hl">Intelligence</span>
+            </span>
           </a>
-          <nav>
-            <a href={`${SITE_ORIGIN}/agentes`}>Especialistas</a>
-            <a href={`${SITE_ORIGIN}/degustacao`}>Degustação</a>
-            <span className="is-current">Explorar</span>
-            <a href={`${SITE_ORIGIN}/`}>Início</a>
-          </nav>
+          <SitePublicMenu className="ml-auto" links={EXPLORAR_SITE_NAV} activeHref="/explorar" />
         </header>
       )}
       <div
@@ -407,27 +470,37 @@ export function ExplorarPage() {
         )}
       >
       <div className="absolute inset-0 z-0">
-      <ExplorarMap
-        center={center}
-        zoom={zoom}
-        pin={pin}
-        rivals={rivals}
-        mapStyle={mapStyle}
-        camada={camada}
-        lente={lente}
-        isoRings={isoRings ?? null}
-        onClickMap={(lat, lng) => setPin({ lat, lng })}
-        onZoom={(z) => {
-          if (zoomLock.current) return
-          setZoom(z)
-        }}
-      />
+        {cartoCamadasOn && cartoEmbedAvailable ? (
+          <iframe
+            title="Camadas CARTO"
+            src={cartoIframeSrc}
+            className="h-full w-full border-0"
+          />
+        ) : (
+          <ExplorarMap
+            center={center}
+            zoom={zoom}
+            pin={pin}
+            rivals={rivals}
+            mapStyle={mapStyle}
+            camada={camada}
+            lente={lente}
+            isoRings={isoRings ?? null}
+            viasFc={viasFc}
+            viasOn={viasOn}
+            onClickMap={(lat, lng) => setPin({ lat, lng })}
+            onZoom={(z) => {
+              if (zoomLock.current) return
+              setZoom(z)
+            }}
+          />
+        )}
       </div>
 
       <div
         className={cn(
-          'pointer-events-none absolute top-3.5 z-50 flex flex-col items-stretch gap-2',
-          resultOpen ? 'left-3.5 right-94' : 'left-3.5 right-3.5',
+          'pointer-events-none absolute top-3.5 left-3.5 right-3.5 z-50 flex flex-col items-stretch gap-2',
+          resultOpen && 'md:right-94',
         )}
       >
         <ExplorarAddressSearch
@@ -439,7 +512,7 @@ export function ExplorarPage() {
           onSubmitFree={() => void goToAddress(query)}
         />
         {controlesOpen && (
-          <div className="pointer-events-auto self-start">
+          <div className="pointer-events-auto w-full max-w-[min(18.25rem,100%)] self-start">
             <ExplorarControles
               mapStyle={mapStyle}
               camada={camada}
@@ -448,7 +521,13 @@ export function ExplorarPage() {
               onStyle={changeStyle}
               onCamada={changeCamada}
               onModo={changeModo}
+              viasOn={viasOn}
+              viasPending={viasPending}
+              onVias={toggleVias}
               onClose={() => setControlesOpen(false)}
+              cartoEmbedAvailable={cartoEmbedAvailable}
+              cartoCamadasOn={cartoCamadasOn}
+              onCartoCamadas={setCartoCamadasOn}
             />
           </div>
         )}
@@ -465,6 +544,8 @@ export function ExplorarPage() {
           pdfLoading={pdfLoading}
           onBaixarPdf={onBaixarPdf}
           emailCapturado={explorarUsed}
+          viasOn={viasOn}
+          topVias={viasData}
         />
       )}
       {absorcao && result?.status === 'ok' && !resultOpen && (
@@ -472,7 +553,7 @@ export function ExplorarPage() {
           type="button"
           className={cn(
             chrome,
-            'absolute right-3.5 top-20 z-50 rounded-lg border px-3 py-2 text-sm font-semibold shadow-md',
+            'absolute right-3.5 top-19 z-50 rounded-lg border px-3 py-2 text-sm font-semibold shadow-md md:top-20',
           )}
           onClick={() => setResultOpen(true)}
         >
@@ -481,7 +562,7 @@ export function ExplorarPage() {
       )}
 
       {camada === 'influencia' && pin && (
-        <div className={cn(chrome, 'pointer-events-none absolute bottom-21.5 left-3.5 z-50 rounded-xl border px-3 py-2.5 shadow-md')}>
+        <div className={cn(chrome, 'pointer-events-none hidden rounded-xl border px-3 py-2.5 shadow-md md:absolute md:bottom-21.5 md:left-3.5 md:z-50 md:block')}>
           <p className="mb-1.5 text-[10px] font-medium tracking-[0.5px] text-muted-foreground">
             TEMPO{isoLoading ? ' · calculando…' : ''}
           </p>
@@ -502,34 +583,6 @@ export function ExplorarPage() {
         </div>
       )}
 
-      {!loggedIn && !explorarUsed && (
-        <form
-          className={cn(chrome, 'pointer-events-auto absolute bottom-21.5 right-3.5 z-50 w-72 rounded-xl border p-3 shadow-lg')}
-          onSubmit={(e) => {
-            e.preventDefault()
-            void onAnalisar()
-          }}
-        >
-          <p className="mb-2 text-xs font-semibold text-foreground">1 pesquisa grátis · degustação</p>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="seu e-mail"
-            required
-            autoComplete="email"
-            className="h-9 w-full rounded-md border border-border bg-secondary px-2 text-sm text-foreground"
-          />
-          <button
-            type="submit"
-            disabled={loading || !email.includes('@')}
-            className="explorar-cta mt-2 h-9 w-full text-sm"
-          >
-            {loading ? 'Analisando…' : 'Continuar'}
-          </button>
-        </form>
-      )}
-
       {verifyOpen &&
         createPortal(
           <div
@@ -539,7 +592,7 @@ export function ExplorarPage() {
             aria-labelledby="explorar-verify-title"
           >
             <div
-              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-background/90"
               aria-hidden
               onClick={() => setVerifyOpen(false)}
             />
@@ -564,17 +617,67 @@ export function ExplorarPage() {
         )}
 
       {toast && (
-        <div className={cn(chrome, 'absolute bottom-21.5 left-1/2 z-60 -translate-x-1/2 rounded-lg border px-3.5 py-2 text-xs shadow-md')}>
+        <div className={cn(chrome, 'pointer-events-none absolute inset-x-3.5 bottom-auto top-1/2 z-60 mx-auto w-fit max-w-[calc(100%-1.75rem)] -translate-y-1/2 rounded-lg border px-3.5 py-2 text-center text-xs shadow-md md:top-auto md:bottom-21.5 md:left-1/2 md:right-auto md:translate-x-[-50%] md:translate-y-0')}>
           {toast}
         </div>
       )}
       {error && !toast && (
-        <div className={cn(chrome, 'absolute bottom-21.5 left-1/2 z-60 -translate-x-1/2 rounded-lg border border-destructive/40 px-3.5 py-2 text-xs text-destructive shadow-md')}>
+        <div className={cn(chrome, 'pointer-events-none absolute inset-x-3.5 bottom-auto top-1/2 z-60 mx-auto w-fit max-w-[calc(100%-1.75rem)] -translate-y-1/2 rounded-lg border border-destructive/40 px-3.5 py-2 text-center text-xs text-destructive shadow-md md:top-auto md:bottom-21.5 md:left-1/2 md:right-auto md:translate-x-[-50%] md:translate-y-0')}>
           {error}
         </div>
       )}
 
-      <div className="absolute inset-x-3.5 bottom-3.5 z-50 flex flex-col gap-2">
+      <div className="absolute inset-x-3.5 bottom-3.5 z-50 flex flex-col gap-2 pb-[env(safe-area-inset-bottom)]">
+        {camada === 'influencia' && pin && (
+          <div className={cn(chrome, 'pointer-events-none self-start rounded-lg border px-2.5 py-1.5 md:hidden')}>
+            <p className="mb-1 text-[10px] font-medium tracking-[0.5px] text-muted-foreground">
+              TEMPO{isoLoading ? ' · calculando…' : ''}
+            </p>
+            <div className="flex items-center gap-3 text-[11px] text-foreground">
+              <span className="flex items-center gap-1">
+                <span className="size-2.5 rounded-sm border border-dashed border-green-600 bg-green-400/50" />
+                5
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-2.5 rounded-sm border border-dashed border-yellow-600 bg-yellow-400/50" />
+                10
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-2.5 rounded-sm border border-dashed border-orange-600 bg-orange-400/50" />
+                15
+              </span>
+            </div>
+          </div>
+        )}
+        {!loggedIn && !explorarUsed && (
+          <form
+            className={cn(chrome, 'pointer-events-auto w-full rounded-xl border p-2.5 shadow-lg md:ml-auto md:w-72 md:p-3')}
+            onSubmit={(e) => {
+              e.preventDefault()
+              void onAnalisar()
+            }}
+          >
+            <p className="mb-1.5 text-[11px] font-semibold text-foreground">1 pesquisa grátis · degustação</p>
+            <div className="flex gap-2 md:flex-col">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu e-mail"
+                required
+                autoComplete="email"
+                className="h-11 min-w-0 flex-1 rounded-md border border-border bg-secondary px-2 text-sm text-foreground md:h-9"
+              />
+              <button
+                type="submit"
+                disabled={loading || !email.includes('@')}
+                className="explorar-cta h-11 shrink-0 px-3 md:h-9 md:w-full"
+              >
+                {loading ? 'Analisando…' : 'Continuar'}
+              </button>
+            </div>
+          </form>
+        )}
         {dadosOpen && (
           <ExplorarDadosPanel
             lugar={lugar}

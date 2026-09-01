@@ -130,7 +130,7 @@ Craft de prompt (formato JSON, Gemini contexto-último, checklist de PR): ver
 |---|---|---|
 | **Frontend unificado** (`frontend/` deste monorepo) | **Cloudflare Pages** (projeto CF `gymsite`) → **`www.gymsite.com.br`** | Git build Pages (`root_dir=frontend`) **ou** `cd frontend` → build → `npx wrangler pages deploy ./dist --project-name gymsite` · config: `frontend/wrangler.jsonc` |
 | **Landing + blog + `/degustacao` + `/explorar`** | **mesmo** Pages `gymsite` (não hub) | rotas públicas no mesmo SPA; Worker `/api/site-agent/*` |
-| **Backend API** (`api.py`, agents, tools) | **Hetzner + Tunnel** `api.getgymsite.com.br` | `./scripts/deploy.sh` · Cloud Run **deprecado** |
+| **Backend API** (`api.py`, agents, tools) | **Hetzner + Tunnel** `api.getgymsite.com.br` | `./scripts/deploy.sh` · Cloud Run **deprecado** · CLI na VPS: [vps-cli-console.md](vps-cli-console.md) |
 | **Worker degustação** | CF Worker `gymsite-degustacao` (repo hub, código) | `www.gymsite.com.br/api/site-agent/*` · não mover nesta onda |
 
 **Mudou `agents/` / `tools/` / `api.py` / motor financeiro / `parametros_metodologia`?** → **Cloud Run obrigatório** (código vive na imagem). Seed/`ALTER` só no Supabase **não** entrega lazy-`param`, `clear_param_cache` nem defaults novos no processo. Após rebuild `gymsite-api`, **atualizar `gymsite-worker` com a mesma imagem** (worker não auto-deploya).

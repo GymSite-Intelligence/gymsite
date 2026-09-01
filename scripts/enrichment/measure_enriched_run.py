@@ -18,7 +18,7 @@ if str(ENRICHMENT_DIR) not in sys.path:
     sys.path.insert(0, str(ENRICHMENT_DIR))
 
 METRICS_PATH = ENRICHMENT_DIR / "production_run_metrics.json"
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.6-flash"
 
 
 def _load_env() -> None:

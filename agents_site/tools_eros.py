@@ -18,6 +18,9 @@ _EROS_GROUP_SUFFIX = {
     "EROS_GROUP_ID_ARQUITETO": "arquiteto",
     "EROS_GROUP_ID_ENGENHARIA": "engenharia",
     "EROS_GROUP_ID_MERCADO": "mercado",
+    "EROS_GROUP_ID_WELLHUB": "wellhub",
+    "EROS_GROUP_ID_TOTALPASS": "totalpass",
+    "EROS_GROUP_ID_GURUPASS": "gurupass",
 }
 
 
@@ -124,3 +127,6 @@ consultar_eros_tecnico = criar_tool_consultar_eros("EROS_GROUP_ID_TECNICO")
 consultar_eros_arquiteto = criar_tool_consultar_eros("EROS_GROUP_ID_ARQUITETO")
 consultar_eros_engenharia = criar_tool_consultar_eros("EROS_GROUP_ID_ENGENHARIA")
 consultar_eros_mercado = criar_tool_consultar_eros("EROS_GROUP_ID_MERCADO")
+consultar_eros_wellhub = criar_tool_consultar_eros("EROS_GROUP_ID_WELLHUB")
+consultar_eros_totalpass = criar_tool_consultar_eros("EROS_GROUP_ID_TOTALPASS")
+consultar_eros_gurupass = criar_tool_consultar_eros("EROS_GROUP_ID_GURUPASS")

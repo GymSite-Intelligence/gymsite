@@ -522,6 +522,16 @@ async def mapear_oferta_concorrente(
     o = OfertaMapeada(nome=nome, place_id=place_id)
     o.fonte_url = _normalizar_url(website)
     handle = _normalizar_handle(instagram_handle)
+
+    # Website que É o Instagram (caso Athletic Fortal): vira handle, não crawl de site.
+    if not handle and o.fonte_url:
+        from tools.instagram_profile import extrair_username_instagram
+        from tools.instagram_highlights_gemini import eh_url_instagram
+
+        if eh_url_instagram(o.fonte_url):
+            handle = extrair_username_instagram(o.fonte_url)
+            o.fonte_url = None  # evita fetch HTML do IG como "site próprio"
+
     o.fonte_instagram = f"@{handle}" if handle else None
 
     # Sem site nem IG NÃO é mais beco sem saída: a camada 3 (agregadores) ainda
@@ -636,7 +646,68 @@ async def mapear_oferta_concorrente(
         o.diferenciais_keywords = sorted(set(o.diferenciais_keywords) | set(_detectar_diferenciais(texto_ag)))
 
     o.confiabilidade_fonte = _calcular_confiabilidade(o)
-    return o.asdict()
+    payload = o.asdict()
+
+    # L3.6 — Gemini proxy de highlights quando há handle IG (PONTO 102).
+    if handle:
+        try:
+            from tools.instagram_highlights_gemini import (
+                enriquecer_oferta_com_highlights_gemini,
+            )
+
+            enriched = enriquecer_oferta_com_highlights_gemini(
+                {
+                    "nome": o.nome,
+                    "modalidades_keywords": list(o.modalidades_keywords),
+                    "fontes": (
+                        (["website"] if o.fonte_url_ok else [])
+                        + (["instagram"] if o.fonte_instagram_ok else [])
+                        + list(o.fontes_agregador or [])
+                    ),
+                    "precos_encontrados": list(o.precos_encontrados),
+                },
+                handle,
+                nome_hint=o.nome,
+            )
+            if enriched.get("planos_extraidos"):
+                payload["planos_extraidos"] = enriched["planos_extraidos"]
+            if enriched.get("faixa_preco_brl"):
+                payload["faixa_preco_brl"] = enriched["faixa_preco_brl"]
+            if enriched.get("highlights_gemini"):
+                payload["highlights_gemini"] = enriched["highlights_gemini"]
+            if enriched.get("instagram_username"):
+                payload["instagram_username"] = enriched["instagram_username"]
+            mods = enriched.get("modalidades") or enriched.get("modalidades_keywords")
+            if mods:
+                payload["modalidades_keywords"] = sorted(
+                    set(payload.get("modalidades_keywords") or []) | set(mods)
+                )
+            # Preços sanitizados → precos_encontrados (mensal efetivo).
+            for p in enriched.get("planos_extraidos") or []:
+                if p.get("suspeito"):
+                    continue
+                mensal = p.get("preco_mensal_brl")
+                if isinstance(mensal, (int, float)):
+                    payload.setdefault("precos_encontrados", []).append({
+                        "valor_brl": float(mensal),
+                        "periodo": "mensal",
+                        "origem": "instagram_highlights_gemini",
+                        "plano": p.get("plano"),
+                        "periodo_origem": p.get("periodo"),
+                    })
+            if enriched.get("highlights_gemini", {}).get("status") == "ok":
+                payload["fonte_instagram_ok"] = True
+                # Recalcula conf a partir do payload enriquecido.
+                o.fonte_instagram_ok = True
+                o.modalidades_keywords = payload.get("modalidades_keywords") or o.modalidades_keywords
+                o.precos_encontrados = payload.get("precos_encontrados") or o.precos_encontrados
+                payload["confiabilidade_fonte"] = _calcular_confiabilidade(o)
+        except Exception as exc:
+            payload.setdefault("erros", []).append(
+                f"l36_gemini_falhou:{type(exc).__name__}"
+            )
+
+    return payload
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ Catálogo de referência de tudo que roda no projeto: linguagens, bibliotecas, s
 
 > **Como ler:** cada item tem nome, versão (quando dá pra saber pelo repo) e uma linha explicando pra que serve. Coisas que eu não consegui confirmar 100% pelos arquivos estão marcadas com **(a confirmar)**.
 
-Em uma frase: é uma plataforma que gera **relatórios de viabilidade para academias**. O miolo é um **backend Python (FastAPI)** que roda uma **fila de agentes de IA (Google ADK, A0→A9)** cruzando dados de CNPJ, CNO, Google Maps e finanças; o resultado aparece num **site React** e vira **PDF**. Tudo guardado no **Supabase (Postgres)** e publicado no **Google Cloud Run**.
+Em uma frase: é uma plataforma que gera **relatórios de viabilidade para academias**. O miolo é um **backend Python (FastAPI)** que roda uma **fila de agentes de IA (Google ADK, A0→A9)** cruzando dados de CNPJ, CNO, Google Maps e finanças; o resultado aparece num **site React** e vira **PDF**. Tudo guardado no **Supabase (Postgres)**; API + worker publicados em **Hetzner VPS (Docker + Cloudflare Tunnel)** e o front no **Cloudflare Pages**.
 
 ---
 
@@ -37,7 +37,7 @@ Dependências de `requirements.txt` / `pyproject.toml`:
 | `redis` | >=5.0.0 | Fila de jobs, cache e rate-limit (ver Redis em Infra). |
 | `langcache` | >=0.12.0 | Cache semântico de respostas de LLM (economiza chamadas repetidas ao Gemini). |
 | `google-cloud-bigquery` | >=3.0.0 | Lê dados públicos nacionais (rota Base dos Dados / CNO). |
-| `google-cloud-discoveryengine` | >=0.13.0 | Vertex AI Search (Discovery Engine) — o RAG da base de conhecimento. Sem ele, todo RAG quebra em produção. |
+| `google-cloud-discoveryengine` | >=0.13.0 | Vertex AI Search (Discovery Engine) — **legado, OFF** (`VERTEX_RAG_ENABLED=0`). RAG hoje = Eros (`knowledge-ask`) + corpus local. |
 | `opentelemetry-api` / `opentelemetry-sdk` | >=1.25.0 | Telemetria/observabilidade (traces exportados, ex.: Grafana). |
 | `packaging` | >=24.0 | Utilitário de versões. |
 | `tinker` | (sem pin) | Inferência e fine-tuning de LLMs (Thinking Machines) — usado por `services/tinker_bot.py`, modelo base `Qwen/Qwen3-8B`. |
@@ -116,18 +116,18 @@ O pipeline é montado com o **Google ADK** em `gymsite_intelligence/agent.py`. O
 
 | Agente | Arquivo | Tipo | Pra que serve |
 |---|---|---|---|
-| **A0** ContextBuilder | `a0_context_builder.py` | LLM (`gemini-2.5-flash`) | Contexto de mercado via Deep Research + CNPJ/OSM. |
+| **A0** ContextBuilder | `a0_context_builder.py` | LLM (`gemini-3.6-flash`) | Contexto de mercado via Deep Research + CNPJ/OSM. |
 | **A1** GeoScout | `a1_geoscout.py` | Determinístico (sem LLM) | Localização e leitura geoespacial do ponto. |
 | **A2** DemoAnalyst | `a2_demo_analyst.py` | Determinístico | Análise demográfica do bairro/entorno. |
 | **A3a** CompetitorSearch | `a3a_competitor_search.py` | Determinístico | Busca concorrentes via SearchAPI (`engine=google_maps`). |
 | **A3b** CompetitorAnalysis | `a3b_competitor_analysis.py` | Determinístico | Gaps/dores/score + mapeia oferta (site + Instagram). Absorveu o antigo A3c. |
-| ~~A3~~ CompetitorIntel | `a3_competitor_intel.py` | LLM (`gemini-2.5-flash`) | **DEPRECATED** — monolítico substituído por A3a+A3b. |
+| ~~A3~~ CompetitorIntel | `a3_competitor_intel.py` | LLM (`gemini-3.6-flash`) | **DEPRECATED** — monolítico substituído por A3a+A3b. |
 | **A4** FinancialEstimator | `a4_financial_estimator.py` | Determinístico | Viabilidade financeira; aluguel vem do MRLR (não de listing raspado). |
 | **A5** ContactHunter | `a5_contact_hunter.py` | Determinístico | Contato de decisores — **fora da viabilidade**, usado na rota de prospecção. |
-| **A6** ReportConsolidator | `a6_report_consolidator.py` | LLM (`gemini-2.5-pro` / `flash`) | Consolida tudo no relatório final. |
-| **A7** MarketResearch | `a7_market_research.py` | LLM (`gemini-2.5-flash`) | Pesquisa de mercado; importado como função dentro de A3a/A4. |
+| **A6** ReportConsolidator | `a6_report_consolidator.py` | LLM (`gemini-3.6-flash` / `flash`) | Consolida tudo no relatório final. |
+| **A7** MarketResearch | `a7_market_research.py` | LLM (`gemini-3.6-flash`) | Pesquisa de mercado; importado como função dentro de A3a/A4. |
 | **A8** Validator | `a8_validator.py` | Validação cruzada | Confere invariantes entre agentes (ex.: A4 × A9) após A6. Roda via `tools/a8_runner.py`. |
-| **A9** PositioningStrategist | `a9_positioning_strategist.py` | LLM (`gemini-2.5-pro`) | Posicionamento estratégico (framework ERRC / oceano azul); usa LangCache. |
+| **A9** PositioningStrategist | `a9_positioning_strategist.py` | LLM (`gemini-3.6-flash`) | Posicionamento estratégico (framework ERRC / oceano azul); usa LangCache. |
 
 **Runner alternativo do site:** `agents_site/runner.py` roda `agents_site.root_agent` (5 especialistas) como motor da "degustação" da landing page, atrás da flag `SITE_AGENT_ENGINE=adk` (default `legacy`).
 
@@ -135,11 +135,11 @@ O pipeline é montado com o **Google ADK** em `gymsite_intelligence/agent.py`. O
 
 | Provedor / Modelo | Onde é usado | Observação |
 |---|---|---|
-| **Gemini** (`gemini-2.5-flash`, `gemini-2.5-pro`) | Padrão de todo o pipeline ADK | `GOOGLE_GENAI_MODEL=gemini-2.5-flash`. `pro` nos passos pesados (A6/A9). |
+| **Gemini** (`gemini-3.6-flash`) | Padrão de todo o pipeline ADK | `GOOGLE_GENAI_MODEL=gemini-3.6-flash`. `gemini-2.5-*` deprecado (alias → 3.6). |
 | **Vertex AI** | Alternativa ao Gemini via chave | Ligado por `GOOGLE_GENAI_USE_VERTEXAI` (default `false`). |
-| **Deep Research** (`deep-research-preview-04-2026`) | A0 / research | Fallback para `gemini-2.5-flash`. |
+| **Deep Research** (`deep-research-preview-04-2026`) | A0 / research | Fallback para `gemini-3.6-flash`. |
 | **Kimi / Moonshot / Groq / Ollama** | `tools/kimi_research.py`, `openclaw_kimi_server.py` | Pesquisa web opcional do A0 (`A0_RESEARCH_PROVIDER=auto\|gemini\|kimi`). Ollama local roda `llama3.2:3b`. |
-| **Tinker** (`Qwen/Qwen3-8B`) | `services/tinker_bot.py` | Inferência/fine-tuning; fallback `gemini-2.5-flash`. |
+| **Tinker** (`Qwen/Qwen3-8B`) | `services/tinker_bot.py` | Inferência/fine-tuning; fallback `gemini-3.6-flash`. |
 | **Qwen (metodologia)** | catálogos/`data/market_waves.csv` → `tier_qwen` | Hoje é **taxonomia/documentação**, não chamada de modelo ao vivo (a confirmar como fase futura). |
 
 ---
@@ -152,7 +152,7 @@ O pipeline é montado com o **Google ADK** em `gymsite_intelligence/agent.py`. O
 | **Google Maps Platform** | `tools/maps_*.py`, `googlemaps` SDK | Places (New), Geocoding, Street View, Distance Matrix; mapa/heatmap no front. Chaves server e browser separadas. |
 | **MRLR determinístico** | `tools/mrlr_modelo.py`, `aluguel_*` | Fonte oficial do **aluguel** na viabilidade (A4 Tier 0), sobre espelhos BigQuery. |
 | **Playwright (scraping OLX/ImovelWeb)** | `imobiliaria_scraper.py` | **Legado**, fora do caminho crítico (flag `LISTINGS_PLAYWRIGHT`, default off) — era o gargalo com timeouts/Cloudflare. Substituído pela cascata SearchAPI. |
-| **Vertex AI Search (Discovery Engine)** | `tools/discovery_engine_tools.py`, `services/kb_rag.py` | RAG qualitativo: base de conhecimento e catálogos de equipamento/regulatório. |
+| **Vertex AI Search (Discovery Engine)** | `tools/discovery_engine_tools.py` | **Legado OFF** (`VERTEX_RAG_ENABLED=0`); RAG qualitativo hoje = Eros (`knowledge-ask` / grupos `EROS_GROUP_ID_*`) + corpus local. |
 | **BigQuery / Base dos Dados** | `tools/basedosdados_loader.py` | Dados públicos nacionais (CNO, censo, espelhos de aluguel). |
 | **CNPJ / Receita Federal** | `tools/rfb_cnpj_fitness_loader.py`, `cnpj_enrichment.py` | Estabelecimentos fitness, QSA, enriquecimento de entrantes. |
 | **CNO (obras RFB)** | `tools/rfb_cno_loader.py`, volume `CNO_DATA_DIR` | Obras em andamento (sinal de novas academias). |
@@ -201,21 +201,21 @@ O pipeline é montado com o **Google ADK** em `gymsite_intelligence/agent.py`. O
 
 ## Infra / DevOps
 
-**Deploy principal: Google Cloud Run** (região `southamerica-east1` no app; artefatos em `us-central1`).
+**Deploy principal: Hetzner VPS + Cloudflare Tunnel** (API + worker no mesmo `docker-compose.prod.yml` em `/opt/gymsite`; push `main` → GHCR → SSH pull via `.github/workflows/ci-cd.yml`). Cloud Run (GCP) DEPRECADO — billing off; ver `docs/PLAN_HETZNER_VPS_TUNNEL.md`.
 
 **Containers (Docker):**
-- **`Dockerfile` (backend):** base `python:3.11-slim`; instala Chromium (Playwright) e libs do WeasyPrint (Pango/cairo/gdk-pixbuf + fontes); sobe com `uvicorn api:app` na porta 8000. Roda como root por decisão consciente (tentativas non-root quebravam import no Cloud Run — risco mitigado pelo sandbox gVisor).
+- **`Dockerfile` (backend):** base `python:3.11-slim`; instala Chromium (Playwright, via apt — `CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium`, sem bundle ms-playwright) e libs do WeasyPrint (Pango/cairo/gdk-pixbuf + fontes); sobe com `uvicorn api:app` na porta 8000. Roda como `USER app` (uid 1000, non-root).
 - **`frontend/Dockerfile`:** build em `node:22-alpine` (Vite) → serve estático com `nginx-unprivileged:1.27-alpine` na porta 8080.
 
-**Serviços Cloud Run:**
-- `gymsite-api` — a API/backend.
-- `gymsite-worker` — **compartilha a mesma imagem da API** e **não auto-deploya**; depois de rebuildar a api é preciso rodar `gcloud run services update gymsite-worker --image <api_image>`.
-- `gymsite-frontend` — o site.
+**Serviços (compose na VPS — `docker-compose.prod.yml`):**
+- `api` — API/backend (`RUN_QUEUE_WORKER=0`, só enfileira).
+- `worker` — **mesma imagem**, consome a fila e roda o pipeline A0–A9 (`RUN_QUEUE_WORKER=1`); sobe junto no compose (sem sync manual).
+- `redis` (fila AOF) + `cloudflared` (túnel, única entrada; sem portas 80/443 abertas).
+- Front app/landing = Cloudflare Pages (Wrangler), fora da VPS.
 
-**Cloud Build:**
-- `cloudbuild.frontend.yaml` — trigger `gymsite-frontend-main` em `^main$` com `includedFiles=frontend/**`; builda com build-args do Vite (URL/anon key/API base — publishable **não** é segredo) e faz deploy por tag no Cloud Run.
+**Legado (ignorar):** `cloudbuild.frontend.yaml` + Actions `pages.yml` — deploy antigo de front por Cloud Build/Cloud Run; hoje front = Wrangler/Pages.
 
-**Redis:** fila de jobs, cache e rate-limit (`tools/redis_*.py`). Em prod pode ser Redis Cloud; local via `redis://redis:6379/0` (`docker-compose`).
+**Redis:** fila de jobs, cache e rate-limit (`tools/redis_*.py`). Prod = serviço `redis` na própria VPS (`redis://redis:6379/0`, AOF); mesmo endpoint local via compose.
 
 **GitHub Actions** (`.github/workflows/`):
 

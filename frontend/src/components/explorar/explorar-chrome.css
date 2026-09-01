@@ -1,6 +1,6 @@
 /**
  * Chrome flutuante /explorar = paleta canônica do site (GYMSITE_PALETTE).
- * Opaco. Independente de data-theme claro/escuro/geo e do tile OSM.
+ * Opaco. Independente de data-theme claro/escuro e do tile OSM.
  *
  * Também redefine --color-* : no :root eles já resolvem var(--token) e
  * os filhos herdam a cor computada — sem isto, text-foreground/bg-card
@@ -8,9 +8,10 @@
  */
 .explorar-page {
   background-color: #13161b;
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
   font-size: 16px;
   font-feature-settings: normal;
+  overflow-x: hidden;
 }
 
 /* Tailwind preflight (img max-width:100%) quebra a malha 256px do pigeon-maps. */
@@ -63,7 +64,7 @@
   background-color: #181c22;
   border-color: #2b323d;
   color-scheme: dark;
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: normal;
 }
 
@@ -71,7 +72,7 @@
 .explorar-chrome input,
 .explorar-chrome select,
 .explorar-chrome [data-slot] {
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
 }
 
 .explorar-chrome [data-slot="input"] {
@@ -85,14 +86,15 @@
 .explorar-chrome .explorar-ctrl {
   box-sizing: border-box;
   display: inline-flex;
-  height: 40px;
+  min-height: 44px;
+  height: auto;
   align-items: center;
   border-radius: 8px;
   border: 1px solid #2b323d;
   background-color: #1c212a;
   padding: 0 12px;
   color: #eef1f4;
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
@@ -108,7 +110,8 @@
 .explorar-chrome .explorar-cta {
   box-sizing: border-box;
   display: inline-flex;
-  height: 40px;
+  min-height: 44px;
+  height: auto;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -117,7 +120,7 @@
   background-color: #84cc01;
   padding: 0 16px;
   color: #13161b;
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
@@ -133,10 +136,18 @@
   opacity: 0.4;
 }
 
+@media (min-width: 768px) {
+  .explorar-chrome .explorar-ctrl,
+  .explorar-chrome .explorar-cta {
+    min-height: 40px;
+    height: 40px;
+  }
+}
+
 .explorar-chrome .explorar-label {
   margin: 0 0 4px;
   color: #9aa4b0;
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Spline Sans Mono", ui-monospace, monospace;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.5px;
@@ -214,7 +225,7 @@
   border-bottom: 1px solid #2b323d;
   background: #13161b;
   padding: 0 12px;
-  font-family: "DM Sans", system-ui, sans-serif;
+  font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
 }
 
 @media (min-width: 640px) {
@@ -224,20 +235,41 @@
   }
 }
 
+.explorar-site-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  color: #eef1f4;
+  text-decoration: none;
+}
+
+.explorar-site-brand .hl {
+  color: #84cc01;
+}
+
+@media (max-width: 639px) {
+  .explorar-site-brand span {
+    display: none;
+  }
+}
+
 .explorar-site-header img {
-  height: 40px;
+  height: 36px;
   width: auto;
+  object-fit: contain;
 }
 
 @media (min-width: 640px) {
   .explorar-site-header img {
-    height: 56px;
+    height: 40px;
   }
 }
 
 .explorar-site-header nav {
   margin-left: auto;
-  display: flex;
   align-items: center;
   gap: 16px;
   color: #9aa4b0;

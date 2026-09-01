@@ -9,7 +9,7 @@ interface BrandLogoProps {
 export function BrandLogo({ className }: BrandLogoProps) {
   const { theme } = useTheme()
   const dark = isAppThemeDark(normalizeAppThemeId(theme))
-  const src = dark ? '/gymsite-logo-white.png' : '/gymsite-logo.png'
+  const src = dark ? '/gymsite-pin-white.png' : '/gymsite-mark.png'
 
   return (
     <img

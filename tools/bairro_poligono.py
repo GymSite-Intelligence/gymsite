@@ -141,17 +141,27 @@ def resolver_bairro_poligono(
 
     `_store` injects fixtures/tests. Else tries `data/ibge_bairros/{UF}.gpkg` when `uf` set.
     """
-    del cidade  # reserved for future adapters / disambiguation
-    from tools.bairro_normalize import normalizar_bairro
+    from tools.bairro_normalize import normalizar_bairro, resolver_bairro_canonico
 
     alvo = normalizar_bairro(bairro or "")
     idm = (id_municipio or "").strip()
     if not alvo or not idm:
         return None
     store = _store if _store is not None else (_load_uf_gpkg(uf) if uf else [])
-    for bp in store:
-        if (bp.get("id_municipio") or "").strip() != idm:
-            continue
-        if normalizar_bairro(bp.get("nm_bairro") or "") == alvo:
-            return bp
+
+    def _match(nome_fold: str) -> BairroPoligono | None:
+        for bp in store:
+            if (bp.get("id_municipio") or "").strip() != idm:
+                continue
+            if normalizar_bairro(bp.get("nm_bairro") or "") == nome_fold:
+                return bp
+        return None
+
+    hit = _match(alvo)
+    if hit:
+        return hit
+    canon = resolver_bairro_canonico(bairro or "", uf=uf or "", cidade=cidade or "")
+    canon_fold = normalizar_bairro(canon)
+    if canon_fold and canon_fold != alvo:
+        return _match(canon_fold)
     return None

@@ -26,6 +26,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/consultor': 'Consultor',
   '/explorar': 'Explorar',
   '/cno-obras': 'Obras CNO',
+  '/carto-hex': 'Hex CARTO',
   '/admin/parceiros': 'Parceiros',
   '/admin/llm': 'Provedor de IA',
 }

@@ -77,6 +77,7 @@ POI_CATEGORIES = {
     "cafe": 0.6,
     "bus_station": 0.9,
     "subway_station": 1.2,
+    "parking": 0.5,
     "bank": 0.5,
     "office": 0.8,
     "residential": 0.4,
@@ -482,75 +483,33 @@ def fetch_pois_from_overpass(
     radius: int = 1_000,
     max_pois: int = 60,
 ) -> List[Dict]:
-    """Busca POIs de atração e transporte via Overpass (sem custo Google)."""
-    import httpx
-
-    user_agent = "GymSite-Intelligence/1.0 (fluxo pedestre; contacto vectracargo.com.br)"
-    overpass_url = "https://overpass-api.de/api/interpreter"
-    raio = max(200, min(int(radius), 3000))
-    query = f"""
-    [out:json][timeout:25];
-    (
-      node(around:{raio},{lat},{lng})["shop"];
-      way(around:{raio},{lat},{lng})["shop"];
-      node(around:{raio},{lat},{lng})["amenity"~"school|university|hospital|restaurant|bus_station"];
-      way(around:{raio},{lat},{lng})["amenity"~"school|university|hospital|restaurant|bus_station"];
-      node(around:{raio},{lat},{lng})["leisure"="fitness_centre"];
-      way(around:{raio},{lat},{lng})["leisure"="fitness_centre"];
-      node(around:{raio},{lat},{lng})["railway"="station"];
-      way(around:{raio},{lat},{lng})["railway"="station"];
-      node(around:{raio},{lat},{lng})["public_transport"="stop_position"];
-      way(around:{raio},{lat},{lng})["public_transport"="stop_position"];
-    );
-    out center {max_pois};
-    """
-    pois: List[Dict] = []
+    """POIs via `osm_pois` (VEC-378 F2). Shape p/ inject_pois_into_dual_graph."""
     try:
-        with httpx.Client(timeout=30, headers={"User-Agent": user_agent}) as client:
-            response = client.post(overpass_url, data={"data": query})
-        if response.status_code != 200:
-            logger.warning("Overpass POI HTTP %s", response.status_code)
-            return pois
-        elements = response.json().get("elements") or []
-        for el in elements[:max_pois]:
-            tags = el.get("tags") or {}
-            plat = el.get("lat")
-            plng = el.get("lon")
-            if plat is None or plng is None:
-                center = el.get("center") or {}
-                plat = center.get("lat")
-                plng = center.get("lon")
-            if plat is None or plng is None:
-                continue
-            category = "office"
-            weight = 0.7
-            poi_class = "emp"
-            if tags.get("leisure") == "fitness_centre" or tags.get("amenity") == "gym":
-                category, weight, poi_class = "gym", 0.8, "emp"
-            elif tags.get("shop") in ("supermarket", "mall", "department_store"):
-                category, weight, poi_class = "supermarket", 1.0, "emp"
-            elif tags.get("amenity") == "bus_station":
-                category, weight, poi_class = "bus_station", 0.9, "transp"
-            elif tags.get("railway") == "station" or tags.get("station") == "subway":
-                category, weight, poi_class = "subway_station", 1.2, "transp"
-            elif tags.get("public_transport"):
-                category, weight, poi_class = "bus_station", 0.9, "transp"
-            elif tags.get("amenity") in ("school", "university", "hospital", "restaurant"):
-                category = tags["amenity"]
-                weight = POI_CATEGORIES.get(category, 0.7)
-                poi_class = "emp"
-            pois.append({
-                "name": tags.get("name") or tags.get("brand") or category,
-                "lat": float(plat),
-                "lng": float(plng),
-                "category": category,
-                "weight": weight,
-                "poi_class": poi_class,
-                "fonte": "overpass_osm",
-            })
+        from tools.osm_pois import osm_pois
     except Exception as exc:
-        logger.error("Overpass POI falhou: %s", exc)
-    logger.info("POIs Overpass: %d", len(pois))
+        logger.error("osm_pois import falhou: %s", exc)
+        return []
+
+    raw = osm_pois(lat, lng, raio_m=int(radius), max_pois=int(max_pois))
+    pois: List[Dict] = []
+    for p in raw.get("pois") or []:
+        cat = str(p.get("categoria") or "office")
+        # Compat legado space_syntax (subway_station)
+        if cat == "bus_station" and "metr" in str(p.get("nome") or "").lower():
+            cat = "subway_station"
+        weight = float(POI_CATEGORIES.get(cat, POI_CATEGORIES.get("office", 0.7)))
+        poi_class = "transp" if cat in ("bus_station", "subway_station") else "emp"
+        pois.append({
+            "name": p.get("nome") or cat,
+            "lat": float(p["lat"]),
+            "lng": float(p["lng"]),
+            "category": cat,
+            "weight": weight,
+            "poi_class": poi_class,
+            "fonte": p.get("fonte") or "overpass_osm",
+            "distancia_m": p.get("distancia_m"),
+        })
+    logger.info("POIs Overpass (via osm_pois): %d status=%s", len(pois), raw.get("status"))
     return pois
 
 

@@ -20,7 +20,7 @@ import json
 import time
 from typing import Any
 
-_MODEL = "gemini-2.5-flash"
+_MODEL = "gemini-3.6-flash"
 
 # Cache em processo: hash(resumo) -> (expira_em_epoch, payload)
 _CACHE: dict[str, tuple[float, dict[str, Any]]] = {}

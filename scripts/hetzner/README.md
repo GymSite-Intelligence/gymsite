@@ -1,6 +1,7 @@
 # Hetzner VPS — bootstrap (pré-cutover)
 
-Canônico: [`docs/PLAN_HETZNER_VPS_TUNNEL.md`](../../docs/PLAN_HETZNER_VPS_TUNNEL.md).
+Canônico: [`docs/PLAN_HETZNER_VPS_TUNNEL.md`](../../docs/PLAN_HETZNER_VPS_TUNNEL.md).  
+CLI na caixa (PowerShell vs consola web / case invertido): [`.agent/rules/vps-cli-console.md`](../../.agent/rules/vps-cli-console.md).
 
 ## Decisões travadas (2026-08-05)
 

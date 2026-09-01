@@ -36,17 +36,20 @@ class JSONFormatter(logging.Formatter):
     """Emite logs como JSON estruturado pra ingestão em Loki / Grafana Cloud."""
 
     def format(self, record: logging.LogRecord) -> str:
+        from tools.log_redaction import redact_sensitive_text
+
+        message = redact_sensitive_text(record.getMessage())
         log_data = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": message,
             "module": record.module,
             "funcName": record.funcName,
             "lineno": record.lineno,
         }
         if record.exc_info:
-            log_data["exc_info"] = self.formatException(record.exc_info)
+            log_data["exc_info"] = redact_sensitive_text(self.formatException(record.exc_info))
         # Contexto da request (injetado via middleware)
         try:
             log_data["request_id"] = REQUEST_ID_CTX.get()

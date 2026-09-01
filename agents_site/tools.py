@@ -1,12 +1,16 @@
 """Re-export estável — L1 dados, L2 RAG, Eros (compat ADK imports)."""
 from __future__ import annotations
 
+from agents_site.agregador_share import consultar_share_agregadores
 from agents_site.tools_eros import (
     consultar_eros_arquiteto,
     consultar_eros_engenharia,
+    consultar_eros_gurupass,
     consultar_eros_mercado,
     consultar_eros_regulatorio,
     consultar_eros_tecnico,
+    consultar_eros_totalpass,
+    consultar_eros_wellhub,
     criar_tool_consultar_eros,
 )
 from agents_site.tools_l1_dados import (
@@ -49,9 +53,13 @@ __all__ = [
     "consultar_engenharia_obra",
     "consultar_eros_arquiteto",
     "consultar_eros_engenharia",
+    "consultar_eros_gurupass",
     "consultar_eros_mercado",
     "consultar_eros_regulatorio",
     "consultar_eros_tecnico",
+    "consultar_eros_totalpass",
+    "consultar_eros_wellhub",
+    "consultar_share_agregadores",
     "criar_tool_consultar_eros",
     "dimensionar_cardio_por_pico",
     "dimensionar_musculacao",

@@ -98,6 +98,28 @@ def test_parse_lugar_coco_fortaleza():
     assert lugar["uf"] == "CE"
 
 
+def test_parse_lugar_pirapora_minas_gerais_devolve_uf():
+    lugar = parse_lugar_explorar(
+        "Centro, Pirapora, Minas Gerais, Região Sudeste, Brasil"
+    )
+    assert lugar["bairro"] == "Centro"
+    assert lugar["cidade"] == "Pirapora"
+    assert lugar["uf"] == "MG"
+
+
+def test_parse_lugar_navegantes_sc_sigla():
+    lugar = parse_lugar_explorar("Centro, Navegantes, SC")
+    assert lugar["bairro"] == "Centro"
+    assert lugar["cidade"] == "Navegantes"
+    assert lugar["uf"] == "SC"
+
+
+def test_parse_lugar_navegantes_sc_sem_virgula_na_uf():
+    lugar = parse_lugar_explorar("Centro, Navegantes SC")
+    assert lugar["cidade"] == "Navegantes"
+    assert lugar["uf"] == "SC"
+
+
 def test_resolve_coco_usa_centroide_ibge():
     pin = resolver_explorar_pin("Cocó, Fortaleza, Ceará, Região Nordeste, Brasil")
     assert pin is not None

@@ -60,7 +60,8 @@ def test_recife_dentro_zeis_restrito():
     zt._polygons_cache.clear()
     with patch("tools.zoneamento_tools._municipio_cfg", return_value=_RECIFE_CFG), \
          patch("tools.zoneamento_tools._fetch_geojson_resource", return_value=_fc_zeis()), \
-         patch("tools.zoneamento_tools._svg_mapa_zonas", return_value=None):
+         patch("tools.zoneamento_tools._svg_mapa_zonas", return_value=None), \
+         patch("tools.zoneamento_tools._png_mapa_zonas", return_value=None):
         out = analisar_zoneamento_candidato(
             "Recife", "Boa Viagem", "PE", -8.115, -34.905)
     assert out["status"] == "ok"

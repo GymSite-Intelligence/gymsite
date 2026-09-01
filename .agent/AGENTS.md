@@ -37,6 +37,7 @@ gymsite_intelligence/           ← Project Root
 │   │   ├── gymsite-intelligence/
 │   │   ├── gymsite-reporting/
 │   │   ├── gymsite-prospecting/
+│   │   ├── gymsite-carto/
 │   │   └── gymsite-devops/
 │   └── workflows/              ← Slash commands (/prospect … /audit)
 │       ├── prospect.md
@@ -76,9 +77,10 @@ Antes de qualquer ação, identifique qual skill é mais relevante:
 | Criar/modificar página React, componente, hook, rota | `gymsite-frontend` |
 | Depurar/estender agentes Google ADK (A0–A9), runner, callback | `gymsite-pipeline` |
 | Buscar dados CNPJ, CNO, Google Maps, scraping de concorrentes | `gymsite-intelligence` |
+| CARTO (Builder, Workflows, Named Source, camada Explorar, Overture) | `gymsite-carto` |
 | Gerar/modificar PDF, gráfico, relatório | `gymsite-reporting` |
 | Pipeline de prospecção, webhooks, status de oportunidade | `gymsite-prospecting` |
-| Cloud Run, Wrangler/Pages, env, worker sync | `gymsite-devops` (+ workflows `/deploy` canônicos; skill pode estar stale) |
+| Deploy Hetzner VPS/Tunnel, Wrangler/Pages, env | `gymsite-devops` (+ workflow `/deploy` canônico) |
 | E-mail transacional / drip degustação (Resend) | `gymsite-email` + MCP `resend` |
 | Auditoria de conformidade (políticas → gaps) | workflow `/audit` + `auditoria-conformidade.md` |
 
@@ -107,7 +109,7 @@ Workflows são procedimentos salvos que você ativa com `/` no chat do Antigravi
 |---|---|
 | `/prospect` | Executar engine de prospecção CNPJ×CNO |
 | `/report` | Gerar relatório de viabilidade completo (A0–A9) |
-| `/deploy` | Cloud Run API+worker + Wrangler Pages (P-000 §7) |
+| `/deploy` | Hetzner VPS API+worker (compose) + Wrangler Pages (P-000 §7) |
 | `/test` | Gate: pytest no `.venv` + `tsc --noEmit` |
 | `/migrate` | Uma migration SQL (schema `gymsite` / views `public`) |
 | `/backup` | Dump Supabase + inventário de secrets (sem valores) |
@@ -362,6 +364,7 @@ gymsite_intelligence/
 | Fontes pipeline | `.agent/rules/conferencia-fontes-pipeline.md` |
 | Spec self-review | `.agent/rules/spec-self-review.md` — toda `*-design.md` termina com `## Self-review` |
 | Preview aprovação | `.agent/rules/preview-aprovacao.md` — PDF/UI → artefato em `docs/superpowers/previews/` antes do ok |
+| CLI VPS Hetzner | `.agent/rules/vps-cli-console.md` — não colar Linux no PowerShell; consola web = swapcase |
 | Documento do módulo de prospecção | `docs/MODULO_PROSPECCAO.md` |
 | Migrations | `db/migrations/` (aplicar via `/migrate`) |
 | Schema do backend | `models/schemas.py` |

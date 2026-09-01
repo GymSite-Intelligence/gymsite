@@ -5,7 +5,7 @@ import tools.competitor_tools as ct
 from agents_site.tools import buscar_concorrentes
 
 _COCO = "Coc\u00f3"
-_QUERY_FOLD = "academia no bairro Coco, Fortaleza - CE"
+_QUERY_FOLD = "academia Coco, Fortaleza - CE"
 
 
 def _fake_place(title: str, address: str, *, place_id: str = "ChIJx", tipos=None) -> dict:
@@ -69,6 +69,10 @@ def test_buscar_concorrentes_formato1_query_gates_e_url(monkeypatch):
         "geocode_endereco",
         lambda _e: {"lat": -3.74, "lng": -38.48, "fonte_geocode": "test"},
     )
+    # Sem polígono: gate = raio do centróide (coords dos fakes). Evita fallback CNPJ ao vivo.
+    import tools.bairro_poligono as bp
+
+    monkeypatch.setattr(bp, "resolver_bairro_poligono", lambda **k: None)
     import tools.concorrentes_parque_tools as cp
 
     monkeypatch.setattr(

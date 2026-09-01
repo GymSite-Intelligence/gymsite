@@ -357,6 +357,10 @@ def classificar_dores_reviews_batch_gemini(
     )
 
     try:
+        from tools.pipeline_model import gemini_side_tools_ok
+
+        if not gemini_side_tools_ok():
+            return {}
         from google.genai import types as gtypes
         from tools._genai_client import build_genai_client
 
@@ -369,7 +373,7 @@ def classificar_dores_reviews_batch_gemini(
         for tentativa, delay in enumerate(backoffs, start=1):
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.6-flash",
                     contents=prompt,
                     config=gtypes.GenerateContentConfig(
                         temperature=0.0,
@@ -571,10 +575,11 @@ def _formato1_place_token(s: str) -> str:
 
 
 def _query_formato1(tipo_negocio: str, bairro: str, cidade: str, uf: str) -> str:
-    """Formato 1 determinístico: '<tipo> no bairro <bairro>, <cidade> - <UF>'.
+    """Formato 1 determinístico: '<tipo> <bairro>, <cidade> - <UF>'.
 
-    Bairro/cidade vão foldados (sem acento) pra unificar cache SearchAPI e recall
-    Maps — Cocó e Coco não podem virar dois mundos.
+    Sem o literal "no bairro" — no SearchAPI/Maps isso piora o recall
+    (Cocó: ~16 vs ~20 na query curta). Bairro/cidade foldados (sem acento)
+    unificam cache SearchAPI — Cocó e Coco não podem virar dois mundos.
     """
     tn = (tipo_negocio or "academia").strip().lower()
     kw = _TIPO_NEGOCIO_KW.get(tn, "academias")
@@ -588,9 +593,9 @@ def _query_formato1(tipo_negocio: str, bairro: str, cidade: str, uf: str) -> str
     bairro_q = _formato1_place_token(bairro) if bairro else ""
     cidade_q = _formato1_place_token(cidade) if cidade else ""
     if bairro_q and cidade_q and uf_s:
-        return f"{termo_q} no bairro {bairro_q}, {cidade_q} - {uf_s}"
+        return f"{termo_q} {bairro_q}, {cidade_q} - {uf_s}"
     if bairro_q and cidade_q:
-        return f"{termo_q} no bairro {bairro_q}, {cidade_q}"
+        return f"{termo_q} {bairro_q}, {cidade_q}"
     return " ".join(x for x in [termo_q, bairro_q, cidade_q, uf_s] if x and str(x).strip())
 
 def _maps_search_url_from_query(query: str) -> str:
@@ -685,7 +690,11 @@ def _tipo_relevante(c: dict, tipo_negocio: str) -> bool:
                      "checkmat", "gracie", "cordel", "doctorfit", "doctor fit",
                      "boxdelas", "fisiot", "clinica", "beach tennis",
                      "ao ar livre", "ar livre", "outdoor gym", "outdoor fitness",
-                     "krav", "krav maga")
+                     "krav", "krav maga",
+                     # Boxes/CF sem a palavra "crossfit" no nome (SearchAPI title curto)
+                     "tbox", "parque esportes")
+        if nome_blob.startswith("cf ") or nome_blob.startswith("cf-") or nome_blob == "cf":
+            return False
         return not any(_norm_txt(k) in nome_blob for k in _OFF_NOME)
     on = _TIPO_ON_KW.get(tn)
     if not on:  # 'outro' ou tipo sem regra → sem filtro
@@ -767,6 +776,68 @@ def cross_check_concorrentes_bairro(
         "nota": ("Contagem autoritativa = gated_n (R canônico do centróide + tipo). "
                  "google_n = bruto; gate remove off-tipo/fora do raio; ja_no_set = já analisados a fundo."),
     }
+
+
+DEFAULT_MAX_ENRIQUECIMENTO = 25
+
+
+def _max_enriquecimento() -> int:
+    """Teto de segurança (bairro absurdo), não o tamanho da amostra.
+    Quem passou no gate bairro+tipo entra no deep até este teto."""
+    try:
+        return max(1, int(os.getenv("MAX_ENRIQUECIMENTO", str(DEFAULT_MAX_ENRIQUECIMENTO))))
+    except ValueError:
+        return DEFAULT_MAX_ENRIQUECIMENTO
+
+
+def universo_deep_bairro(
+    *,
+    gated_no_bairro: list[dict],
+    candidatos_completos: list[dict],
+    max_enriq: int | None = None,
+) -> list[dict]:
+    """Todo gated no bairro entra no deep (reviews + planos/preços).
+
+    `gated_no_bairro` = saída do gate raio+tipo (cross_check).
+    `candidatos_completos` = registros A3a com website/lat quando existirem.
+    Teto = MAX_ENRIQUECIMENTO (default 25), só pra praça patológica.
+    """
+    pool: dict[str, dict] = {}
+    for c in candidatos_completos or []:
+        if not isinstance(c, dict):
+            continue
+        pid = str(c.get("place_id") or "")
+        if pid and pid not in pool:
+            pool[pid] = c
+    out: list[dict] = []
+    seen: set[str] = set()
+    for g in gated_no_bairro or []:
+        if not isinstance(g, dict):
+            continue
+        pid = str(g.get("place_id") or "")
+        key = pid or str(g.get("nome") or "")
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        full = pool.get(pid) if pid else None
+        if isinstance(full, dict):
+            out.append(full)
+        else:
+            out.append({
+                "place_id": pid,
+                "nome": g.get("nome") or "",
+                "endereco": g.get("endereco") or "",
+                "rating": g.get("rating"),
+                "num_avaliacoes": g.get("num_avaliacoes") or 0,
+                "website": g.get("website") or "",
+                "telefone": "",
+                "fonte_busca": "gate_bairro",
+            })
+    cap = _max_enriquecimento() if max_enriq is None else max(1, int(max_enriq))
+    if len(out) > cap:
+        out.sort(key=_avaliacoes_int, reverse=True)
+        out = out[:cap]
+    return out
 
 
 def _searchapi_maps_textsearch(
@@ -1519,6 +1590,78 @@ def _fetch_reviews_raw(place_id: str) -> "list | None":
     if bundle is None:
         return None
     return bundle.get("reviews") or []
+
+
+def _card_from_searchapi_review(rev: dict) -> dict | None:
+    """Raw SearchAPI (place ou reviews engine) → card determinístico."""
+    import re as _re_html
+
+    texto = (rev.get("text") or rev.get("snippet") or "")
+    texto = _re_html.sub(r"<br\s*/?>", " ", texto, flags=_re_html.IGNORECASE)
+    texto = _re_html.sub(r"<[^>]+>", "", texto)
+    texto = _re_html.sub(r"\s+", " ", texto).strip()
+    if not texto:
+        return None
+    try:
+        rating = int(float(rev.get("rating") or 3))
+    except (TypeError, ValueError):
+        rating = 3
+    autor = ((rev.get("user") or {}) if isinstance(rev.get("user"), dict) else {}).get("name") or "Anônimo"
+    return _processar_review_card(texto, rating, str(autor), rev.get("date") or "")
+
+
+def reviews_deep_searchapi(
+    place_id: str,
+    place_raw: dict | None = None,
+    *,
+    max_reviews: int = 10,
+) -> dict:
+    """Deep reviews = metodologia SearchAPI (não Places Details).
+
+    1) `google_maps_place.review_results` (1 call c/ pico, dores primeiro)
+    2) `google_maps_reviews` sort lowest_rating só se o place não trouxe reviews
+    """
+    from tools.searchapi_maps_place import (
+        contato_from_maps_place,
+        get_or_fetch_maps_place,
+        reviews_raw_from_maps_place,
+        seed_reviews_cache_from_place,
+    )
+
+    fetched = place_raw
+    if fetched is None and place_id:
+        try:
+            fetched = get_or_fetch_maps_place(place_id)
+        except Exception:
+            fetched = None
+
+    raw_list = reviews_raw_from_maps_place(fetched) if fetched else []
+    fonte = "searchapi_google_maps_place" if raw_list else None
+    if raw_list and place_id:
+        seed_reviews_cache_from_place(place_id, fetched)
+
+    cards: list[dict] = []
+    if raw_list:
+        for rev in raw_list[:max_reviews]:
+            card = _card_from_searchapi_review(rev)
+            if card:
+                cards.append(card)
+    elif place_id:
+        sa = _reviews_searchapi_card(place_id, max_reviews=max_reviews)
+        if sa:
+            cards = sa
+            fonte = "searchapi_google_maps_reviews"
+
+    contato = contato_from_maps_place(fetched)
+    return {
+        "reviews": cards,
+        "fonte_reviews": fonte or ("indisponivel" if place_id else None),
+        "place_raw": fetched,
+        "website": contato.get("website") or "",
+        "telefone": contato.get("telefone") or "",
+        "rating": contato.get("rating"),
+        "num_avaliacoes": contato.get("num_avaliacoes"),
+    }
 
 
 def _reviews_searchapi_card(place_id: str, max_reviews: int = 5) -> list[dict] | None:
@@ -2750,7 +2893,7 @@ def _planos_precos_searchapi(nome: str, bairro: str, cidade: str) -> list | None
         )
         client = build_genai_client()
         resp = generate_content_resilient(
-            client, model="gemini-2.5-flash", contents=[prompt], max_retries=2, base_delay=3.0)
+            client, model="gemini-3.6-flash", contents=[prompt], max_retries=2, base_delay=3.0)
         txt = (resp.text or "").strip()
         ini = txt.find("[")
         if ini < 0:
@@ -2935,24 +3078,42 @@ async def analisar_concorrentes_a3a_completo(
         }
 
     top_5 = busca.get("concorrentes_balanceados") or busca.get("concorrentes_top_5_balanceados") or []
+    todas = list(busca.get("concorrentes") or []) or list(top_5)
 
-    # Filtro semântico academia_tradicional
+    # Filtro semântico academia_tradicional (pool completo, não só o top-10)
     incluidos: list[dict] = []
     excluidos: list[dict] = []
-    for c in top_5:
+    for c in todas:
         eh_academia, motivo = _eh_academia_tradicional(c)
         if eh_academia:
             incluidos.append(c)
         else:
             excluidos.append({"nome": c.get("nome", "?"), "motivo": motivo})
 
-    # Cap de enriquecimento: reviews + pico + details + planos rodam SEQUENCIAL
-    # por concorrente — long-pole do parallel block. Default 3 (SPEC_a3a_store_v2 /
-    # Act-on); override via MAX_ENRIQUECIMENTO. Resto fica na lista só com Maps básico.
-    _max_enriq = max(1, int(os.getenv("MAX_ENRIQUECIMENTO", "3")))
-    if len(incluidos) > _max_enriq:
-        incluidos.sort(key=_avaliacoes_int, reverse=True)
-        incluidos = incluidos[:_max_enriq]
+    # Deep = TODOS no gate bairro+tipo (reviews + planos). Top-10/cap-3 era
+    # atalho de latência: deixava 11 academias do Meireles só "contadas".
+    state = getattr(tool_context, "state", None) or {}
+    ip_raw = state.get("input_params") if isinstance(state, dict) else None
+    ip: dict = ip_raw if isinstance(ip_raw, dict) else {}
+    uf = str(ip.get("uf") or (state.get("uf") if isinstance(state, dict) else None) or "")
+    tipo_negocio = str(ip.get("tipo_negocio") or "academia")
+    try:
+        cc = cross_check_concorrentes_bairro(
+            cidade, uf, bairro, tipo_negocio, existentes=incluidos,
+        )
+    except Exception:
+        logger.warning("A3a cross_check no deep falhou", exc_info=True)
+        cc = {"status": "erro", "no_bairro": []}
+    if cc.get("status") == "ok" and (cc.get("no_bairro") or []):
+        incluidos = universo_deep_bairro(
+            gated_no_bairro=cc["no_bairro"],
+            candidatos_completos=incluidos + todas + list(top_5 or []),
+        )
+    else:
+        cap = _max_enriquecimento()
+        if len(incluidos) > cap:
+            incluidos.sort(key=_avaliacoes_int, reverse=True)
+            incluidos = incluidos[:cap]
 
     # Pra cada incluído: reviews (sync) + enrichment (async)
     concorrentes_brutos: list[dict] = []
@@ -2970,26 +3131,35 @@ async def analisar_concorrentes_a3a_completo(
             _steps[label] = round((now - started) * 1000)
             return now
 
-        # 1× google_maps_place (cache) — alimenta pico + reviews antes das etapas.
+        # 1× SearchAPI google_maps_place (cache) — pico + reviews + contato.
         _t = _t0
         _place_raw: dict | None = None
         if place_id:
             try:
-                from tools.searchapi_maps_place import (
-                    get_or_fetch_maps_place,
-                    seed_reviews_cache_from_place,
-                )
+                from tools.searchapi_maps_place import get_or_fetch_maps_place
 
                 _place_raw = get_or_fetch_maps_place(place_id)
-                if _place_raw:
-                    seed_reviews_cache_from_place(place_id, _place_raw)
             except Exception as e:
                 logger.debug("[A3a maps_place] %s: %s", nome, e)
         _t = _mark("maps_place", _t)
 
-        # Reviews via Places Details (síncrono — httpx blocking)
-        reviews_data = buscar_reviews_academia(place_id, nome)
-        reviews = reviews_data.get("reviews", []) if "erro" not in reviews_data else []
+        deep_rev = reviews_deep_searchapi(place_id, _place_raw)
+        if deep_rev.get("place_raw") is not None:
+            _place_raw = deep_rev["place_raw"]
+        reviews = list(deep_rev.get("reviews") or [])
+        fonte_reviews = deep_rev.get("fonte_reviews")
+        if deep_rev.get("website") and not (c.get("website") or "").strip():
+            c["website"] = deep_rev["website"]
+        if deep_rev.get("telefone") and not (c.get("telefone") or "").strip():
+            c["telefone"] = deep_rev["telefone"]
+        rating_oficial = (
+            deep_rev.get("rating") if deep_rev.get("rating") is not None else c.get("rating")
+        )
+        num_avaliacoes = (
+            deep_rev.get("num_avaliacoes")
+            if deep_rev.get("num_avaliacoes") is not None
+            else c.get("num_avaliacoes", 0)
+        )
         _t = _mark("reviews", _t)
 
         # Knowledge Panel Playwright — OFF no hot-path prod (SPEC_market_bundle_v2).
@@ -3012,21 +3182,17 @@ async def analisar_concorrentes_a3a_completo(
         horarios_pico_dict: dict | None = None
         pico_semanal_str: str | None = enrichment.get("pico_semanal")
         atributos_sobre: dict = {}
-        # Places Details Atmosphere (SKU caro): skip se listing Maps já trouxe
-        # telefone ou website (Act-on A3a). Force com A3A_FETCH_ATRIBUTOS=1.
+        # Contato vem do google_maps_place. Places Details Atmosphere só se flag.
         _fetch_attr = (os.getenv("A3A_FETCH_ATRIBUTOS") or "0").strip().lower() in (
             "1", "true", "yes", "on",
         )
-        _tem_contato = bool((c.get("telefone") or "").strip() or (c.get("website") or "").strip())
-        if place_id and (_fetch_attr or not _tem_contato):
+        if place_id and _fetch_attr:
             try:
                 from tools.maps_tools import obter_atributos_place
 
                 atributos_sobre = obter_atributos_place(place_id) or {}
             except Exception:
                 atributos_sobre = {}
-        elif place_id and _tem_contato:
-            atributos_sobre = {}
         _t = _mark("atributos", _t)
 
         if place_id:
@@ -3066,27 +3232,7 @@ async def analisar_concorrentes_a3a_completo(
             horarios_pico_dict = enrichment.get("horarios_pico")
         _t = _mark("pico", _t)
 
-        # Reviews de MENOR NOTA via SearchAPI — Places Details devolve só 5
-        # "mais relevantes" enviesadas pro elogio (Smart Fit 1.329 aval sem
-        # nenhuma ≤3★). As dores reais moram nas piores; merge dedup.
-        if place_id:
-            try:
-                piores = _reviews_baixa_nota_searchapi(place_id)
-                if piores:
-                    vistos = {
-                        ((r.get("autor") or ""), (r.get("quote_curta") or "")[:60])
-                        for r in reviews
-                    }
-                    reviews = piores + [
-                        r for r in reviews
-                        if ((r.get("autor") or ""), (r.get("quote_curta") or "")[:60]) not in vistos
-                    ]
-                    reviews = reviews[:15]
-            except Exception as e:
-                logger.warning(f"[A3a reviews_baixa_nota] {nome}: {type(e).__name__}: {e}")
-        _t = _mark("reviews_baixa", _t)
-
-        # Planos × preços BALCÃO: site oficial → google_light+Gemini → grounding.
+        # Planos × preços BALCÃO: site oficial → SearchAPI google_light.
         # Site-first (Smart Fit JSON) evita light+LLM quando HTML já tem preço.
         planos_precos: list | None = None
         try:
@@ -3174,8 +3320,8 @@ async def analisar_concorrentes_a3a_completo(
             "lng": c.get("lng"),
             "distancia_km": c.get("distancia_km"),
             "google_maps_uri": maps_uri,
-            "rating_oficial": reviews_data.get("rating_geral", c.get("rating")),
-            "num_avaliacoes": reviews_data.get("total_avaliacoes", c.get("num_avaliacoes", 0)),
+            "rating_oficial": rating_oficial,
+            "num_avaliacoes": num_avaliacoes,
             "tem_24h": c.get("tem_24h", False),
             "telefone": c.get("telefone", ""),
             "website": c.get("website", ""),
@@ -3183,7 +3329,7 @@ async def analisar_concorrentes_a3a_completo(
             "reviews": reviews,
             "searchapi_topics": searchapi_topics,
             "temas_insatisfacao": temas_insatisfacao,
-            "fonte_reviews": reviews_data.get("fonte_reviews"),
+            "fonte_reviews": fonte_reviews,
             "horarios_pico": horarios_pico_dict,
             "pico_semanal": pico_semanal_str,
             "planos_precos": planos_precos,
@@ -3195,10 +3341,26 @@ async def analisar_concorrentes_a3a_completo(
             "enrichment_search_grounding_text": enrichment.get("scraping_text"),
         }
 
-    # Processa concorrentes em sequência (Playwright costuma travar com
-    # múltiplas instâncias paralelas no Windows; sequencial é seguro)
-    for c in incluidos:
-        concorrentes_brutos.append(await _processar_um(c))
+    # Playwright no Windows trava em paralelo — sequencial só se a flag estiver on.
+    # SearchAPI (reviews/planos) aguenta concorrência limitada.
+    _pw_on = (os.getenv("COMPETITOR_PLAYWRIGHT_ENRICH") or "0").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+    if _pw_on or len(incluidos) <= 1:
+        for c in incluidos:
+            concorrentes_brutos.append(await _processar_um(c))
+    else:
+        try:
+            _conc = max(1, min(6, int(os.getenv("A3A_ENRICH_CONCURRENCY", "4"))))
+        except ValueError:
+            _conc = 4
+        _sem = asyncio.Semaphore(_conc)
+
+        async def _one(c: dict) -> dict:
+            async with _sem:
+                return await _processar_um(c)
+
+        concorrentes_brutos = list(await asyncio.gather(*[_one(c) for c in incluidos]))
 
     classificar_dores_reviews_deterministico(concorrentes_brutos)
     classificacoes: dict = {}

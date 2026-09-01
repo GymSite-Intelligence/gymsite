@@ -55,6 +55,11 @@ def _expand_org_aliases(slugs: list[str] | None) -> list[str] | None:
         "ana": "agencia-nacional-de-aguas-e-saneamento-basico",
         "me": "ministerio-da-economia-me",
         "al": "estado-de-alagoas-al",
+        "fazenda": "ministerio-da-fazenda",
+        "mf": "ministerio-da-fazenda",
+        "anvisa": "agencia-nacional-de-vigilancia-sanitaria-anvisa",
+        "esporte": "ministerio-do-esporte",
+        "mesp": "ministerio-do-esporte",
     }
     out: list[str] = []
     for s in slugs:
@@ -88,7 +93,7 @@ def main() -> int:
     p.add_argument(
         "--orgs",
         default=None,
-        help="Slugs ORG_SEED (ou alias ibge,mcid,df,bh,rj,fortaleza,ipea,ana)",
+        help="Slugs ORG_SEED (ou alias ibge,mcid,df,bh,rj,fortaleza,ipea,ana,fazenda,anvisa,esporte)",
     )
     p.add_argument(
         "--nome",

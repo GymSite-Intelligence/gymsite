@@ -14,7 +14,7 @@ Documento de referência: como a **metodologia Qwen** (oceano vermelho/azul), **
 | **Qwen (metodologia)** | Taxonomia de mercado + framework ERRC / 5 GAPs / oceano | `docs/metodologia/`, `data/market_waves.csv` → `tier_qwen`, `market_wave` | **Não** — só catálogo e docs |
 | **Kimi** | Pesquisa web / mercado em tempo real | `tools/kimi_research.py`, `A0_RESEARCH_PROVIDER=kimi` | **Sim** (A0 opcional) |
 | **Bailian RAG** | Retrieve de chunks (PDF/MD) antes do LLM | **Não implementado** | Piloto futuro |
-| **Gemini ADK** | Pipeline A0–A9 produção | `gymsite_intelligence/agent.py`, A9 = `gemini-2.5-pro` | **Sim** (default) |
+| **Gemini ADK** | Pipeline A0–A9 produção | `gymsite_intelligence/agent.py`, A9 = `gemini-3.6-flash` | **Sim** (default) |
 
 O run local (`run_market_wave.py --mode local`) usa **Gemini em todo o pipeline**; `tier_qwen=capital_bairro` vem do CSV, não de uma chamada Qwen.
 
@@ -124,7 +124,7 @@ Opções via **DashScope / Bailian** (mesma conta Alibaba):
 
 | Uso | Modelo candidato | Troca |
 |-----|------------------|-------|
-| A9 estratégico | `qwen-max` / `qwen-plus` | Avaliar vs `gemini-2.5-pro` no golden |
+| A9 estratégico | `qwen-max` / `qwen-plus` | Avaliar vs `gemini-3.6-flash` no golden |
 | Sumarizar investigations | `qwen-turbo` | Offline, ingest na KB |
 | A0 | Manter **Kimi** ou Gemini | Qwen sem web nativa fraca para A0 |
 

@@ -1,4 +1,4 @@
-import { Car, PersonStanding, X } from 'lucide-react'
+import { Car, PersonStanding, Route, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { explorarChrome, useExplorarSite } from './explorar-chrome'
 import type { Camada, MapStyle, ModoDesloc } from './explorarIso'
@@ -11,20 +11,32 @@ export function ExplorarControles({
   onStyle,
   onCamada,
   onModo,
+  viasOn,
+  viasPending,
+  onVias,
   onClose,
+  cartoEmbedAvailable,
+  cartoCamadasOn,
+  onCartoCamadas,
 }: {
   mapStyle: MapStyle
   camada: Camada
   modo: ModoDesloc
   nMaps: number
+  viasOn: boolean
+  viasPending: boolean
   onStyle: (s: MapStyle) => void
   onCamada: (c: Camada) => void
   onModo: (m: ModoDesloc) => void
+  onVias: () => void
   onClose: () => void
+  cartoEmbedAvailable?: boolean
+  cartoCamadasOn?: boolean
+  onCartoCamadas?: (on: boolean) => void
 }) {
   const chrome = explorarChrome(useExplorarSite())
   return (
-    <aside className={cn(chrome, 'pointer-events-auto w-73 rounded-xl border p-3.5 shadow-lg')}>
+    <aside className={cn(chrome, 'pointer-events-auto w-full max-w-[min(18.25rem,100%)] rounded-xl border p-3.5 shadow-lg')}>
       <div className="mb-3.5 flex items-center justify-between">
         <h2 className="text-xs font-semibold text-foreground">Controles</h2>
         <button
@@ -77,8 +89,15 @@ export function ExplorarControles({
         selected={camada === 'influencia'}
         onClick={() => onCamada(camada === 'influencia' ? 'off' : 'influencia')}
       />
+      {cartoEmbedAvailable && (
+        <CamadaRow
+          label="Camadas CARTO"
+          selected={Boolean(cartoCamadasOn)}
+          onClick={() => onCartoCamadas!(!cartoCamadasOn)}
+        />
+      )}
       {camada === 'influencia' && (
-        <div className="mb-2.5 ml-6 mt-1 grid grid-cols-2 gap-2">
+        <div className="mb-2.5 ml-6 mt-1 grid grid-cols-3 gap-2">
           <button
             type="button"
             title="A pé"
@@ -106,6 +125,23 @@ export function ExplorarControles({
             )}
           >
             <Car className="size-5" />
+          </button>
+          <button
+            type="button"
+            title="Vias de maior fluxo"
+            aria-label="Top vias"
+            aria-pressed={viasOn}
+            disabled={viasPending}
+            onClick={onVias}
+            className={cn(
+              'flex items-center justify-center rounded-lg border px-3 py-3',
+              viasPending && 'opacity-60',
+              viasOn
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-secondary text-foreground hover:bg-muted',
+            )}
+          >
+            <Route className="size-5" />
           </button>
         </div>
       )}

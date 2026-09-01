@@ -33,3 +33,8 @@ dev = [
 
 [tool.setuptools]
 py-modules = []
+
+# Só se alguém rodar `vercel` local — API prod = Hetzner, não Vercel.
+# Ver .agent/workflows/deploy.md
+[tool.vercel]
+entrypoint = "api:app"

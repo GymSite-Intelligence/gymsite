@@ -24,7 +24,7 @@ from pdf.models import RelatorioPdfModel
 _ASSETS = os.path.join(os.path.dirname(__file__), "assets")
 
 _TEMPLATE = """
-<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><style>
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Viabilidade · {{ bairro }} · {{ cidade }}</title><style>
 @page { size: A4; margin: 15mm 13mm;
   @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: Helvetica; font-size: 8pt; color:#64748B; }
   @bottom-left { content: "{{ rodape }}"; font-family: Helvetica; font-size: 8pt; font-style: italic; color:#64748B; } }
@@ -162,20 +162,18 @@ table.d thead { display:table-header-group; }
 
 {% if mercado or panorama %}
 <div class="sec">Contexto e Panorama de Mercado</div>
-<table class="d"><tr><th>Indicador</th><th>Valor</th></tr>
+<table class="d"><thead><tr><th>Indicador</th><th>Valor</th></tr></thead>
   {% if mercado and mercado.ticket %}<tr><td>Ticket médio local</td><td>{{ mercado.ticket }}</td></tr>{% endif %}
   {% if mercado and mercado.aluguel %}<tr><td>Aluguel comercial</td><td>{{ mercado.aluguel }}</td></tr>{% endif %}
   {% if mercado and mercado.renda %}<tr><td>Renda do bairro</td><td>{{ mercado.renda }}</td></tr>{% endif %}
   {% if mercado and mercado.tendencia %}<tr><td>Tendência</td><td>{{ mercado.tendencia }}</td></tr>{% endif %}
   {% if mercado and mercado.parque %}<tr><td>Parque ativo (CNPJ)</td><td>{{ mercado.parque }}</td></tr>{% endif %}
-  {% if mercado and mercado.novos is not none %}<tr><td>Aberturas CNPJ (90d)</td><td>{{ mercado.novos }}{% if mercado.carimbo_90d %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_90d }}</span>{% endif %}</td></tr>{% endif %}
-  {% if mercado and mercado.baixas_90d is not none %}<tr><td>Baixas CNPJ (90d)</td><td>{{ mercado.baixas_90d }}{% if mercado.carimbo_90d %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_90d }}</span>{% endif %}</td></tr>{% endif %}
   {% if mercado and mercado.entrantes_q is not none %}<tr><td>Aberturas CNPJ ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.entrantes_q }}{% if mercado.carimbo_q %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_q }}</span>{% endif %}</td></tr>{% endif %}
   {% if mercado and mercado.baixas_q is not none %}<tr><td>Baixas CNPJ ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.baixas_q }}{% if mercado.carimbo_q %} <span style="font-size:8pt;color:#666;">· {{ mercado.carimbo_q }}</span>{% endif %}</td></tr>{% endif %}
   {% if mercado and mercado.saldo_q is not none %}<tr><td>Saldo oferta ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.saldo_q }}{% if mercado.pressao %} · {{ mercado.pressao }}{% endif %}</td></tr>{% endif %}
   {% if mercado and mercado.baixas_bairro_q is not none %}<tr><td>Baixas no bairro ({{ mercado.janela_q or 'Q' }})</td><td>{{ mercado.baixas_bairro_q }}</td></tr>{% endif %}
   {% if panorama and panorama.saturacao %}<tr><td>Nível de saturação</td><td>{{ panorama.saturacao }}</td></tr>{% endif %}
-  {% if panorama and panorama.rating_medio %}<tr><td>Rating médio dos concorrentes</td><td>{{ panorama.rating_medio }} ★</td></tr>{% endif %}
+  {% if panorama and panorama.rating_medio %}<tr><td>Rating médio dos concorrentes</td><td>{{ panorama.rating_medio }} ★{% if panorama.rating_n %} (n={{ panorama.rating_n }} analisados a fundo){% endif %}</td></tr>{% endif %}
   {% if panorama and panorama.total %}<tr><td>Concorrentes analisados</td><td>{{ panorama.total }}{% if panorama.raio %} (de {{ panorama.raio }} no raio){% endif %}</td></tr>{% endif %}
 </table>{% endif %}
 
@@ -261,11 +259,13 @@ table.d thead { display:table-header-group; }
   <tr><td>Ação</td><td>{{ matriz.acao }}</td></tr>
 </table>
 {% if matriz.carimbo %}<div class="note" style="margin-top:6px;">{{ matriz.carimbo }}</div>{% endif %}
+{% if matriz.n is not none %}<div class="note" style="margin-top:6px;">“N no polígono” ({{ matriz.n }}) é a régua da matriz de posicionamento (densidade no polígono IBGE), não o número de academias no KPI nem nos anéis. Anéis = pressão ponderada por distância. Contagem da praça = gate bairro+tipo (quadro Cross-check).{% if matriz.nota_oceano_vs_absorcao %} {{ matriz.nota_oceano_vs_absorcao }}{% endif %}</div>{% endif %}
+{% if matriz.nota_contradicao %}<div class="note" style="margin-top:8px; border-left:3px solid #DC2626; padding-left:8px; color:#7F1D1D;">{{ matriz.nota_contradicao }}</div>{% endif %}
 {% endif %}
 
 {% if competidores %}
 <div class="sec">Inteligência Competitiva</div>
-<table class="d"><tr><th>Concorrente</th><th>Prof.</th><th>Rating</th><th>Avaliações</th><th>Bairro</th><th>24h</th>{% if competidores_tem_tier %}<th>Tier agregador</th>{% endif %}</tr>
+<table class="d"><thead><tr><th>Concorrente</th><th>Prof.</th><th>Rating</th><th>Avaliações</th><th>Bairro</th><th>24h</th>{% if competidores_tem_tier %}<th>Tier agregador</th>{% endif %}</tr></thead>
 {% for c in competidores %}<tr><td>{{ c.nome }}</td><td style="font-size:7.5pt; color:#64748B;">{{ c.profundidade }}</td><td>{{ c.rating }}</td><td>{{ c.aval }}</td><td>{{ c.bairro }}</td><td>{{ c.h24 }}</td>{% if competidores_tem_tier %}<td>{{ c.tier }}</td>{% endif %}</tr>{% endfor %}
 </table>
 {% if competidores_tem_mapeado %}<div class="note"><strong>analisado</strong> = reviews/oferta em profundidade · <strong>mapeado</strong> = no gate do bairro (contagem autoritativa), sem deep dive. Todos entram no denominador da praça.</div>{% endif %}
@@ -308,7 +308,8 @@ table.d thead { display:table-header-group; }
 {% if top_vias.modo_vias %}
 <div class="alert" style="background:#F0FDF4; border-color:#BBF7D0; margin-bottom:10px;"><div style="font-size:8.5pt; color:#14532D;">Nenhum imóvel anunciado na especificação neste bairro. Priorize as vias abaixo por fluxo estrutural de pedestres e valide <strong>in loco</strong> a disponibilidade de ponto comercial.</div></div>
 {% endif %}
-{% if top_vias.mapa_svg %}<div style="margin-bottom:10px;">{{ top_vias.mapa_svg | safe }}<div class="note" style="margin-top:2px;">Mapa das top vias · vermelho = maior fluxo · ponto = centróide/candidato · © OpenStreetMap.</div></div>{% endif %}
+{% if top_vias.mapa_png %}<div style="margin-bottom:10px;"><img src="{{ top_vias.mapa_png }}" alt="Mapa das top vias" style="width:100%;border:1px solid #E2E8F0;border-radius:4px;display:block;"/><div class="note" style="margin-top:2px;">Mapa das top vias · vermelho = maior fluxo · ponto = centróide/candidato · © OpenStreetMap.</div></div>
+{% elif top_vias.mapa_svg %}<div style="margin-bottom:10px;">{{ top_vias.mapa_svg | safe }}<div class="note" style="margin-top:2px;">Mapa das top vias · vermelho = maior fluxo · ponto = centróide/candidato · © OpenStreetMap.</div></div>{% endif %}
 <table class="d"><tr><th>#</th><th>Via</th><th>Tipo</th><th>Fluxo (0–100)</th><th>Concorrentes no trecho</th></tr>
 {% for v in top_vias.vias %}<tr><td>{{ v.rank }}</td><td><strong>{{ v.nome }}</strong></td><td>{{ v.tipo }}</td><td>{{ v.fluxo }}</td><td>{{ v.concorrentes }}</td></tr>{% endfor %}
 </table>
@@ -340,6 +341,7 @@ table.d thead { display:table-header-group; }
 
 {% if aneis %}
 <div class="sec">Anéis Competitivos (score ponderado por distância)</div>
+<div class="note">Cada anel conta concorrentes por distância (no bairro / fronteira / regional) — não é o N do KPI nem o N no polígono da matriz.</div>
 <div class="kpis">
   <div class="c"><div class="kpi-t">No bairro</div><div class="kpi-n">{{ aneis.no_bairro }}</div></div>
   <div class="c"><div class="kpi-t">Fronteira</div><div class="kpi-n">{{ aneis.fronteira }}</div></div>
@@ -372,12 +374,15 @@ table.d thead { display:table-header-group; }
   <div class="c"><div class="kpi-t">Área alvo</div><div class="kpi-n" style="font-size:13pt;">{{ kpi_fin.area }}</div><div class="kpi-s">m²</div></div>
   {% if kpi_fin.aluguel %}<div class="c"><div class="kpi-t">Aluguel/mês</div><div class="kpi-n" style="font-size:13pt;">R$ {{ kpi_fin.aluguel }}</div></div>{% endif %}
   {% if kpi_fin.capex %}<div class="c"><div class="kpi-t">CAPEX (mid)</div><div class="kpi-n" style="font-size:13pt;">R$ {{ kpi_fin.capex }}</div></div>{% endif %}
+  {% if kpi_fin.investimento %}<div class="c"><div class="kpi-t">Investimento (mid)</div><div class="kpi-n" style="font-size:13pt;">R$ {{ kpi_fin.investimento }}</div><div class="kpi-s">CAPEX + giro</div></div>{% endif %}
   {% if kpi_fin.payback %}<div class="c"><div class="kpi-t">Payback (mid)</div><div class="kpi-n" style="font-size:13pt;">{{ kpi_fin.payback }}</div></div>{% endif %}
 </div>{% endif %}
-{% if cenarios %}<table class="d" style="margin-top:6px;"><tr><th>Modelo</th><th>Ticket</th><th>Receita/mês</th><th>Lucro/mês</th><th>Margem</th><th>Payback</th><th>Alunos</th><th>Viabilidade</th></tr>
+{% if cenarios %}<table class="d" style="margin-top:6px;"><thead><tr><th>Modelo</th><th>Ticket</th><th>Receita/mês</th><th>Lucro/mês</th><th>Margem</th><th>Payback</th><th>Alunos</th><th>Viabilidade</th></tr></thead>
 {% for c in cenarios %}<tr class="{{ 'rec' if c.recomendado }}"><td>{{ c.modelo }}{{ ' ★' if c.recomendado }}</td><td>{{ c.ticket }}</td><td>{{ c.receita }}</td><td>{{ c.lucro }}</td><td>{{ c.margem }}</td><td>{{ c.payback }}</td><td>{{ c.alunos }}</td>
   <td><span class="pill {{ c.viab_cls }}">{{ c.viab }}</span>{% if c.justificativa %}<div style="font-size:6.5pt; color:#64748B; margin-top:2px;">{{ c.justificativa }}</div>{% endif %}</td></tr>{% endfor %}
 </table>
+<div class="note">Payback de cada linha = investimento daquele modelo (CAPEX + capital de giro) ÷ lucro/mês, truncado para inteiro — não é o CAPEX do KPI ÷ lucro. Cada modelo tem CAPEX próprio. Fonte: A4.</div>
+<div class="note">Receita/mês = alunos × ticket efetivo. Ticket efetivo = mensalidade de balcão × (1 − inadimplência estimada do modelo). Não multiplique alunos × ticket da coluna. Fonte: A4.{% if receita_inad_run %} {{ receita_inad_run }}{% endif %}</div>
 {% if cenarios_tem_fiscal %}<div class="note">Lucro/mês já é LÍQUIDO do Simples Nacional — a conferência fecha com Receita − Custos − Tributos (valores no quadro Tributos &amp; Ocupação abaixo).</div>{% endif %}
 {% if narrativa.financeira %}<div class="note" style="margin-top:8px; border-left:3px solid #0E5C66; padding-left:8px; color:#334155;">{{ narrativa.financeira }}</div>{% endif %}{% endif %}
 {% if cenarios_tem_fiscal %}
@@ -395,6 +400,7 @@ table.d thead { display:table-header-group; }
 {% for r in capex.itens %}<div class="bar-row"><span class="lab">{{ r.label }}</span>
   <div class="bar-wrap"><div class="bar" style="width:{{ r.pct }}%; opacity:.5;"></div></div>
   <span class="num">R$ {{ r.valor }}</span><span class="sx">{{ r.pct }}%</span></div>{% endfor %}
+<div class="note">CAPEX deste cenário: R$ {{ capex.total }} · % sobre o CAPEX total (não sobre um subconjunto). Obra/adaptação já inclui projeto e alvará. {% if capex.fecha %}Soma das linhas = CAPEX.{% else %}Soma das linhas R$ {{ capex.soma }} — conferir linhas omitidas.{% endif %} Fonte: A4 (SINAPI/CUB + kit + ANTT + contingência).</div>
 </div>{% endif %}{% endif %}
 
 {% if errc %}
@@ -408,13 +414,18 @@ table.d thead { display:table-header-group; }
       <td style="border-top:3px solid #16A34A;"><div class="h" style="color:#166534;">Criar</div><ul>{% for i in errc.criar %}<li>{{ i }}</li>{% endfor %}</ul></td></tr>
 </table></div>{% endif %}
 
-{% if gaps or ticket_rec %}
+{% if gaps or ticket_rec or ticket_indeterminado %}
 <div class="sec">Dores do Mercado e Proposta Tarifária</div>
 <table style="width:100%; border-collapse:collapse;"><tr>
   <td style="width:35%; vertical-align:top; padding-right:12px;"><div class="card" style="height:100%;">
+    {% if ticket_indeterminado %}
+    <div class="kpi-t">Posicionamento Tarifário</div><div class="kpi-n" style="color:#DC2626;">INDETERMINADO</div>
+    <div style="font-size:8pt; color:#64748B; margin-top:8px; line-height:1.5;">Modelo financeiro inviável: nenhum cenário (Econômico/Padrão/Premium) fecha conta nas condições atuais de área/aluguel. Revisar m², aluguel ou ticket antes de cravar preço de mercado.</div>
+    {% else %}
     <div class="kpi-t">Posicionamento Tarifário</div><div class="kpi-n">{{ ticket_rec or '—' }}<span style="font-size:10pt; color:#64748B;"> /mês</span></div>
     {% if ticket_banda %}<div style="font-size:8pt; color:#64748B; margin:5px 0 9px; border-bottom:1px solid #E2E8F0; padding-bottom:8px;">Banda viável: {{ ticket_banda }}</div>{% endif %}
     {% if benchmarks %}<div style="font-size:8pt; color:#475569; line-height:1.5;"><strong>Ancoragem:</strong><br>{% for b in benchmarks %}&bull; {{ b }}<br>{% endfor %}</div>{% endif %}
+    {% endif %}
   </div></td>
   <td style="width:65%; vertical-align:top;">
     {% for g in gaps %}<div class="gapc"><div class="t">{{ g.titulo }}</div>{% if g.desc %}<div class="d">{{ g.desc }}</div>{% endif %}{% if g.potencial %}<div class="m">Potencial: {{ g.potencial }}{% if g.dificuldade %} · implementação {{ g.dificuldade }}{% endif %}</div>{% endif %}</div>{% endfor %}
@@ -438,22 +449,9 @@ table.d thead { display:table-header-group; }
 {% for a in alertas_ff %}<div class="gapc" style="border-left-color:#D97706;"><div class="t">{{ a.titulo }}{% if a.severidade %} <span class="pill mid">{{ a.severidade }}</span>{% endif %}</div>{% if a.diagnostico %}<div class="d">{{ a.diagnostico }}</div>{% endif %}</div>{% endfor %}{% endif %}
 </div>{% endif %}
 
-{% if novas_unidades %}
-<div class="sec">Oferta CNPJ — aberturas e baixas</div>
-<div class="timing">
-  <div class="c"><div class="kpi-t">Aberturas (90d)</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.total }}</div></div>
-  {% if novas_unidades.baixas_90d is not none %}<div class="c"><div class="kpi-t">Baixas (90d)</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.baixas_90d }}</div></div>{% endif %}
-  {% if novas_unidades.baixas_q is not none %}<div class="c"><div class="kpi-t">Baixas ({{ novas_unidades.janela_q or 'Q' }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.baixas_q }}</div></div>{% endif %}
-  {% if novas_unidades.saldo_q is not none %}<div class="c"><div class="kpi-t">Saldo ({{ novas_unidades.janela_q or 'Q' }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.saldo_q }}</div></div>{% endif %}
-  <div class="c"><div class="kpi-t">Cidade</div><div class="kpi-n" style="font-size:12pt; padding-top:3px;">{{ novas_unidades.cidade }}</div></div>
-  {% if novas_unidades.bairro_nome %}<div class="c"><div class="kpi-t">Aberturas bairro ({{ novas_unidades.bairro_nome }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.bairro_total }}</div></div>{% endif %}
-  {% if novas_unidades.baixas_bairro_q is not none and novas_unidades.bairro_nome %}<div class="c"><div class="kpi-t">Baixas bairro ({{ novas_unidades.janela_q or 'Q' }})</div><div class="kpi-n" style="font-size:15pt;">{{ novas_unidades.baixas_bairro_q }}</div></div>{% endif %}
-</div>
-<div class="timing-d">Aberturas e baixas de CNPJ fitness (RFB, situacao 02/08). {% if novas_unidades.pressao %}Pressão {{ novas_unidades.janela_q or 'Q' }}: <strong>{{ novas_unidades.pressao }}</strong>. {% endif %}{% if novas_unidades.carimbo %}<em>{{ novas_unidades.carimbo }}</em>{% else %}<em>Fonte: RFB CNPJ Aberto.</em>{% endif %}</div>{% endif %}
-
 {% if obras %}
 <div class="sec">Obras Fitness em Andamento (CNO)</div>
-<table class="d"><tr><th>Obra</th><th>Bairro</th><th>Área (m²)</th><th>Início</th></tr>
+<table class="d"><thead><tr><th>Obra</th><th>Bairro</th><th>Área (m²)</th><th>Início</th></tr></thead>
 {% for o in obras %}<tr><td>{{ o.nome }}</td><td>{{ o.bairro }}</td><td>{{ o.area }}</td><td>{{ o.inicio }}</td></tr>{% endfor %}
 </table>
 <div class="note">Obras de academias registradas no Cadastro Nacional de Obras (RFB) — concorrência futura em construção. Fonte: CNO/RFB.</div>{% endif %}
@@ -471,7 +469,7 @@ table.d thead { display:table-header-group; }
 </div>
 <div class="timing-d"><strong>Diretriz de timing:</strong> {{ demanda.moradores }} novos moradores em obra. Upside captável com marketing, sem CAPEX extra. <em>Fonte: CNO/RFB + IBGE Censo 2022.</em></div>
 {% if demanda.obras %}
-<table class="d" style="margin-top:10px;"><tr><th>Empreendimento</th><th>Unidades</th><th>Fonte</th><th>Planta</th><th>Entrega</th><th>Fitness</th><th>Aderência</th><th>Moradores</th><th>Leads</th><th>Receita/mês</th></tr>
+<table class="d" style="margin-top:10px;"><thead><tr><th>Empreendimento</th><th>Unidades</th><th>Fonte</th><th>Planta</th><th>Entrega</th><th>Fitness</th><th>Aderência</th><th>Moradores</th><th>Leads</th><th>Receita/mês</th></tr></thead>
 {% for o in demanda.obras %}<tr><td>{{ o.nome }}{% if o.quente %} <span class="pill mid">reta final</span>{% endif %}</td><td>{{ o.unidades }}</td><td>{% if o.real %}<span class="pill ok">real</span>{% else %}<span class="pill no">proxy</span>{% endif %}</td><td>{{ o.area }}</td><td>{{ o.entrega }}</td><td>{{ '✓' if o.fitness else '—' }}</td><td>{% if o.aderencia %}<span class="pill {{ o.aderencia_cls }}">{{ o.aderencia }}</span>{% else %}—{% endif %}</td><td>{{ o.moradores }}</td><td>~{{ o.captura }}</td><td>R$ {{ o.receita }}</td></tr>{% endfor %}
 <tr class="rec"><td>Total (residenciais)</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>{{ demanda.moradores }}</td><td>~{{ demanda.captura }}</td><td>R$ {{ demanda.receita }}</td></tr>
 </table>
@@ -494,7 +492,8 @@ table.d thead { display:table-header-group; }
 {% if zoneamento %}
 <div style="page-break-inside:avoid;">
 <div class="sec">Análise de zoneamento urbano</div>
-{% if zoneamento.mapa_svg %}<div style="margin-bottom:10px;">{{ zoneamento.mapa_svg | safe }}<div class="note" style="margin-top:2px;">Polígonos das zonas especiais (Plano Diretor) no entorno · verde = comercial/permissivo · vermelho = ZEIS/ZEA restritivo · âmbar = ZEPH/patrimônio · ponto = candidato.</div></div>{% endif %}
+{% if zoneamento.mapa_png %}<div style="margin-bottom:10px;"><img src="{{ zoneamento.mapa_png }}" alt="Mapa de zoneamento" style="width:100%;border:1px solid #E2E8F0;border-radius:4px;display:block;"/><div class="note" style="margin-top:2px;">Polígonos das zonas especiais (Plano Diretor) no entorno · verde = comercial/permissivo · vermelho = ZEIS/ZEA restritivo · âmbar = ZEPH/patrimônio · ponto = candidato · © OpenStreetMap.</div></div>
+{% elif zoneamento.mapa_svg %}<div style="margin-bottom:10px;">{{ zoneamento.mapa_svg | safe }}<div class="note" style="margin-top:2px;">Polígonos das zonas especiais (Plano Diretor) no entorno · verde = comercial/permissivo · vermelho = ZEIS/ZEA restritivo · âmbar = ZEPH/patrimônio · ponto = candidato.</div></div>{% endif %}
 <div class="duo" style="margin-bottom:10px;">
   <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Zona identificada</div><div class="v">{{ zoneamento.zona }}</div></div>
   <div class="c" style="border-left:4px solid {{ zoneamento.cor }};"><div class="l">Compatibilidade — CNAE {{ zoneamento.cnae }}</div><div class="v" style="color:{{ zoneamento.cor }};">{{ zoneamento.compat }}</div>{% if zoneamento.oficial %}<div style="font-size:8pt; color:#64748B;">Subgrupo {{ zoneamento.subgrupo }} · Classe {{ zoneamento.classe }}</div>{% endif %}</div>
@@ -705,6 +704,7 @@ def _top_vias_ctx(meta: dict[str, Any]) -> dict[str, Any] | None:
         "carimbo": carimbo,
         "modo_vias": meta.get("modo_localizacao") == "vias_por_fluxo",
         "mapa_svg": mv.get("mapa_svg") if isinstance(mv.get("mapa_svg"), str) and "<svg" in mv.get("mapa_svg", "") else None,
+        "mapa_png": mv.get("mapa_png") if isinstance(mv.get("mapa_png"), str) and str(mv.get("mapa_png")).startswith("data:image/png") else None,
     }
 
 
@@ -1226,21 +1226,22 @@ def _ticket_segmentos(competidores) -> list[dict] | None:
     entrega em cada faixa de ticket."""
     planos = []
     for c in (competidores or []):
+        mods = list(getattr(c, "oferta_modalidades", None) or [])
         for p in (getattr(c, "planos_precos", None) or []):
             if not isinstance(p, dict):
                 continue
             preco = _preco_num(p.get("preco_mensal"))
             if preco and preco > 0:
-                planos.append((preco, p.get("inclui") or [], c.nome, p.get("plano")))
+                planos.append((preco, p.get("inclui") or [], c.nome, mods))
     if len(planos) < 2:
         return None
     precos = sorted(pp[0] for pp in planos)
     n = len(precos)
     t1, t2 = precos[max(0, n // 3 - 1)], precos[min(n - 1, 2 * n // 3)]
     segs: dict[str, list] = {"Econômico": [], "Intermediário": [], "Premium": []}
-    for preco, inclui, nome, _plano in planos:
+    for preco, inclui, nome, mods in planos:
         k = "Econômico" if preco <= t1 else ("Premium" if preco > t2 else "Intermediário")
-        segs[k].append((preco, inclui, nome))
+        segs[k].append((preco, inclui, nome, mods))
     from tools.catalogos import normalizar_servicos
 
     rows = []
@@ -1248,10 +1249,16 @@ def _ticket_segmentos(competidores) -> list[dict] | None:
         if not items:
             continue
         ps = [i[0] for i in items]
-        # Serviços = CATEGORIAS limpas do catálogo (não a prosa de marketing do `inclui`).
+        # Serviços = `inclui` do plano + modalidades da academia (planos SearchAPI
+        # quase nunca trazem `inclui`; a oferta minerada preenche a coluna).
         textos = []
-        for _, inc, _ in items:
+        for _, inc, _, mods in items:
             textos.extend(str(x) for x in (inc or []))
+            for m in (mods or []):
+                label = str(_SERVICO_LABEL.get(m, m) or m)
+                textos.append(label)
+                if label != str(m):
+                    textos.append(str(m))
         svc = normalizar_servicos(textos)
         faixa = f"R$ {_brl(min(ps))}" if min(ps) == max(ps) else f"R$ {_brl(min(ps))}–{_brl(max(ps))}"
         rows.append({
@@ -1271,9 +1278,15 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     if isinstance(errc_raw, dict) and any(errc_raw.get(k) for k in ("eliminar", "reduzir", "aumentar", "criar")):
         errc = {k: [str(x) for x in (errc_raw.get(k) or [])] for k in ("eliminar", "reduzir", "aumentar", "criar")}
 
-    ticket = pos.get("ticket")
+    ticket = pos.get("recomendacao_ticket") or pos.get("ticket")
     ticket_rec = ticket_banda = None
-    if isinstance(ticket, dict) and ticket.get("ticket_recomendado") is not None:
+    veredito_pos = str(pos.get("veredito_posicionamento") or "").upper().strip()
+    ticket_indeterminado = veredito_pos == "INDETERMINADO"
+    if (
+        not ticket_indeterminado
+        and isinstance(ticket, dict)
+        and ticket.get("ticket_recomendado") is not None
+    ):
         ticket_rec = f"R$ {_brl(ticket.get('ticket_recomendado'))}"
         lo, hi = ticket.get("banda_min"), ticket.get("banda_max")
         if lo and hi:
@@ -1333,9 +1346,16 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     pano = meta.get("panorama") if isinstance(meta.get("panorama"), dict) else None
     panorama = None
     if pano:
+        rating_n = sum(
+            1
+            for c in (model.competidores or [])
+            if getattr(c, "profundidade", None) == "analisado"
+            and getattr(c, "rating", None) is not None
+        )
         panorama = {
             "saturacao": pano.get("saturacao"),
             "rating_medio": f"{float(pano['rating_medio']):.1f}" if pano.get("rating_medio") else None,
+            "rating_n": rating_n if rating_n else None,
             "total": pano.get("total"), "raio": pano.get("raio"),
         }
 
@@ -1458,6 +1478,10 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "teto": _pct(c.teto_ocupacao) or "—",
             "ticket_piso": f"R$ {_brl(c.ticket_piso_ocupacao)}" if c.ticket_piso_ocupacao is not None else "—",
             "ocupacao_estoura": bool(c.ocupacao_estoura),
+            "inad": (
+                f"{c.taxa_inadimplencia * 100:.0f}%"
+                if c.taxa_inadimplencia is not None else None
+            ),
             # Flag p/ saber se há QUALQUER dado fiscal/ocupação neste cenário (renderiza a sub-tabela).
             "tem_fiscal": any(x is not None for x in (
                 c.anexo_simples, c.aliquota_tributos, c.tributos_mensal, c.fator_r,
@@ -1469,9 +1493,9 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         if is_rec:
             rec_cen = c
 
-    # Ticket: prioriza pos.ticket (A9); fallback pro ticket do cenário recomendado
-    # (senão "— /mês" quando A9 não emitiu banda). Banda = low↔premium dos cenários.
-    if ticket_rec is None:
+    # Ticket: prioriza A9; fallback pro cenário só se o veredito NÃO for INDETERMINADO
+    # (senão o R$ do A4 vira falsa precisão no card tarifário).
+    if ticket_rec is None and not ticket_indeterminado:
         base_cen = rec_cen or mid_cen
         if base_cen is not None and base_cen.ticket_medio:
             ticket_rec = f"R$ {_brl(base_cen.ticket_medio)}"
@@ -1485,26 +1509,33 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "area": f"{model.area_m2_min}–{model.area_m2_max}",
             "aluguel": _brl(model.aluguel_mensal) if model.aluguel_mensal else None,
             "capex": _brl(mid_cen.capex_total) if mid_cen and mid_cen.capex_total else None,
+            "investimento": _brl(mid_cen.investimento_total) if mid_cen and mid_cen.investimento_total else None,
             "payback": f"{mid_cen.payback_meses}m" if mid_cen and mid_cen.payback_meses else None,
         }
     # Capex breakdown do cenário recomendado (ou mid)
     capex = None
     cap_cen = next((c for c in (model.cenarios or [])
                     if (c.modelo or "").lower() == rec_norm or (c.label or "").lower() == rec_norm), mid_cen)
-    if cap_cen is not None:
+    if cap_cen is not None and cap_cen.capex_total:
         itens_raw = [
             ("Obra/adaptação", cap_cen.capex_obra),
             ("Equipamentos", cap_cen.capex_equipamentos),
+            ("Frete equipamentos", cap_cen.capex_frete),
             ("Contingência", cap_cen.capex_contingencia),
         ]
-        # values are already numeric (float/int); avoid unnecessary conversion
         itens_raw = [(lab, v) for lab, v in itens_raw if v]
-        tot = sum(v for _, v in itens_raw)
-        if tot > 0:
-            capex = {
-                "modelo": cap_cen.label or cap_cen.modelo,
-                "itens": [{"label": lab, "valor": _brl(v), "pct": round(100 * v / tot)} for lab, v in itens_raw],
-            }
+        tot_ref = float(cap_cen.capex_total)
+        soma = sum(v for _, v in itens_raw)
+        capex = {
+            "modelo": cap_cen.label or cap_cen.modelo,
+            "total": _brl(tot_ref),
+            "itens": [
+                {"label": lab, "valor": _brl(v), "pct": round(100 * v / tot_ref)}
+                for lab, v in itens_raw
+            ],
+            "fecha": abs(soma - tot_ref) < 1.0,
+            "soma": _brl(soma),
+        }
 
     def _tier_txt(t: dict | None) -> str:
         if not isinstance(t, dict) or not t.get("plano"):
@@ -1675,6 +1706,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "restricoes": [str(r) for r in (zm.get("restricoes") or [])][:4],
             "alerta": zm.get("alerta"),
             "mapa_svg": zm.get("mapa_svg"),
+            "mapa_png": zm.get("mapa_png") if isinstance(zm.get("mapa_png"), str) and str(zm.get("mapa_png")).startswith("data:image/png") else None,
             "fonte": _fonte,
             "cnae": zm.get("cnae") or "9313-1/00",
             "oficial": _oficial,
@@ -1694,6 +1726,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             aderencia, aderencia_cls = _aderencia_modelo(
                 ob.get("area_privativa_media"), _pb.get("max"))
             _cap = ob.get("captura_est")
+            _mor_f = float(ob.get("moradores_est") or 0) if ob.get("moradores_est") else None
             obras_ficha.append({
                 "nome": str(ob.get("empreendimento") or ob.get("construtora") or "—")[:28],
                 "unidades": _int(ob.get("unidades_est")),
@@ -1703,10 +1736,11 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
                 "fitness": bool(ob.get("amenidade_fitness")),
                 "aderencia": aderencia,
                 "aderencia_cls": aderencia_cls,
-                "moradores": _int(ob.get("moradores_est")) if ob.get("moradores_est") else "—",
+                "moradores": _brl(_mor_f) if _mor_f else "—",
                 "captura": (round(float(_cap)) if _cap is not None else "—"),
                 "receita": _brl(ob.get("receita_mensal_est")) if ob.get("receita_mensal_est") else "—",
                 "quente": bool(ob.get("janela_quente")),
+                "_mor_f": _mor_f or 0.0,
             })
         # Janela quente (C) — obras na reta final → diretriz de contato/MKT.
         janelas = []
@@ -1738,75 +1772,38 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
                 "preco": f"R$ {_brl(_rp_min)}" if _rp_min else "—",
                 "entrega": str(r.get("previsao_entrega") or "—"),
             })
+        obras_ficha = obras_ficha[:6]
+        _moradores_footer = (
+            _brl(sum(x.pop("_mor_f") for x in obras_ficha))
+            if obras_ficha
+            else _brl(df.get("moradores_total_est"))
+        )
         demanda = {
             "n": int(df.get("provavel_residencial_n") or 0),
             "captura": int(float(df.get("captura_total_est") or 0)),
             "receita": _brl(df.get("receita_total_mensal_est")),
-            "moradores": _brl(df.get("moradores_total_est")),
+            "moradores": _moradores_footer,
             "radar": radar_ficha,
-            "obras": obras_ficha[:6],
+            "obras": obras_ficha,
             "janela_quente_n": int(df.get("janela_quente_n") or 0),
             "janelas": janelas[:4],
         }
 
-    # Oferta CNPJ: aberturas + baixas (market_context / arvore_oferta)
-    ent = meta.get("entrantes_cnpj_90d")
-    mkt = model.market
+    # Oferta CNPJ dedicada removida do PDF cliente — Q1 fica só no panorama (Fase 1.2).
     novas_unidades = None
-    has_ent = isinstance(ent, dict) and (ent.get("total") or 0) > 0
-    has_baixas = mkt is not None and (
-        mkt.baixas_cnpj_90d is not None or mkt.baixas_cnpj_q is not None
-    )
-    if has_ent or has_baixas:
-        pressao_label = None
-        carimbo = "Fonte: RFB CNPJ Aberto"
-        if mkt is not None:
-            pressao_label = {
-                "retracao": "retração",
-                "expansao": "expansão",
-                "neutro": "neutro",
-            }.get((mkt.pressao_oferta_q or "").lower(), mkt.pressao_oferta_q)
-            bits = ["Fonte: RFB CNPJ Aberto"]
-            if mkt.janela_q_label:
-                bits.append(mkt.janela_q_label)
-            if mkt.cnpj_as_of:
-                bits.append(f"as_of {mkt.cnpj_as_of}")
-            carimbo = " · ".join(bits)
-        total_aberturas = (
-            _int(ent.get("total")) if isinstance(ent, dict) else None
-        )
-        if total_aberturas is None and mkt is not None:
-            total_aberturas = mkt.novos_cnpj_90d
-        novas_unidades = {
-            "total": total_aberturas if total_aberturas is not None else 0,
-            "dias": (ent.get("dias") if isinstance(ent, dict) else None) or 90,
-            "cidade": str(
-                (ent.get("cidade") if isinstance(ent, dict) else None)
-                or model.cidade
-                or "—"
-            )[:20],
-            "bairro_total": (
-                _int(ent.get("total_bairro"))
-                if isinstance(ent, dict) and ent.get("total_bairro") is not None
-                else None
-            ),
-            "bairro_nome": (
-                str(ent.get("bairro_alvo") or "")[:20] or None
-                if isinstance(ent, dict)
-                else (model.bairro[:20] if model.bairro else None)
-            ),
-            "baixas_90d": mkt.baixas_cnpj_90d if mkt else None,
-            "baixas_q": mkt.baixas_cnpj_q if mkt else None,
-            "saldo_q": mkt.saldo_oferta_q if mkt else None,
-            "pressao": pressao_label,
-            "janela_q": mkt.janela_q_label if mkt else None,
-            "baixas_bairro_q": mkt.baixas_bairro_q if mkt else None,
-            "carimbo": carimbo,
-        }
 
     # V3 — flag de fiscal (mostra a sub-tabela "Tributos & Ocupação") + box de ocupação
     # estourada (cenário onde aluguel não cabe no teto). Determinístico, do A4.
     cenarios_tem_fiscal = any(c.get("tem_fiscal") for c in cenarios)
+    inad_parts = [
+        f"{c['modelo']} {c['inad']}"
+        for c in cenarios
+        if c.get("inad")
+    ]
+    receita_inad_run = (
+        f"Inadimplência neste run: {' · '.join(inad_parts)}."
+        if inad_parts else None
+    )
     ocupacao_alertas = [
         {
             "modelo": c["modelo"], "ocupacao": c["ocupacao"], "teto": c["teto"],
@@ -1860,15 +1857,36 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             )
         if competidores:
             _n_comp = len(competidores)
+            _n_analisados = sum(1 for x in competidores if x.get("profundidade") == "analisado")
+            _n_mapeados = sum(1 for x in competidores if x.get("profundidade") == "mapeado")
             _com_tier = sum(1 for x in competidores if x.get("tier") not in (None, "—"))
             _sat = (panorama or {}).get("saturacao") or model.nivel_saturacao or "—"
+            if _n_analisados and _n_mapeados == 0:
+                _contagem = (
+                    f"{_n_analisados} concorrente{'s' if _n_analisados != 1 else ''} no bairro, "
+                    f"todos com reviews e planos analisados"
+                )
+            elif _n_analisados and _n_mapeados:
+                _contagem = (
+                    f"{_n_comp} concorrentes no bairro — {_n_analisados} com reviews e planos, "
+                    f"{_n_mapeados} ainda sem análise completa nesta rodada"
+                )
+            elif _n_analisados:
+                _contagem = (
+                    f"{_n_analisados} concorrente{'s' if _n_analisados != 1 else ''} "
+                    f"com reviews e planos analisados na praça"
+                )
+            else:
+                _contagem = (
+                    f"{_n_comp} concorrente{'s' if _n_comp != 1 else ''} no bairro"
+                )
             narrativa["competitiva"] = (
-                f"Leitura executiva: {_n_comp} concorrente{'s' if _n_comp != 1 else ''} com reviews analisados na praça, "
+                f"Leitura executiva: {_contagem}, "
                 f"saturação {_sat} pela contagem no bairro. "
                 + (f"{_com_tier} deles com presença em agregador corporativo (tier Wellhub) — sinal de disputa também "
                    f"pelo público de benefício-empresa. " if _com_tier else "")
-                + "As dores medidas nos reviews são o mapa da diferenciação: o que a praça executa "
-                  "mal é o que o entrante deve executar com excelência."
+                + "As dores medidas nos reviews são o mapa da diferenciação: "
+                  "o que a praça executa mal é o que o entrante deve executar com excelência."
             )
         if cenarios:
             _rec = next((c for c in cenarios if c.get("recomendado")), None)
@@ -1912,9 +1930,13 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         mix: dict[str, Any] = _mix_raw if isinstance(_mix_raw, dict) else {}
         n10 = _raw_matriz.get("n_per_10k")
         rating = _raw_matriz.get("rating_medio")
+        todos_inviaveis = bool(cenarios) and all(
+            "INVI" in str(c.get("viab") or "").upper() for c in cenarios
+        )
+        modelo_txt = str(_raw_matriz.get("modelo_sugerido") or "").replace("_", " ")
         matriz = {
             "quadrante": _raw_matriz.get("quadrante"),
-            "modelo": str(_raw_matriz.get("modelo_sugerido") or "").replace("_", " "),
+            "modelo": modelo_txt,
             "n": _raw_matriz.get("n_poligono"),
             "n_per_10k": f"{float(n10):.2f}" if n10 is not None else "n/d",
             "mix": (
@@ -1923,6 +1945,13 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "rating": f"{float(rating):.1f} ★" if rating is not None else "—",
             "acao": _raw_matriz.get("acao_estrategica") or "—",
             "carimbo": _raw_matriz.get("carimbo"),
+            "nota_contradicao": (
+                "O modelo sugerido vem de demografia e concorrência, mas todos os "
+                "cenários financeiros são inviáveis nas condições atuais de área/aluguel. "
+                "Revisar m², aluguel ou ticket antes de seguir o posicionamento sugerido."
+                if todos_inviaveis and modelo_txt else None
+            ),
+            "nota_oceano_vs_absorcao": None,
         }
 
     _raw_abs = pos.get("absorcao_margem_fresca") or meta.get("absorcao_margem_fresca")
@@ -1972,6 +2001,21 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             ),
         }
 
+    if matriz is not None and matriz.get("n") is not None and absorcao is not None and isinstance(_raw_abs, dict):
+        rotulo_id = str(_raw_abs.get("rotulo") or "")
+        deficit = rotulo_id == "roubo"
+        if not deficit:
+            try:
+                mg = _raw_abs.get("margem_fresca")
+                deficit = mg is not None and float(mg) < 0
+            except (TypeError, ValueError):
+                deficit = False
+        if deficit:
+            matriz["nota_oceano_vs_absorcao"] = (
+                "Oceano Azul fala de faixa (renda × mix no polígono), não de ‘há aluno novo’. "
+                "Déficit no bloco Quem ainda pode matricular é outra pergunta."
+            )
+
     return {
         "narrativa": narrativa,
         "bairro": model.bairro, "cidade": model.cidade, "uf": model.uf,
@@ -1998,9 +2042,15 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "vc": vc, "voc": voc, "errc": errc, "modelo_recomendado": model.modelo_recomendado,
         "gaps": _gaps_rich(pos),
         "ticket_rec": ticket_rec, "ticket_banda": ticket_banda,
+        "ticket_indeterminado": ticket_indeterminado,
         "benchmarks": [c["nome"][:26] + (f" ({c['bairro']})" if c["bairro"] != "—" else "") for c in competidores[:4]],
         "resumo": _limpar_md(model.resumo_executivo),
-        "posicionamento_txt": _limpar_md(model.posicionamento),
+        "posicionamento_txt": (
+            _limpar_md(pos.get("markdown") if isinstance(pos.get("markdown"), str) else None)
+            or _limpar_md(model.posicionamento)
+            if ticket_indeterminado else
+            _limpar_md(model.posicionamento)
+        ),
         "scores_dim": scores_dim,
         "scores": {
             "bairro": f"{model.score_bairro:.1f}" if model.score_bairro is not None else "—",
@@ -2012,7 +2062,8 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         "matriz": matriz,
         "absorcao": absorcao,
         "cenarios": cenarios, "kpi_fin": kpi_fin, "capex": capex,
-        "cenarios_tem_fiscal": cenarios_tem_fiscal, "ocupacao_alertas": ocupacao_alertas,
+        "cenarios_tem_fiscal": cenarios_tem_fiscal, "receita_inad_run": receita_inad_run,
+        "ocupacao_alertas": ocupacao_alertas,
         "zona": zona, "alertas_ff": alertas_ff,
         "competidores": competidores, "competidores_tem_tier": tem_tier,
         "competidores_tem_mapeado": tem_mapeado,

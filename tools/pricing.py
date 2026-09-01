@@ -18,20 +18,24 @@ import os
 # (consultado 2026-05-29). Vertex AI e Gemini API têm preços idênticos.
 # ---------------------------------------------------------------------------
 PRICING_BRL_PER_MILLION: dict[str, dict[str, float]] = {
-    # Gemini 2.5 Flash GA — Text Input / Output (standard, não batch/priority)
+    # Gemini 3.6 Flash (canônico) — placeholder até CSV de billing atualizar;
+    # banda alinhada ao antigo Flash 2.5 standard (2026-05-29).
+    "gemini-3.6-flash": {
+        "input": 1.703181374,
+        "output": 14.193178124,
+    },
+    # Legado 2.5 (deprecado) — mesmas chaves p/ telemetria de runs antigos
     "gemini-2.5-flash": {
         "input": 1.703181374,
         "output": 14.193178124,
     },
-    # Gemini 2.5 Flash Lite — mais barato, usado em A3b competitor_analysis
     "gemini-2.5-flash-lite": {
         "input": 0.567727124,
         "output": 2.270908499,
     },
-    # Gemini 2.5 Pro — usado em A4 (financial_estimator) e A6 (report_consolidator)
     "gemini-2.5-pro": {
-        "input": 7.096589062,    # short context (<=128k)
-        "output": 56.772712499,  # short context
+        "input": 7.096589062,
+        "output": 56.772712499,
     },
     # Fallbacks compatíveis
     "gemini-2.0-flash": {
@@ -70,8 +74,8 @@ MAPS_API_BRL_PER_CALL: dict[str, float] = {
 # Helpers
 # ---------------------------------------------------------------------------
 def _lookup_model(model_raw: str | None) -> str | None:
-    """Normaliza p/ a chave de preço. Robusto a 'models/gemini-2.5-flash' E ao repr
-    do objeto Gemini do ADK (\"model='gemini-2.5-flash' ... retry_options=...\") — o
+    """Normaliza p/ a chave de preço. Robusto a 'models/gemini-3.6-flash' E ao repr
+    do objeto Gemini do ADK (\"model='gemini-3.6-flash' ... retry_options=...\") — o
     wrap de retry passou a logar o repr inteiro no telemetry; sem isto o custo LLM zera.
     """
     if not model_raw:
@@ -180,9 +184,9 @@ def usd_brl_rate() -> float:
 
 # Preços legados em USD (aproximados) — usados só se alguém chamar compute_cost_usd
 _PRICING_USD_PER_MILLION: dict[str, dict[str, float]] = {
-    "gemini-2.5-flash": {"input": 0.30, "output": 2.50},
-    "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
-    "gemini-2.5-flash-lite": {"input": 0.10, "output": 0.40},
+    "gemini-3.6-flash": {"input": 0.30, "output": 2.50},
+    "gemini-3.6-flash": {"input": 1.25, "output": 10.00},
+    "gemini-3.6-flash": {"input": 0.10, "output": 0.40},
     "gemini-2.0-flash": {"input": 0.15, "output": 0.60},
 }
 

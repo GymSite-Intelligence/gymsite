@@ -4,7 +4,7 @@ Pipeline multi-agente que avalia viabilidade comercial de pontos para academias 
 
 > **Status:** produto end-to-end pronto pra demos com testers externos.
 > Pipeline **A0 → A6** via **Gemini Developer API** (`GOOGLE_GENAI_USE_VERTEXAI=false`) — Deep Research no A0; frontend Vite em `:5174`, dashboard `/custos` por org, multi-tenant via Supabase RLS.
-> Vertex AI fica **desligado por padrão** até o agente Deep Research existir no Vertex ([docs/VERTEX_SETUP.md](docs/VERTEX_SETUP.md)).
+> Vertex está **OFF** (`GOOGLE_GENAI_USE_VERTEXAI=false`, `VERTEX_RAG_ENABLED=0`); pipeline usa Gemini API / NVIDIA e RAG via Eros + corpus local. Histórico: [docs/VERTEX_SETUP.md](docs/VERTEX_SETUP.md).
 
 ---
 
@@ -64,7 +64,7 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A0 — ContextBuilder
 **Arquivo:** `agents/a0_context_builder.py`  
-**Modelo:** Gemini 2.5 Flash (thinking_budget=1024)  
+**Modelo:** Gemini 3.6 Flash (thinking_budget=1024)  
 **Input:** cidade, bairro, tipo_negocio, público alvo  
 **Output:** `contexto_mercado` (JSON), `insights_deep_research`, `benchmarks_setor`
 
@@ -75,7 +75,7 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A1 — GeoScout
 **Arquivo:** `agents/a1_geoscout.py`  
-**Modelo:** Gemini 2.5 Flash  
+**Modelo:** Gemini 3.6 Flash  
 **Input:** parâmetros de localização + contexto do A0  
 **Output:** `candidatos` (top 3 imóveis), `score_ancoragem`, `polos_geradores`
 
@@ -85,7 +85,7 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A2 — DemoAnalyst
 **Arquivo:** `agents/a2_demo_analyst.py`  
-**Modelo:** Gemini 2.5 Flash  
+**Modelo:** Gemini 3.6 Flash  
 **Input:** cidade, bairro  
 **Output:** `analise_demografica` (JSON)
 
@@ -123,7 +123,7 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A4 — FinancialEstimator
 **Arquivo:** `agents/a4_financial_estimator.py`  
-**Modelo:** Gemini 2.5 Flash  
+**Modelo:** Gemini 3.6 Flash  
 **Input:** candidatos, demografia, contexto de mercado  
 **Output:** `cenarios_financeiros` (3 cenários: low/mid/premium), `aluguel_estimado`, `payback`, `viabilidade`
 
@@ -133,7 +133,7 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A5 — ContactHunter
 **Arquivo:** `agents/a5_contact_hunter.py`  
-**Modelo:** Gemini 2.5 Flash  
+**Modelo:** Gemini 3.6 Flash  
 **Input:** top candidato + contexto do negócio  
 **Output:** `contato_decisor`, `script_abordagem`, `tipo_ponto`
 
@@ -144,7 +144,7 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A6 — ReportConsolidator
 **Arquivo:** `agents/a6_report_consolidator.py`  
-**Modelo:** Gemini 2.5 Pro (thinking alto)  
+**Modelo:** Gemini 3.6 Flash (thinking alto)  
 **Input:** outputs de A0–A5 via session state  
 **Output:** `relatorio_executivo` (markdown), `veredito`, `bairros_alternativos`, `alertas`
 
@@ -155,7 +155,7 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 ### A7 — MarketResearch
 **Arquivo:** `agents/a7_market_research.py`  
-**Modelo:** Gemini 2.5 Flash  
+**Modelo:** Gemini 3.6 Flash  
 **Input:** pergunta livre do usuário sobre tendências macro  
 **Output:** resposta com fontes (Search Grounding)
 
@@ -169,9 +169,9 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 
 | Camada      | Tech                                                          |
 |-------------|---------------------------------------------------------------|
-| LLM         | Gemini 2.5 Flash (default) + Gemini 2.5 Pro (consolidação)    |
+| LLM         | Gemini 3.6 Flash (default) + Gemini 3.6 Flash (consolidação)    |
 | Orquestração | Google ADK (`google-adk>=1.3.0`)                              |
-| Compute LLM | Gemini Developer API (`GOOGLE_API_KEY`); Vertex opcional (`GOOGLE_GENAI_USE_VERTEXAI=true`) |
+| Compute LLM | Gemini Developer API (`GOOGLE_API_KEY`) / NVIDIA (`PIPELINE_LLM_PROVIDER=nvidia`); Vertex OFF (`GOOGLE_GENAI_USE_VERTEXAI=false`) |
 | Backend     | FastAPI + Uvicorn, Python 3.12                                |
 | Banco       | Supabase Postgres (mesmo cluster do CFN), RLS multi-org       |
 | Dados ext.  | Google Maps Platform (Places, Distance Matrix, Street View) · IBGE Censo 2022 (REST `servicodados`) · PNAD/Atlas via Search Grounding · SearchAPI Tier 0 (horários de pico) · **OLX + ImovelWeb** (listings comerciais via Playwright headless — ver [docs/listing_sources.md](docs/listing_sources.md)) |
@@ -355,8 +355,8 @@ Pra granularidade por setor censitário do Censo 2022, a publicação SIDRA est�
 
 Pipeline atual gasta em média **R$ 4,45 por relatório** (10 concorrentes + horários de pico via SearchAPI free):
 
-- **78%** em `ReportConsolidator` + `FinancialEstimator` (Gemini 2.5 Pro)
-- Restante diluído em A0–A5 (Gemini 2.5 Flash) + Places API + Distance Matrix
+- **78%** em `ReportConsolidator` + `FinancialEstimator` (Gemini 3.6 Flash)
+- Restante diluído em A0–A5 (Gemini 3.6 Flash) + Places API + Distance Matrix
 
 Custos persistidos em `relatorios.custo_brl/tokens_total` e detalhados por agente em `relatorio_custos_agentes`. Dashboard `/custos` (visível a owner/admin) tem filtro por período, drill-down inline e (futuro) breakdown por org quando >1 tenant ativo.
 
@@ -369,13 +369,13 @@ Custos persistidos em `relatorios.custo_brl/tokens_total` e detalhados por agent
 - Frontend completo: listagem, novo relatório, viewer, comparador, mapa, custos, perfil
 - Auth email+senha + OTP, multi-tenant via RLS
 - Deep Research A0 via Interactions API; retry 30s/60s/120s em 429 no `api.py`
-- Vertex AI documentado em `VERTEX_SETUP.md` (não é o padrão de dev)
+- Vertex AI = legado OFF; `VERTEX_SETUP.md` é histórico (não é o padrão)
 - Horários de pico via SearchAPI (9/9 cobertura em testes)
 - Delete de relatórios `failed` direto da UI
 - A3 ancorado no bairro + A3a determinístico (2026-06-15)
 
 **Próximas issues (Linear VEC):**
-- `#120` Dockerfile + deploy Cloud Run do backend
+- `#120` Dockerfile + deploy do backend (hoje Hetzner VPS; Cloud Run deprecado)
 - `#121` Suíte pytest cobrindo agentes
 - `#122` OrgDropdown (depende de **VEC-417** super-admin cross-org)
 - `#125` Backend validar JWT no POST

@@ -93,7 +93,7 @@ Telemetria é anexada via `_attach_telemetry()` em `gymsite_intelligence/agent.p
 | `tokens_in` | Tokens de prompt |
 | `tokens_out` | Tokens de resposta |
 | `tokens_total` | Soma (fallback: in + out se API não retornar total) |
-| `model` | Modelo usado (gemini-2.5-flash, gemini-2.5-pro, etc.) |
+| `model` | Modelo usado (gemini-3.6-flash, gemini-3.6-flash, etc.) |
 | `fonte_usage` | De onde veio o `usage_metadata` (debug de captura) |
 | `finish_reason` | STOP / MAX_TOKENS / MALFORMED_FUNCTION_CALL / SAFETY / ERROR:* |
 

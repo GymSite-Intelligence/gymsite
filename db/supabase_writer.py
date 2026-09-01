@@ -250,7 +250,11 @@ def _rows_candidatos(rel: dict, relatorio_id: str) -> list[dict]:
             "endereco": c.get("endereco"),
             "place_id": c.get("place_id"),
             "tipo": (c.get("tipos") or ["establishment"])[0] if c.get("tipos") else None,
-            "area_estimada_m2": c.get("area_estimada_m2"),
+            "area_estimada_m2": (
+                c.get("area_estimada_m2")
+                if c.get("area_estimada_m2") is not None
+                else c.get("area_m2")
+            ),
             "lat": c.get("lat"),
             "lng": c.get("lng"),
             "score_geoscout": c.get("score_geoscout"),
@@ -672,6 +676,26 @@ def _rows_bairros_alternativos(rel: dict, relatorio_id: str) -> list[dict]:
 # API pública
 # ============================================================================
 
+def _sanitize_row(row: dict) -> dict:
+    """Coerce int/float antes do PostgREST (evita 22P02: '5.0' em integer)."""
+    from tools.supabase_type_sanitizer import sanitize_record
+
+    limpo, stats = sanitize_record(row)
+    if stats.get("int_convertidos") or stats.get("nullificados"):
+        _log("info", "row sanitizada antes do insert", {
+            "int_convertidos": stats.get("int_convertidos"),
+            "nullificados": stats.get("nullificados"),
+            "keys": [k for k in ("area_estimada_m2", "area_m2", "payback_meses",
+                                 "num_avaliacoes", "total_concorrentes_analisados")
+                     if k in limpo],
+        })
+    return limpo
+
+
+def _sanitize_rows(rows: list[dict]) -> list[dict]:
+    return [_sanitize_row(r) for r in rows if isinstance(r, dict)]
+
+
 def write_relatorio_to_supabase(
     relatorio: dict,
     markdown: Optional[str] = None,
@@ -698,7 +722,7 @@ def write_relatorio_to_supabase(
     t0 = time.time()
 
     # 1. Header relatórios — INSERT novo OU UPDATE existente (modo API HTTP)
-    header_row = _row_relatorios(relatorio, markdown, org_id)
+    header_row = _sanitize_row(_row_relatorios(relatorio, markdown, org_id))
     skip_inputs = False
     geo_preserve: dict[str, dict] = {}
     if relatorio_id:
@@ -729,24 +753,31 @@ def write_relatorio_to_supabase(
     # 2. Tabelas 1:1 (inputs + outputs)
     # Em modo API HTTP, a row de inputs já existe (criada pelo POST) — preservar
     if not skip_inputs:
-        client.table("relatorio_inputs").insert(_row_inputs(relatorio, relatorio_id)).execute()
-    client.table("relatorio_outputs").insert(_row_outputs(relatorio, relatorio_id)).execute()
+        client.table("relatorio_inputs").insert(
+            _sanitize_row(_row_inputs(relatorio, relatorio_id))
+        ).execute()
+    client.table("relatorio_outputs").insert(
+        _sanitize_row(_row_outputs(relatorio, relatorio_id))
+    ).execute()
 
     # 3. Tabelas N:1 simples
     for table, rows_fn in [
         ("candidatos", _rows_candidatos),
         ("bairros_alternativos", _rows_bairros_alternativos),
     ]:
-        rows = rows_fn(relatorio, relatorio_id)
+        rows = _sanitize_rows(rows_fn(relatorio, relatorio_id))
         if rows:
             client.table(table).insert(rows).execute()
 
-    rows_comp = _rows_competidores(relatorio, relatorio_id, geo_preserve=geo_preserve)
+    rows_comp = _sanitize_rows(
+        _rows_competidores(relatorio, relatorio_id, geo_preserve=geo_preserve)
+    )
     if rows_comp:
         client.table("competidores").insert(rows_comp).execute()
 
     # 4. Cenários — precisa capturar IDs gerados pra ligar sensibilidade
-    rows_cenarios = _rows_cenarios(relatorio, relatorio_id)
+    rows_cenarios = _sanitize_rows(_rows_cenarios(relatorio, relatorio_id))
+
     cenario_ids: dict[str, str] = {}
     if rows_cenarios:
         cen_resp = client.table("cenarios_financeiros").insert(rows_cenarios).execute()
@@ -757,7 +788,7 @@ def write_relatorio_to_supabase(
                 cenario_ids[modelo] = row["id"]
 
     # 5. Sensibilidade (3 stress tests × 3 cenários = 9 rows) — depende dos IDs
-    rows_sens = _rows_sensibilidade(relatorio, relatorio_id, cenario_ids)
+    rows_sens = _sanitize_rows(_rows_sensibilidade(relatorio, relatorio_id, cenario_ids))
     if rows_sens:
         client.table("sensibilidade_cenarios").insert(rows_sens).execute()
 

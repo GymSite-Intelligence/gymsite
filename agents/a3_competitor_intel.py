@@ -18,7 +18,7 @@ from tools.gemini_search_grounding import pesquisar_no_google_grounding
 
 competitor_intel_agent = Agent(
     name="CompetitorIntel",
-    model="gemini-2.5-flash",
+    model="gemini-3.6-flash",
     description=(
         "Inteligência competitiva profunda com perfil POR CONCORRENTE: serviços, "
         "reclamações nominadas, horários de pico, atividade marketing, gap analysis "

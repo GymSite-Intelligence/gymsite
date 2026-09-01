@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { fetchExplorar } from '@/lib/explorarApi'
 import { useAuth } from '@/lib/auth'
-import { API_BASE } from '@/lib/supabase'
 import type { AbsorcaoMargemFrescaJSON } from '@/hooks/useRelatorioDetail'
 import type { ExplorarRival } from '@/components/explorar/ExplorarMap'
 import type { Lente, TipoNegocioExplorar } from '@/components/explorar/explorarIso'
@@ -54,7 +54,7 @@ export function useExplorarAnalise() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE}/api/explorar/analisar`, {
+      const res = await fetchExplorar('/api/explorar/analisar', {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
@@ -86,7 +86,7 @@ export function useExplorarAnalise() {
     cidade?: string
     uf?: string
   }> {
-    const res = await fetch(`${API_BASE}/api/explorar/geocode`, {
+    const res = await fetchExplorar('/api/explorar/geocode', {
       method: 'POST',
       headers,
       body: JSON.stringify({ endereco }),

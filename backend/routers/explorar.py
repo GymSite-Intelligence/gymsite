@@ -71,6 +71,12 @@ class ExplorarIsocronasInput(BaseModel):
     modo: Literal["pe", "carro"] = "pe"
 
 
+class ExplorarTopViasInput(BaseModel):
+    lat: float
+    lng: float
+    bairro: Optional[str] = Field(default=None, max_length=120)
+
+
 def _user_id_from_request(request: Request) -> str | None:
     auth = request.headers.get("authorization") or ""
     token = auth.removeprefix("Bearer ").strip()
@@ -163,13 +169,15 @@ def _liberar_entitlement(email: str) -> None:
 
 
 def _resumo_email_explorar(out: dict[str, Any], cidade: str | None, bairro: str | None) -> dict[str, Any]:
-    absb = out.get("absorcao_margem_fresca") if isinstance(out.get("absorcao_margem_fresca"), dict) else {}
-    rivais = out.get("concorrentes") if isinstance(out.get("concorrentes"), list) else []
+    abs_raw = out.get("absorcao_margem_fresca")
+    absb: dict[str, Any] = abs_raw if isinstance(abs_raw, dict) else {}
+    conc = out.get("concorrentes")
+    rivais: list[Any] = conc if isinstance(conc, list) else []
     return {
         "cidade": cidade or out.get("cidade"),
         "bairro": bairro or out.get("bairro"),
         "label": out.get("base_espacial_label"),
-        "leituras": absb.get("leituras") if isinstance(absb, dict) else {},
+        "leituras": absb.get("leituras") if isinstance(absb.get("leituras"), dict) else {},
         "rivais": [
             {"nome": r.get("nome"), "dist_m": r.get("dist_m")}
             for r in rivais[:8]
@@ -231,6 +239,12 @@ async def explorar_analisar(
     ip = _client_ip(request)
     user_id = _user_id_from_request(request)
     bypass = _bypass_autorizado(request, None, ip)
+    auth = (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    if auth and not user_id and not bypass:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sessão expirada. Entre de novo para analisar.",
+        )
     email = str(data.email).lower().strip() if data.email else None
     reserved = False
 
@@ -319,6 +333,26 @@ async def explorar_isocronas(data: ExplorarIsocronasInput) -> dict[str, Any]:
             status_code=502,
             detail="Não deu para calcular o tempo a pé/carro neste ponto.",
         )
+
+
+@router.post("/top-vias")
+async def explorar_top_vias(data: ExplorarTopViasInput) -> dict[str, Any]:
+    from tools.fluxo_pedestre_tools import top_vias_por_fluxo
+
+    try:
+        raw = top_vias_por_fluxo(
+            data.lat,
+            data.lng,
+            top_n=5,
+            radius_m=2000,
+            bairro=data.bairro or "",
+        )
+        if not isinstance(raw, dict):
+            return {"status": "indisponivel", "top_vias": [], "confianca": "indisponivel"}
+        return {k: v for k, v in raw.items() if k not in ("mapa_svg", "mapa_png")}
+    except Exception:
+        logger.warning("top-vias falhou", exc_info=True)
+        return {"status": "indisponivel", "top_vias": [], "confianca": "indisponivel"}
 
 
 @router.post("/geocode")

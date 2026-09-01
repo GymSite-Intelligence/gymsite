@@ -62,6 +62,10 @@ class CenarioPdf:
     capex_contingencia: float | None
     viabilidade: str | None
     matriculas_realista: int | None
+    capex_frete: float | None = None
+    capital_giro: float | None = None
+    taxa_inadimplencia: float | None = None
+    ticket_realizado: float | None = None
     # V3 (A4) — tributos & ocupação por cenário; opcionais (relatórios antigos não têm).
     tributos_mensal: float | None = None
     aliquota_tributos: float | None = None  # fração (ex 0.06)

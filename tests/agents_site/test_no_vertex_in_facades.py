@@ -10,6 +10,9 @@ import pytest
 def _clear_eros_and_vertex(monkeypatch):
     for k in (
         "EROS_GROUP_ID_MERCADO",
+        "EROS_GROUP_ID_WELLHUB",
+        "EROS_GROUP_ID_TOTALPASS",
+        "EROS_GROUP_ID_GURUPASS",
         "EROS_GROUP_ID_REGULATORIO",
         "EROS_GROUP_ID_ENGENHARIA",
         "EROS_GROUP_ID_TECNICO",

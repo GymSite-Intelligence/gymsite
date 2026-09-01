@@ -160,3 +160,23 @@ def test_lista_vazia_retorna_vazia():
         tipo_negocio="academia",
     )
     assert resultado == []
+
+
+def test_gate_tipo_dropa_cf_tbox_parque_esportes():
+    """Academia tradicional: CF*/TBOX/Parque Esportes não contam no N do bairro."""
+    base = [
+        {"nome": "Academia Uniq Club", "tipos": ["gym"], "status": "OPERATIONAL"},
+        {"nome": "CF Cangaço", "tipos": ["gym"], "status": "OPERATIONAL"},
+        {"nome": "TBOX", "tipos": ["gym"], "status": "OPERATIONAL"},
+        {"nome": "Parque Esportes", "tipos": ["gym"], "status": "OPERATIONAL"},
+        {"nome": "CT Greenlife", "tipos": ["gym"], "status": "OPERATIONAL"},
+    ]
+    out = filtrar_concorrentes_bairro_tipo(
+        base, bairro="Cocó", tipo_negocio="academia"
+    )
+    nomes = {c["nome"] for c in out}
+    assert "Academia Uniq Club" in nomes
+    assert "CT Greenlife" in nomes
+    assert "CF Cangaço" not in nomes
+    assert "TBOX" not in nomes
+    assert "Parque Esportes" not in nomes

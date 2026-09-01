@@ -108,7 +108,7 @@ def test_retorna_agente(monkeypatch):
 
     agente = factory.build_llm_agent(
         name="teste",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         instruction="Você é um agente de teste.",
     )
     assert isinstance(agente, _FakeAgent)
@@ -130,7 +130,7 @@ def test_after_model_callback_injetado(monkeypatch):
 
     agente = factory.build_llm_agent(
         name="teste",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         instruction="Instrução.",
     )
     assert agente.after_model_callback is not None
@@ -157,7 +157,7 @@ def test_callbacks_encadeados(monkeypatch):
 
     agente = factory.build_llm_agent(
         name="teste",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         instruction="Instrução.",
         after_model_callback=_meu_callback,
     )
@@ -190,7 +190,7 @@ def test_callbacks_encadeados_contagem_multipla(monkeypatch):
 
     agente = factory.build_llm_agent(
         name="x",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         instruction="i",
         after_model_callback=_meu,
     )
@@ -219,7 +219,7 @@ def test_nao_encadeia_quando_proprio_e_telemetria(monkeypatch):
     # Passa o próprio _telemetria como callback — não deve duplicar
     agente = factory.build_llm_agent(
         name="x",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         instruction="i",
         after_model_callback=_telemetria,
     )
@@ -245,7 +245,7 @@ def test_model_string_vira_gemini(monkeypatch):
 
     agente = factory.build_llm_agent(
         name="x",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         instruction="i",
     )
     # Pode ser _FakeGemini (ADK disponível) ou str (ADK ausente — tolerado)
@@ -265,12 +265,12 @@ def test_model_gemini_tem_retry_options(monkeypatch):
 
     agente = factory.build_llm_agent(
         name="x",
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         instruction="i",
     )
     if isinstance(agente.model, _FakeGemini):
         assert agente.model.retry_options is not None
-        assert agente.model.model == "gemini-2.5-flash"
+        assert agente.model.model == "gemini-3.6-flash"
 
 
 # ---------------------------------------------------------------------------
@@ -288,7 +288,7 @@ def test_sem_callback_proprio_recebe_telemetria_direta(monkeypatch):
     m_tel.after_model_callback = _tel
     monkeypatch.setitem(sys.modules, "tools.token_telemetry", m_tel)
 
-    agente = factory.build_llm_agent(name="x", model="gemini-2.5-flash", instruction="i")
+    agente = factory.build_llm_agent(name="x", model="gemini-3.6-flash", instruction="i")
     # Callback deve ser a telemetria (ou um wrapper que a chama)
     agente.after_model_callback(None, None)
     assert chamadas["n"] == 1

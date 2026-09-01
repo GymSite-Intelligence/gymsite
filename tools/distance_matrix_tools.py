@@ -1,15 +1,17 @@
 """
-Google Distance Matrix API  distncia rodoviria real entre 2 pontos.
+Google Distance Matrix API — distância rodoviária real entre 2 pontos.
 
-Cache em disco (tools/cache/distance_matrix/*.json)  chave por par
-(origem, destino) com tolerncia de 0.001 (~100m). Distncias rodovirias
-no mudam em horizonte de anos; cache infinito  seguro.
+Cache em disco (tools/cache/distance_matrix/*.json) — chave por par
+(origem, destino) com tolerância de 0.001 (~100m). Distâncias rodoviárias
+não mudam em horizonte de anos; cache infinito é seguro.
 
-Custo: $5/1000 elements (Google Maps Platform pricing 2024).
-Com cache, ~80-90% das anlises hit cache aps 50 cidades cobertas.
+Live API: DESLIGADA por default (`DISTANCE_MATRIX_ENABLED=0`). GCP Maps billing
+foi deprecado no hot-path — frete cai no fallback por UF (antt_tools).
+Opt-in: DISTANCE_MATRIX_ENABLED=1 + GOOGLE_DISTANCE_MATRIX_API_KEY.
 
-Variveis de ambiente necessrias:
-    GOOGLE_DISTANCE_MATRIX_API_KEY  (ou GOOGLE_MAPS_API_KEY como fallback)
+Variáveis:
+    DISTANCE_MATRIX_ENABLED=0|1  (default 0)
+    GOOGLE_DISTANCE_MATRIX_API_KEY  (só se enabled=1; não reusa MAPS key)
 """
 
 import hashlib
@@ -20,6 +22,16 @@ from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _live_api_enabled() -> bool:
+    """GCP Distance Matrix off por default (billing deprecado no GymSite)."""
+    return (os.environ.get("DISTANCE_MATRIX_ENABLED") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
 # ---------------------------------------------------------------------------
 # Origens dos principais fornecedores fitness (lat, lng)
@@ -113,19 +125,25 @@ def calcular_distancia_rodoviaria(
         logger.debug("distance_matrix: cache HIT %s", key)
         return cached
 
-    # 2. Resolve API key
-    api_key = (
-        os.environ.get("GOOGLE_DISTANCE_MATRIX_API_KEY")
-        or os.environ.get("GOOGLE_MAPS_API_KEY")
-    )
-    if not api_key:
-        logger.warning(
-            "distance_matrix: GOOGLE_DISTANCE_MATRIX_API_KEY no definida  "
-            "usando fallback por UF."
+    # 2. Live API off (default) — chamador usa estimativa por UF
+    if not _live_api_enabled():
+        logger.debug(
+            "distance_matrix: live API desligada (DISTANCE_MATRIX_ENABLED!=1) — "
+            "fallback UF"
         )
         return None
 
-    # 3. Chama Google Distance Matrix via SDK oficial
+    # 3. Resolve API key (NÃO reusa GOOGLE_MAPS_API_KEY — evita REQUEST_DENIED
+    #    em chave Maps sem Distance Matrix / billing GCP).
+    api_key = (os.environ.get("GOOGLE_DISTANCE_MATRIX_API_KEY") or "").strip()
+    if not api_key:
+        logger.warning(
+            "distance_matrix: DISTANCE_MATRIX_ENABLED=1 sem "
+            "GOOGLE_DISTANCE_MATRIX_API_KEY — fallback por UF."
+        )
+        return None
+
+    # 4. Chama Google Distance Matrix via SDK oficial
     try:
         import googlemaps  # noqa: PLC0415  import lazy pra no quebrar se lib ausente
 
@@ -163,7 +181,7 @@ def calcular_distancia_rodoviaria(
             "rota_resumo": rota_resumo,
         }
 
-        # 4. Salva no cache antes de retornar
+        # 5. Salva no cache antes de retornar
         _save_cache(key, data)
         logger.info(
             "distance_matrix: %.0f km | %.1fh | %s",

@@ -668,7 +668,7 @@ def sugerir_passos(sb, tarefa_id: str, user_id: str) -> dict[str, Any]:
         client = build_genai_client()
         resp = generate_content_resilient(
             client,
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
             config={"response_mime_type": "application/json"},
         )

@@ -374,10 +374,11 @@ def top_vias_por_fluxo(
             }
         stats = analysis.get("statistics") or {}
         mapa_svg = None
+        mapa_png = None
         try:
             from tools.vias_geometry_tools import anexar_geometria_e_mapa
 
-            mapa_svg = anexar_geometria_e_mapa(
+            mapa_svg, mapa_png = anexar_geometria_e_mapa(
                 top_vias_out, list(features) if isinstance(features, list) else None, lat, lng
             )
         except Exception:
@@ -390,6 +391,7 @@ def top_vias_por_fluxo(
             "mean_flow_score": stats.get("mean_flow_score"),
             "bairro": bairro,
             "mapa_svg": mapa_svg,
+            "mapa_png": mapa_png,
             "recomendacao": (
                 "Validar in loco disponibilidade de imóvel comercial nestas vias "
                 "antes de fechar negociação."
@@ -452,15 +454,31 @@ def top_vias_por_fluxo(
             }
         )
 
+    ancoras_entorno: dict | None = None
+    try:
+        from tools.osm_pois import resumo_ancoras_ondeabrir
+
+        ancoras_entorno = resumo_ancoras_ondeabrir(lat, lng, raio_m=min(1000, int(radius_m)))
+        labels = [
+            f"{a['nome']} ({a['distancia_m']}m)"
+            for a in (ancoras_entorno.get("ancoras_top") or [])[:5]
+            if isinstance(a, dict) and a.get("nome")
+        ]
+        for v in top_vias_out:
+            v["ancoras_proximas"] = list(labels)
+    except Exception:
+        logger.warning("top_vias ancoras OSM falhou", exc_info=True)
+
     mapa_svg = None
+    mapa_png = None
     try:
         from tools.vias_geometry_tools import anexar_geometria_e_mapa
 
-        mapa_svg = anexar_geometria_e_mapa(top_vias_out, features, lat, lng)
+        mapa_svg, mapa_png = anexar_geometria_e_mapa(top_vias_out, features, lat, lng)
     except Exception:
         logger.warning("top_vias mapa_svg falhou", exc_info=True)
 
-    return {
+    out_block = {
         "status": "ok",
         "top_vias": top_vias_out,
         "confianca": confianca,
@@ -468,9 +486,13 @@ def top_vias_por_fluxo(
         "mean_flow_score": round(float(stats.get("mean_flow_score") or 0.0), 4),
         "bairro": bairro,
         "mapa_svg": mapa_svg,
+        "mapa_png": mapa_png,
         "recomendacao": (
             "Validar in loco disponibilidade de imóvel comercial nestas vias "
             "antes de fechar negociação. O fluxo estrutural indica prioridade "
             "de prospecção, não garante imóvel disponível."
         ),
     }
+    if ancoras_entorno:
+        out_block["ancoras_entorno"] = ancoras_entorno
+    return out_block

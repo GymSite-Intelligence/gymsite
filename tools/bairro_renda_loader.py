@@ -178,7 +178,11 @@ def _renda_bairro_ibge(cidade: str, uf: str, bairro: str) -> dict | None:
         if not rows:
             return None
         cnorm = _norm(cidade)
-        pick = next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), rows[0])
+        pick = next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), None)
+        if pick is None:
+            if len(rows) > 1:
+                return None
+            pick = rows[0]
         # DF: rejeita linha municipal artificial (bairro == cidade) se pediu RA/bairro real
         if (
             (uf or "").strip().upper() == "DF"

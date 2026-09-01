@@ -1,8 +1,8 @@
+import { SitePublicMenu, DEGUSTACAO_NAV, DEGUSTACAO_SANDBOX_NAV } from "@/components/site/SiteNavBrand";
 import { Link } from "@tanstack/react-router";
 import { Lock, ShieldCheck } from "lucide-react";
 import { SiteChat } from "@/components/SiteChat";
 import { AnaliseGratuitaFlow } from "@/components/site/AnaliseGratuitaFlow";
-import { explorarHref } from "@/lib/degustacaoUrls";
 
 /**
  * Layout canônico de `/degustacao` e `/teste` (desbloqueado).
@@ -38,12 +38,20 @@ const CHAT_VIEWPORT_CLASS =
 
 function DegustacaoLogoLink() {
   return (
-    <a href="/" className="flex items-center gap-3">
+    <a
+      href="/"
+      aria-label="GymSite Intelligence"
+      className="flex items-center gap-3 font-semibold tracking-tight"
+    >
       <img
-        src="/gymsite-logo-white.png"
-        alt="GymSite Intelligence"
-        className="h-10 w-auto sm:h-14"
+        src="/gymsite-pin-white.png"
+        alt=""
+        draggable={false}
+        className="h-9 w-auto object-contain sm:h-10"
       />
+      <span className="hidden sm:inline">
+        GymSite <span className="text-primary">Intelligence</span>
+      </span>
     </a>
   );
 }
@@ -52,29 +60,8 @@ function SandboxBadge() {
   return (
     <div className="ml-2 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200 sm:ml-3 sm:px-2.5 sm:text-xs">
       <ShieldCheck className="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
-      <span className="hidden sm:inline">Sandbox · sem Turnstile · sem caps</span>
+      <span className="hidden sm:inline">Sandbox · Eros · Gemini 3.6 Flash</span>
       <span className="sm:hidden">Sandbox</span>
-    </div>
-  );
-}
-
-function DegustacaoRouteNav({ variant }: { variant: DegustacaoRouteVariant }) {
-  return (
-    <div className="ml-auto flex items-center gap-3 text-sm text-muted-foreground sm:gap-4">
-      <Link to="/agentes" className="hover:text-foreground">
-        Especialistas
-      </Link>
-      <a href={explorarHref()} className="hover:text-foreground">
-        Explorar
-      </a>
-      {variant === "sandbox" ? (
-        <Link to="/degustacao" className="hover:text-foreground">
-          Degustação
-        </Link>
-      ) : null}
-      <a href="/" className="hover:text-foreground">
-        Início
-      </a>
     </div>
   );
 }
@@ -98,7 +85,10 @@ export function DegustacaoRouteShell({
       <header className={HEADER_CLASS}>
         <DegustacaoLogoLink />
         {variant === "sandbox" ? <SandboxBadge /> : null}
-        <DegustacaoRouteNav variant={variant} />
+        <SitePublicMenu
+          className="ml-auto"
+          links={variant === "sandbox" ? DEGUSTACAO_SANDBOX_NAV : DEGUSTACAO_NAV}
+        />
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col">

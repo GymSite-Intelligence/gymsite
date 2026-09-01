@@ -23,7 +23,9 @@ _BLOCOS_REMOVER: list[tuple] = [
     ("fatos_parque_cnpj", "novas_unidades_90d_por_segmento"),
     ("obras_cno_em_curso", "benchmark_tempo_obra"),
     ("zoneamento", "mapa_svg"),
+    ("zoneamento", "mapa_png"),
     ("melhores_vias_prospeccao", "mapa_svg"),
+    ("melhores_vias_prospeccao", "mapa_png"),
 ]
 
 _CAMPOS_OBRA_REMOVER = {

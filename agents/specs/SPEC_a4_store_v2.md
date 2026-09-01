@@ -31,7 +31,7 @@ Retest `6bb90ff7`: **1,7s** — aluguel MRLR hit / sem portais longos.
 
 ## 3. A4bak (legado LLM)
 
-Paste do usuário = `Agent(gemini-2.5-pro)` ecoando macro + instruction gigante.  
+Paste do usuário = `Agent(gemini-3.6-flash)` ecoando macro + instruction gigante.  
 **Fora do `agent.py` atual.** Manter só como referência anti-regressão:
 
 | | Prod BaseAgent | BAK LLM |

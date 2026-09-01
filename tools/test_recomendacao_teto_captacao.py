@@ -42,12 +42,17 @@ def test_premium_viavel_no_teto_com_pico_folgado():
     assert t["matriculas_alvo"] > 690
 
 
-def test_bairro_rico_eleva_premium():
+def test_bairro_rico_marca_premium_como_upside_nao_recomendacao():
+    from tools.financial_tools import _faixa_key_de_modelo
+
     cen = {"low": dict(_LOW), "mid": dict(_MID), "premium": _prem()}
     melhor = _escolher_cenario_recomendado(cen, 4952.0, 0.99)
-    assert melhor["modelo_key"] == "premium"
+    # Teto-de-captação anota UPSIDE no premium, mas a recomendação NÃO é INVIAVEL
+    # no realista (gate de viabilidade — auto-contradição no relatório).
     assert cen["premium"].get("_elegivel_teto") is True
     assert cen["premium"]["recomendado_no_teto_captacao"]["viabilidade"] != "INVIAVEL"
+    assert melhor["modelo"] != "nenhum"
+    assert _faixa_key_de_modelo(melhor.get("modelo") or "") != "premium"
 
 
 def test_bairro_pobre_nao_eleva_premium():

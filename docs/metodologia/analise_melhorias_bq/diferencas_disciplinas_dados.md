@@ -444,7 +444,7 @@ A tabela a seguir mapeia cada agente do GymSite à disciplina de dados correspon
 | **A3a/b/c** Competidores | Mapeamento e análise competitiva | **Análise de Dados** + **Ciência** | Google Places, reviews, shadow mapping |
 | **A4** FinancialEstimator | Cenários financeiros (CAPEX, payback) | **Análise de Dados** (financeira) | Search Grounding, ANTT, kits equipamentos |
 | **A5** ContactHunter | Identificação do decisor | **Administração de Dados** (enriquecimento) | Search + CNPJ + Receita Federal |
-| **A6** ReportConsolidator | Consolidação e veredito | **Ciência de Dados** (síntese) | Gemini 2.5 Pro + persistência Supabase |
+| **A6** ReportConsolidator | Consolidação e veredito | **Ciência de Dados** (síntese) | Gemini 3.6 Flash + persistência Supabase |
 
 O custo atual de **R$ 4,45 por relatório** e o tempo de execução de **~5 minutos** são métricas impressionantes para um produto end-to-end. Mas o projeto já identifica dezenas de **limitações e oportunidades** no seu próprio roadmap — e é exatamente aí que a nossa análise se torna acionável  [(ijsrtjournal.com)](https://www.ijsrtjournal.com/article/Gym-Management-System) .
 

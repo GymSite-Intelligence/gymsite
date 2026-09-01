@@ -55,10 +55,13 @@ def test_anexar_muta_top_vias():
         _feat("Av A", [[-38.48, -3.75], [-38.479, -3.749]], 1.0),
     ]
     top = [{"nome_via": "Av A", "fluxo_score": 100}]
-    svg = anexar_geometria_e_mapa(top, features, -3.75, -38.48)
+    svg, png = anexar_geometria_e_mapa(top, features, -3.75, -38.48)
     assert svg and "<svg" in svg
     assert top[0].get("coords")
     assert len(top[0]["coords"]) >= 2
+    # PNG pode ser None se tiles falharem (fail-soft); se vier, é data URI
+    if png:
+        assert png.startswith("data:image/png;base64,")
 
 
 def test_fail_soft_sem_features():

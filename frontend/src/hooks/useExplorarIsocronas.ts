@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { API_BASE } from '@/lib/supabase'
+import { fetchExplorar } from '@/lib/explorarApi'
 import type { ModoDesloc } from '@/components/explorar/explorarIso'
 
 export type ExplorarIsoRings = {
@@ -14,7 +14,7 @@ async function fetchIsocronas(
   lng: number,
   modo: ModoDesloc,
 ): Promise<ExplorarIsoRings> {
-  const res = await fetch(`${API_BASE.replace(/\/$/, '')}/api/explorar/isocronas`, {
+  const res = await fetchExplorar('/api/explorar/isocronas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ lat, lng, modo }),

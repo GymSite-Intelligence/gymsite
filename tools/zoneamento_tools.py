@@ -347,6 +347,24 @@ def _svg_mapa_zonas(lat: float, lon: float, polygons: list, *, raio: float = 0.0
     return "".join(partes)
 
 
+def _png_mapa_zonas(lat: float, lon: float, polygons: list) -> str | None:
+    """PNG OSM data URI — mesma geometria do SVG; fail-soft."""
+    try:
+        from tools.mapa_osm_real import try_mapa_zonas_data_uri
+
+        return try_mapa_zonas_data_uri(list(polygons or []), float(lat), float(lon))
+    except Exception:
+        logger.warning("mapa_osm zonas PNG falhou", exc_info=True)
+        return None
+
+
+def _mapas_zonas(lat: float, lon: float, polygons: list) -> dict[str, str | None]:
+    return {
+        "mapa_svg": _svg_mapa_zonas(lat, lon, polygons),
+        "mapa_png": _png_mapa_zonas(lat, lon, polygons),
+    }
+
+
 def _mapa_estatico_url(lat: float, lon: float, polygon: list | None, compat: str) -> str | None:
     """URL do mapa estático (Google Maps Static API). None se sem key."""
     try:
@@ -409,6 +427,7 @@ def _bloco_indisponivel(
         "restricoes": ["Validar zoneamento legal na prefeitura"],
         "alerta": _alerta_prefeitura(cidade, uf, extra=extra_alerta),
         "mapa_svg": None,
+        "mapa_png": None,
         "fonte_dados": None,
         "camada": "fallback_honesto",
     }
@@ -471,6 +490,7 @@ def _bloco_proxy_osm(
         "restricoes": ["Validar zoneamento legal na prefeitura"],
         "alerta": alerta,
         "mapa_svg": None,
+        "mapa_png": None,
         "fonte_dados": "OSM_landuse_proxy",
         "camada": "osm_proxy",
         "completude": p.get("completude") or "alta",
@@ -584,7 +604,7 @@ def _zoneamento_por_ckan(
             "descricao": "Fora de zona especial — uso geral (ZOC/ZEU), academia permitida.",
             "restricoes": [],
             "alerta": None,
-            "mapa_svg": _svg_mapa_zonas(latitude, longitude, polys),
+            **_mapas_zonas(latitude, longitude, polys),
             "fonte_dados": fonte,
             "fonte_url": fonte_url,
             "camada": "ckan_municipal",
@@ -616,7 +636,7 @@ def _zoneamento_por_ckan(
         "altura_max": params.get("altura_max"),
         "restricoes": [],
         "alerta": None,
-        "mapa_svg": _svg_mapa_zonas(latitude, longitude, polys),
+        **_mapas_zonas(latitude, longitude, polys),
         "fonte_dados": fonte,
         "fonte_url": fonte_url,
         "camada": "ckan_municipal",

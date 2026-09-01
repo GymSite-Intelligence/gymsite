@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { SiteNavBrand, SitePublicMenu, BLOG_NAV } from '@/components/site/SiteNavBrand'
 import { listBlogPosts } from '@/lib/blog/posts'
 import './blog.scoped.css'
 
@@ -9,18 +10,10 @@ export function BlogIndexPage() {
     <div className="gs-blog">
       <div className="wrap">
         <header className="top">
-          <a className="brand" href="/">
-            <img src="/gymsite-logo-white.png" alt="GymSite Intelligence" />
+          <a className="brand" href="/" aria-label="GymSite Intelligence">
+            <SiteNavBrand />
           </a>
-          <nav className="nav">
-            <a href="/#fontes">Fontes</a>
-            <a href="/agentes">Especialistas</a>
-            <a href="/explorar">Explorar</a>
-            <Link to="/blog" className="is-active">
-              Blog
-            </Link>
-            <a href="/degustacao">Degustação</a>
-          </nav>
+          <SitePublicMenu links={BLOG_NAV} activeHref="/blog" />
         </header>
 
         <section className="hero">

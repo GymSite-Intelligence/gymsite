@@ -46,6 +46,9 @@ _ALIAS_BAIRRO: dict[tuple[str, str], str] = {
     ("DF", "scia"): "SCIA/Estrutural",
     ("DF", "octogonal"): "Sudoeste/Octogonal",
     ("DF", "sudoeste"): "Sudoeste/Octogonal",
+    # RJ — base renda_bairro usa "Lagoa"; nome longo (geocode/OSM) → chave da tabela.
+    ("RJ", "lagoa rodrigo de freitas"): "Lagoa",
+    ("RJ", "rodrigo de freitas"): "Lagoa",
 }
 
 
@@ -79,7 +82,12 @@ def renda_bairro_ipece(cidade: str, uf: str, bairro: str) -> dict | None:
             return None
         # refina pela cidade quando houver match (evita bairro homônimo em outra cidade)
         cnorm = _norm(cidade)
-        pick = next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), rows[0])
+        pick = next((r for r in rows if _norm(r.get("cidade") or "") == cnorm), None)
+        if pick is None:
+            # Homônimos (ex.: Lagoa em Macaé vs Rio) — sem match de cidade não inventa.
+            if len(rows) > 1:
+                return None
+            pick = rows[0]
         # (c) transparência: marca a fonte quando veio por alias (aproximação)
         fonte = pick.get("fonte")
         if alias:

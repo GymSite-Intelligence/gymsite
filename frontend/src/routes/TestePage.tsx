@@ -7,6 +7,7 @@ import {
 /**
  * Sandbox dono/dev — mesmo shell que `/degustacao`, bypass Turnstile/caps
  * quando `?dev_token=` bate com `SITE_CHAT_BYPASS_TOKEN` no backend.
+ * RAG = Eros knowledge-ask (Gemini 3.6 Flash), igual à degustação.
  */
 export function TestePage() {
   const { dev_token, abrir } = useSearch({ from: "/teste" });

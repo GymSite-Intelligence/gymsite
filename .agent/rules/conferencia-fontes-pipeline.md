@@ -175,7 +175,7 @@ A7 = agente **lateral** (chat/grounding), **fora** do pipeline A0→A9.
 
 | Camada | Papel | Canônico |
 |---|---|---|
-| Query Formato 1 (`academia no bairro X, cidade - UF`) | Recall SearchAPI | Hint |
+| Query Formato 1 (`academia X, cidade - UF`) | Recall SearchAPI | Hint |
 | Centróide (geocode do ponto do relatório) | Âncora | Sim |
 | **Polígono IBGE do bairro** (Censo 2022) — se `resolver_bairro_poligono` hit | Gate de inclusão | **Preferido** (Spec C) |
 | `dist(centroid, place) ≤ R` com **R = 1000 m** | Gate de inclusão | **Fallback** sem polígono |

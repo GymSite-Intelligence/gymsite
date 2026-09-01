@@ -2,14 +2,21 @@
 Sinais de ancoragem urbana e checklist de diligência.
 
 Computa score_ancoragem (0-10) baseado em proximidade de polos geradores de
-fluxo (terminais de transporte + atacadistas) ao redor de cada candidato.
+fluxo (terminais, educação, saúde, comércio OSM + complementar text search).
 Estima visibilidade e detecta avenida principal via heurística determinística
 no código (LLM só consome o resultado, sem reinventar regra).
 
-Reusa funções de tools/maps_tools.py — não faz chamadas novas à API Google.
+Polos: VEC-378 Fase 2 `osm_pois` (Overpass) primeiro; Text Search só se faltar
+transporte/comércio.
 """
+from __future__ import annotations
+
+import logging
+
 from tools.maps_tools import buscar_imoveis_texto, calcular_distancia_km
 from tools.parametros_metodologia import param, param_int
+
+logger = logging.getLogger(__name__)
 
 
 CHECKLIST_DILIGENCIA = [
@@ -44,22 +51,48 @@ QUERIES_POLOS = {
 def buscar_polos_geradores(latitude: float, longitude: float,
                             raio_metros: int = 2000) -> list[dict]:
     """
-    Busca polos geradores de fluxo (terminais + atacadistas) num raio do bairro.
+    Busca polos geradores de fluxo num raio do bairro.
 
-    Faz Text Search por queries específicas e deduplica por place_id.
-    Use UMA VEZ por bairro, não por candidato — os polos são compartilhados.
-
-    Args:
-        latitude: lat do centróide do bairro
-        longitude: lng do centróide do bairro
-        raio_metros: raio de busca (padrão 2km)
+    Ordem (VEC-378 Fase 2): Overpass OSM primeiro; se vazio em comércio/transporte,
+    complementa Text Search só para atacadista (marcas). Use UMA VEZ por bairro.
 
     Returns:
         Lista de dicts com {place_id, nome, lat, lng, tipo_polo}.
     """
-    seen = set()
-    polos = []
-    for tipo, queries in QUERIES_POLOS.items():
+    polos: list[dict] = []
+    seen: set[str] = set()
+    try:
+        from tools.osm_pois import polos_para_ancoragem
+
+        for p in polos_para_ancoragem(latitude, longitude, raio_m=raio_metros):
+            pid = str(p.get("place_id") or "")
+            if not pid or pid in seen:
+                continue
+            seen.add(pid)
+            polos.append({
+                "place_id": pid,
+                "nome": p.get("nome", ""),
+                "lat": p.get("lat", 0),
+                "lng": p.get("lng", 0),
+                "tipo_polo": p.get("tipo_polo") or "educacao",
+                "fonte": p.get("fonte") or "overpass_osm",
+            })
+    except Exception:
+        logger.warning("buscar_polos_geradores: osm_pois falhou", exc_info=True)
+
+    tem_comercio = any(p.get("tipo_polo") == "atacadista" for p in polos)
+    tem_transp = any(p.get("tipo_polo") == "terminal_transporte" for p in polos)
+    if tem_comercio and tem_transp:
+        return polos
+
+    # Complemento legado: Text Search só nas queries que OSM não cobriu bem
+    queries_faltantes: dict[str, list[str]] = {}
+    if not tem_transp:
+        queries_faltantes["terminal_transporte"] = QUERIES_POLOS["terminal_transporte"]
+    if not tem_comercio:
+        queries_faltantes["atacadista"] = QUERIES_POLOS["atacadista"]
+
+    for tipo, queries in queries_faltantes.items():
         for q in queries:
             try:
                 resultados = buscar_imoveis_texto(q, latitude, longitude, raio_metros)
@@ -76,6 +109,7 @@ def buscar_polos_geradores(latitude: float, longitude: float,
                     "lat": r.get("lat", 0),
                     "lng": r.get("lng", 0),
                     "tipo_polo": tipo,
+                    "fonte": "text_search",
                 })
     return polos
 

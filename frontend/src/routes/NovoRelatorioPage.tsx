@@ -519,7 +519,7 @@ export function NovoRelatorioPage() {
 
       <form onSubmit={handleSubmitWrapper} className="space-y-6">
         {/* Localização (árvore Estado → Município → Bairro) */}
-        <section className="rounded-lg border border-border bg-card/40 p-5 space-y-4">
+        <section className="rounded-lg border border-border bg-card p-5 space-y-4">
           <h2 className="text-xs uppercase tracking-wider font-mono font-medium text-muted-foreground">
             Localização alvo
           </h2>
@@ -674,7 +674,7 @@ export function NovoRelatorioPage() {
         </section>
 
         {/* Parâmetros do imóvel */}
-        <section className="rounded-lg border border-border bg-card/40 p-5 space-y-4">
+        <section className="rounded-lg border border-border bg-card p-5 space-y-4">
           <h2 className="text-xs uppercase tracking-wider font-mono font-medium text-muted-foreground">
             Parâmetros do imóvel
           </h2>

@@ -15,4 +15,4 @@ Você está manipulando a espinha dorsal de inteligência do GymSite em `gymsite
 ## 🛠️ Regras de Escrita de Código do ADK
 * Novas ferramentas/agentes devem ser criados através da fábrica canônica em `tools/agent_factory.py`.
 * **Obrigatório:** Garantir telemetria de tokens e o mecanismo de retry nativo do modelo em erros 429/503.
-* **Cache Semântico:** Implementar `langcache` nas chamadas pesadas (como o estrategista A9 com `gemini-2.5-pro`) para economizar custos.
+* **Cache Semântico:** Implementar `langcache` nas chamadas pesadas (como o estrategista A9 com `gemini-3.6-flash`) para economizar custos.

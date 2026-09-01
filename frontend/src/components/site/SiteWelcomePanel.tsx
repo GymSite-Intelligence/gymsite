@@ -1,15 +1,6 @@
 import { ArrowRight, ShieldAlert } from "lucide-react";
-import { DEGUSTACAO_COPY, MERCADO_CONTEXTO_PESQUISAS } from "@/lib/degustacaoCopy";
+import { DEGUSTACAO_COPY } from "@/lib/degustacaoCopy";
 import type { AgenteLanding } from "./agentesLanding";
-
-function MiniCard({ kicker, detail }: { kicker: string; detail: string }) {
-  return (
-    <div className="rounded-xl border border-border/60 bg-card/50 p-3 text-left">
-      <span className="mb-0.5 block text-xs font-bold text-lime">{kicker}</span>
-      <span className="block text-[10px] leading-snug text-muted-foreground">{detail}</span>
-    </div>
-  );
-}
 
 interface SiteWelcomePanelProps {
   agente: AgenteLanding;
@@ -17,7 +8,6 @@ interface SiteWelcomePanelProps {
 }
 
 export function SiteWelcomePanel({ agente, onUseExample }: SiteWelcomePanelProps) {
-  const contextoPesquisas = agente.id === "degustacao" ? MERCADO_CONTEXTO_PESQUISAS : undefined;
   // Garante que o exemplo do Mercado inclua UF (ex.: "Fortaleza, CE") para o backend
   // parsear a localização corretamente sem reperguntar.
   const example =
@@ -64,34 +54,6 @@ export function SiteWelcomePanel({ agente, onUseExample }: SiteWelcomePanelProps
           Usar pergunta exemplo
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </button>
-      </div>
-
-      {contextoPesquisas?.length ? (
-        <div className="mt-4 w-full text-left">
-          <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            O que este consultor cruza
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {contextoPesquisas.map((item) => (
-              <span
-                key={item}
-                className="rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mt-5 grid w-full grid-cols-1 gap-2.5 sm:grid-cols-3">
-        {DEGUSTACAO_COPY.badgesAtritoZero.map((detail, i) => (
-          <MiniCard
-            key={DEGUSTACAO_COPY.miniCardKickers[i]}
-            kicker={DEGUSTACAO_COPY.miniCardKickers[i]}
-            detail={detail}
-          />
-        ))}
       </div>
 
       <div className="mt-4 w-full rounded-xl border border-lime/20 bg-lime/5 p-3.5 text-left">

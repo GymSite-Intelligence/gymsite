@@ -13,7 +13,7 @@ from google.adk.tools import google_search
 from tools.agent_factory import build_llm_agent
 market_research_agent = build_llm_agent(
     name="MarketResearch",
-    model="gemini-2.5-flash",
+    model="gemini-3.6-flash",
     # C6.2/C6.4: sem output_key o resultado se perdia (não ia pro state). Agora
     # consumidores leem state['market_research_result'] por contrato.
     output_key="market_research_result",

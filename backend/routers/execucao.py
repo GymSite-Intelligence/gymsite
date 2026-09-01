@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import re
 import uuid
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
@@ -39,12 +39,11 @@ def _require_user(request: Request) -> str:
         raise HTTPException(status_code=401, detail="Não autenticado")
     try:
         user_res = _sb().auth.get_user(token)
-        user = user_res.user
     except Exception:
-        user = None
-    if not user:
         raise HTTPException(status_code=401, detail="Sessão inválida ou expirada")
-    return user.id
+    if not user_res or not user_res.user:
+        raise HTTPException(status_code=401, detail="Sessão inválida ou expirada")
+    return user_res.user.id
 
 
 class GerarPlaybookRequest(BaseModel):
@@ -162,9 +161,10 @@ def gerar_playbook(data: GerarPlaybookRequest, request: Request):
         .maybe_single()
         .execute()
     )
-    if not rel or not rel.data:
+    rel_row = rel.data if rel is not None else None
+    if not isinstance(rel_row, dict):
         raise HTTPException(status_code=404, detail="Relatório não encontrado")
-    if rel.data.get("user_id") and rel.data["user_id"] != user_id:
+    if rel_row.get("user_id") and rel_row["user_id"] != user_id:
         raise HTTPException(status_code=403, detail="Este relatório pertence a outra conta")
 
     try:
