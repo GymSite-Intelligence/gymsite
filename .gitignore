@@ -1,7 +1,3 @@
-```
-# Documentation
-*.md
-```
 node_modules
 .vercel
 .env*
