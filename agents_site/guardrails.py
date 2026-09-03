@@ -12,6 +12,8 @@ RESULTADO da tool (a tool real NÃO roda). É a barreira real, independe do prom
 """
 from __future__ import annotations
 
+from agents_site.intent_gate import ferramenta_maps, mensagem_bloqueio_maps
+
 # Tools que só existem no diagnóstico completo (Tier 2) — bloqueadas na degustação.
 _BLOQUEADAS_DEGUSTACAO = frozenset({
     "estimar_investimento",
@@ -51,6 +53,19 @@ def gate_degustacao(tool, args, tool_context):
         return None  # consultor logado / teste: sem gate
 
     nome = getattr(tool, "name", None) or getattr(tool, "__name__", "")
+
+    if ferramenta_maps(nome):
+        user_msg = ""
+        if state is not None:
+            user_msg = str(state.get("user_message") or "")
+        args_dict = args if isinstance(args, dict) else {}
+        bloqueio = mensagem_bloqueio_maps(args_dict, user_msg)
+        if bloqueio:
+            return {
+                "bloqueado": True,
+                "mensagem": bloqueio,
+                "_meta": {"ferramenta": nome, "tier": "intent_maps"},
+            }
 
     if nome in _BLOQUEADAS_DEGUSTACAO:
         return _bloqueio(nome, "bloqueada")
