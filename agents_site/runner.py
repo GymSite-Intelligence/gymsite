@@ -16,6 +16,11 @@ from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 
 from agents_site.agent import root_agent
+from agents_site.intent_gate import (
+    aplicar_gate_grounding_sanitaria,
+    loc_resolvida_confiavel,
+    pin_especialista,
+)
 from agents_site.catalog import ESPECIALISTAS
 from agents_site.carimbo import extrair_citacoes, pack_citacoes_tool_results
 from agents_site.llm_route import (
@@ -223,6 +228,7 @@ async def _rodar_turno(
             "tier": tier,
             "agente": getattr(agente_obj, "name", "degustacao"),
             "amostras": _derivar_amostras(historico),
+            "user_message": mensagem,
         },
     )
     session = await session_service.get_session(
@@ -461,7 +467,7 @@ async def _executar_turno_site(
     historico: list[dict],
     agente: str,
 ) -> tuple[str, str | None, list[dict]]:
-    escolhido = _resolver_agente(agente)
+    escolhido = _resolver_agente(pin_especialista(agente, mensagem_efetiva))
     with site_chat_developer_api(escolhido):
         resposta, autor, alvo, acoes = await _rodar_turno_com_retry_self_transfer(
             escolhido,
@@ -488,6 +494,9 @@ async def _executar_turno_site(
     # Preferir narracao pos-tools quando há acoes e texto fraco/vazio.
     resposta = _reforcar_resposta_pos_tools(
         mensagem_efetiva, resposta, acoes or [], autor=autor
+    )
+    resposta, autor, acoes = aplicar_gate_grounding_sanitaria(
+        mensagem_efetiva, resposta, autor, acoes
     )
     return resposta, autor, acoes
 
@@ -553,8 +562,9 @@ async def run_site_agent_adk(
 
     loc = resolver_localizacao(mensagem, hint=localizacao_hint, previa=previa)
     mensagem_efetiva = injetar_contexto_localizacao(mensagem, loc)
+    agente = pin_especialista(agente, mensagem)
 
-    if loc.completa or (loc.bairro or loc.cidade):
+    if loc_resolvida_confiavel(loc):
         try:
             payload_loc = {
                 k: v for k, v in {
@@ -623,7 +633,7 @@ async def run_consultor_adk(
     historico = await carregar_historico(projeto_id, limite=20)
     await salvar_mensagem(projeto_id, role="user", content=mensagem)
 
-    escolhido = _resolver_agente(agente)
+    escolhido = _resolver_agente(pin_especialista(agente, mensagem))
     try:
         with site_chat_developer_api(escolhido):
             resposta, autor, alvo, acoes = await _rodar_turno_com_retry_self_transfer(
@@ -652,6 +662,9 @@ async def run_consultor_adk(
 
     resposta = _reforcar_resposta_pos_tools(
         mensagem, resposta, acoes or [], autor=autor
+    )
+    resposta, autor, acoes = aplicar_gate_grounding_sanitaria(
+        mensagem, resposta, autor, acoes
     )
 
     await _sync_consultor_pos_turno(projeto_id, usuario_id, acoes)

@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from agents_site.intent_gate import loc_resolvida_confiavel, parece_lugar
 from tools.bairro_normalize import fold_texto, formatar_bairro_exibicao
 
 _UFS = frozenset({
@@ -35,9 +36,14 @@ _VIRGULA_UF_RE = re.compile(
     r"^\s*([^,;\n]+?)\s*,\s*([^,;\n\-]+?)\s*[,-]?\s*([A-Za-z]{2})\s*[\?\.]?\s*$",
     re.IGNORECASE,
 )
-# Parangabá Fortaleza CE (três tokens, UF no fim)
+# Parangabá Fortaleza CE (três tokens, UF no fim) — só mensagem curta
 _TRES_TOKENS_UF_RE = re.compile(
-    r"^\s*(.+?)\s+(\S+)\s+([A-Za-z]{2})\s*[\?\.]?\s*$",
+    r"^\s*(\S+(?:\s+\S+){0,3})\s+(\S+)\s+([A-Za-z]{2})\s*[\?\.]?\s*$",
+)
+# "Cidade é Navegantes - SC" / "Cidade: Navegantes SC"
+_CIDADE_E_RE = re.compile(
+    r"^\s*cidade\s*(?:é|e|eh|:)?\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s]+?)\s*[-–,]\s*([A-Za-z]{2})\s*$",
+    re.IGNORECASE,
 )
 
 
@@ -138,6 +144,16 @@ def parse_localizacao_mensagem(mensagem: str) -> LocalizacaoResolvida:
 
     tipo = inferir_tipo_negocio(msg)
 
+    m = _CIDADE_E_RE.match(msg.rstrip("?!. "))
+    if m:
+        cidade = m.group(1).strip(" ,;")
+        uf = m.group(2)
+        if parece_lugar(cidade):
+            loc = _from_parts("", cidade, uf, tipo=tipo, origem="mensagem")
+            loc.completa = False
+            loc.confirme = True
+            return loc
+
     m = re.search(r"\bbairro\s+(.+?)\s+em\s+(.+)", msg, re.IGNORECASE)
     if m:
         bairro = m.group(1).strip(" ,;")
@@ -149,7 +165,7 @@ def parse_localizacao_mensagem(mensagem: str) -> LocalizacaoResolvida:
             cidade = " ".join(tokens[:-1]).strip(" ,;-")
         else:
             cidade = rest.strip(" ,;-")
-        if bairro and cidade:
+        if parece_lugar(bairro) and parece_lugar(cidade):
             return _from_parts(bairro, cidade, uf, tipo=tipo, origem="mensagem")
 
     m = re.search(r"\bno\s+([^,]+?)\s*,\s*([A-Za-zÀ-ÿ].*)", msg, re.IGNORECASE)
@@ -162,25 +178,32 @@ def parse_localizacao_mensagem(mensagem: str) -> LocalizacaoResolvida:
             cidade = " ".join(tokens[:-1]).strip(" ,;-")
         else:
             cidade = rest.strip(" ,;-")
-        if m.group(1).strip() and cidade:
-            return _from_parts(m.group(1), cidade, uf, tipo=tipo, origem="mensagem")
+        bairro = m.group(1).strip()
+        if parece_lugar(bairro) and parece_lugar(cidade):
+            return _from_parts(bairro, cidade, uf, tipo=tipo, origem="mensagem")
 
     m = _VIRGULA_UF_RE.match(msg)
-    if m:
+    if m and parece_lugar(m.group(1)) and parece_lugar(m.group(2)):
         return _from_parts(m.group(1), m.group(2), m.group(3), tipo=tipo, origem="mensagem")
 
     m = _TRES_TOKENS_UF_RE.match(msg)
-    if m and _norm_uf(m.group(3)):
+    if m and _norm_uf(m.group(3)) and parece_lugar(m.group(1)) and parece_lugar(m.group(2)):
         return _from_parts(m.group(1), m.group(2), m.group(3), tipo=tipo, origem="mensagem")
 
     return LocalizacaoResolvida(tipo_negocio=tipo, origem="")
+
+
+def _limpar_rotulo_cidade(s: str) -> str:
+    t = (s or "").strip()
+    m = re.match(r"^cidade\s*(?:é|e|eh|:)\s+(.+)$", t, re.IGNORECASE)
+    return (m.group(1).strip() if m else t).strip(" ,;-")
 
 
 def _from_hint_dict(hint: dict[str, Any] | None, *, origem: str) -> LocalizacaoResolvida:
     if not hint or not isinstance(hint, dict):
         return LocalizacaoResolvida()
     bairro = (hint.get("bairro") or hint.get("bairro_ascii") or "").strip()
-    cidade = (hint.get("cidade") or "").strip()
+    cidade = _limpar_rotulo_cidade((hint.get("cidade") or "").strip())
     uf = _norm_uf(hint.get("uf"))
     tipo = (hint.get("tipo_negocio") or "").strip()
     if not (bairro or cidade):
@@ -212,6 +235,10 @@ def resolver_localizacao(
 
     escolhido = LocalizacaoResolvida()
     for cand in candidatos:
+        if not loc_resolvida_confiavel(cand) and not (
+            cand.cidade and parece_lugar(cand.cidade) and not cand.bairro
+        ):
+            continue
         if cand.completa:
             escolhido = cand
             break

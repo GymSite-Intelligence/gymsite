@@ -214,3 +214,36 @@ def test_conversar_input_aceita_localizacao():
     )
     assert body.localizacao["uf"] == "CE"
     assert body.localizacao["bairro"] == "Parangabá"
+
+
+_PID_ULTIMA = (
+    "Para a Lanchonete a lista informada tem itens que devo manter registro "
+    "atualizado no local para apreciação da vigilancia, poderia me indicar quais são eles?"
+)
+
+
+def test_parse_nao_trata_frase_sanitaria_como_bairro_cidade():
+    loc = parse_localizacao_mensagem(_PID_ULTIMA)
+    assert not loc.completa
+    assert "vigilanc" not in (loc.bairro or "").lower()
+    assert "poderia" not in (loc.cidade or "").lower()
+    assert loc.uf != "ME"
+
+
+def test_parse_cidade_e_navegantes_sc():
+    loc = parse_localizacao_mensagem("Cidade é Navegantes - SC")
+    assert mesmos_lugares(loc.cidade, "Navegantes")
+    assert loc.uf == "SC"
+    assert "cidade" not in (loc.bairro or "").lower()
+    assert loc.cidade != "-"
+
+
+def test_resolver_preserva_previa_quando_frase_nao_e_lugar():
+    loc = resolver_localizacao(
+        _PID_ULTIMA,
+        previa={"bairro": "Centro", "cidade": "Navegantes", "uf": "SC"},
+    )
+    assert mesmos_lugares(loc.bairro, "Centro")
+    assert mesmos_lugares(loc.cidade, "Navegantes")
+    assert loc.uf == "SC"
+    assert loc.origem == "previa"
