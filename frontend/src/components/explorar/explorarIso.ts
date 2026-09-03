@@ -86,22 +86,17 @@ export function influenceFeatureCollection(
   }
 }
 
-const CARTO = ['a', 'b', 'c', 'd'] as const
-
-/** Mesma família CARTO do OndeAbrir (eles usam vector GL Positron / Dark Matter). */
-export const CARTO_ATTRIBUTION = '© CARTO, © OpenStreetMap contributors'
+/** OSM direto — CARTO raster (`light_all`/`dark_all`) agora exige API key e marca água. */
+export const OSM_ATTRIBUTION = '© OpenStreetMap contributors'
+export const CARTO_ATTRIBUTION = OSM_ATTRIBUTION
 
 export function tileProvider(style: MapStyle) {
-  return (x: number, y: number, z: number, dpr?: number) => {
-    const retina = dpr && dpr >= 2 ? '@2x' : ''
-    const s = CARTO[Math.abs(x + y) % 4]
-    if (style === 'escuro') {
-      return `https://${s}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}${retina}.png`
-    }
+  return (x: number, y: number, z: number, _dpr?: number) => {
     if (style === 'satelite') {
       return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
     }
-    return `https://${s}.basemaps.cartocdn.com/light_all/${z}/${x}/${y}${retina}.png`
+    const host = ['a', 'b', 'c'][Math.abs(x + y) % 3]
+    return `https://${host}.tile.openstreetmap.org/${z}/${x}/${y}.png`
   }
 }
 

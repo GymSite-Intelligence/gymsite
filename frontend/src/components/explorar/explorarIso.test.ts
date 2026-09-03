@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { influenceFeatureCollection } from './explorarIso.ts'
+import { influenceFeatureCollection, tileProvider } from './explorarIso.ts'
 
 const iso = {
   m5: [[-7.06, -34.84], [-7.07, -34.84], [-7.07, -34.85]] as [number, number][],
@@ -20,5 +20,9 @@ assert.equal(
   umKm.features.some((f) => f.properties?.key === 'lente'),
   true,
 )
+
+const claroUrl = tileProvider('claro')(100, 50, 12)
+assert.ok(claroUrl.includes('tile.openstreetmap.org'))
+assert.ok(!claroUrl.includes('basemaps.cartocdn.com'))
 
 console.log('explorarIso camada ok')
