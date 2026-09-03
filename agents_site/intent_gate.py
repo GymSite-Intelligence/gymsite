@@ -60,7 +60,7 @@ _TOOLS_MAPS = frozenset({
 })
 
 _VERBO_LUGAR = frozenset({
-    "poderia", "indicar", "quais", "sao", "eles", "itens", "lista",
+    "poderia", "indicar", "quais", "eles", "itens", "lista",
     "registro", "documentacao", "documentacoes", "necessarias",
     "vigilancia", "sanitaria", "sanitario", "apreciacao",
     "manter", "atualizado", "informada", "lanchonete", "devo",

@@ -66,6 +66,16 @@ def test_gate_maps_bloqueia_args_que_nao_sao_lugar():
     assert out.get("bloqueado") is True
 
 
+def test_loc_args_validos_inclui_sao_paulo():
+    tool = SimpleNamespace(name="buscar_concorrentes")
+    ctx = SimpleNamespace(
+        state={"tier": "degustacao", "user_message": "quantas academias em Perdizes, São Paulo - SP?"}
+    )
+    # Antes: "São Paulo" quebrava o gate por causa de token "sao".
+    out = gate_degustacao(tool, {"cidade": "São Paulo", "bairro": "Perdizes", "uf": "SP"}, ctx)
+    assert out is None
+
+
 def test_prosa_sem_rag_sanitaria_vira_abstencao():
     checklist = (
         "Mantenha planilhas de temperatura, POPs da RDC 216/2004 e "
