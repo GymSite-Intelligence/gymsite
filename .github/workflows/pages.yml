@@ -1,13 +1,14 @@
 # =============================================================================
-# GymSite Intelligence — Frontend → Cloudflare Pages (GYM-03)
-# Produção: https://gymsite.vectracargo.com.br | Preview: gymsite-3p0.pages.dev
+# GymSite Intelligence — Frontend → Cloudflare Pages
+# Produção: projeto CF `gymsite` → gymsite.com.br / getgymsite.com.br
+# (gymsite-3p0 = órfão sem custom domain — não usar)
 # =============================================================================
 name: Deploy Frontend (Cloudflare Pages)
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  PAGES_PROJECT: gymsite-3p0
-  PRODUCTION_URL: https://gymsite.vectracargo.com.br
+  PAGES_PROJECT: gymsite
+  PRODUCTION_URL: https://gymsite.com.br
   PREVIEW_URL: https://gymsite-3p0.pages.dev
 
 on:
