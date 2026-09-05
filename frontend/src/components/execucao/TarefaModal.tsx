@@ -240,26 +240,26 @@ export function TarefaModal({
             <Badge variant="secondary" className="rounded-full px-3 font-normal">
               {CATEGORIA_LABEL[tarefa.categoria] ?? tarefa.categoria}
             </Badge>
-            <Badge variant="secondary" className="rounded-full bg-blue-50 px-3 font-normal text-blue-700">
+            <Badge variant="secondary" className="rounded-full px-3 font-normal">
               {STATUS_LABEL[tarefa.status]}
             </Badge>
             {tarefa.sugerida_pela_ia && (
-              <Badge variant="secondary" className="gap-1 rounded-full bg-violet-50 px-3 font-normal text-violet-700">
+              <Badge variant="secondary" className="gap-1 rounded-full px-3 font-normal">
                 <Sparkles className="h-3 w-3" /> Sugestão da análise
               </Badge>
             )}
             {tarefa.esta_atrasada && (
-              <Badge variant="secondary" className="gap-1 rounded-full bg-red-50 px-3 font-normal text-red-700">
+              <Badge variant="destructive" className="gap-1 rounded-full px-3 font-normal">
                 <AlertTriangle className="h-3 w-3" /> {tarefa.dias_atraso} dia(s) de atraso
               </Badge>
             )}
             {variacao != null && variacao > 0 && (
-              <Badge variant="secondary" className="rounded-full bg-amber-50 px-3 font-normal text-amber-700">
+              <Badge variant="secondary" className="rounded-full border border-border px-3 font-normal">
                 Concluída {variacao} dia(s) depois do previsto
               </Badge>
             )}
             {variacao != null && variacao < 0 && (
-              <Badge variant="secondary" className="rounded-full bg-emerald-50 px-3 font-normal text-emerald-700">
+              <Badge variant="secondary" className="rounded-full px-3 font-normal">
                 Concluída {Math.abs(variacao)} dia(s) antes do previsto
               </Badge>
             )}
@@ -345,7 +345,7 @@ export function TarefaModal({
           {tarefa.origem_relatorio_insight && (
             <div className="border-t pt-4">
               <p className="mb-0.5 text-xs text-muted-foreground">Da sua análise</p>
-              <p className="text-sm leading-relaxed text-blue-900">{tarefa.origem_relatorio_insight}</p>
+              <p className="text-sm leading-relaxed">{tarefa.origem_relatorio_insight}</p>
             </div>
           )}
 
@@ -606,7 +606,7 @@ export function TarefaModal({
                   className="h-11"
                 />
                 {precisaGasto && (
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-destructive">
                     Esta etapa tem valor alto — informe o gasto real para manter seu orçamento confiável.
                   </p>
                 )}

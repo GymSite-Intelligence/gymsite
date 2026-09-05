@@ -1,10 +1,10 @@
 import { useSearch } from '@tanstack/react-router'
-import { DegustacaoRouteShell } from '@/components/site/DegustacaoRouteShell'
+import { EspecialistasChatShell } from '@/components/chat/EspecialistasChatShell'
 
 export function DegustacaoPage() {
   const { abrir, dev_token } = useSearch({ from: '/degustacao' })
   return (
-    <DegustacaoRouteShell
+    <EspecialistasChatShell
       variant="public"
       formulario={abrir === 'formulario'}
       devToken={dev_token?.trim() || undefined}

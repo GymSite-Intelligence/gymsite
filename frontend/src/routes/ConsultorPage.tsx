@@ -1,7 +1,7 @@
 import { useConsultorChat } from '@/hooks/useConsultorChat'
-import { ConsultorAppShell } from '@/components/chat/ConsultorAppShell'
+import { EspecialistasChatShell } from '@/components/chat/EspecialistasChatShell'
 
 export function ConsultorPage() {
   const chat = useConsultorChat()
-  return <ConsultorAppShell chat={chat} />
+  return <EspecialistasChatShell variant="app" chat={chat} />
 }

@@ -9,11 +9,9 @@ import {
   CpuIcon,
   FileTextIcon,
   GitCompareIcon,
-  Globe2Icon,
+  HexagonIcon,
   InboxIcon,
   LayoutDashboardIcon,
-  MapIcon,
-  MessageSquareIcon,
   TargetIcon,
 } from 'lucide-react'
 
@@ -35,24 +33,14 @@ export const appNavItems: SidebarNavItem[] = [
     icon: FileTextIcon,
   },
   {
-    title: 'Planos de abertura',
-    to: '/execucao',
+    title: 'CRM',
+    to: '/crm',
     icon: ClipboardListIcon,
   },
   {
     title: 'Explorar',
     to: '/explorar',
     icon: CompassIcon,
-  },
-  {
-    title: 'Mapa',
-    to: '/mapa',
-    icon: MapIcon,
-  },
-  {
-    title: 'Market Atlas',
-    to: '/market-atlas',
-    icon: Globe2Icon,
   },
   {
     title: 'Comparar',
@@ -73,11 +61,6 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Consultor',
     to: '/consultor',
     icon: BotIcon,
-  },
-  {
-    title: 'Assistente',
-    to: '/assistente',
-    icon: MessageSquareIcon,
   },
   {
     title: 'Obras CNO',
@@ -105,5 +88,5 @@ export const llmAdminNavItem: SidebarNavItem = {
 
 export function getSidebarNavItems(isOwnerOrAdmin: boolean): SidebarNavItem[] {
   if (!isOwnerOrAdmin) return appNavItems
-  return [...appNavItems, custosNavItem, llmAdminNavItem]
+  return [...appNavItems, custosNavItem]
 }

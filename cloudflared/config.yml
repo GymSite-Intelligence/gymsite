@@ -52,4 +52,15 @@ ingress:
       noTLSVerify: true
       originServerName: gymsite-api
 
+  # Uptime Kuma — painel status (sem porta host). DNS do túnel:
+  #   cloudflared tunnel route dns 12675577-d94b-4a19-b1df-a86713dbaf80 status.getgymsite.com.br
+  - hostname: status.getgymsite.com.br
+    service: http://uptime-kuma:3001
+    originRequest:
+      connectTimeout: 30s
+      keepAliveTimeout: 90s
+      keepAliveConnections: 100
+      http2Origin: false
+      noTLSVerify: true
+
   - service: http_status:404

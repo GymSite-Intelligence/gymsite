@@ -72,6 +72,16 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Uptime Kuma: monitor externo de /health (staging + prod). Sem ports no
+  #    host — cloudflared entrega status.getgymsite.com.br → :3001.
+  #    Spec: docs/superpowers/specs/2026-08-22-uptime-kuma-hetzner-design.md
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    volumes:
+      - uptime-kuma-data:/app/data
+    restart: unless-stopped
+
   # ── Cloudflare Tunnel: única porta de entrada. Lê ./cloudflared/config.yml +
   #    credentials.json. Não abre porta no host.
   cloudflared:
@@ -82,9 +92,11 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+      - uptime-kuma
 
 volumes:
   redis-data:
+  uptime-kuma-data:
 
 networks:
   default:

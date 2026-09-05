@@ -24,6 +24,25 @@ _SENSITIVE_HEADER_NAMES = frozenset({
     "proxy-authorization",
 })
 
+_CAPABILITY_HEADER_NAMES = frozenset({
+    "x-access-token",
+})
+
+_CAPABILITY_MASK_KEYS = frozenset({
+    "access_token",
+    "access_code",
+})
+
+
+def mask_capability_token(value: str | None) -> str | None:
+    """Mascara UUID capability — mantém últimos 4 chars para correlacionar logs."""
+    if not value:
+        return None
+    v = value.strip()
+    if len(v) <= 4:
+        return "****"
+    return f"{'*' * (len(v) - 4)}{v[-4:]}"
+
 
 def mask_cnpj(cnpj: str | None) -> str | None:
     """Mascara CNPJ: 12.345.678/0001-99 → 12.***.***/0001-99"""
@@ -169,8 +188,11 @@ def safe_headers(headers: Mapping[str, str]) -> dict[str, str]:
     """Retorna cópia dos headers HTTP com credenciais redacted."""
     out: dict[str, str] = {}
     for key, value in headers.items():
-        if key.lower() in _SENSITIVE_HEADER_NAMES:
+        lower = key.lower()
+        if lower in _SENSITIVE_HEADER_NAMES:
             out[key] = "[REDACTED]"
+        elif lower in _CAPABILITY_HEADER_NAMES:
+            out[key] = mask_capability_token(value) or "[REDACTED]"
         else:
             out[key] = value
     return out
@@ -182,7 +204,21 @@ _SPAN_MASK_BY_KEY: dict[str, Callable[[str], str | None]] = {
     "telefone": mask_phone,
     "whatsapp": mask_phone,
     "phone": mask_phone,
+    "access_token": mask_capability_token,
+    "access_code": mask_capability_token,
 }
+
+
+def safe_query_params(params: Mapping[str, str]) -> dict[str, str]:
+    """Cópia de query params com capability tokens mascarados."""
+    out: dict[str, str] = {}
+    for key, value in params.items():
+        if key.lower() in _CAPABILITY_MASK_KEYS or key.lower() == "token":
+            masked = mask_capability_token(value)
+            out[key] = masked if masked is not None else "[REDACTED]"
+        else:
+            out[key] = value
+    return out
 
 
 def safe_span_attribute(key: str, value: object) -> tuple[str, str] | None:

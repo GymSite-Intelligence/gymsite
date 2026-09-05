@@ -20,3 +20,8 @@ dist-ssr
 # Tooling
 .eslintcache
 .cache
+
+# Playwright
+e2e/.auth/
+playwright-report/
+test-results/

@@ -68,6 +68,7 @@ const APP_PREFIXES = [
   '/market-atlas',
   '/consultor',
   '/admin',
+  '/crm',
   '/execucao',
   '/assistente',
 ] as const
@@ -138,8 +139,9 @@ const privacidadeRoute = createRoute({
 const leadAccessRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/acesso',
-  validateSearch: (search: Record<string, unknown>): { code?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { code?: string; id?: string } => ({
     code: typeof search.code === 'string' ? search.code : undefined,
+    id: typeof search.id === 'string' ? search.id : undefined,
   }),
   component: LeadAccessPage,
 })
@@ -460,13 +462,13 @@ const adminLlmRoute = createRoute({
 
 const planosListRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/execucao',
+  path: '/crm',
   component: PlanosListPage,
 })
 
-const execucaoRoute = createRoute({
+const crmDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/execucao/$playbookId',
+  path: '/crm/$playbookId',
   component: ProjetoExecucaoPage,
   validateSearch: (
     s: Record<string, unknown>,
@@ -511,7 +513,9 @@ const routeTree = rootRoute.addChildren([
   adminParceirosRoute,
   adminLlmRoute,
   planosListRoute,
-  execucaoRoute,
+  crmDetailRoute,
+  execucaoLegacyListRoute,
+  execucaoLegacyDetailRoute,
 ])
 
 export const router = createRouter({ routeTree })

@@ -748,14 +748,9 @@ export function CenarioFinanceiroTable({
 
   // ── (c) INVESTIMENTO ──
   const rowsInvestimento: SubTableRow[] = [
-    { label: 'Equipamentos', values: (c) => formatBRL(c?.capex_detalhado?.equipamentos) },
     { label: 'Obra de adaptação', values: (c) => formatBRL(c?.capex_detalhado?.obra_adaptacao) },
     { label: 'Projeto arquitetônico', values: (c) => formatBRL(c?.capex_detalhado?.projeto_arquitetonico) },
     { label: 'Alvará e taxas', values: (c) => formatBRL(c?.capex_detalhado?.alvara_e_taxas) },
-    {
-      label: 'Frete equipamentos (ANTT)',
-      values: (c) => formatBRL(c?.capex_detalhado?.frete_equipamentos),
-    },
     { label: 'Contingência (10%)', values: (c) => formatBRL(c?.capex_detalhado?.contingencia_valor) },
     {
       label: 'CAPEX total',

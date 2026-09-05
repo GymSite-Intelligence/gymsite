@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "gymsite-3p0",
+  "name": "gymsite",
   "compatibility_date": "2026-06-01",
   "pages_build_output_dir": "dist"
 }

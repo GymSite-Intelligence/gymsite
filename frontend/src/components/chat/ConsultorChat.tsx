@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { Loader2, Plus, Download } from 'lucide-react'
+import { Download, Loader2, PanelLeft, PanelRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ChatInput } from '@/components/chat/ChatInput'
 import { ConsultorMessage } from '@/components/chat/ConsultorMessage'
 import { ConsultorWelcomePanel } from '@/components/chat/ConsultorWelcomePanel'
-import { ConsultorAgentAvatar } from '@/components/chat/ConsultorAgentAvatar'
+import { ConsultorProjetoAside } from '@/components/chat/ConsultorProjetoAside'
 import { ChatMiniCard } from '@/components/chat/ChatMiniCard'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { AGENT_ICONS } from '@/components/icons/gymsite-icons'
 import {
   ESPECIALISTAS,
@@ -17,7 +17,9 @@ import {
 import { CONSULTOR_COPY } from '@/config/gymsite-design-system'
 import { cn } from '@/lib/utils'
 import { apiIdFromUi } from '@/config/site-agent-map'
+import { useMediaQuery } from '@/hooks/use-media-query'
 import type { ChatMessageData } from '@/components/chat/ChatMessage'
+import type { ConsultorProjeto } from '@/hooks/useConsultorChat'
 import type { ConsultorSessionItem } from '@/lib/consultor-sessions'
 
 const IconeRelatorio = AGENT_ICONS.marketing_report_writer
@@ -26,6 +28,7 @@ interface ConsultorChatProps {
   messages: ChatMessageData[]
   sessions: ConsultorSessionItem[]
   activeProjetoId: string | null
+  projeto: ConsultorProjeto | null
   sugestoes: string[]
   isLoading: boolean
   isLoadingSessions: boolean
@@ -44,6 +47,7 @@ export function ConsultorChat({
   messages,
   sessions,
   activeProjetoId,
+  projeto,
   sugestoes,
   isLoading,
   isLoadingSessions,
@@ -58,7 +62,14 @@ export function ConsultorChat({
   onExportJson,
 }: ConsultorChatProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [input, setInput] = useState('')
   const [focado, setFocado] = useState<Especialista>(especialistaPadrao)
+  const [agentsCollapsed, setAgentsCollapsed] = useState(false)
+  const [projetoCollapsed, setProjetoCollapsed] = useState(true)
+  const [agentsSheetOpen, setAgentsSheetOpen] = useState(false)
+  const [projetoSheetOpen, setProjetoSheetOpen] = useState(false)
+  const isLg = useMediaQuery('(min-width: 1024px)')
+  const isXl = useMediaQuery('(min-width: 1280px)')
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -83,17 +94,10 @@ export function ConsultorChat({
 
   const especialistaAtivo = ESPECIALISTAS.find((e) => e.id === idDestaque) ?? focado
 
-  return (
-    <div className="flex min-w-0 flex-1">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
-        <div className="border-b border-border px-4 py-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-            {CONSULTOR_COPY.tagline}
-          </span>
-          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-            {CONSULTOR_COPY.subtitle}
-          </p>
-        </div>
+  const selectAgente = (e: Especialista) => {
+    setFocado(e)
+    setAgentsSheetOpen(false)
+  }
 
         <div className="px-3 pb-2 pt-3">
           <span className="pl-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -128,37 +132,57 @@ export function ConsultorChat({
                 <div className="min-w-0 flex-1">
                   <span
                     className={cn(
-                      'block text-xs font-bold',
-                      destacado ? 'text-primary' : 'text-foreground',
+                      'h-1.5 w-1.5 shrink-0 rounded-full',
+                      ativa ? 'bg-lime' : 'bg-muted-foreground/40',
                     )}
-                  >
-                    {e.nome}
-                  </span>
-                  <span className="block truncate text-[10px] leading-tight text-muted-foreground">
-                    {e.especialidade}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+                    aria-hidden
+                  />
+                  <span className="flex-1 truncate">{session.title || 'Nova conversa'}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
-        <div className="mx-3 h-px bg-border" />
+      <div className="mx-2 mb-2">
+        <ChatMiniCard
+          kicker={CONSULTOR_COPY.basesOficiais.kicker}
+          detail={CONSULTOR_COPY.basesOficiais.detail}
+        />
+      </div>
 
-        <div className="flex items-center justify-between px-3 py-2.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Conversas
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 px-2 text-[11px] text-primary hover:text-primary"
-            onClick={onNewSession}
-          >
-            <Plus className="h-3 w-3" />
-            Nova
-          </Button>
-        </div>
+      <div className="space-y-1.5 border-t border-border p-2">
+        <Button variant="outline" size="sm" className="h-8 w-full gap-2 text-xs" asChild>
+          <Link to="/explorar" search={{ novo: true }}>
+            <IconeRelatorio className="h-4 w-4 shrink-0" />
+            Novo relatório
+          </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-full gap-2 text-xs text-muted-foreground"
+          onClick={onExportJson}
+          disabled={!activeProjetoId && messages.length <= 1}
+        >
+          <Download className="h-3.5 w-3.5 shrink-0" />
+          Exportar JSON
+        </Button>
+      </div>
+    </>
+  )
+
+  return (
+    <div className="flex min-w-0 flex-1">
+      {!agentsCollapsed && (
+        <aside
+          id="sidebar-consultor-especialistas"
+          className="hidden w-56 shrink-0 flex-col border-r border-border bg-card lg:flex xl:w-60"
+        >
+          {sidebarContent}
+        </aside>
+      )}
 
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {isLoadingSessions ? (
@@ -202,30 +226,28 @@ export function ConsultorChat({
           )}
         </div>
 
-        <div className="mx-2 mb-2">
-          <ChatMiniCard
-            kicker={CONSULTOR_COPY.basesOficiais.kicker}
-            detail={CONSULTOR_COPY.basesOficiais.detail}
-          />
-        </div>
+          <span className="min-w-0 flex-1 truncate text-center text-[11px] text-muted-foreground sm:text-xs">
+            {especialistaAtivo.especialidade}
+          </span>
 
-        <div className="space-y-1.5 border-t border-border p-2">
-          <Button variant="outline" size="sm" className="h-8 w-full gap-2 text-xs" asChild>
-            <Link to="/explorar" search={{ novo: true }}>
-              <IconeRelatorio className="h-4 w-4 shrink-0" />
-              Novo relatório
-            </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-full gap-2 text-xs text-muted-foreground"
-            onClick={onExportJson}
-            disabled={!activeProjetoId && messages.length <= 1}
+          <button
+            type="button"
+            onClick={() => {
+              if (isXl) setProjetoCollapsed((v) => !v)
+              else setProjetoSheetOpen(true)
+            }}
+            className={cn(
+              'inline-flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition',
+              isXl && !projetoCollapsed
+                ? 'border-lime/30 bg-lime/10 text-lime'
+                : 'border-border bg-background text-foreground hover:bg-accent',
+            )}
+            aria-expanded={isXl ? !projetoCollapsed : projetoSheetOpen}
+            aria-controls={isXl ? 'sidebar-consultor-projeto' : 'sidebar-consultor-projeto-sheet'}
           >
-            <Download className="h-3.5 w-3.5 shrink-0" />
-            Exportar JSON
-          </Button>
+            <span className="hidden sm:inline">Projeto</span>
+            <PanelRight className="h-4 w-4 shrink-0 text-lime" aria-hidden />
+          </button>
         </div>
       </aside>
 
@@ -245,47 +267,44 @@ export function ConsultorChat({
           </div>
         )}
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+        <div
+          ref={scrollRef}
+          className="flex-1 space-y-3 overflow-y-auto bg-background px-3 py-3 sm:px-5 sm:py-4"
+        >
           {isWelcomeState ? (
             <ConsultorWelcomePanel
               especialista={focado}
               onSend={(text) => onSend(text, apiIdFromUi(focado.id))}
             />
           ) : (
-            <div className="mx-auto max-w-3xl space-y-3">
+            <>
               {messages.map((msg, i) => (
                 <ConsultorMessage key={msg.id} msg={msg} especialistaAnterior={especialistaAnterior(i)} />
               ))}
               {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                  <ConsultorAgentAvatar
-                    Icone={focado.Icone}
-                    imgSrc={focado.img}
-                    isActive
-                    size="inline"
-                  />
-                  <span className="flex items-center gap-2">
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
                     <span className="flex gap-1">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:150ms]" />
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary [animation-delay:300ms]" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-lime" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-lime [animation-delay:150ms]" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-lime [animation-delay:300ms]" />
                     </span>
                     Pesquisando bases públicas… (pode levar 1-3 min)
-                  </span>
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
         {!isLoading && sugestoes.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-t border-border px-4 py-2 sm:px-6">
+          <div className="flex flex-wrap gap-2 border-t border-border px-3 py-2 sm:px-5">
             {sugestoes.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => onSend(s, apiIdFromUi(focado.id))}
-                className="rounded-full border border-primary/40 px-3 py-1 text-xs text-foreground outline-none transition-colors hover:bg-primary/10 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-full border border-lime/40 px-3 py-1 text-xs text-foreground hover:bg-lime/10 hover:text-lime disabled:opacity-50"
               >
                 {s}
               </button>
@@ -294,37 +313,92 @@ export function ConsultorChat({
         )}
 
         {podeGerarRelatorio && !temRelatorio && (
-          <div className="flex items-center gap-2 border-t border-primary/20 bg-primary/10 px-4 py-2.5 text-xs text-foreground sm:px-6">
-            <IconeRelatorio className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-            <span className="flex-1">Dados suficientes para o Relatório Formal de Viabilidade.</span>
-            <Button
-              size="sm"
-              className="h-7 gap-1.5 text-xs"
+          <div className="border-t border-border bg-lime/5 p-3 text-center">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Dados suficientes para o{' '}
+              <span className="font-medium text-foreground">Relatório Formal de Viabilidade</span>.
+            </p>
+            <button
+              type="button"
               disabled={isGeneratingReport}
               onClick={onGerarRelatorio}
+              className="inline-flex items-center gap-1.5 rounded-md bg-lime px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-lime-glow disabled:opacity-50"
             >
               {isGeneratingReport ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <IconeRelatorio className="h-3.5 w-3.5" />
+                <IconeRelatorio className="h-4 w-4" />
               )}
               Gerar relatório
-            </Button>
+            </button>
           </div>
         )}
 
         {error && (
-          <div className="border-t border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive sm:px-6">
+          <div className="border-t border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive sm:px-5">
             {error}
           </div>
         )}
 
-        <ChatInput
-          onSend={(text) => onSend(text, apiIdFromUi(focado.id))}
-          isLoading={isLoading}
-          placeholder={focado.placeholder}
-        />
+        <form
+          onSubmit={submit}
+          className="flex gap-2 border-t border-border bg-card p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:p-3"
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={focado.placeholder}
+            disabled={isLoading}
+            className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="shrink-0 rounded-md bg-lime px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-lime-glow disabled:opacity-50 sm:px-4"
+          >
+            Enviar
+          </button>
+        </form>
       </div>
+
+      {!projetoCollapsed && (
+        <aside
+          id="sidebar-consultor-projeto"
+          className="hidden w-72 shrink-0 flex-col gap-3 overflow-y-auto border-l border-border bg-muted/20 p-4 xl:flex"
+        >
+          <ConsultorProjetoAside projeto={projeto} />
+        </aside>
+      )}
+
+      <Sheet open={agentsSheetOpen} onOpenChange={setAgentsSheetOpen}>
+        <SheetContent
+          id="sidebar-consultor-especialistas-sheet"
+          side="left"
+          className="flex w-[min(100%,18rem)] flex-col border-border bg-card p-0"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Especialistas</SheetTitle>
+            <SheetDescription>
+              Tema sugerido — o especialista certo assume conforme sua pergunta.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col pt-2">{sidebarContent}</div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={projetoSheetOpen} onOpenChange={setProjetoSheetOpen}>
+        <SheetContent
+          id="sidebar-consultor-projeto-sheet"
+          side="right"
+          className="flex w-[min(100%,20rem)] flex-col gap-3 overflow-y-auto border-border bg-muted/20 p-4 pt-12"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Projeto</SheetTitle>
+            <SheetDescription>Localização, pesquisas e status do relatório.</SheetDescription>
+          </SheetHeader>
+          <ConsultorProjetoAside projeto={projeto} />
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
