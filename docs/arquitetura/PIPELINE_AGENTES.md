@@ -46,9 +46,9 @@ GymSitePipeline (Sequential)
 
 ### A0 — ContextBuilder · [`a0_context_builder.py`](../../agents/a0_context_builder.py)
 - **Classe / model:** `Agent` (LLM) · gemini-3.6-flash (NVIDIA via `PIPELINE_LLM_PROVIDER`)
-- **Tools:** `carregar_market_bundle`, `dados_parque_cnpj_para_a0`, `fatos_competicao_local` (Deep Research/Kimi removidos — Act-on bundle-only)
-- **Lê:** `input_params` (cidade/bairro/uf) · **Escreve:** `market_context`, `a0_tool_snapshots` (payloads completos das tools)
-- **Fonte:** market_bundle (qualitativo) · CNPJ RFB/Supabase + CNO (quantitativo) · OSM (`fatos_competicao_local`)
+- **Tools:** `carregar_market_bundle`, `carregar_wikipedia_municipio`, `dados_parque_cnpj_para_a0`, `fatos_competicao_local` (Deep Research/Kimi removidos — Act-on bundle-only)
+- **Lê:** `input_params` (cidade/bairro/uf) · **Escreve:** `market_context`, `a0_tool_snapshots` (payloads completos das tools; wiki **não** é slimado)
+- **Fonte:** market_bundle (qualitativo) · Wikipedia/Wikidata município (qualitativo complementar, nunca canônico) · CNPJ RFB/Supabase + CNO (quantitativo) · OSM (`fatos_competicao_local`)
 - **Faz:** consolida contexto de mercado (ticket, tendência, redes, parque CNPJ/CNO). **Aqui mora a árvore 2×2 do parque** (`dados_parque_cnpj_para_a0` → `arvore_2x2_parque`).
 - **Slim prompt (ago/2026):** `after_tool_callback` `_a0_after_tool_slim` — grava tool response **completa** em `a0_tool_snapshots` e devolve versão slim (`tools/context_slimmer.py`) ao LLM. State/`market_context` final permanece completo (A4/A6 leem daqui). Loop/cap: `before_model_callback` (máx. 12 turns / tool repetida 3×) + `on_model_error_callback` fail-soft em estouro de contexto (NVIDIA 131k).
 - **Callback:** `after_agent_callback` `_a0_override_cnpj_numeros` — preferência por snapshot completo; fallback re-roda a tool e **sobrescreve todo número CNPJ** no `market_context` + pluga `arvore_2x2_parque`. Número = tool/banco, nunca LLM.
@@ -255,6 +255,7 @@ Seções na ordem do doc final (montado pelo A6). `PRÉ` = pré-computada (deter
 | Aluguel viabilidade | MRLR determinístico (`aluguel_mrlr.py`) | — | Preço de anúncio raspado |
 | Demografia | IBGE Censo 2022 / BQ | CKAN 2010, nominatim | LLM inventando número |
 | Parque CNPJ/CNO | RFB/Supabase determinístico | — | LLM (A0 override fecha) |
+| Contexto municipal qualitativo (A0) | Wikipedia pt + Wikidata (`carregar_wikipedia_municipio`) — **sempre junto ao bundle**, não fallback | missing/error → segue | Usar pop/IDH/PIB wiki como A2/CNPJ/MRLR/score |
 | Fluxo pedestre | OSMnx malha + Overpass POI | **nenhum grid sintético** | Score fake / fallback heurístico |
 | Zoneamento (ZEUS) | CKAN municipal (`zoneamento_municipio`) | OSM `landuse`/`zoning` → **uso observado** (`INDIVIDUALIZAR`) | Assumir `PERMISSIVO` sem malha; mapear OSM→veredito legal |
 

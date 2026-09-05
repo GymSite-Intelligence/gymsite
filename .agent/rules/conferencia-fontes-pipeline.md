@@ -16,6 +16,7 @@
 | Aluguel referência batch | ~~`bundle.aluguel_portais`~~ | **removido** — `tools/9_obsolete/` |
 | Demografia | IBGE Censo 2022 / espelhos BQ | LLM inventando número |
 | CNPJ/CNO | RFB/Supabase determinístico | LLM (A0 override fecha CNPJ) |
+| Contexto municipal qualitativo (A0) | Wikipedia pt + Wikidata (`tools/wikipedia_municipio.py`) — **sempre** com o bundle | Fallback do `market_bundle`; número canônico (A2/CNPJ/MRLR/score) |
 | Pico / popular times | SearchAPI `google_maps_place` + `cache_places_details` / `cache_popular_times` | A7 como fonte primária no pipeline |
 | Crowdsource §14 | Input usuário + validação | SearchAPI inventando demanda |
 | A7 gaps qualitativos | Google Search Grounding (chat on-demand) | Aluguel, concorrência, demografia |
@@ -162,7 +163,7 @@ A7 = agente **lateral** (chat/grounding), **fora** do pipeline A0→A9.
 | Qualquer fonte pipeline | Este arquivo + `pipeline-fontes-deterministicas.md` + `PIPELINE_AGENTES.md` §7–§9 |
 | Aluguel / MRLR | `SPEC_A4_FinancialEstimator.md` + `tools/aluguel_mrlr.py` docstring |
 | A7 escopo | `SPEC_A7_MarketResearch.md` |
-| A0 bundle | `SPEC_A0_ContextBuilder.md` + `market_bundle.py` comentários |
+| A0 bundle / wiki município | `SPEC_A0_ContextBuilder.md` + `market_bundle.py` + `wikipedia_municipio.py` |
 | Site / landing | `agents_site/tools.py` docstrings + `site_agent.py` header |
 | SearchAPI ingestão | `A9_SEARCHAPI_INGESTION.md` (rent_sqm = ORANGE, não A4 Tier 0) |
 | Agente novo | `.agent/AGENTS.md` + `processo-mudanca.md` § Pipeline |

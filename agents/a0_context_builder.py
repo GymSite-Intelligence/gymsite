@@ -3,7 +3,9 @@
 A0: Context Builder — primeiro agente do pipeline.
 
 Act-on A0 bundle-only (2026-07-16): Deep Research / Kimi FORA das tools.
-Qualitativo = market_bundle; quantitativo = CNPJ/CNO + fatos_competicao_local.
+Qualitativo = market_bundle + Wikipedia município (complementar, sempre tentada).
+Quantitativo = CNPJ/CNO + fatos_competicao_local. Wiki nunca é fallback do bundle
+nem fonte canônica de parque/score/ticket/MRLR.
 Sem interpretação além dos dados retornados pelas tools.
 
 Slim-down (2026-08-11): tool responses enviadas ao LLM são slim; o state guarda
@@ -23,6 +25,12 @@ from tools.cnpj_fitness_tools import dados_parque_cnpj_para_a0
 from tools.context_slimmer import slim_market_context_for_prompt
 from tools.local_market_facts import fatos_competicao_local
 from tools.market_bundle import carregar_market_bundle
+from tools.wikipedia_municipio import (
+    apply_contexto_local_wiki,
+    carregar_wikipedia_municipio,
+    fetch_wikipedia_municipio,
+    snapshot_for_a0,
+)
 
 logger = logging.getLogger("gymsite.a0")
 
@@ -135,9 +143,9 @@ def _a0_override_cnpj_numeros(callback_context):
         cidade = (ip.get("cidade") or inner.get("cidade") or "").strip()
         uf = (ip.get("uf") or inner.get("uf") or "").strip()
         bairro = (ip.get("bairro") or inner.get("bairro") or "").strip()
+        snaps = st.get("a0_tool_snapshots") if isinstance(st.get("a0_tool_snapshots"), dict) else {}
 
         if cidade:
-            snaps = st.get("a0_tool_snapshots") if isinstance(st.get("a0_tool_snapshots"), dict) else {}
             snap = snaps.get("dados_parque_cnpj_para_a0")
             if isinstance(snap, dict) and snap.get("status") == "ok":
                 tool = snap
@@ -174,6 +182,24 @@ def _a0_override_cnpj_numeros(callback_context):
                     "lacunas": tool.get("lacunas_conhecidas") or [],
                 }
                 inner["_cnpj_override"] = "deterministico_tool"
+                mudou = True
+
+        wiki_snap = snaps.get("carregar_wikipedia_municipio") if cidade else None
+        if not isinstance(wiki_snap, dict) or wiki_snap.get("status") not in (
+            "ok",
+            "missing",
+            "error",
+        ):
+            if cidade and uf:
+                try:
+                    wiki_snap = fetch_wikipedia_municipio(cidade, uf, bairro=bairro or None)
+                    snaps["carregar_wikipedia_municipio"] = wiki_snap
+                    st["a0_tool_snapshots"] = snaps
+                except Exception:
+                    wiki_snap = None
+        if isinstance(wiki_snap, dict):
+            # Wiki only fills contexto_local_wiki; parque_*/score_* stay CNPJ/empty.
+            if apply_contexto_local_wiki(inner, wiki_snap):
                 mudou = True
 
         if mudou:
@@ -262,14 +288,23 @@ def _a0_after_tool_slim(tool, args, tool_context, tool_response):
         hist.append(name)
         st["_a0_tool_call_history"] = hist[-30:]
 
-        if not isinstance(tool_response, dict):
-            return None
-
         snaps = st.get("a0_tool_snapshots")
         if not isinstance(snaps, dict):
             snaps = {}
+
+        if name == "carregar_wikipedia_municipio":
+            # Full wiki snapshot stays in state — do not slim.
+            snap = snapshot_for_a0(tool_response)
+            if isinstance(snap, dict):
+                snaps[name] = deepcopy(snap)
+                st["a0_tool_snapshots"] = snaps
+            return None
+
+        if not isinstance(tool_response, dict):
+            return None
+
         # Snapshot before slim — state keeps full payload for after_agent / A4-A6.
-        snaps[name] = deepcopy(tool_response) if isinstance(tool_response, dict) else tool_response
+        snaps[name] = deepcopy(tool_response)
         st["a0_tool_snapshots"] = snaps
 
         slim = slim_market_context_for_prompt(tool_response)
@@ -335,8 +370,8 @@ context_builder_agent = build_llm_agent(
     model="gemini-3.6-flash",
     generate_content_config=_GENERATE_CONFIG,
     description=(
-        "Constrói contexto de mercado (market_bundle + fatos CNPJ/CNO) "
-        "sem Deep Research/Kimi e sem inferências além das tools."
+        "Constrói contexto de mercado (market_bundle + Wikipedia município "
+        "+ fatos CNPJ/CNO) sem Deep Research/Kimi e sem inferências além das tools."
     ),
     instruction="""
 Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
@@ -348,22 +383,30 @@ Você é o ContextBuilder — primeiro agente do pipeline GymSite Intelligence.
   **aberturas recentes** / **fluxo de aberturas** (novas unidades 90d).
 - Você **consolida e cruza fatos** das tools; não é consultor criativo.
 - PROIBIDO chamar Deep Research / Kimi — tools removidas (Act-on A0 bundle-only).
+- PROIBIDO usar pop/IDH/PIB/área da Wikipedia como se fossem A2/IBGE, CNPJ ou MRLR.
+- Wiki **nunca** preenche `parque_*` nem `score_*`. Ticket do bundle, se presente, prevalece.
 
 ## FLUXO
 1. Extrair cidade, bairro, uf, genero_alvo, tipo_negocio, tamanho_preset.
 2. **`carregar_market_bundle(cidade, bairro, uf)` primeiro** — se retornar briefing com
    `<!-- market_bundle` (sem `status=missing`), use como `briefing_completo_md` e preencha
    ticket/tendência/demografia a partir do texto.
-3. Se bundle `missing` ou lacuna de campo qualitativo → use `"dados_nao_disponiveis"`
+3. **SEMPRE** `carregar_wikipedia_municipio(cidade, uf)` em seguida — complementar, **não**
+   fallback do bundle. Bundle missing não dispensa wiki; wiki missing/error **não**
+   substitui bundle e **não** bloqueia. Se `status=ok`, preencha `contexto_local_wiki`
+   e cite insights com `(wikipedia)`.
+4. Se bundle `missing` ou lacuna de campo qualitativo → use `"dados_nao_disponiveis"`
    nesse campo e **siga**. NÃO existe fallback de pesquisa web no A0.
    Renda: A2/`renda_bairro`. Concorrência detalhada: A3a. Aluguel viabilidade: A4 MRLR.
-4. `dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)` — fatos CNPJ + CNO.
-5. `fatos_competicao_local(cidade, bairro, uf)` — marcas no raio via OSM (se geocode ok), salvo cache/skip.
-6. **Consolide a resposta final** como o objeto JSON do schema abaixo (texto puro —
-   NÃO é function call). Tools permitidas e **somente estas três**:
-   `carregar_market_bundle`, `dados_parque_cnpj_para_a0`, `fatos_competicao_local`.
+   Wikipedia NÃO é fonte canônica de número.
+5. `dados_parque_cnpj_para_a0(cidade, uf, dias=90, bairro=bairro)` — fatos CNPJ + CNO.
+6. `fatos_competicao_local(cidade, bairro, uf)` — marcas no raio via OSM (se geocode ok), salvo cache/skip.
+7. **Consolide a resposta final** como o objeto JSON do schema abaixo (texto puro —
+   NÃO é function call). Tools permitidas e **somente estas quatro**:
+   `carregar_market_bundle`, `carregar_wikipedia_municipio`, `dados_parque_cnpj_para_a0`,
+   `fatos_competicao_local`.
    PROIBIDO inventar tools (`montar_json_*`, `write_*`, `save_*`, etc.).
-   Bundle → ticket, tendência (qualitativo).
+   Bundle → ticket, tendência (qualitativo). Wiki → `contexto_local_wiki` (qualitativo).
    `principais_redes_concorrentes` = **somente** `redes_detectadas_osm` da tool local.
    Se a tool local falhar ou retornar lista vazia, use `[]` — **não** invente redes.
    Tool CNPJ → números e composição. Tool CNO → área m² só onde houver match.
@@ -388,6 +431,17 @@ objeto JSON — sem markdown, sem fence ```, começando por { e terminando por }
     "tendencia_mercado": "crescimento|estavel|retracao",
     "regulamentacao_resumo": "",
     "insights_estrategicos": ["fato+fonte 1", "fato+fonte 2", "fato+fonte 3"],
+    "contexto_local_wiki": {
+      "status": "ok|missing|error",
+      "url": "",
+      "qid": "",
+      "lead": "",
+      "insights_wiki": [],
+      "infobox_qualitativo": {},
+      "metricas_referencia": [],
+      "fonte": "wikipedia_pt + wikidata",
+      "retrieved_at": ""
+    },
     "parque_ativo_total": 0,
     "parque_comercial_total": 0,
     "novos_cnpj_fitness_90d": 0,
@@ -405,7 +459,7 @@ objeto JSON — sem markdown, sem fence ```, começando por { e terminando por }
       "lacunas": []
     },
     "fonte_entrantes": "",
-    "fonte": "market_bundle + CNPJ/CNO (tools)",
+    "fonte": "market_bundle + wikipedia + CNPJ/CNO (tools)",
     "data_coleta": "YYYY-MM-DD",
     "cached": false,
     "briefing_completo_md": ""
@@ -427,16 +481,19 @@ objeto JSON — sem markdown, sem fence ```, começando por { e terminando por }
 - Se `sem_obra` > 0, listar em `lacunas` — não estimar m² por chute.
 
 ## INSIGHTS
-- Cada insight = 1 frase com **fonte** entre parênteses: (market_bundle), (CNPJ), (CNO), (OSM).
+- Cada insight = 1 frase com **fonte** entre parênteses: (market_bundle), (wikipedia), (CNPJ), (CNO), (OSM).
 - Pelo menos 1 insight deve citar número CNPJ.
 - Sem palavra "estoque". Sem inventar ticket/tendência se bundle ausente.
+- Wiki pop/IDH/PIB só em `contexto_local_wiki.metricas_referencia` com `uso=display_only`.
 
 ## DEGRADAÇÃO
-- Bundle missing → campos qualitativos `dados_nao_disponiveis`; CNPJ/OSM ainda preenchem se ok.
+- Bundle missing → campos qualitativos `dados_nao_disponiveis`; wiki/CNPJ/OSM ainda preenchem se ok.
+- Wiki missing/error → `contexto_local_wiki.status` correspondente; pipeline segue.
 - CNPJ indisponível → lacunas explicam; não inventar parque.
 """,
     tools=[
         carregar_market_bundle,
+        carregar_wikipedia_municipio,
         dados_parque_cnpj_para_a0,
         fatos_competicao_local,
     ],

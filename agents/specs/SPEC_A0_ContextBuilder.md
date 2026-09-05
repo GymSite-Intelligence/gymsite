@@ -11,7 +11,7 @@ constitution: C2.1, C2.3, C6.1
 
 ## 1. Responsabilidade Única
 
-O A0 ContextBuilder é o **primeiro agente do pipeline** e tem escopo exclusivo de **coleta e consolidação de fatos de mercado**: dados qualitativos via **market_bundle** (Deep Research / Kimi **removidos** — Act-on 2026-07-16), dados quantitativos CNPJ/CNO e competição OSM local. Ele não faz análise preditiva, não pontua candidatos e não emite recomendações além dos dados devolvidos pelas tools — qualquer dado não retornado por tool é marcado como `"dados_nao_disponiveis"`.
+O A0 ContextBuilder é o **primeiro agente do pipeline** e tem escopo exclusivo de **coleta e consolidação de fatos de mercado**: dados qualitativos via **market_bundle** (Deep Research / Kimi **removidos** — Act-on 2026-07-16) **e** Wikipedia/Wikidata municipal complementar (`carregar_wikipedia_municipio`, sempre tentada, nunca fallback do bundle), dados quantitativos CNPJ/CNO e competição OSM local. Ele não faz análise preditiva, não pontua candidatos e não emite recomendações além dos dados devolvidos pelas tools — qualquer dado não retornado por tool é marcado como `"dados_nao_disponiveis"`. Wikipedia **não** é canônica para parque/score/ticket/MRLR.
 
 ---
 
@@ -73,7 +73,8 @@ O valor é um JSON com chave de envelope `"market_context"` contendo os seguinte
 | `serie_aberturas_anual` | `dict` | Série histórica de aberturas por ano |
 | `fatos_parque_cnpj` | `dict` | Sub-objeto com métricas, indicadores derivados, cruzamento CNO, lacunas |
 | `fonte_entrantes` | `str` | Fonte dos dados de entrantes |
-| `fonte` | `str` | `"market_bundle + CNPJ/CNO (tools)"` |
+| `fonte` | `str` | `"market_bundle + wikipedia + CNPJ/CNO (tools)"` quando wiki `ok`; sem `wikipedia` se missing/error |
+| `contexto_local_wiki` | `dict` | Complementar: `status`, `url`, `qid`, `lead`, `insights_wiki`, `infobox_qualitativo`, `metricas_referencia` (`uso=display_only`), `fonte`, `retrieved_at` |
 | `data_coleta` | `str` | Data no formato `YYYY-MM-DD` |
 | `cached` | `bool` | Se veio de bundle cacheado |
 | `briefing_completo_md` | `str` | Markdown completo do market bundle (quando disponível) |
@@ -98,7 +99,7 @@ O term "estoque" é proibido em toda saída. Usar "parque ativo" para unidades n
 `principais_redes_concorrentes` é preenchido **somente** com `redes_detectadas_osm` retornado pela tool `fatos_competicao_local`. Se a tool falhar ou retornar lista vazia, o campo recebe `[]`. Proibido inventar redes.
 
 **RN-A0-06 — Insights com fonte rotulada**
-Cada item de `insights_estrategicos` deve ser 1 frase com a fonte entre parênteses: `(market_bundle)`, `(CNPJ)`, `(CNO)` ou `(OSM)`. Ao menos 1 insight deve citar número CNPJ.
+Cada item de `insights_estrategicos` deve ser 1 frase com a fonte entre parênteses: `(market_bundle)`, `(wikipedia)`, `(CNPJ)`, `(CNO)` ou `(OSM)`. Ao menos 1 insight deve citar número CNPJ. Wiki pop/IDH/PIB só em `contexto_local_wiki.metricas_referencia` com `uso=display_only`.
 
 **RN-A0-07 — Regras CNPJ (campos escalares)**
 Os campos escalares (`parque_ativo_total`, `novos_cnpj_fitness_90d`, etc.) devem ser copiados de `metricas_objetivas` retornado pela tool `dados_parque_cnpj_para_a0`. `fatos_parque_cnpj.indicadores_derivados` recebe apenas o que a tool calculou (ex: `taxa_renovacao_parque_90d_pct`, `segmento_dominante_parque`).
@@ -110,7 +111,7 @@ Se a tool CNPJ retornar `divergencia_parque_vs_aberturas=true`, o fato deve ser 
 `cruzamento_cno` recebe `resumo_match` e até 5 entrantes com `area_m2_obra` preenchida. Se `sem_obra > 0`, listar em `lacunas` — não estimar m² por chute.
 
 **RN-A0-10 — Ordem canônica das tools**
-1. `carregar_market_bundle` → 2. `dados_parque_cnpj_para_a0` → 3. `fatos_competicao_local`.
+1. `carregar_market_bundle` → 2. `carregar_wikipedia_municipio` (sempre) → 3. `dados_parque_cnpj_para_a0` → 4. `fatos_competicao_local`. Wikipedia é complementar, não fallback do bundle.
 
 **RN-A0-11 — Guardrail esqueleto: aluguel_medio_m2 deve ser "dados_nao_disponiveis" (v2.0)**
 O campo `aluguel_medio_m2` **deve** receber `"dados_nao_disponiveis"` ou ser omitido. Qualquer valor numérico ou string que não seja `"dados_nao_disponiveis"` viola esta regra e deve ser rejeitado por lint/review. Aluguel é responsabilidade exclusiva do A4 (MRLR).
@@ -127,6 +128,8 @@ O campo `aluguel_medio_m2` **deve** receber `"dados_nao_disponiveis"` ou ser omi
 - [ ] Bundle ausente → campos qualitativos `"dados_nao_disponiveis"`; pipeline segue.
 - [ ] `parque_ativo_total` é `int >= 0` (não string, não None).
 - [ ] `fonte` contém a string `"CNPJ/CNO (tools)"`.
+- [ ] Wiki `ok` → `fonte` contém `"wikipedia"` e `contexto_local_wiki.status=ok`.
+- [ ] Wiki nunca preenche `parque_*` / `score_*`.
 - [ ] `data_coleta` está no formato `YYYY-MM-DD`.
 - [ ] **v2.0**: `aluguel_medio_m2` é `"dados_nao_disponiveis"` ou omitido — nunca valor numérico.
 
@@ -136,7 +139,8 @@ O campo `aluguel_medio_m2` **deve** receber `"dados_nao_disponiveis"` ou ser omi
 
 | Cenário | Comportamento |
 |---|---|
-| Bundle missing / lacuna qualitativa | Campos → `"dados_nao_disponiveis"`; **sem** DR/Kimi |
+| Bundle missing / lacuna qualitativa | Campos → `"dados_nao_disponiveis"`; **sem** DR/Kimi; wiki ainda roda |
+| `carregar_wikipedia_municipio` missing/error | `contexto_local_wiki.status` correspondente; **não** bloqueia; **não** preenche parque/score |
 | `dados_parque_cnpj_para_a0` erro | `fatos_parque_cnpj.lacunas` descreve a falha; campos CNPJ recebem `0` ou `{}` |
 | `fatos_competicao_local` falha ou lista vazia | `principais_redes_concorrentes = []` |
 | Todos os tools falham | JSON com zeros/`dados_nao_disponiveis`; **nunca** derruba o pipeline |

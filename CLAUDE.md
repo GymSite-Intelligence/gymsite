@@ -26,6 +26,7 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
 - **MRLR determinístico** (`aluguel_mrlr.py`) — fonte do ALUGUEL na viabilidade (A4 Tier 0), sobre espelhos BQ. O aluguel NÃO vem de listing raspado.
 - **Playwright** (`imobiliaria_scraper.py`, OLX/ImovelWeb) — legado, FORA do caminho crítico (flag `LISTINGS_PLAYWRIGHT`, default off): era o gargalo que estourava o pipeline (timeouts 45s + Cloudflare). A cascata SearchAPI o substitui.
 - **Vertex AI Search** — RAG qualitativo (base de conhecimento, catálogos de equipamento/regulatório).
+- **Wikipedia pt / Wikidata** — contexto municipal complementar no A0 (`carregar_wikipedia_municipio`). Sempre junto ao `market_bundle`, nunca fallback dele, nunca canônico para parque/score/ticket/MRLR.
 
 ## Regras que mais mordem
 
