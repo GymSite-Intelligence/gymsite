@@ -96,10 +96,148 @@ const CUSTO_CAPITAL_ANUAL = 0.12
 export interface CenarioAjustado extends CenarioJSON {
   /** Marca pra UI mostrar badge "ajustado via kit". */
   _ajustado_com_kit?: boolean
+  /** Marca pra UI indicar cenário sem linha de equipamentos. */
+  _equipamentos_ocultos?: boolean
   /** Total original do CAPEX antes do recálculo — útil pra diff. */
   _capex_total_original?: number
   /** Total original de equipamentos antes do override. */
   _equipamentos_original?: number
+}
+
+interface CascataCapexMeta {
+  _ajustado_com_kit?: boolean
+  _equipamentos_ocultos?: boolean
+  _capex_total_original?: number
+  _equipamentos_original?: number
+}
+
+function aplicarCascataCapex(
+  cenario: CenarioJSON,
+  area_m2: number | null | undefined,
+  equipamentosNovo: number,
+  freteNovo: number,
+  meta: CascataCapexMeta,
+): CenarioAjustado {
+  const capexOriginal = cenario.capex_detalhado!
+  const equipamentosOriginal = capexOriginal.equipamentos ?? 0
+  const obra = capexOriginal.obra_adaptacao ?? 0
+  const projeto = capexOriginal.projeto_arquitetonico ?? 0
+  const alvara = capexOriginal.alvara_e_taxas ?? 0
+  const subtotal = equipamentosNovo + obra + projeto + alvara + freteNovo
+  const contingenciaPct = capexOriginal.contingencia_pct ?? 0.1
+  const contingenciaNova = subtotal * contingenciaPct
+  const capexTotalNovo = subtotal + contingenciaNova
+
+  const custosDetOriginal = cenario.custos_detalhados ?? {
+    aluguel: 0,
+    condominio: 0,
+    iptu: 0,
+    energia: 0,
+    agua: 0,
+    internet: 0,
+    folha: 0,
+    manutencao: 0,
+    contabilidade: 0,
+    sistema_gestao: 0,
+    seguro: 0,
+    outros: 0,
+  }
+  const manutencaoNova = capexTotalNovo * MANUTENCAO_PCT_CAPEX_MES
+  const seguroNovo = capexTotalNovo * SEGURO_PCT_CAPEX_MES
+
+  const matriculasRealista = cenario.matriculas?.realista?.valor ?? 0
+  const aguaNova = calcularCustoAgua(
+    area_m2 ?? 0,
+    custosDetOriginal.agua / (area_m2 || 1),
+    matriculasRealista,
+    cenario.frequencia_semanal_aluno ?? 2.0,
+  )
+  const sistemaGestaoNovo = calcularCustoSistema(800, matriculasRealista)
+
+  const custosFixosTotalNovo =
+    custosDetOriginal.aluguel +
+    custosDetOriginal.condominio +
+    custosDetOriginal.iptu +
+    custosDetOriginal.energia +
+    aguaNova +
+    custosDetOriginal.internet +
+    custosDetOriginal.folha +
+    manutencaoNova +
+    custosDetOriginal.contabilidade +
+    sistemaGestaoNovo +
+    seguroNovo +
+    custosDetOriginal.outros
+
+  const marketingMensal = cenario.marketing_mensal ?? 0
+  const custosTotaisNovo = custosFixosTotalNovo + marketingMensal
+
+  const receitaMensal = cenario.receita_mensal ?? 0
+  const folha = custosDetOriginal.folha ?? 0
+  const fatorR = receitaMensal > 0 ? folha / receitaMensal : 0
+  const anexoSimples = fatorR >= FATOR_R_CORTE_FOLHA ? 'III' : 'V'
+  const aliquotaTributos =
+    anexoSimples === 'III'
+      ? ALIQUOTA_SIMPLES_ANEXO_III
+      : ALIQUOTA_SIMPLES_ANEXO_V
+
+  const tributosMensal = receitaMensal * aliquotaTributos
+  const lucroMensalNovo =
+    receitaMensal - custosTotaisNovo - tributosMensal
+  const margemPctNovo =
+    cenario.receita_mensal > 0
+      ? (lucroMensalNovo / cenario.receita_mensal) * 100
+      : 0
+
+  const capitalGiroNovo = custosTotaisNovo * CAPITAL_GIRO_MESES
+  const investimentoTotalNovo = capexTotalNovo + capitalGiroNovo
+  const paybackMesesNovo =
+    lucroMensalNovo > 0
+      ? Math.ceil(investimentoTotalNovo / lucroMensalNovo)
+      : 999
+
+  const lucroAnual = lucroMensalNovo * 12
+  const tirAnual = calcularTirAnual(investimentoTotalNovo, lucroMensalNovo)
+  const tirAnualPctNovo = tirAnual !== null ? tirAnual * 100 : null
+
+  let vplNovo = -investimentoTotalNovo
+  for (let t = 1; t <= 5; t++) {
+    vplNovo += lucroAnual / Math.pow(1 + CUSTO_CAPITAL_ANUAL, t)
+  }
+
+  return {
+    ...cenario,
+    capex_detalhado: {
+      ...capexOriginal,
+      equipamentos: equipamentosNovo,
+      frete_equipamentos: freteNovo,
+      contingencia_valor: contingenciaNova,
+      total: capexTotalNovo,
+    },
+    capex_total: capexTotalNovo,
+    custos_detalhados: {
+      ...custosDetOriginal,
+      manutencao: manutencaoNova,
+      seguro: seguroNovo,
+      agua: aguaNova,
+      sistema_gestao: sistemaGestaoNovo,
+    },
+    custos_fixos_total: custosFixosTotalNovo,
+    custos_totais: custosTotaisNovo,
+    fator_r: fatorR,
+    anexo_simples: anexoSimples,
+    aliquota_tributos: aliquotaTributos,
+    tributos_mensal: tributosMensal,
+    lucro_mensal_estimado: lucroMensalNovo,
+    margem_percentual: margemPctNovo,
+    capital_giro: capitalGiroNovo,
+    investimento_total: investimentoTotalNovo,
+    payback_meses: paybackMesesNovo,
+    tir_anual_pct: tirAnualPctNovo,
+    vpl_5_anos: vplNovo,
+    ...meta,
+    _equipamentos_original: meta._equipamentos_original ?? equipamentosOriginal,
+    _capex_total_original: meta._capex_total_original ?? capexOriginal.total,
+  }
 }
 
 /**
@@ -130,146 +268,35 @@ export function recalcularCenarioComKit(
     return cenario
   }
 
-  // ── 1. CAPEX recalculado ─────────────────────────────────────
-  const equipamentosOriginal = capexOriginal.equipamentos ?? 0
-  const equipamentosNovo = equipamentosTotalReal
-  const obra = capexOriginal.obra_adaptacao ?? 0
-  const projeto = capexOriginal.projeto_arquitetonico ?? 0
-  const alvara = capexOriginal.alvara_e_taxas ?? 0
-  // Schema v1.6: preserva frete se já calculado pelo backend; senão 0.
-  // (Recálculo client-side de frete exigiria distância — não temos UF aqui.)
   const frete = capexOriginal.frete_equipamentos ?? 0
-  const subtotal = equipamentosNovo + obra + projeto + alvara + frete
-  const contingenciaPct = capexOriginal.contingencia_pct ?? 0.1
-  const contingenciaNova = subtotal * contingenciaPct
-  const capexTotalNovo = subtotal + contingenciaNova
-
-  // ── 2. Custos detalhados que dependem do CAPEX ───────────────
-  const custosDetOriginal = cenario.custos_detalhados ?? {
-    aluguel: 0,
-    condominio: 0,
-    iptu: 0,
-    energia: 0,
-    agua: 0,
-    internet: 0,
-    folha: 0,
-    manutencao: 0,
-    contabilidade: 0,
-    sistema_gestao: 0,
-    seguro: 0,
-    outros: 0,
-  }
-  const manutencaoNova = capexTotalNovo * MANUTENCAO_PCT_CAPEX_MES
-  const seguroNovo = capexTotalNovo * SEGURO_PCT_CAPEX_MES
-
-  const matriculasRealista = cenario.matriculas?.realista?.valor ?? 0
-  const aguaNova = calcularCustoAgua(
-    area_m2 ?? 0,
-    custosDetOriginal.agua / (area_m2 || 1), // Extrai a base R$/m²
-    matriculasRealista,
-    cenario.frequencia_semanal_aluno ?? 2.0,
+  return aplicarCascataCapex(
+    cenario,
+    area_m2,
+    equipamentosTotalReal,
+    frete,
+    { _ajustado_com_kit: true },
   )
-  const sistemaGestaoNovo = calcularCustoSistema(
-    800, // Valor base do parâmetro
-    matriculasRealista,
-  )
+}
 
-  // ── 3. Custos fixos total recalculado ────────────────────────
-  // Mantém todos outros custos, substitui só manutencao + seguro
-  const custosFixosTotalNovo =
-    custosDetOriginal.aluguel +
-    custosDetOriginal.condominio +
-    custosDetOriginal.iptu +
-    custosDetOriginal.energia + // Energia não muda significativamente com o kit
-    aguaNova +
-    custosDetOriginal.internet +
-    custosDetOriginal.folha +
-    manutencaoNova +
-    custosDetOriginal.contabilidade +
-    sistemaGestaoNovo +
-    seguroNovo +
-    custosDetOriginal.outros
+/**
+ * Zera equipamentos e frete no CAPEX e cascateia downstream (mesmas fórmulas
+ * do kit). Útil quando o usuário quer ver viabilidade sem investimento em
+ * equipamentos (ex.: locação ou equipamentos já existentes).
+ */
+export function recalcularCenarioSemEquipamentos(
+  cenario: CenarioJSON | undefined,
+  area_m2: number | null | undefined,
+): CenarioAjustado | undefined {
+  if (!cenario) return undefined
 
-  // ── 4. Custos totais (fixos + marketing) ─────────────────────
-  const marketingMensal = cenario.marketing_mensal ?? 0
-  const custosTotaisNovo = custosFixosTotalNovo + marketingMensal
-
-  // ── 5. Resultado (com motor fiscal) ──────────────────────────
-  // Recalcula o Fator R e os tributos, pois a folha pode ter mudado
-  // implicitamente via custos de manutenção/seguro.
-  const receitaMensal = cenario.receita_mensal ?? 0
-  const folha = custosDetOriginal.folha ?? 0
-  const fatorR = receitaMensal > 0 ? folha / receitaMensal : 0
-  const anexoSimples = fatorR >= FATOR_R_CORTE_FOLHA ? 'III' : 'V'
-  const aliquotaTributos =
-    anexoSimples === 'III'
-      ? ALIQUOTA_SIMPLES_ANEXO_III
-      : ALIQUOTA_SIMPLES_ANEXO_V
-
-  const tributosMensal = receitaMensal * aliquotaTributos
-
-  // Lucro é LÍQUIDO de impostos
-  const lucroMensalNovo =
-    receitaMensal - custosTotaisNovo - tributosMensal
-  const margemPctNovo =
-    cenario.receita_mensal > 0
-      ? (lucroMensalNovo / cenario.receita_mensal) * 100
-      : 0
-
-  // ── 6. Investimento e payback ────────────────────────────────
-  const capitalGiroNovo = custosTotaisNovo * CAPITAL_GIRO_MESES
-  const investimentoTotalNovo = capexTotalNovo + capitalGiroNovo
-  const paybackMesesNovo =
-    lucroMensalNovo > 0
-      ? Math.ceil(investimentoTotalNovo / lucroMensalNovo)
-      : 999
-
-  // ── 7. TIR e VPL (réplica do backend) ────────────────────────
-  const lucroAnual = lucroMensalNovo * 12
-  const tirAnual = calcularTirAnual(investimentoTotalNovo, lucroMensalNovo)
-  const tirAnualPctNovo = tirAnual !== null ? tirAnual * 100 : null
-
-  // VPL para 5 anos, replicando _calcular_vpl
-  // VPL = Σ (lucro_anual / (1+r)^t) - investimento, t=1..5
-  let vplNovo = -investimentoTotalNovo
-  for (let t = 1; t <= 5; t++) {
-    vplNovo += lucroAnual / Math.pow(1 + CUSTO_CAPITAL_ANUAL, t)
+  const capexOriginal = cenario.capex_detalhado
+  if (!capexOriginal) {
+    return cenario
   }
 
-  return {
-    ...cenario,
-    capex_detalhado: {
-      ...capexOriginal,
-      equipamentos: equipamentosNovo,
-      contingencia_valor: contingenciaNova,
-      total: capexTotalNovo,
-    },
-    capex_total: capexTotalNovo,
-    custos_detalhados: {
-      ...custosDetOriginal,
-      manutencao: manutencaoNova,
-      seguro: seguroNovo,
-      agua: aguaNova,
-      sistema_gestao: sistemaGestaoNovo,
-    },
-    custos_fixos_total: custosFixosTotalNovo,
-    custos_totais: custosTotaisNovo,
-    // Campos fiscais recalculados
-    fator_r: fatorR,
-    anexo_simples: anexoSimples,
-    aliquota_tributos: aliquotaTributos,
-    tributos_mensal: tributosMensal,
-    lucro_mensal_estimado: lucroMensalNovo,
-    margem_percentual: margemPctNovo,
-    capital_giro: capitalGiroNovo,
-    investimento_total: investimentoTotalNovo,
-    payback_meses: paybackMesesNovo,
-    tir_anual_pct: tirAnualPctNovo,
-    vpl_5_anos: vplNovo,
-    _ajustado_com_kit: true,
-    _capex_total_original: capexOriginal.total,
-    _equipamentos_original: equipamentosOriginal,
-  }
+  return aplicarCascataCapex(cenario, area_m2, 0, 0, {
+    _equipamentos_ocultos: true,
+  })
 }
 
 /**
