@@ -72,7 +72,7 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
                 key={key}
                 className={cn(
                   'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs',
-                  done ? 'border-primary/25 bg-primary/5' : 'border-border/60 bg-card',
+                  done ? 'border-primary bg-elevated' : 'border-border/60 bg-card',
                 )}
               >
                 {Icone ? (

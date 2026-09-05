@@ -93,7 +93,7 @@ export function RelatorioCard({ relatorio, className }: RelatorioCardProps) {
             </span>
           </h3>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className={cn('text-xs', relatorio.status === 'failed' ? 'text-destructive' : 'text-muted-foreground')}>
           {TIPO_NEGOCIO_LABEL[relatorio.tipo_negocio] ?? relatorio.tipo_negocio}
           {' · '}
           <span className="font-mono">

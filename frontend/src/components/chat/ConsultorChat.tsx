@@ -115,7 +115,7 @@ export function ConsultorChat({
                 className={cn(
                   'flex w-full items-center gap-2.5 rounded-xl border p-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
                   destacado
-                    ? 'border-primary/30 bg-primary/5'
+                    ? 'border-primary bg-elevated'
                     : 'border-border/50 bg-background/40 hover:border-border hover:bg-card',
                 )}
               >
@@ -183,7 +183,7 @@ export function ConsultorChat({
                     className={cn(
                       'flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition-colors',
                       ativa
-                        ? 'border-primary/30 bg-primary/5 text-primary'
+                        ? 'border-primary bg-elevated text-foreground'
                         : 'border-transparent text-foreground/80 hover:border-border/60 hover:bg-background/60',
                     )}
                   >
