@@ -22,19 +22,19 @@ import { forwardRef, type HTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
 const alertVariants = cva(
-  'relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg~*]:pl-7',
+  'relative w-full rounded-lg border-l-4 border-b border-r border-t-0 border-transparent px-4 py-3 text-sm bg-elevated text-foreground [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg~*]:pl-7',
   {
     variants: {
       variant: {
-        default: 'bg-background text-foreground border-border',
+        default: 'border-l-border',
         success:
-          'border-status-good/40 bg-status-good/5 text-status-good [&>svg]:text-status-good',
+          'border-l-status-good [&>svg]:text-status-good',
         warning:
-          'border-status-warning/40 bg-status-warning/5 text-status-warning [&>svg]:text-status-warning',
+          'border-l-status-warning [&>svg]:text-status-warning',
         investigate:
-          'border-status-investigate/40 bg-status-investigate/5 text-status-investigate [&>svg]:text-status-investigate',
+          'border-l-status-investigate [&>svg]:text-status-investigate',
         destructive:
-          'border-status-critical/40 bg-status-critical/5 text-status-critical [&>svg]:text-status-critical',
+          'border-l-status-critical [&>svg]:text-status-critical',
       },
     },
     defaultVariants: { variant: 'default' },
