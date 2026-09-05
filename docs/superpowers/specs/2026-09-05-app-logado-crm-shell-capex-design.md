@@ -132,6 +132,8 @@ Simplificar o app logado: menu enxuto, CRM usável com UI opaca canônica, Consu
 - National baseline + note that município/UF may add requirements
 - No DB seed this wave; next wave imports matrix into gerar-plano templates
 
+**Companion doc:** [`docs/produto/crm/tarefas-regulatorias-matriz.md`](../../produto/crm/tarefas-regulatorias-matriz.md) — 22 linhas determinísticas (VS / Arquiteto / Engenheiro).
+
 ## Error handling
 
 - Redirect `/execucao` preserves search params where possible
