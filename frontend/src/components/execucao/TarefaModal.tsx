@@ -233,7 +233,7 @@ export function TarefaModal({
 
   return (
     <Dialog open={aberto} onOpenChange={(v) => !v && onFechar()}>
-      <DialogContent className="max-h-[88vh] gap-0 overflow-y-auto p-0 sm:max-w-xl">
+      <DialogContent className="max-h-[88vh] gap-0 overflow-y-auto bg-popover p-0 sm:max-w-xl">
         <DialogHeader className="space-y-3 px-6 pt-6 text-center sm:text-center">
           <DialogTitle className="text-lg leading-snug">{tarefa.titulo}</DialogTitle>
           <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -272,7 +272,7 @@ export function TarefaModal({
             <div
               className={
                 'rounded-lg border p-3 ' +
-                (emAprovacao ? 'border-accent/40 bg-accent/5' : 'border-border bg-muted/30')
+                (emAprovacao ? 'border-primary/50 bg-elevated' : 'border-border bg-elevated')
               }
             >
               <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -365,7 +365,7 @@ export function TarefaModal({
             </div>
 
             {sugestoes.length > 0 && (
-              <div className="mb-3 space-y-2 rounded-lg border border-accent/40 bg-accent/5 p-3">
+              <div className="mb-3 space-y-2 rounded-lg border border-primary/50 bg-elevated p-3">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   Sugestões da IA · aceite ou descarte
                 </p>
@@ -563,7 +563,7 @@ export function TarefaModal({
             {(notas ?? []).length > 0 && (
               <div className="mt-3 flex max-h-48 flex-col gap-2 overflow-y-auto">
                 {(notas ?? []).map((n) => (
-                  <div key={n.id} className="rounded-md bg-muted/50 px-3 py-2">
+                  <div key={n.id} className="rounded-md border border-border bg-secondary px-3 py-2">
                     <p className="text-sm leading-relaxed">{n.texto}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {n.autor_nome} · {new Date(n.criado_em).toLocaleDateString('pt-BR')}{' '}
