@@ -15,6 +15,7 @@ WeasyPrint precisa libs de sistema (pango/cairo) — no Dockerfile; em dev `gera
 """
 from __future__ import annotations
 
+import math
 import os
 import re
 from typing import Any
@@ -559,6 +560,45 @@ def _capex_sem_equipamentos(cen) -> float | None:
         return None
     equip = cen.capex_equipamentos or 0
     return max(0.0, float(cen.capex_total) - float(equip))
+
+
+def _investimento_sem_equipamentos(cen) -> float | None:
+    """Investimento exibido — CAPEX sem kit + capital de giro (paridade web)."""
+    capex_sem = _capex_sem_equipamentos(cen)
+    if capex_sem is None:
+        return None
+    if cen.investimento_total is not None and cen.capex_total is not None:
+        capital_giro = max(0.0, float(cen.investimento_total) - float(cen.capex_total))
+        return capex_sem + capital_giro
+    if cen.investimento_total is not None:
+        equip = float(cen.capex_equipamentos or 0)
+        return max(0.0, float(cen.investimento_total) - equip)
+    return None
+
+
+def _payback_sem_equipamentos(cen) -> int | None:
+    """Payback coerente com CAPEX/investimento sem equipamentos."""
+    if cen is None:
+        return None
+    lucro = cen.lucro_mensal
+    inv_sem = _investimento_sem_equipamentos(cen)
+    if lucro is not None and lucro > 0 and inv_sem is not None and inv_sem > 0:
+        return max(1, math.ceil(inv_sem / float(lucro)))
+    capex_sem = _capex_sem_equipamentos(cen)
+    if (
+        capex_sem is not None
+        and cen.capex_total
+        and cen.payback_meses
+        and float(cen.capex_total) > 0
+    ):
+        ratio = capex_sem / float(cen.capex_total)
+        return max(1, math.ceil(float(cen.payback_meses) * ratio))
+    return cen.payback_meses
+
+
+def _payback_display(cen) -> str:
+    pb = _payback_sem_equipamentos(cen)
+    return f"{pb}m" if pb else "—"
 
 
 def _int(v) -> str:
@@ -1458,7 +1498,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "receita": f"R$ {_brl(c.receita_mensal)}" if c.receita_mensal else "—",
             "lucro": f"R$ {_brl(c.lucro_mensal)}" if c.lucro_mensal is not None else "—",
             "margem": f"{c.margem_pct:.0f}%" if c.margem_pct is not None else "—",
-            "payback": f"{c.payback_meses}m" if c.payback_meses else "—",
+            "payback": _payback_display(c),
             "alunos": _int(c.matriculas_realista) if c.matriculas_realista else "—",
             "viab": c.viabilidade or "—", "viab_cls": _viab_cls(c.viabilidade or ""),
             "justificativa": c.justificativa,
@@ -1500,7 +1540,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
             "area": f"{model.area_m2_min}–{model.area_m2_max}",
             "aluguel": _brl(model.aluguel_mensal) if model.aluguel_mensal else None,
             "capex": _brl(_capex_sem_equipamentos(mid_cen)) if mid_cen else None,
-            "payback": f"{mid_cen.payback_meses}m" if mid_cen and mid_cen.payback_meses else None,
+            "payback": _payback_display(mid_cen) if mid_cen else None,
         }
     # Capex breakdown do cenário recomendado (ou mid)
     capex = None
