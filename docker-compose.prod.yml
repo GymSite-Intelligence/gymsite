@@ -14,7 +14,7 @@ services:
   # ── API: só ENFILEIRA (RUN_QUEUE_WORKER=0). Sem portas públicas — o cloudflared
   #    alcança via alias de rede `gymsite-api` (batendo com cloudflared/config.yml).
   api:
-    image: ${GHCR_IMAGE:-ghcr.io/marcelo-rosas/gymsite:latest}
+    image: ${GHCR_IMAGE:-ghcr.io/gymsite-intelligence/gymsite:latest}
     build:
       context: .
       args:
@@ -43,7 +43,7 @@ services:
   # ── Worker: CONSOME a fila e roda o pipeline A0–A9 (RUN_QUEUE_WORKER=1).
   #    Mesma imagem da API; não expõe porta.
   worker:
-    image: ${GHCR_IMAGE:-ghcr.io/marcelo-rosas/gymsite:latest}
+    image: ${GHCR_IMAGE:-ghcr.io/gymsite-intelligence/gymsite:latest}
     build:
       context: .
       args:
