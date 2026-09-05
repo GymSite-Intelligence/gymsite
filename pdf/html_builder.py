@@ -553,6 +553,14 @@ def _brl(v) -> str:
         return "—"
 
 
+def _capex_sem_equipamentos(cen) -> float | None:
+    """CAPEX exibido no PDF — exclui equipamentos (paridade com web)."""
+    if cen is None or cen.capex_total is None:
+        return None
+    equip = cen.capex_equipamentos or 0
+    return max(0.0, float(cen.capex_total) - float(equip))
+
+
 def _int(v) -> str:
     try:
         return f"{int(v):,}".replace(",", ".")
@@ -1491,7 +1499,7 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
         kpi_fin = {
             "area": f"{model.area_m2_min}–{model.area_m2_max}",
             "aluguel": _brl(model.aluguel_mensal) if model.aluguel_mensal else None,
-            "capex": _brl(mid_cen.capex_total) if mid_cen and mid_cen.capex_total else None,
+            "capex": _brl(_capex_sem_equipamentos(mid_cen)) if mid_cen else None,
             "payback": f"{mid_cen.payback_meses}m" if mid_cen and mid_cen.payback_meses else None,
         }
     # Capex breakdown do cenário recomendado (ou mid)
@@ -1501,7 +1509,6 @@ def _contexto(model: RelatorioPdfModel) -> dict[str, Any]:
     if cap_cen is not None:
         itens_raw = [
             ("Obra/adaptação", cap_cen.capex_obra),
-            ("Equipamentos", cap_cen.capex_equipamentos),
             ("Contingência", cap_cen.capex_contingencia),
         ]
         # values are already numeric (float/int); avoid unnecessary conversion
