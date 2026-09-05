@@ -75,7 +75,7 @@ export function PlanosListPage() {
             key={p.id}
             to="/crm/$playbookId"
             params={{ playbookId: p.id }}
-            className="rounded-lg border bg-card px-4 py-3 transition-colors hover:border-primary/40 hover:bg-accent/40"
+            className="rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:border-primary hover:bg-muted"
           >
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-medium">{p.projeto_nome || p.nome}</p>
