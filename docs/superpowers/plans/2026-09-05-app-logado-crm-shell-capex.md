@@ -486,6 +486,20 @@ Admin project: sidebar has Custos; no Provedor de IA.
 
 - [ ] **Step 4: Document secrets in plan comment / devops note** — CI `workflow_dispatch` first.
 
+**E2E secrets (GitHub Actions / local `.env.local`, never committed):**
+
+| Var | Required | Purpose |
+|-----|----------|---------|
+| `E2E_BASE_URL` | no (default `https://gymsite.com.br`) | Target deploy |
+| `E2E_USER_EMAIL` | yes | Tenant login |
+| `E2E_USER_PASSWORD` | yes | Tenant login |
+| `E2E_ADMIN_EMAIL` | yes | Admin/owner login |
+| `E2E_ADMIN_PASSWORD` | yes | Admin/owner login |
+| `E2E_RELATORIO_ID` | no | Pin report for CAPEX spec (else first list item) |
+| `E2E_EXPECTED_CAPEX` | no | Assert KPI "CAPEX mid" display |
+
+Run: `cd frontend && npm run test:e2e`. CI: add `workflow_dispatch` job with secrets above; `auth.setup.ts` throws if any required var missing.
+
 - [ ] **Step 5: Commit (if human asked)**
 
 ```
