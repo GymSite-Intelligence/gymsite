@@ -15,6 +15,14 @@ import { FileDown, Printer, Building2, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { CenarioJSON } from '@/hooks/useRelatorioDetail'
+import { recalcularCenarioSemEquipamentos } from '@/lib/recalcula-cenario-com-kit'
+
+function cenarioParaParecer(cenario: CenarioJSON | undefined): CenarioJSON | undefined {
+  return recalcularCenarioSemEquipamentos(cenario, undefined) ?? cenario
+}
+
+const INVESTIMENTO_META =
+  'Soma de obra de adaptação, projeto, alvarás e capital de giro — orçamento referenciado em fornecedores do setor.'
 
 interface ParecerPdfExportProps {
   bairroA: string
@@ -193,31 +201,34 @@ function PdfLayout({
 }: ParecerPdfExportProps & { modo: 'resumido' | 'completo'; qrDataUrl: string }) {
   if (!cenarioA || !cenarioB) return null
 
+  const cenA = cenarioParaParecer(cenarioA) ?? cenarioA
+  const cenB = cenarioParaParecer(cenarioB) ?? cenarioB
+
   const hoje = new Date().toLocaleDateString('pt-BR')
   const isResumido = modo === 'resumido'
 
-  const lucroA = cenarioA.lucro_mensal_estimado
-  const lucroB = cenarioB.lucro_mensal_estimado
-  const payA = cenarioA.payback_meses
-  const payB = cenarioB.payback_meses
-  const tirA = cenarioA.tir_anual_pct
-  const tirB = cenarioB.tir_anual_pct
-  const vplA = cenarioA.vpl_5_anos
-  const vplB = cenarioB.vpl_5_anos
-  const margemA = cenarioA.margem_percentual
-  const margemB = cenarioB.margem_percentual
-  const receitaA = cenarioA.receita_mensal
-  const receitaB = cenarioB.receita_mensal
-  const ticketA = cenarioA.ticket_medio
-  const ticketB = cenarioB.ticket_medio
-  const matrA = cenarioA.matriculas?.realista?.valor ?? cenarioA.alunos_projetados ?? 0
-  const matrB = cenarioB.matriculas?.realista?.valor ?? cenarioB.alunos_projetados ?? 0
-  const capexA = cenarioA.investimento_total ?? cenarioA.capex_total ?? cenarioA.capex_estimado ?? 0
-  const capexB = cenarioB.investimento_total ?? cenarioB.capex_total ?? cenarioB.capex_estimado ?? 0
-  const custoFixoA = aluguelA ?? cenarioA.custos_detalhados?.aluguel ?? cenarioA.custos_fixos_total ?? 0
-  const custoFixoB = aluguelB ?? cenarioB.custos_detalhados?.aluguel ?? cenarioB.custos_fixos_total ?? 0
+  const lucroA = cenA.lucro_mensal_estimado
+  const lucroB = cenB.lucro_mensal_estimado
+  const payA = cenA.payback_meses
+  const payB = cenB.payback_meses
+  const tirA = cenA.tir_anual_pct
+  const tirB = cenB.tir_anual_pct
+  const vplA = cenA.vpl_5_anos
+  const vplB = cenB.vpl_5_anos
+  const margemA = cenA.margem_percentual
+  const margemB = cenB.margem_percentual
+  const receitaA = cenA.receita_mensal
+  const receitaB = cenB.receita_mensal
+  const ticketA = cenA.ticket_medio
+  const ticketB = cenB.ticket_medio
+  const matrA = cenA.matriculas?.realista?.valor ?? cenA.alunos_projetados ?? 0
+  const matrB = cenB.matriculas?.realista?.valor ?? cenB.alunos_projetados ?? 0
+  const capexA = cenA.investimento_total ?? cenA.capex_total ?? cenA.capex_estimado ?? 0
+  const capexB = cenB.investimento_total ?? cenB.capex_total ?? cenB.capex_estimado ?? 0
+  const custoFixoA = aluguelA ?? cenA.custos_detalhados?.aluguel ?? cenA.custos_fixos_total ?? 0
+  const custoFixoB = aluguelB ?? cenB.custos_detalhados?.aluguel ?? cenB.custos_fixos_total ?? 0
 
-  const mesmosModelos = cenarioA.modelo === cenarioB.modelo
+  const mesmosModelos = cenA.modelo === cenB.modelo
   let ptsA = 0, ptsB = 0
   if (lucroA != null && lucroB != null) { if (lucroA > lucroB) ptsA += 3; else if (lucroB > lucroA) ptsB += 3 }
   if (payA != null && payB != null) { if (payA < payB) ptsA += 2; else if (payB < payA) ptsB += 2 }
@@ -296,8 +307,8 @@ function PdfLayout({
           {rec === 'empate'
             ? 'As métricas financeiras apresentam convergência. A decisão final deve considerar visibilidade do ponto, concorrência local e projeção de crescimento do bairro.'
             : mesmosModelos
-              ? `Ambos operam no modelo ${cenarioA.modelo}. A vantagem de ${rec === 'B' ? bairroB : bairroA} está na relação custo/benefício e retorno do capital investido.`
-              : `Modelos distintos (${cenarioA.modelo} vs ${cenarioB.modelo}). Recomendamos priorizar payback e TIR como métricas normalizadas de comparação.`}
+              ? `Ambos operam no modelo ${cenA.modelo}. A vantagem de ${rec === 'B' ? bairroB : bairroA} está na relação custo/benefício e retorno do capital investido.`
+              : `Modelos distintos (${cenA.modelo} vs ${cenB.modelo}). Recomendamos priorizar payback e TIR como métricas normalizadas de comparação.`}
         </p>
       </div>
 
@@ -341,7 +352,7 @@ function PdfLayout({
             <DriverBlock label="Payback" a={fmt(payA, 'meses')} b={fmt(payB, 'meses')} meta="Tempo estimado para recuperação do capital investido (CAPEX + giro) a partir do fluxo de caixa mensal projetado." />
             <DriverBlock label="TIR anual" a={fmt(tirA, 'pct')} b={fmt(tirB, 'pct')} meta="Taxa interna de retorno do projeto em 5 anos, considerando crescimento conservador de matrículas e inflação de custos." />
             <DriverBlock label="VPL 5 anos" a={fmt(vplA, 'brl')} b={fmt(vplB, 'brl')} meta="Valor presente líquido dos fluxos de caixa futuros, descontado pela taxa mínima de atratividade do setor." />
-            <DriverBlock label="Investimento inicial" a={fmt(capexA, 'brl')} b={fmt(capexB, 'brl')} meta="Soma de equipamentos, obra de adaptação, projeto, alvarás, frete e capital de giro — orçamento referenciado em fornecedores do setor." />
+            <DriverBlock label="Investimento inicial" a={fmt(capexA, 'brl')} b={fmt(capexB, 'brl')} meta={INVESTIMENTO_META} />
           </div>
         </>
       )}
@@ -447,6 +458,8 @@ function renderPrintHtml(
   const hoje = new Date().toLocaleDateString('pt-BR')
   const { bairroA, bairroB, cidadeA, cidadeB, cenarioA, cenarioB, aluguelA, aluguelB, vereditoA, vereditoB, scoreA, scoreB } = props
   if (!cenarioA || !cenarioB) return '<html><body>Dados insuficientes</body></html>'
+  const cenA = cenarioParaParecer(cenarioA) ?? cenarioA
+  const cenB = cenarioParaParecer(cenarioB) ?? cenarioB
   const isResumido = modo === 'resumido'
 
   const f = (v: number | null | undefined, t: 'brl' | 'pct' | 'int' | 'meses') => {
@@ -472,15 +485,15 @@ function renderPrintHtml(
   const driverBlock = (label: string, av: string, bv: string, meta: string) =>
     `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f3f4f6"><p style="margin:0;font-size:10px;font-weight:600;color:#111827">${label}</p><p style="margin:4px 0 0;font-size:10px;color:#4b5563">A: <strong style="color:#111827">${av}</strong> &nbsp;·&nbsp; B: <strong style="color:#111827">${bv}</strong></p><p style="margin:3px 0 0;font-size:8px;color:#9ca3af;font-style:italic">Base: ${meta}</p></div>`
 
-  const lucroA = cenarioA.lucro_mensal_estimado
-  const lucroB = cenarioB.lucro_mensal_estimado
-  const payA = cenarioA.payback_meses
-  const payB = cenarioB.payback_meses
+  const lucroA = cenA.lucro_mensal_estimado
+  const lucroB = cenB.lucro_mensal_estimado
+  const payA = cenA.payback_meses
+  const payB = cenB.payback_meses
   let ptsA = 0, ptsB = 0
   if (lucroA != null && lucroB != null) { if (lucroA > lucroB) ptsA += 3; else if (lucroB > lucroA) ptsB += 3 }
   if (payA != null && payB != null) { if (payA < payB) ptsA += 2; else if (payB < payA) ptsB += 2 }
   const rec = ptsB > ptsA * 1.2 ? 'B' : ptsA > ptsB * 1.2 ? 'A' : 'empate'
-  const mesmosModelos = cenarioA.modelo === cenarioB.modelo
+  const mesmosModelos = cenA.modelo === cenB.modelo
 
   const recBoxBg = rec === 'empate' ? '#eff6ff' : '#ecfdf5'
   const recBoxBorder = rec === 'empate' ? '#3b82f6' : '#10b981'
@@ -488,19 +501,19 @@ function renderPrintHtml(
   const recText = rec === 'empate'
     ? 'As métricas financeiras apresentam convergência. A decisão final deve considerar visibilidade do ponto, concorrência local e projeção de crescimento do bairro.'
     : mesmosModelos
-      ? `Ambos operam no modelo ${cenarioA.modelo}. A vantagem de ${rec === 'B' ? bairroB : bairroA} está na relação custo/benefício e retorno do capital investido.`
-      : `Modelos distintos (${cenarioA.modelo} vs ${cenarioB.modelo}). Recomendamos priorizar payback e TIR como métricas normalizadas de comparação.`
+      ? `Ambos operam no modelo ${cenA.modelo}. A vantagem de ${rec === 'B' ? bairroB : bairroA} está na relação custo/benefício e retorno do capital investido.`
+      : `Modelos distintos (${cenA.modelo} vs ${cenB.modelo}). Recomendamos priorizar payback e TIR como métricas normalizadas de comparação.`
 
-  const receitaA = cenarioA.receita_mensal
-  const receitaB = cenarioB.receita_mensal
-  const ticketA = cenarioA.ticket_medio
-  const ticketB = cenarioB.ticket_medio
-  const matrA = cenarioA.matriculas?.realista?.valor ?? cenarioA.alunos_projetados ?? 0
-  const matrB = cenarioB.matriculas?.realista?.valor ?? cenarioB.alunos_projetados ?? 0
-  const capexA = cenarioA.investimento_total ?? cenarioA.capex_total ?? cenarioA.capex_estimado ?? 0
-  const capexB = cenarioB.investimento_total ?? cenarioB.capex_total ?? cenarioB.capex_estimado ?? 0
-  const custoFixoA = aluguelA ?? cenarioA.custos_detalhados?.aluguel ?? cenarioA.custos_fixos_total ?? 0
-  const custoFixoB = aluguelB ?? cenarioB.custos_detalhados?.aluguel ?? cenarioB.custos_fixos_total ?? 0
+  const receitaA = cenA.receita_mensal
+  const receitaB = cenB.receita_mensal
+  const ticketA = cenA.ticket_medio
+  const ticketB = cenB.ticket_medio
+  const matrA = cenA.matriculas?.realista?.valor ?? cenA.alunos_projetados ?? 0
+  const matrB = cenB.matriculas?.realista?.valor ?? cenB.alunos_projetados ?? 0
+  const capexA = cenA.investimento_total ?? cenA.capex_total ?? cenA.capex_estimado ?? 0
+  const capexB = cenB.investimento_total ?? cenB.capex_total ?? cenB.capex_estimado ?? 0
+  const custoFixoA = aluguelA ?? cenA.custos_detalhados?.aluguel ?? cenA.custos_fixos_total ?? 0
+  const custoFixoB = aluguelB ?? cenB.custos_detalhados?.aluguel ?? cenB.custos_fixos_total ?? 0
 
   const qrImg = qrDataUrl ? `<img src="${qrDataUrl}" alt="QR" style="width:72px;height:72px;display:block;margin:0 auto 4px" />` : ''
 
@@ -573,11 +586,11 @@ function renderPrintHtml(
       ${!isResumido ? row('Matrículas projetadas', matrA, matrB, 'int') : ''}
       ${!isResumido ? row('Custos fixos mensais', custoFixoA, custoFixoB, 'brl', true) : ''}
       ${row('Lucro mensal estimado', lucroA, lucroB, 'brl')}
-      ${row('Margem líquida', cenarioA.margem_percentual, cenarioB.margem_percentual, 'pct')}
+      ${row('Margem líquida', cenA.margem_percentual, cenB.margem_percentual, 'pct')}
       ${!isResumido ? row('Investimento total', capexA, capexB, 'brl', true) : ''}
-      ${row('Payback', cenarioA.payback_meses, cenarioB.payback_meses, 'meses', true)}
-      ${!isResumido ? row('TIR anual', cenarioA.tir_anual_pct, cenarioB.tir_anual_pct, 'pct') : ''}
-      ${!isResumido ? row('VPL 5 anos', cenarioA.vpl_5_anos, cenarioB.vpl_5_anos, 'brl') : ''}
+      ${row('Payback', cenA.payback_meses, cenB.payback_meses, 'meses', true)}
+      ${!isResumido ? row('TIR anual', cenA.tir_anual_pct, cenB.tir_anual_pct, 'pct') : ''}
+      ${!isResumido ? row('VPL 5 anos', cenA.vpl_5_anos, cenB.vpl_5_anos, 'brl') : ''}
     </tbody>
   </table>
 
@@ -591,9 +604,9 @@ function renderPrintHtml(
       ${driverBlock('Custos fixos', f(custoFixoA,'brl'), f(custoFixoB,'brl'), 'Estimativa a partir de dados de mercado imobiliário local e benchmark de condomínio, IPTU e serviços para o porte da unidade.')}
       ${driverBlock('Lucro mensal', f(lucroA,'brl'), f(lucroB,'brl'), 'Receita projetada menos custos totais (fixos + variáveis + marketing) no cenário realista de ocupação.')}
       ${driverBlock('Payback', f(payA,'meses'), f(payB,'meses'), 'Tempo estimado para recuperação do capital investido (CAPEX + giro) a partir do fluxo de caixa mensal projetado.')}
-      ${driverBlock('TIR anual', f(cenarioA.tir_anual_pct,'pct'), f(cenarioB.tir_anual_pct,'pct'), 'Taxa interna de retorno do projeto em 5 anos, considerando crescimento conservador de matrículas e inflação de custos.')}
-      ${driverBlock('VPL 5 anos', f(cenarioA.vpl_5_anos,'brl'), f(cenarioB.vpl_5_anos,'brl'), 'Valor presente líquido dos fluxos de caixa futuros, descontado pela taxa mínima de atratividade do setor.')}
-      ${driverBlock('Investimento inicial', f(capexA,'brl'), f(capexB,'brl'), 'Soma de equipamentos, obra de adaptação, projeto, alvarás, frete e capital de giro — orçamento referenciado em fornecedores do setor.')}
+      ${driverBlock('TIR anual', f(cenA.tir_anual_pct,'pct'), f(cenB.tir_anual_pct,'pct'), 'Taxa interna de retorno do projeto em 5 anos, considerando crescimento conservador de matrículas e inflação de custos.')}
+      ${driverBlock('VPL 5 anos', f(cenA.vpl_5_anos,'brl'), f(cenB.vpl_5_anos,'brl'), 'Valor presente líquido dos fluxos de caixa futuros, descontado pela taxa mínima de atratividade do setor.')}
+      ${driverBlock('Investimento inicial', f(capexA,'brl'), f(capexB,'brl'), INVESTIMENTO_META)}
     </div>`}
 
   <div style="margin-top:${isResumido ? '12px' : '24px'};border-top:1px solid #d1d5db;padding-top:18px;display:flex;justify-content:space-between;gap:20px;align-items:flex-start">

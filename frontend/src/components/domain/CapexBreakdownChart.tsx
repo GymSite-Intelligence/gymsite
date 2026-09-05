@@ -1,5 +1,5 @@
 /**
- * CapexBreakdownChart — composição do investimento inicial (obra, equipamentos, reserva)
+ * CapexBreakdownChart — composição do investimento inicial (obra, reserva)
  * nos 3 modelos financeiros (econômico, padrão, premium).
  */
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
@@ -20,13 +20,6 @@ const chartConfig = {
     theme: {
       light: 'oklch(0.52 0.17 250)',
       dark: 'oklch(0.68 0.15 250)',
-    },
-  },
-  equipamentos: {
-    label: 'Equipamentos',
-    theme: {
-      light: 'oklch(0.52 0.16 155)',
-      dark: 'oklch(0.68 0.14 155)',
     },
   },
   contingencia: {
@@ -66,13 +59,11 @@ function extrairBreakdown(cenario: CenarioJSON | undefined) {
   const obra =
     (d.obra_adaptacao ?? 0) +
     (d.projeto_arquitetonico ?? 0) +
-    (d.alvara_e_taxas ?? 0) +
-    (d.frete_equipamentos ?? 0)
-  const equipamentos = d.equipamentos ?? 0
+    (d.alvara_e_taxas ?? 0)
   const contingencia = d.contingencia_valor ?? 0
-  const total = obra + equipamentos + contingencia
+  const total = obra + contingencia
   if (total <= 0) return null
-  return { obra, equipamentos, contingencia }
+  return { obra, contingencia }
 }
 
 export interface CapexBreakdownChartProps {
@@ -159,11 +150,6 @@ export function CapexBreakdownChart({ cenarios, className }: CapexBreakdownChart
             stackId="capex"
             fill="var(--color-obra)"
             radius={[0, 0, 0, 0]}
-          />
-          <Bar
-            dataKey="equipamentos"
-            stackId="capex"
-            fill="var(--color-equipamentos)"
           />
           <Bar
             dataKey="contingencia"
