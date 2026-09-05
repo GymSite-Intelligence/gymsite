@@ -43,17 +43,8 @@ import { CandidatoCard } from '@/components/domain/CandidatoCard'
 import { CenarioFinanceiroTable } from '@/components/domain/CenarioFinanceiroTable'
 import { CenariosViz } from '@/components/domain/CenariosViz'
 import { CapexBreakdownChart } from '@/components/domain/CapexBreakdownChart'
-import { ConsorcioCard } from '@/components/domain/ConsorcioCard'
 import { FinanceiroKpiStrip } from '@/components/domain/FinanceiroKpiStrip'
-import { KitEquipamentosTable } from '@/components/domain/KitEquipamentosTable'
-import {
-  getKit,
-  getKitParaModeloFinanceiro,
-  getTamanhoParaModeloFinanceiro,
-  faixaCustoReal,
-} from '@/data/kits'
-import type { ModeloNegocio, TamanhoCodigo } from '@/data/tamanhos-por-modelo'
-import { recalcularCenariosComKit } from '@/lib/recalcula-cenario-com-kit'
+import { recalcularCenarioSemEquipamentos } from '@/lib/recalcula-cenario-com-kit'
 import { DoresPorCategoria } from '@/components/domain/DoresPorCategoria'
 import { PicoLotacaoViz } from '@/components/domain/PicoLotacaoViz'
 import { InteligenciaCompetitivaResumoCard } from '@/components/domain/InteligenciaCompetitivaResumoCard'
@@ -241,39 +232,22 @@ function RelatorioViewerContent({
   const out = data.output_consolidado
   const meta = (data.metadata_execucao ?? {}) as MetadataExecucaoShape
 
-  // Schema v1.5: kit detalhado vira fonte da verdade pra "Equipamentos".
-  // Kit DIFERE por modelo financeiro: Low usa tamanho-1 (econômico),
-  // Mid usa tamanho selecionado, Premium usa tamanho+1 (robusto).
-  // Cascateia recalculo nos 3 cenários (capex → manutenção → seguro →
-  // contingência → capital giro → investimento → payback → margem → TIR/VPL).
-  const tipoNegocio = (data.input_canonico.tipo_negocio || 'academia') as ModeloNegocio
-  const tamanhoPreset = (data.input_canonico.tamanho_preset || 'm') as TamanhoCodigo
-
-  // Helper: mediana da faixa real de um kit
-  const medianaKit = (k: ReturnType<typeof getKit>) =>
-    k ? (faixaCustoReal(k)[0] + faixaCustoReal(k)[1]) / 2 : null
-
-  // Map de equipamentos por modelo financeiro
-  const equipamentosPorModelo: Record<string, number | null> = {
-    low: medianaKit(getKitParaModeloFinanceiro(tipoNegocio, tamanhoPreset, 'low')),
-    mid: medianaKit(getKitParaModeloFinanceiro(tipoNegocio, tamanhoPreset, 'mid')),
-    premium: medianaKit(getKitParaModeloFinanceiro(tipoNegocio, tamanhoPreset, 'premium')),
-  }
-
   const areaM2Kit =
     data.input_canonico.area_m2_max ?? data.input_canonico.area_m2_min ?? null
-  const cenariosRecalc = recalcularCenariosComKit(
-    out.viabilidade_3_cenarios,
-    areaM2Kit,
-    equipamentosPorModelo,
-  )
-
-  // Tamanhos usados por cenário (pra exibir hint na UI)
-  const tamanhosPorModelo = {
-    low: getTamanhoParaModeloFinanceiro(tamanhoPreset, 'low'),
-    mid: getTamanhoParaModeloFinanceiro(tamanhoPreset, 'mid'),
-    premium: getTamanhoParaModeloFinanceiro(tamanhoPreset, 'premium'),
-  }
+  const baseCenarios = out.viabilidade_3_cenarios
+  const cenariosRecalc = baseCenarios
+    ? ({
+        low:
+          recalcularCenarioSemEquipamentos(baseCenarios.low, areaM2Kit) ??
+          baseCenarios.low,
+        mid:
+          recalcularCenarioSemEquipamentos(baseCenarios.mid, areaM2Kit) ??
+          baseCenarios.mid,
+        premium:
+          recalcularCenarioSemEquipamentos(baseCenarios.premium, areaM2Kit) ??
+          baseCenarios.premium,
+      } as Record<'low' | 'mid' | 'premium', import('@/hooks/useRelatorioDetail').CenarioJSON>)
+    : undefined
 
   // Score Geral por candidato (4 dim) = (geoscout + 3 regionais) / 4
   const scoreRegional = (() => {
@@ -684,47 +658,10 @@ function RelatorioViewerContent({
                 competidores={out.competitors_set}
                 className="mt-4"
               />
-              <ConsorcioCard key={cenariosAtivos?.mid?.capex_total ?? cenariosAtivos?.mid?.capex_estimado ?? 'sem-capex'} capexMid={cenariosAtivos?.mid?.capex_total ?? cenariosAtivos?.mid?.capex_estimado ?? null} className="mt-4" />
             </>
           )
         })()}
-        {cenariosRecalc && (
-          <p className="mt-2 text-[10px] text-muted-foreground font-mono">
-            Valores recalculados via kit detalhado v1.5. Equipamentos
-            diferentes por modelo: Low usa kit{' '}
-            <strong>{tamanhosPorModelo.low.toUpperCase()}</strong> (econômico),
-            Mid usa <strong>{tamanhosPorModelo.mid.toUpperCase()}</strong>{' '}
-            (selecionado), Premium usa{' '}
-            <strong>{tamanhosPorModelo.premium.toUpperCase()}</strong>{' '}
-            (robusto). Cascata aplicada em manutenção (0,5%/mês CAPEX), seguro
-            (0,2%/mês), contingência (10%), capital de giro (3 meses) e
-            investimento total.
-          </p>
-        )}
       </Section>
-
-      {/* 6.5 Kit Equipamentos Detalhado (schema v1.5)
-         Só renderiza quando o pipeline gerou veredito + cenários financeiros.
-         Sem essa guarda, em relatórios `failed` a tabela de equipamentos
-         (hardcoded em frontend/src/data/kits/) seria exibida e revelaria que
-         o kit não vem da análise — só esconder pra preservar a percepção
-         de que tudo é gerado pelo pipeline. */}
-      {(() => {
-        const cenariosOk =
-          !!out.viabilidade_3_cenarios?.low ||
-          !!out.viabilidade_3_cenarios?.mid ||
-          !!out.viabilidade_3_cenarios?.premium
-        if (!out.veredito || !cenariosOk) return null
-        const tipo = (data.input_canonico.tipo_negocio || 'academia') as ModeloNegocio
-        const tamanho = (data.input_canonico.tamanho_preset || 'm') as TamanhoCodigo
-        const kit = getKit(tipo, tamanho)
-        if (!kit) return null
-        return (
-          <Section title="Kit de Equipamentos" collapsible>
-            <KitEquipamentosTable kit={kit} />
-          </Section>
-        )
-      })()}
 
       {/* 7. Posicionamento Recomendado (collapsible) */}
       {out.posicionamento_recomendado && (

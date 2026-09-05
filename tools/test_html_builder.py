@@ -118,6 +118,30 @@ def test_leitura_competitiva_mapeados_vs_analisados():
     assert "14 concorrentes com reviews analisados" not in h
 
 
+def test_capex_sem_equipamentos_no_pdf():
+    """Paridade web: PDF não exibe linha Equipamentos nem frete no breakdown."""
+    m = _model()
+    m.cenarios = [
+        _cenario("mid", "Padrão", 150, "VIAVEL"),
+    ]
+    h = gerar_html(m)
+    assert "Equipamentos" not in h
+    assert "150.000" not in h  # capex_equipamentos do _cenario não no KPI
+    assert "250.000" in h  # capex_total 400k − equip 150k
+
+
+def test_payback_sem_equipamentos_no_pdf():
+    """Payback no PDF usa investimento sem kit (capex_sem + capital_giro)."""
+    m = _model()
+    m.cenarios = [
+        _cenario("mid", "Padrão", 150, "VIAVEL"),
+    ]
+    h = gerar_html(m)
+    # investimento_sem = (400k-150k) + (500k-400k) = 350k; lucro 10k → ceil = 35m
+    assert "35m" in h
+    assert "24m" not in h  # payback bruto A4 (com kit) não deve aparecer
+
+
 def test_ticket_segmento_usa_oferta_modalidades():
     m = _model()
     m.competidores = [

@@ -1,8 +1,6 @@
 import { useSearch } from "@tanstack/react-router";
-import {
-  DegustacaoRouteShell,
-  TesteSandboxLocked,
-} from "@/components/site/DegustacaoRouteShell";
+import { EspecialistasChatShell } from "@/components/chat/EspecialistasChatShell";
+import { TesteSandboxLocked } from "@/components/site/DegustacaoRouteShell";
 
 /**
  * Sandbox dono/dev — mesmo shell que `/degustacao`, bypass Turnstile/caps
@@ -17,7 +15,7 @@ export function TestePage() {
   }
 
   return (
-    <DegustacaoRouteShell
+    <EspecialistasChatShell
       variant="sandbox"
       formulario={abrir === "formulario"}
       devToken={token}

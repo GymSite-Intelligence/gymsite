@@ -66,6 +66,7 @@ const APP_PREFIXES = [
   '/market-atlas',
   '/consultor',
   '/admin',
+  '/crm',
   '/execucao',
   '/assistente',
 ] as const
@@ -453,13 +454,13 @@ const adminLlmRoute = createRoute({
 
 const planosListRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/execucao',
+  path: '/crm',
   component: PlanosListPage,
 })
 
-const execucaoRoute = createRoute({
+const crmDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/execucao/$playbookId',
+  path: '/crm/$playbookId',
   component: ProjetoExecucaoPage,
   validateSearch: (
     s: Record<string, unknown>,
@@ -469,6 +470,31 @@ const execucaoRoute = createRoute({
     view: typeof s.view === 'string' ? s.view : undefined,
     situacao: typeof s.situacao === 'string' ? s.situacao : undefined,
   }),
+})
+
+const execucaoLegacyListRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/execucao',
+  beforeLoad: ({ location }) => {
+    throw redirect({
+      to: '/crm',
+      search: location.search as Record<string, unknown>,
+      replace: true,
+    })
+  },
+})
+
+const execucaoLegacyDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/execucao/$playbookId',
+  beforeLoad: ({ location, params }) => {
+    throw redirect({
+      to: '/crm/$playbookId',
+      params: { playbookId: params.playbookId },
+      search: location.search as Record<string, unknown>,
+      replace: true,
+    })
+  },
 })
 
 const routeTree = rootRoute.addChildren([
@@ -503,7 +529,9 @@ const routeTree = rootRoute.addChildren([
   adminParceirosRoute,
   adminLlmRoute,
   planosListRoute,
-  execucaoRoute,
+  crmDetailRoute,
+  execucaoLegacyListRoute,
+  execucaoLegacyDetailRoute,
 ])
 
 export const router = createRouter({ routeTree })

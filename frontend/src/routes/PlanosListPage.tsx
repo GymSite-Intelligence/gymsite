@@ -1,5 +1,5 @@
 /**
- * PlanosListPage — /execucao: todos os planos de abertura do usuário.
+ * PlanosListPage — /crm: todos os planos de abertura do usuário.
  *
  * Entrada de primeira classe do módulo de execução no sidebar. O plano em si
  * nasce do relatório (botão "Gerar plano de abertura"); aqui é o retorno do
@@ -73,9 +73,9 @@ export function PlanosListPage() {
         return (
           <Link
             key={p.id}
-            to="/execucao/$playbookId"
+            to="/crm/$playbookId"
             params={{ playbookId: p.id }}
-            className="rounded-lg border bg-card px-4 py-3 transition-colors hover:border-primary/40 hover:bg-accent/40"
+            className="rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:border-primary hover:bg-muted"
           >
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-medium">{p.projeto_nome || p.nome}</p>

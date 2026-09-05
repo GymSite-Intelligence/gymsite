@@ -19,7 +19,7 @@ export function renderRich(texto: string) {
     const conteudo = bullet ? linha.replace(/^\s*[*\-•]\s+/, '') : linha
     return bullet ? (
       <div key={i} className="flex gap-1.5">
-        <span className="shrink-0 text-primary" aria-hidden>
+        <span className="shrink-0 text-lime" aria-hidden>
           •
         </span>
         <span>{renderInline(conteudo)}</span>

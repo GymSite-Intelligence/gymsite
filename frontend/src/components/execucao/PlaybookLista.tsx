@@ -45,7 +45,7 @@ export function PlaybookLista({
                     key={t.id}
                     type="button"
                     onClick={() => onAbrir(t.id)}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-card px-3 py-2 text-left transition-colors hover:border-primary hover:bg-muted"
                   >
                     <CategoriaBadge categoria={t.categoria} />
                     <span
@@ -55,9 +55,9 @@ export function PlaybookLista({
                     >
                       {t.titulo}
                     </span>
-                    {t.sugerida_pela_ia && <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />}
+                    {t.sugerida_pela_ia && <Sparkles className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                     {t.esta_atrasada && (
-                      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-red-600">
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-destructive">
                         <AlertTriangle className="h-3.5 w-3.5" /> {t.dias_atraso}d
                       </span>
                     )}

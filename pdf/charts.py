@@ -54,18 +54,15 @@ def chart_scores_bar(scores: list[ScoreDim], width_in: float = 6.0) -> bytes | N
 def chart_capex_stacked(cenarios: list[CenarioPdf], width_in: float = 6.5) -> bytes | None:
     labels: list[str] = []
     obra: list[float] = []
-    equip: list[float] = []
     cont: list[float] = []
 
     for c in cenarios:
         o = c.capex_obra or 0
-        e = c.capex_equipamentos or 0
         t = c.capex_contingencia or 0
-        if o + e + t <= 0:
+        if o + t <= 0:
             continue
         labels.append(c.label)
         obra.append(o)
-        equip.append(e)
         cont.append(t)
 
     if not labels:
@@ -74,9 +71,7 @@ def chart_capex_stacked(cenarios: list[CenarioPdf], width_in: float = 6.5) -> by
     fig, ax = plt.subplots(figsize=(width_in, 2.8))
     x = range(len(labels))
     ax.bar(x, obra, label="Obra / adaptação", color="#1B2A4A")
-    ax.bar(x, equip, bottom=obra, label="Equipamentos", color="#0D9488")
-    bottom2 = [o + e for o, e in zip(obra, equip, strict=True)]
-    ax.bar(x, cont, bottom=bottom2, label="Contingência", color="#E8751A")
+    ax.bar(x, cont, bottom=obra, label="Contingência", color="#E8751A")
     ax.set_xticks(list(x))
     ax.set_xticklabels(labels, fontsize=9)
     ax.set_title("Composição do CAPEX por modelo", fontsize=11, fontweight="bold", color="#1B2A4A")
