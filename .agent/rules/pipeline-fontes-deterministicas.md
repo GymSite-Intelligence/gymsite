@@ -25,6 +25,7 @@
 | Aluguel referência batch | ~~removido jul/2026~~ | `tools/9_obsolete/` — viabilidade = MRLR |
 | Demografia | IBGE Censo 2022 |
 | CNPJ/CNO | RFB/Supabase |
+| Contexto municipal qualitativo A0 | Wikipedia/Wikidata (`carregar_wikipedia_municipio`) — complementar ao bundle, **nunca** canônico para parque/score/ticket/MRLR |
 | Fluxo pedestre | OSMnx + Overpass (exceção: não SearchAPI; 1× por relatório, preferir A6) |
 
 ## Documentos a revisitar sempre (junto com este arquivo)
