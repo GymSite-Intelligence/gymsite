@@ -30,7 +30,7 @@ export function GerarPlanoButton({
           } else {
             notify.success(`Plano de abertura criado com ${r.tarefas_geradas ?? ''} etapas!`)
           }
-          navigate({ to: '/execucao/$playbookId', params: { playbookId: r.playbook_id } })
+          navigate({ to: '/crm/$playbookId', params: { playbookId: r.playbook_id } })
         },
         onError: (e: Error) => notify.error(e.message),
       },

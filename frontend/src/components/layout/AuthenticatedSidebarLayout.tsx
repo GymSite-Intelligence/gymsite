@@ -17,7 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/relatorios': 'Relatórios',
   '/mapa': 'Mapa',
   '/market-atlas': 'Market Atlas',
-  '/execucao': 'Planos de abertura',
+  '/crm': 'CRM',
   '/comparar': 'Comparar',
   '/prospeccao': 'Prospecção',
   '/prospect': 'Captação de Leads',
@@ -34,7 +34,7 @@ function titleFromPath(pathname: string): string {
   if (pathname.startsWith('/relatorios/new')) return 'Novo relatório'
   if (pathname.includes('/aguardando')) return 'Gerando relatório'
   if (pathname.startsWith('/relatorios/')) return 'Relatório'
-  if (pathname.startsWith('/execucao/')) return 'Plano de abertura'
+  if (pathname.startsWith('/crm/')) return 'CRM'
   if (pathname.startsWith('/consultor')) return 'Consultor'
   return PAGE_TITLES[pathname] ?? 'GymSite Intelligence'
 }
