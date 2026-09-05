@@ -84,17 +84,22 @@ export type DegustacaoRouteShellProps = {
   formulario: boolean;
   /** Sandbox: bypass Turnstile/caps no chat e formulário. */
   devToken?: string;
+  "data-testid"?: string;
 };
 
 export function DegustacaoRouteShell({
   variant,
   formulario,
   devToken,
+  "data-testid": dataTestId,
 }: DegustacaoRouteShellProps) {
   const copy = COPY[variant];
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div
+      data-testid={dataTestId}
+      className="flex min-h-screen flex-col bg-background text-foreground"
+    >
       <header className={HEADER_CLASS}>
         <DegustacaoLogoLink />
         {variant === "sandbox" ? <SandboxBadge /> : null}
