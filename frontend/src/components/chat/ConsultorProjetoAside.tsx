@@ -27,20 +27,21 @@ const STATUS_LABEL: Record<string, string> = {
 
 interface ConsultorProjetoAsideProps {
   projeto: ConsultorProjeto | null
+  className?: string
 }
 
-export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
+export function ConsultorProjetoContent({ projeto }: { projeto: ConsultorProjeto | null }) {
   const loc = projeto?.localizacao
   const locLabel = loc?.cidade ? [loc.bairro, loc.cidade, loc.uf].filter(Boolean).join(', ') : null
 
   return (
-    <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-card p-4 lg:flex">
+    <>
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Projeto</h2>
         <div className="mt-2 rounded-xl border border-border bg-card p-3">
           {locLabel ? (
             <div className="flex items-center gap-1.5 text-sm font-medium">
-              <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />
+              <MapPin className="h-3.5 w-3.5 text-lime" aria-hidden />
               <span className="truncate">{locLabel}</span>
             </div>
           ) : (
@@ -72,7 +73,7 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
                 key={key}
                 className={cn(
                   'flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs',
-                  done ? 'border-primary/25 bg-primary/5' : 'border-border/60 bg-card',
+                  done ? 'border-lime/25 bg-lime/5' : 'border-border/60 bg-card',
                 )}
               >
                 {Icone ? (
@@ -84,7 +85,7 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
                     className={cn(!done && 'opacity-70 ring-1 ring-border')}
                   />
                 ) : done ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-lime" />
                 ) : (
                   <Circle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
                 )}
@@ -94,7 +95,7 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
                 <span
                   className={cn(
                     'font-mono text-[9px] uppercase',
-                    done ? 'text-primary' : 'text-muted-foreground/60',
+                    done ? 'text-lime' : 'text-muted-foreground/60',
                   )}
                 >
                   {done ? 'ok' : '—'}
@@ -121,6 +122,15 @@ export function ConsultorProjetoAside({ projeto }: ConsultorProjetoAsideProps) {
           </Button>
         )}
       </div>
-    </aside>
+    </>
+  )
+}
+
+/** Conteúdo do painel projeto — usado em drawer (paridade com jornada na degustação). */
+export function ConsultorProjetoAside({ projeto, className }: ConsultorProjetoAsideProps) {
+  return (
+    <div className={cn('flex flex-col gap-4', className)}>
+      <ConsultorProjetoContent projeto={projeto} />
+    </div>
   )
 }
