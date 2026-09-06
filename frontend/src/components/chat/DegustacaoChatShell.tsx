@@ -75,7 +75,6 @@ export function DegustacaoChatShell({
           messages={messages}
           sessions={sessions}
           activeProjetoId={projetoId}
-          projeto={projeto}
           sugestoes={sugestoes}
           isLoading={isLoading}
           isLoadingSessions={isLoadingSessions}

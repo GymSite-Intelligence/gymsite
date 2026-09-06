@@ -45,7 +45,7 @@ function AppEspecialistasShell({ chat }: { chat: UseConsultorChatReturn }) {
         messages={messages}
         sessions={sessions}
         activeProjetoId={projetoId}
-        projeto={projeto}
+
         sugestoes={sugestoes}
         isLoading={isLoading}
         isLoadingSessions={isLoadingSessions}
