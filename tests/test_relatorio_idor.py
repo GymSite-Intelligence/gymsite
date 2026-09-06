@@ -97,3 +97,30 @@ def test_pdf_endpoint_exige_credencial():
 
     routes = {r.path for r in app.routes if hasattr(r, "path")}
     assert "/api/relatorios/{relatorio_id}/pdf" in routes
+
+
+def test_jwt_com_org_id_vazio_nega():
+    """Fail-closed: relatório sem org_id não libera acesso via JWT."""
+    from fastapi import HTTPException
+
+    import api
+
+    sb = _sb_with_relatorio(access_code=None, org_id=None)
+    with patch.object(api, "_require_authenticated", return_value=("user-X", "org-X")), \
+         patch.object(api, "_user_org_ids", return_value=["org-X"]):
+        with pytest.raises(HTTPException) as exc:
+            api._assert_relatorio_access(_req("bearer tok"), sb, REL_ID, access_code=None)
+    assert exc.value.status_code == 403
+
+
+def test_jwt_com_org_id_blank_nega():
+    from fastapi import HTTPException
+
+    import api
+
+    sb = _sb_with_relatorio(access_code=None, org_id="   ")
+    with patch.object(api, "_require_authenticated", return_value=("user-X", "org-X")), \
+         patch.object(api, "_user_org_ids", return_value=["org-X"]):
+        with pytest.raises(HTTPException) as exc:
+            api._assert_relatorio_access(_req("bearer tok"), sb, REL_ID, access_code=None)
+    assert exc.value.status_code == 403
