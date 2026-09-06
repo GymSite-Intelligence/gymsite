@@ -3,6 +3,7 @@
 # GymSite Intelligence — Production Deploy Script
 # Uso: ./scripts/deploy.sh [tag]
 #   tag: opcional (default: latest). Ex: ./scripts/deploy.sh v1.2.3
+# Atualiza API (rolling) e sincroniza worker com a mesma imagem GHCR.
 # =============================================================================
 set -euo pipefail
 
@@ -68,8 +69,8 @@ if [[ "$(stat -c '%u' "$PROJECT_DIR/cno_data")" != "1000" ]]; then
 fi
 
 # ─── Pull ───────────────────────────────────────────────────────────────────
-log "Pulling image ${GHCR_IMAGE}..."
-$DOCKER_COMPOSE -f "$COMPOSE_FILE" pull api
+log "Pulling image ${GHCR_IMAGE} (api + worker)..."
+$DOCKER_COMPOSE -f "$COMPOSE_FILE" pull api worker
 
 # ─── Deploy (rolling update) ────────────────────────────────────────────────
 log "Deploying tag=${TAG}..."
@@ -120,6 +121,23 @@ fi
 # ─── Scale down to single replica ───────────────────────────────────────────
 log "Removendo container antigo..."
 $DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d --no-deps --scale api=1 api
+
+# ─── Sync worker (same image as API) ────────────────────────────────────────
+# Worker does not auto-update on API rolling deploy; force same GHCR_IMAGE.
+log "Syncing worker to ${GHCR_IMAGE}..."
+$DOCKER_COMPOSE -f "$COMPOSE_FILE" up -d --no-deps --force-recreate worker
+
+API_CID=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" ps -q api | head -1)
+WORKER_CID=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" ps -q worker | head -1)
+if [[ -n "$API_CID" && -n "$WORKER_CID" ]]; then
+    API_IMG=$(docker inspect --format='{{.Image}}' "$API_CID")
+    WORKER_IMG=$(docker inspect --format='{{.Image}}' "$WORKER_CID")
+    if [[ "$API_IMG" != "$WORKER_IMG" ]]; then
+        err "Worker image drift after sync: api=$API_IMG worker=$WORKER_IMG"
+        exit 1
+    fi
+    log "API+worker image IDs match (${API_IMG:0:12}…)"
+fi
 
 # ─── Cleanup ────────────────────────────────────────────────────────────────
 log "Limpando imagens antigas..."

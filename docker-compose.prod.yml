@@ -5,7 +5,7 @@
 # portas 80/443 (o túnel entrega o tráfego). Ver docs/PLAN_HETZNER_VPS_TUNNEL.md.
 #
 # Bring-up inicial:   docker compose -f docker-compose.prod.yml up -d
-# Deploy rolling API: ./scripts/deploy.sh [tag]   (usa GHCR_IMAGE)
+# Deploy rolling API+sync worker: ./scripts/deploy.sh [tag]   (mesma GHCR_IMAGE)
 #
 # .env.production e cloudflared/credentials.json NÃO são versionados (.gitignore).
 # =============================================================================
