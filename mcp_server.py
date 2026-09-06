@@ -9,6 +9,7 @@ Auth: Bearer token (GYMSITE_API_KEY)
 import os
 import json
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any
 from contextlib import asynccontextmanager
@@ -26,6 +27,8 @@ from mcp.segments.listings import LISTINGS_HANDLERS, LISTINGS_TOOLS
 from mcp.segments.mercado import MERCADO_HANDLERS, MERCADO_TOOLS
 from mcp.segments.reviews import REVIEWS_HANDLERS, REVIEWS_TOOLS
 from mcp.segments.social import SOCIAL_HANDLERS, SOCIAL_TOOLS
+
+logger = logging.getLogger("gymsite.mcp")
 
 # ─── Config ─────────────────────────────────────────────────────────────────
 GYMSITE_API_BASE = os.getenv("GYMSITE_API_BASE", "http://127.0.0.1:8000")
@@ -313,16 +316,23 @@ async def mcp_endpoint(request: Request):
                 }
             })
         except httpx.HTTPStatusError as e:
+            logger.warning(
+                "Erro na API GymSite ao executar tool '%s' (status %s): %s",
+                tool_name,
+                e.response.status_code,
+                e.response.text,
+            )
             return JSONResponse({
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "error": {"code": -32000, "message": f"Erro na API GymSite: {e.response.status_code} — {e.response.text[:200]}"}
+                "error": {"code": -32000, "message": f"Erro na API GymSite: status {e.response.status_code}"}
             }, status_code=500)
         except Exception as e:
+            logger.exception("Erro interno ao executar tool '%s': %s", tool_name, e)
             return JSONResponse({
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "error": {"code": -32603, "message": f"Erro interno: {str(e)}"}
+                "error": {"code": -32603, "message": "Erro interno ao processar requisição MCP"}
             }, status_code=500)
 
     # ── notifications/initialized ─────────────────────────────────────────
