@@ -1,2 +1,10 @@
 # Documentation
 # *.md
+
+# Environment / secrets - never commit real env files
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+!.env.*.example
