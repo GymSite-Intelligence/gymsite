@@ -1184,7 +1184,7 @@ async def _run_pipeline_async_body(
 
             erro_amigavel = friendly_pipeline_429_message()
         else:
-            erro_amigavel = f"{type(e).__name__}: {e}"
+            erro_amigavel = "Erro interno no processamento do relatório. Tente novamente mais tarde."
         _mark_pipeline_failed(sb, relatorio_id, elapsed=elapsed, erro_mensagem=erro_amigavel)
 
 
@@ -1497,7 +1497,8 @@ def maps_street_view_proxy(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        logger.exception("Falha ao obter imagem do Street View: %s", exc)
+        raise HTTPException(status_code=502, detail="Falha ao obter imagem do Street View") from exc
 
 
 @app.post("/api/maps/territorio-read")
@@ -1776,7 +1777,8 @@ async def create_relatorio(
                 user_id=user_id,
             )
         except RuntimeError as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
+            logger.exception("Falha ao criar stub do relatório: %s", e)
+            raise HTTPException(status_code=500, detail="Falha ao criar header do relatório") from e
 
         await _enqueue_ou_background({
             "type": "pipeline",
@@ -2239,7 +2241,7 @@ def post_entrantes_para_prospeccao(
                 inseridos.append(cnpj_limpo)
         except Exception as e:
             logger.warning("Erro ao enviar CNPJ %s para prospecção: %s", cnpj_limpo, e)
-            erros.append({"cnpj": cnpj_limpo, "motivo": f"Erro no Supabase: {e}"})
+            erros.append({"cnpj": cnpj_limpo, "motivo": "Erro ao salvar oportunidade"})
 
     return {
         "ok": True,
@@ -2342,7 +2344,7 @@ def post_sync_apollo_pendentes(
                 erros.append({"id": opp["id"], "erro": result.get("erro")})
         except Exception as e:
             failed += 1
-            erros.append({"id": opp.get("id"), "erro": str(e)})
+            erros.append({"id": opp.get("id"), "erro": "Falha na sincronização Apollo"})
             logger.warning("Sync Apollo falhou para oportunidade %s: %s", opp.get("id"), e)
 
     return {
@@ -2458,7 +2460,7 @@ def _run_canal_probe(canal: str, body: CanalProbeInput) -> dict:
         return {
             "canal": canal,
             "ok": False,
-            "erro": f"{type(e).__name__}: {e}",
+            "erro": "Falha na execução do canal",
         }
 
 
@@ -3059,7 +3061,8 @@ def captar_entrantes_cnpj(
                 sb.table("oportunidades_prospeccao").insert(row).execute()
                 inseridos.append(c)
         except Exception as e:
-            erros.append({"cnpj": c, "motivo": str(e)})
+            logger.warning("Erro ao salvar oportunidade CNPJ %s: %s", c, e)
+            erros.append({"cnpj": c, "motivo": "Erro ao salvar oportunidade"})
 
     return {"ok": True, "inseridos": inseridos, "atualizados": atualizados,
             "erros": erros, "total_enviados": len(inseridos) + len(atualizados)}
@@ -3098,12 +3101,14 @@ def patch_status_oportunidade(
     try:
         update_status(oportunidade_id, payload.status)
         return {"status": "updated", "id": oportunidade_id, "novo_status": payload.status}
-    except OportunidadeNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except OportunidadeNotFoundError:
+        raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
     except WebhookDeliveryError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("Falha na entrega de webhook para oportunidade %s: %s", oportunidade_id, e)
+        raise HTTPException(status_code=400, detail="Falha no envio do webhook")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno ao atualizar status: {str(e)}")
+        logger.exception("Erro interno ao atualizar status da oportunidade %s: %s", oportunidade_id, e)
+        raise HTTPException(status_code=500, detail="Erro interno ao atualizar status")
 
 
 @app.post("/api/prospeccao/webhook/configure")
@@ -3120,7 +3125,8 @@ def configurar_webhook_claw(
         }).eq("id", payload.org_id).execute()
         return {"status": "ok", "org_id": payload.org_id, "webhook_url": payload.webhook_url}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Erro ao configurar webhook para org %s: %s", payload.org_id, e)
+        raise HTTPException(status_code=500, detail="Erro ao configurar webhook")
 
 
 # ── Tinker Bot Assistente ──────────────────────────────────────────────────
@@ -3218,7 +3224,7 @@ async def assistente_chat(request: Request, payload: AssistenteChatInput) -> Ass
         raise
     except Exception as e:
         logger.exception("Erro no Tinker Bot: %s", e)
-        raise HTTPException(status_code=500, detail=f"Erro no assistente: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro no assistente")
 
 
 class AssistenteFeedbackInput(BaseModel):
@@ -3285,7 +3291,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput, backgr
         )
     except Exception as e:
         logger.exception("Erro no ConversationalEngine: %s", e)
-        raise HTTPException(status_code=500, detail=f"Erro no agente: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro no agente")
 
     intencao = resultado.get("intencao", "indefinido")
 
@@ -3360,7 +3366,7 @@ async def assistente_conversar(request: Request, payload: ConversarInput, backgr
             resultado["status"] = "pipeline_rodando"
         except Exception as e:
             logger.exception("Erro ao criar relatório do chat: %s", e)
-            raise HTTPException(status_code=500, detail=f"Erro ao iniciar relatório: {str(e)}")
+            raise HTTPException(status_code=500, detail="Erro ao iniciar relatório")
 
     return ConversarOutput(
         session_id=resultado["session_id"],
@@ -3523,7 +3529,7 @@ async def websocket_pipeline(
         try:
             await websocket.send_json({
                 "type": "degraded",
-                "error": str(e),
+                "error": "degraded_connection",
                 "data": _pipeline_state,
             })
             await _ws_pipeline_memory_fallback(websocket, client_id)
