@@ -164,7 +164,9 @@ def gerar_playbook(data: GerarPlaybookRequest, request: Request):
     )
     if not rel or not rel.data:
         raise HTTPException(status_code=404, detail="Relatório não encontrado")
-    if rel.data.get("user_id") and rel.data["user_id"] != user_id:
+    # Fail-closed: empty/missing owner must not skip ownership (IDOR).
+    owner_id = rel.data.get("user_id") or ""
+    if not owner_id or owner_id != user_id:
         raise HTTPException(status_code=403, detail="Este relatório pertence a outra conta")
 
     try:
