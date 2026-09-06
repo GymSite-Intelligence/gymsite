@@ -1,3 +1,6 @@
+# DEPRECADO (ADR-008 / Opsera #5): Cloud Run NAO e producao.
+# Prod API+worker = Hetzner + Tunnel. NUNCA usar projeto orfao gen-lang-client-0662901510.
+# Nao execute este script salvo diagnostico legado autorizado.
 param (
     [string]$Project = "gen-lang-client-0106729343",
     [string]$Service = "gymsite-api",

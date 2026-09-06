@@ -20,7 +20,7 @@ Deploy produção GymSite (monorepo app logado). Ambiente shell: **PowerShell** 
 | Landing CF | projeto `gym-insight-hub` → `gymsite.com.br` |
 | API URL (após cutover) | `https://api.getgymsite.com.br` |
 | Cloud Run | **DEPRECADO** — billing off; não `gcloud run deploy` |
-| Órfão GCP | `gen-lang-client-0662901510` (ignorar) |
+| Órfão GCP | `gen-lang-client-0662901510` (ignorar/desligar — [ADR-008](../../docs/arquitetura/ADR-008_PROD_HETZNER_ORPHAN_GCP.md)) |
 
 ## Steps
 
