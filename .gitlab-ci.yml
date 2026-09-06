@@ -1,0 +1,94 @@
+# =============================================================================
+# GymSite — GitLab CI mirror of required PR gates
+# Source of truth today: GitHub Actions (.github/workflows/)
+#   - pipeline-gate.yml  → job pipeline_gate
+#   - frontend-ci.yml    → job frontend_ci
+# Deploy/GHCR (ci-cd.yml) stays on GitHub until a GitLab registry + runners exist.
+# =============================================================================
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - gate
+
+default:
+  interruptible: true
+
+# ── Pipeline Gate (contratos A0–A9 / MRLR / HTML — R$ 0, sem LLM, sem rede) ──
+pipeline_gate:
+  stage: gate
+  image: python:3.11-bookworm
+  timeout: 15 minutes
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - agents/**/*
+        - tools/**/*
+        - tests/**/*
+        - pdf/**/*
+        - models/**/*
+        - ci/**/*
+        - pytest.ini
+        - .gitlab-ci.yml
+        - .github/workflows/pipeline-gate.yml
+  cache:
+    key:
+      files:
+        - requirements.txt
+    paths:
+      - .cache/pip
+  before_script:
+    - pip install --cache-dir .cache/pip -r requirements.txt
+    - pip install --cache-dir .cache/pip pytest pytest-asyncio pytest-socket
+  script:
+    - |
+      mapfile -t files < <(grep -vE '^\s*(#|$)' ci/pipeline-gate.txt)
+      if [ ${#files[@]} -eq 0 ]; then
+        echo "ci/pipeline-gate.txt está vazia"
+        exit 1
+      fi
+      python -m pytest -q --tb=short \
+        -m "not integration and not e2e" \
+        --disable-socket --allow-unix-socket \
+        --allow-hosts=127.0.0.1,::1 \
+        "${files[@]}"
+
+# ── Frontend CI (typecheck + production build smoke) ─────────────────────────
+frontend_ci:
+  stage: gate
+  image: node:20-bookworm
+  timeout: 15 minutes
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - frontend/**/*
+        - .gitlab-ci.yml
+        - .github/workflows/frontend-ci.yml
+        - .github/workflows/pages.yml
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/node_modules/
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
+    - |
+      export VITE_USE_MOCKS=false
+      export VITE_SUPABASE_URL=https://placeholder.supabase.co
+      export VITE_SUPABASE_ANON_KEY=placeholder-anon-key-for-ci-only
+      export VITE_API_BASE=https://gymsite-api.vectracargo.com.br
+      export VITE_DEV_AS_ADMIN=false
+      npm run build
+    - test -f dist/index.html
+    - test -f dist/_redirects || grep -q '/*' public/_redirects
+  artifacts:
+    when: on_success
+    expire_in: 3 days
+    paths:
+      - frontend/dist/
