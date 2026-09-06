@@ -120,7 +120,9 @@ async def rebuscar_candidatos(relatorio_id: str, data: RebuscaRequest, request: 
     )
     if not rel or not rel.data:
         raise HTTPException(status_code=404, detail="Relatório não encontrado")
-    if rel.data.get("user_id") and rel.data["user_id"] != user_id:
+    # Fail-closed: empty/missing owner must not skip ownership (IDOR).
+    owner_id = rel.data.get("user_id") or ""
+    if not owner_id or owner_id != user_id:
         raise HTTPException(status_code=403, detail="Este relatório pertence a outra conta")
     if rel.data.get("status") != "done":
         raise HTTPException(status_code=400, detail="Espere a análise terminar antes de re-buscar pontos.")

@@ -1691,9 +1691,10 @@ def _assert_relatorio_access(request: Request, sb, rid: str, access_code: str | 
     row = res.data if res else None
     if not row:
         raise HTTPException(status_code=404, detail="relatório não encontrado")
-    org_id = str(row.get("org_id") or "")
+    org_id = str(row.get("org_id") or "").strip()
     orgs = _user_org_ids(sb, user_id)
-    if org_id and org_id not in orgs:
+    # Fail-closed: missing/empty org_id must deny (no orphan-report bypass).
+    if not org_id or org_id not in orgs:
         raise HTTPException(status_code=403, detail="Sem permissão para este relatório")
 
 
