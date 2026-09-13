@@ -8,7 +8,6 @@ import {
   CpuIcon,
   FileTextIcon,
   GitCompareIcon,
-  HexagonIcon,
   InboxIcon,
   LayoutDashboardIcon,
   TargetIcon,
@@ -65,11 +64,6 @@ export const appNavItems: SidebarNavItem[] = [
     title: 'Obras CNO',
     to: '/cno-obras',
     icon: Building2Icon,
-  },
-  {
-    title: 'Hex CARTO',
-    to: '/carto-hex',
-    icon: HexagonIcon,
   },
 ]
 
