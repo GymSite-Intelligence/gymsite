@@ -8,8 +8,8 @@ Só edite `agents/a3a_competitor_search.py` / `agents/a3b_competitor_analysis.py
 sair com código 0 (9 passed).
 
 Contrato 2026-08-05:
-- A3 em produção = par determinístico A3a + A3b (BaseAgent, sem LLM). O LlmAgent
-  `a3_competitor_intel.py` (CompetitorIntel) está MORTO (comentado no runner).
+- A3 em produção = par determinístico A3a + A3b (BaseAgent, sem LLM). O antigo
+  LlmAgent monolítico (CompetitorIntel) foi removido.
 - A3a: roda `analisar_concorrentes_a3a_completo`, grava `concorrentes_brutos`.
 - A3b: roda `analisar_concorrentes_completo`, grava `inteligencia_competitiva`
   + `oferta_concorrentes`; sintetiza posicionamento/resumo por template.

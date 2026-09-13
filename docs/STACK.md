@@ -121,7 +121,7 @@ O pipeline é montado com o **Google ADK** em `gymsite_intelligence/agent.py`. O
 | **A2** DemoAnalyst | `a2_demo_analyst.py` | Determinístico | Análise demográfica do bairro/entorno. |
 | **A3a** CompetitorSearch | `a3a_competitor_search.py` | Determinístico | Busca concorrentes via SearchAPI (`engine=google_maps`). |
 | **A3b** CompetitorAnalysis | `a3b_competitor_analysis.py` | Determinístico | Gaps/dores/score + mapeia oferta (site + Instagram). Absorveu o antigo A3c. |
-| ~~A3~~ CompetitorIntel | `a3_competitor_intel.py` | LLM (`gemini-2.5-flash`) | **DEPRECATED** — monolítico substituído por A3a+A3b. |
+| ~~A3~~ CompetitorIntel | *(removido)* | LLM (legado) | Monolítico descontinuado e removido; substituído por A3a+A3b. |
 | **A4** FinancialEstimator | `a4_financial_estimator.py` | Determinístico | Viabilidade financeira; aluguel vem do MRLR (não de listing raspado). |
 | **A5** ContactHunter | `a5_contact_hunter.py` | Determinístico | Contato de decisores — **fora da viabilidade**, usado na rota de prospecção. |
 | **A6** ReportConsolidator | `a6_report_consolidator.py` | LLM (`gemini-2.5-pro` / `flash`) | Consolida tudo no relatório final. |

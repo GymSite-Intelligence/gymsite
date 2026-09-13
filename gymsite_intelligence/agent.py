@@ -33,8 +33,6 @@ except Exception:  # ADK/genai ausente em algum contexto — segue sem retry de 
 from agents.a0_context_builder import context_builder_agent
 from agents.a1_geoscout import geoscout_agent
 from agents.a2_demo_analyst import demo_analyst_agent
-# A3 monolítico DEPRECATED — substituído por A3a + A3b (resolve AFC=10 + MALFORMED)
-# from agents.a3_competitor_intel import competitor_intel_agent
 from agents.a3a_competitor_search import competitor_search_agent
 # A3b (determinístico) FUNDIU o antigo A3c: roda analisar_concorrentes_completo
 # (gaps/dores/score) E mapear_oferta_competidores_completo (oferta site+IG via
