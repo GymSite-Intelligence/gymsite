@@ -22,7 +22,6 @@ tests/
 *.jpeg
 docs/
 .next/
-.next-app/
 artifacts/
 credentials/
 cloudflared/
