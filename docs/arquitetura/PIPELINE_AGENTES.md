@@ -36,7 +36,7 @@ GymSitePipeline (Sequential)
 | A5 ContactHunter | `agents/a5_contact_hunter.py` | decisor + canal + script | contato = prospecção, não viabilidade |
 | A7 MarketResearch | `agents/a7_market_research.py` | Google Search Grounding on-demand | chamado sob demanda, não no fluxo fixo |
 | A8 Validador | `agents/a8_validator.py` | validação cruzada pós-A6 | classe standalone, não é agente ADK |
-| A3 CompetitorIntel | `agents/a3_competitor_intel.py` | monólito antigo | **substituído** por A3a/A3b/A3c |
+| A3 CompetitorIntel | *(removido)* | monólito antigo | **substituído** por A3a/A3b/A3c |
 
 **Determinismo (regra VEC — LLM veste, não produz dado):** A1, A2, A3a, A3b, A4, A5, A9 = `BaseAgent` sem LLM. **LLM restante:** A0 (com override determinístico dos números — ver §6), A6 (narrador guardrail parcial), A7 (web grounding, justificado). A6/A9 narram via `narrador_claude` (Claude headless + guardrail). A3b determinizado + A0 com override de número CNPJ (jun/2026) — **nenhum agente produz número sem guardrail**, exceto a cobertura parcial do A6.
 
@@ -149,8 +149,8 @@ GymSitePipeline (Sequential)
 - **Faz:** framework ERRC + GAPs + ticket recomendado + veredito (OCEANO_AZUL/TRANSICAO/VERMELHO) + quadrante (Oceano/Armadilha/Guerra/Deserto). **Armadilha vence** headroom Oceano se ≥2 Premium no polígono (`matriz_override`).
 - **Relatório:** §7 (Posicionamento Recomendado) + seção PDF **Modelo de Negócio Adequado**.
 
-### A3 — CompetitorIntel · [`a3_competitor_intel.py`](../../agents/a3_competitor_intel.py) — **LEGADO**
-- `Agent` (LLM) gemini-3.6-flash, 8 tools soltas. Monólito que estourava AFC=10 (`MALFORMED_FUNCTION_CALL`). **Substituído** por A3a/A3b/A3c. Mantido só p/ referência.
+### A3 — CompetitorIntel (legado removido)
+- Antigo `Agent` (LLM) gemini-3.6-flash, 8 tools soltas. Monólito que estourava AFC=10 (`MALFORMED_FUNCTION_CALL`). **Substituído** por A3a/A3b/A3c. Arquivo `agents/a3_competitor_intel.py` removido.
 
 ---
 
