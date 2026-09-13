@@ -27,7 +27,7 @@
 ## ESTUDO
 
 - `analise_melhorias_bq/diferencas_disciplinas_dados.md` — tese 4 disciplinas + BQ (fonte do roadmap).
-- `Guia de Engenharia de Prompt Eficaz.pdf` — destilado em `prompts/guia_prompts_pipeline.md`.
+- ~~`Guia de Engenharia de Prompt Eficaz.pdf`~~ — removido (destilado em `prompts/guia_prompts_pipeline.md`).
 - ~~`fig1–3_*.png`~~ — removidos desta pasta (dup em `docs/arquitetura/` ou pitch antigo).
 
 ## Relacionados fora da pasta

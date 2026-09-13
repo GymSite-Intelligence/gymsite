@@ -63,6 +63,8 @@ SaaS). **Ingerir isso no store público `gymsite-market-docs` VAZA estratégia p
 | docs/agente/index.pdf | untracked, origem desconhecida — confirmar |
 
 ### Ebooks / PDFs irrelevantes (provável copyright, fora de escopo)
+> Nota (set/2026): PDFs pesados e não utilizados de marketing/branding/tendências e RAG pontual foram removidos do repositório.
+
 | arquivo | motivo |
 |---|---|
 | docs/arquitetura/Manual-Vibe-Coding.pdf | manual de coding, off-topic |
