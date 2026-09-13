@@ -13,7 +13,6 @@ project-excludes = [
     "__pycache__",
     ".pytest_cache",
     "frontend",
-    "next-app",
     "node_modules",
     "cloudflared",
     "cloudflared;C",
