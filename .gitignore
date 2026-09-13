@@ -8,3 +8,11 @@
 .env.*.local
 !.env.example
 !.env.*.example
+
+# Debug artifacts and scraped dumps
+debug/
+
+# Ephemeral market research caches (production cache is Supabase)
+market_context/investigations/*.md
+market_context/*.md
+
