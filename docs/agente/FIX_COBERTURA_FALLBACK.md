@@ -41,7 +41,7 @@ Implementar Opcao A (allowlist de cobertura no backend) como gate antes de qualq
 
 ## Onde mexer (a confirmar no codigo)
 
-- Camada de backend/orquestracao que decide cobertura (ver test_cobertura_a0.py e test_resolver_cidade.py no repo — indicam que ja existe logica de resolucao de cidade/cobertura a ser reutilizada como gate).
+- Camada de backend/orquestracao que decide cobertura (ver tests/test_cobertura_a0.py e test_resolver_cidade.py no repo — indicam que ja existe logica de resolucao de cidade/cobertura a ser reutilizada como gate).
 - Apos implementar, re-rodar o caso `cobertura_fallback` no eval e atualizar a matriz de resultados.
 
 ## Status

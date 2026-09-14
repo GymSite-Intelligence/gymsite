@@ -22,7 +22,7 @@ Fidelidade à marca. Sem hex inventado. Sem tema lab (teal/índigo/laranja) em p
 | Hex / logo | `docs/frontend/IDENTIDADE_VISUAL_APP.md` |
 | Spec UI | `docs/superpowers/specs/2026-08-03-app-ui-identity-design.md` |
 | TS palette | `frontend/src/config/gymsite-design-system.ts` → `GYMSITE_PALETTE` |
-| Cursor rules | `.cursor/rules/frontend-logo.mdc`, `frontend-desing.mdc` |
+| Cursor rules | `.cursor/rules/frontend-logo.mdc`, `.cursor/rules/frontend-design.mdc` |
 
 Hub (`gym-insight-hub/docs/frontend/CLAUDE.md` + artifact cores) **vence** se hex divergir.
 

@@ -15,10 +15,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).parent / "gymsite_intelligence" / ".env")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(_REPO_ROOT / "gymsite_intelligence" / ".env")
 
 # Importa só o helper (não dispara o agent)
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(_REPO_ROOT))
 from agents.a6_report_consolidator import _build_cobertura_redes_a0
 
 _REDES_DR = {
