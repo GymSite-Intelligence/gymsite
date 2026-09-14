@@ -164,11 +164,6 @@ function placesAutocompletePlugin() {
                 body: JSON.stringify(params),
               },
             )
-            // Log de debug — útil quando proxy retorna vazio mas API direta funciona.
-            // Remover depois que estabilizar.
-            console.log(
-              `[places-autocomplete] query="${queryString}" status=${upstream.status}`,
-            )
             const data = (await upstream.json()) as {
               suggestions?: Array<{
                 placePrediction?: {
@@ -215,10 +210,6 @@ function placesAutocompletePlugin() {
                 // UF é hint; Places costuma retornar "Ceará" em vez de "CE".
                 return true
               })
-
-            console.log(
-              `[places-autocomplete] retornou ${suggestions.length}/${(data.suggestions || []).length} (filtro município "${municipio}")`,
-            )
 
             res.statusCode = 200
             res.setHeader('content-type', 'application/json')

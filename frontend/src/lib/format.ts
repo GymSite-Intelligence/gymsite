@@ -1,4 +1,4 @@
-const IS_DEV = typeof process !== 'undefined' && process.env?.NODE_ENV === 'development';
+const IS_DEV = import.meta.env.DEV;
 
 /**
  * Formata um valor numérico para a moeda BRL (R$).
