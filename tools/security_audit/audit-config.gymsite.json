@@ -10,8 +10,7 @@
   "rate_limit_probe_method": "GET",
   "clickjacking_paths": ["/", "/health"],
   "profile_paths": [
-    "/api/relatorios",
-    "/api/assistente/conversar"
+    "/api/relatorios"
   ],
   "idor_paths": [
     "/api/relatorios/{id}",
