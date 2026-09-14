@@ -74,7 +74,7 @@ GymSite (prospecting)
 | Arquivo | Descrição |
 |---------|-----------|
 | `prospecting/webhook.py` | Atualizado para setar status = 'webhook_enviado' |
-| `supabase_sync_gymsite_to_prospects.sql` | SQL da função + trigger (já aplicado) |
+| `db/migrations/20260610_sync_gymsite_to_prospects.sql` | SQL da função + trigger (já aplicado) |
 | `supabase/functions/gymsite-sync/index.ts` | Edge Function alternativa (não deployada) |
 
 ---
