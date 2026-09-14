@@ -22,7 +22,7 @@
 | Oferta site/IG | httpx + SearchAPI `instagram_profile` |
 | Imóveis candidato | `listing_cascata` (SearchAPI) — **não** alimenta aluguel |
 | Aluguel viabilidade | `aluguel_mrlr.py` + `mrlr_modelo.py` (A4 Tier 0; **não** SearchAPI, **não** A7) |
-| Aluguel referência batch | ~~removido jul/2026~~ | `tools/9_obsolete/` — viabilidade = MRLR |
+| Aluguel referência batch | ~~removido jul/2026~~ | Removido — viabilidade = MRLR |
 | Demografia | IBGE Censo 2022 |
 | CNPJ/CNO | RFB/Supabase |
 | Contexto municipal qualitativo A0 | Wikipedia/Wikidata (`carregar_wikipedia_municipio`) — complementar ao bundle, **nunca** canônico para parque/score/ticket/MRLR |

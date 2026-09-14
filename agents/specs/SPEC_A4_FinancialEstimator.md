@@ -68,9 +68,7 @@ O LLM chama `analise_financeira_a4_completo(bairro, cidade, uf, area_m2, destino
 **RN-A4-02 — Cascata de tiers para aluguel (determinística)**
 A macro em `analise_financeira_a4_completo` aplica tiers e **Tier 0 MRLR sobrescreve** quando `aluguel_deterministico` retorna `status=ok`:
 - **Tier 0 (primário)** — MRLR IBAPE-GO (`tools/aluguel_mrlr.py` + `mrlr_modelo.py`) sobre espelhos `renda_bairro` + `municipio_pib`. Mesma praça = mesmo R$/m². `fonte_aluguel`: `"MRLR IBAPE-GO (determinístico)"`. `tier_usado == 0`.
-- **Tier 1** — Portais municipais (ZAP/Viva/OLX via `pesquisar_aluguel_municipio`). Só se Tier 0 indisponível e `tier1_suficiente=True`.
-- **Tier 2** — Search Grounding (`pesquisar_aluguel_mediana`). Só se Tier 0 indisponível e Tier 1 insuficiente.
-- **Tier 3** — Benchmark ACAD/FipeZap. Último fallback.
+- **Fallback pós-MRLR** — Benchmark setorial ACAD/FipeZap e referência macro BCB (`tools/bcb_imobiliario_olinda.py`).
 **Proibido:** usar preço de listing SearchAPI ou snippet `rent_sqm` como Tier 0. Ver `.agent/rules/conferencia-fontes-pipeline.md` §2.
 
 **RN-A4-03 — Snapshot determinístico `analise_financeira_pronto` (after_tool_callback)**
@@ -113,11 +111,11 @@ O A6 `_renderizar_secao_referencia_aluguel` lê `fonte_aluguel`, `aluguel_mensal
 - [ ] `score_viabilidade` é float entre 0 e 10.
 - [ ] `recomendacao_modelo` é um de: `"Low Cost"`, `"Mid Market"`, `"Premium"`, `"Nenhum"`.
 - [ ] `alertas` é lista com ao menos 1 item quando `payback > 60` ou `margem < 10%`.
-- [ ] `fonte_aluguel` contém `"Portais municipais"` quando Tier 1 suficiente, ou `"Search Grounding"` quando Tier 2, ou `"Benchmark ACAD"` quando Tier 3.
-- [ ] `aluguel_pesquisa_detalhes.tier` reflete o tier efetivamente usado (1, 2 ou 3).
+- [ ] `fonte_aluguel` contém `"MRLR"` quando determinístico disponível, ou `"Benchmark"` quando degradado.
+- [ ] `aluguel_pesquisa_detalhes.tier` reflete o tier efetivamente usado (0 ou 3).
 - [ ] `aviso_metodologia_aluguel` presente e não-vazio.
 - [ ] Para `genero_alvo="exclusivamente_feminino"`, `recomendacao_modelo != "Low Cost"`.
-- [ ] Smoke E2E: relatório completo com bairro Tier 1 disponível gera `fonte_aluguel` com `"Portais municipais"` e `aluguel_pesquisa_detalhes.tier == 1`.
+- [ ] Smoke E2E: relatório completo com bairro gera `fonte_aluguel` com `"MRLR"` e `aluguel_pesquisa_detalhes.tier == 0`.
 - [ ] Sem `MALFORMED_FUNCTION_CALL` no log da macro (verificável via `finish_reason` na telemetria do A4).
 
 ---
@@ -126,8 +124,7 @@ O A6 `_renderizar_secao_referencia_aluguel` lê `fonte_aluguel`, `aluguel_mensal
 
 | Cenário | Comportamento |
 |---|---|
-| Tier 1 sem amostras (N=0) | Cascata para Tier 2 (Search Grounding); `motivo_tier1` documenta o motivo; `referencia_macro_bcb` é populado via BCB |
-| Tier 1 e Tier 2 falham | Tier 3 (Benchmark ACAD/FipeZap); `aluguel_pesquisa_detalhes.tier == 3`; alerta de fonte adicionado a `alertas[]` |
+| MRLR indisponível | Degradado para Benchmark ACAD/FipeZap; `aluguel_pesquisa_detalhes.tier == 3`; `referencia_macro_bcb` populado via BCB; alerta de fonte adicionado a `alertas[]` |
 | `analise_financeira_a4_completo` lança exceção | ADK captura; A4 emite `OUT=0`; A6 lê `analise_financeira_pronto` (se callback rodou antes da exceção) ou falha gracefully no gate do A6 |
 | LLM tenta chamar `pesquisar_aluguel_mediana` separadamente | ADK não encontra a tool (não está registrada diretamente no A4); function_call falha; LLM deve usar apenas `analise_financeira_a4_completo` |
 | LLM alucina tool inexistente (ex: `run_code`) | Pipeline morre naquele run — padrão histórico do Flash (run 7, 2026-06-12). Prevenido pelo prompt `regra_execucao: autonoma` e instrução `NÃO tente chamar ... separadamente` |

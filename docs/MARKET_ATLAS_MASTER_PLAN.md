@@ -42,7 +42,7 @@ Na wave `blue`, **pré-aquecer** o contexto local **antes** do ADK:
 | Bloco | Fonte | Onde no repo |
 |-------|--------|----------------|
 | Concorrência (raio) | OSM / Overpass | `tools/local_market_facts` → `scripts/enrichment/cache_enrichment.py` |
-| Aluguel comercial | Portais (OLX, Zap, Viva) | `tools/aluguel_municipio_portais` (Playwright em thread no Windows) |
+| Aluguel comercial | MRLR (IBAPE-GO) | `tools/aluguel_mrlr` (viabilidade determinística) |
 | Macro imobiliário | BCB Olinda | `tools/bcb_imobiliario_olinda` |
 | Demografia | IBGE direto + **CKAN só como catálogo** (descoberta de pacotes municipais) | `tools/ibge_tools` (A2); batch CKAN → ver arquitetura de dados |
 | Compressão | Prompt &lt; ~1k tokens para smoke LLM | `scripts/enrichment/prompt_compressor.py` |

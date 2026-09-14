@@ -13,7 +13,7 @@
 | Reviews | SearchAPI `google_maps_place.review_results` (1 call c/ pico); fallback `google_maps_reviews` | LLM como única classificação |
 | Imóveis candidato | `listing_cascata` (SearchAPI) | Listing como **fonte de aluguel** |
 | **Aluguel viabilidade (OPEX)** | **`aluguel_deterministico` → `mrlr_modelo`** (A4 Tier 0) | Preço de anúncio; SearchAPI `rent_sqm`; A7 grounding |
-| Aluguel referência batch | ~~`bundle.aluguel_portais`~~ | **removido** — `tools/9_obsolete/` |
+| Aluguel referência batch | ~~`bundle.aluguel_portais`~~ | **removido** |
 | Demografia | IBGE Censo 2022 / espelhos BQ | LLM inventando número |
 | CNPJ/CNO | RFB/Supabase determinístico | LLM (A0 override fecha CNPJ) |
 | Contexto municipal qualitativo (A0) | Wikipedia pt + Wikidata (`tools/wikipedia_municipio.py`) — **sempre** com o bundle | Fallback do `market_bundle`; número canônico (A2/CNPJ/MRLR/score) |
@@ -138,7 +138,7 @@ A7 = agente **lateral** (chat/grounding), **fora** do pipeline A0→A9.
 
 ## 6. `market_bundle` — aluguel fora do batch
 
-- **`aluguel_portais` removido do bundle batch** (jul/2026) — código em `tools/9_obsolete/`.
+- **`aluguel_portais` removido do bundle batch** (jul/2026) — scraping de portais removido.
 - Aluguel viabilidade = **A4 MRLR** apenas.
 - `LIVE_TRAIL_FIELDS` = só `competicao_osm` (trilha viva batch).
 
