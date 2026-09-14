@@ -16,7 +16,7 @@ BUNDLE_DIR = ROOT / "data" / "market_bundles"
 BUNDLE_MAX_AGE_DAYS = 7
 
 # Campos da "trilha viva": competição no relatório (A3). Aluguel viabilidade = A4 MRLR
-# (nunca mais `aluguel_portais` no bundle batch — ver tools/9_obsolete/).
+# (nunca mais `aluguel_portais` no bundle batch — scraping de portais removido).
 LIVE_TRAIL_FIELDS = frozenset({"competicao_osm"})
 
 

@@ -30,7 +30,7 @@ A memória ou a intuição sobre como uma API, biblioteca ou serviço funciona �
 - **Documentação de API Externa:** Antes de chamar uma API (Google Maps, SearchAPI, Apollo), consulte a documentação para entender os parâmetros, o custo e o formato da resposta.
 - **Lineage:** Nova fonte, tabela ou tool no pipeline → atualizar `docs/metodologia/data_lineage.md` no mesmo PR.
 
-**Exemplo real que quebrou produção:** Assumir que o aluguel de viabilidade vinha de portais imobiliários, quando a fonte de verdade determinística é o `aluguel_mrlr.py`. Ler a fonte (`tools/aluguel_mrlr.py` e `tools/financial_tools.py`) teria evitado a divergência. Scraping de portais para bundle (`aluguel_portais`) foi arquivado em `tools/9_obsolete/` (jul/2026).
+**Exemplo real que quebrou produção:** Assumir que o aluguel de viabilidade vinha de portais imobiliários, quando a fonte de verdade determinística é o `aluguel_mrlr.py`. Ler a fonte (`tools/aluguel_mrlr.py` e `tools/financial_tools.py`) teria evitado a divergência. Scraping de portais para bundle (`aluguel_portais`) foi removido como obsoleto.
 
 ## 3. Fontes de Dados Têm Hierarquia (P-001)
 
@@ -40,7 +40,7 @@ Nem toda fonte de dados tem o mesmo peso. A hierarquia de fontes de verdade é *
 - **Tier 1 (API Paga):** Dados estruturados de APIs pagas e confiáveis (SearchAPI, Google Places). Usados para preencher gaps do Tier 0.
 - **Tier 2 (Busca Web Grounded):** Pesquisa qualitativa via `google_search` (A7) ou Kimi (A0). Usada para contexto e insights, **NUNCA para números financeiros ou de viabilidade**.
 
-**Invariante:** O **aluguel de viabilidade** vem **exclusivamente** do MRLR (Tier 0). Fallbacks (T1/T2) só são usados em caso de falha do MRLR, com a flag `aluguel_deterministico=false` e alertas explícitos no relatório. O uso de Search Grounding (Tier 2) para aluguel OPEX é proibido; o fallback deve vir de benchmarks (FipeZap/ACAD). Código legado de portais: `tools/9_obsolete/` + `.agent/rules/conferencia-fontes-pipeline.md`.
+**Invariante:** O **aluguel de viabilidade** vem **exclusivamente** do MRLR (Tier 0). Fallbacks só são usados em caso de falha do MRLR, com a flag `aluguel_deterministico=false` e alertas explícitos no relatório. O uso de Search Grounding para aluguel OPEX é proibido; o fallback deve vir de benchmarks (FipeZap/ACAD) e dados macro BCB. Ver `.agent/rules/conferencia-fontes-pipeline.md`.
 
 ### Benchmarks financeiros (calibração de `parametros_metodologia` / A4)
 

@@ -41,6 +41,8 @@ BENCHMARKS_ALUGUEL = {
     "default": {"min": 20, "med": 40, "max": 70},
 }
 
+MIN_SAMPLES_ALTA = 5
+
 # Constantes sourceadas via param() — LAZY (PEP 562 __getattr__).
 # Não congelar no import: override Supabase + clear_param_cache() passam a valer
 # no próximo acesso. Ver docs/metodologia/data_lineage.md.
@@ -1620,7 +1622,6 @@ async def analise_financeira_a4_completo(
     """Macro-tool A4 — viabilidade 3 cenários + aluguel (MRLR Tier 0 primeiro, P-000)."""
     import os
 
-    from tools.aluguel_municipio_portais import MIN_SAMPLES_ALTA
     from tools.enrichment_cache import cached_bcb_imobiliario
 
     mediana = 0.0
@@ -1628,13 +1629,7 @@ async def analise_financeira_a4_completo(
     max_r = 0.0
     queries_ok = 0
     tier_usado = 3
-    motivo_tier1: str | None = None
-    municipio: dict = {}
-    ref_municipio: dict = {}
-    n_validos_t1 = 0
-    tier1_suficiente = False
-    tier1_vazio = True
-    aluguel: dict = {}
+    motivo_degradacao: str | None = None
     _tier0_mrlr = None
 
     # ── Tier 0: MRLR (primário) ───────────────────────────────────────────
@@ -1651,40 +1646,8 @@ async def analise_financeira_a4_completo(
     except Exception:
         pass
 
-    # ── Fallback portais legado (opt-in; P-000 proíbe grounding em OPEX) ───
-    if tier_usado != 0 and os.getenv("ALUGUEL_PORTAIS_TIER1", "0").strip().lower() in (
-        "1",
-        "true",
-        "yes",
-    ):
-        from tools.aluguel_municipio_portais import pesquisar_aluguel_municipio
-
-        municipio = await pesquisar_aluguel_municipio(
-            cidade, uf, area_m2_min, area_m2_max, bairro=bairro
-        )
-        ref_municipio = municipio.get("aluguel_municipio_referencia") or {}
-        n_validos_t1 = int(municipio.get("n_validos") or 0)
-        tier1_vazio = n_validos_t1 == 0
-        tier1_suficiente = bool(municipio.get("tier1_suficiente"))
-        if tier1_suficiente:
-            mediana = float(municipio.get("mediana_r_m2", 0.0) or 0)
-            min_r = float(municipio.get("min_r_m2", 0.0) or 0)
-            max_r = float(municipio.get("max_r_m2", 0.0) or 0)
-            queries_ok = n_validos_t1
-            aluguel = municipio
-            tier_usado = 1
-        elif tier1_vazio:
-            motivo_tier1 = (
-                f"Portais municipais (ZAP/Viva/OLX): nenhum anúncio válido em "
-                f"{cidade}{f'/{uf}' if uf else ''} na faixa {area_m2_min}–{area_m2_max} m²."
-            )
-        else:
-            motivo_tier1 = (
-                f"Portais municipais: amostra insuficiente (N={n_validos_t1}, "
-                f"mínimo recomendado {MIN_SAMPLES_ALTA})."
-            )
-    elif tier_usado != 0:
-        motivo_tier1 = "MRLR indisponível; portais Tier 1 desligados (P-000)."
+    if tier_usado != 0:
+        motivo_degradacao = "MRLR indisponível; degradando para benchmark setorial/BCB."
 
     fin = analise_financeira_completa(
         area_m2=area_m2,
@@ -1723,27 +1686,15 @@ async def analise_financeira_a4_completo(
         fin["fonte_aluguel"] = _tier0_mrlr.get("fonte") or "MRLR IBAPE-GO (determinístico)" # noqa: E501
         fin["aluguel_mrlr_inputs"] = _tier0_mrlr.get("inputs") # noqa: E501
         fin["aviso_metodologia_aluguel"] = "Aluguel determinístico (equação MRLR sobre espelhos: porte/PIB do município + padrão da renda do bairro + zona). Mesma praça = mesmo valor, recalibrável." # noqa: E501
-    elif tier_usado == 1:
-        fin["fonte_aluguel"] = (
-            f"Portais municipais (ZAP/Viva/OLX) | N={queries_ok}"
-        )
-        fin["aviso_metodologia_aluguel"] = municipio.get("norte") or municipio.get("aviso", "")
-    elif tier_usado >= 3:
+    else:
         fin["fonte_aluguel"] = fin.get("fonte_aluguel") or "Benchmark ACAD / FipeZap"
-        fin["aviso_metodologia_aluguel"] = f"⚠️ MRLR indisponível. {motivo_tier1 or ''} Aluguel no modelo usa benchmark setorial — validar cotação local." # noqa: E501
+        fin["aviso_metodologia_aluguel"] = f"⚠️ MRLR indisponível. {motivo_degradacao or ''} Aluguel no modelo usa benchmark setorial — validar cotação local." # noqa: E501
         alerta_t3 = (
-            "Aluguel: MRLR indisponível e portais sem amostra; "
+            "Aluguel: MRLR indisponível; "
             "modelo financeiro em benchmark ACAD/FipeZap."
         )
         if alerta_t3 not in fin["alertas"]:
             fin["alertas"].append(alerta_t3)
-        if n_validos_t1 < MIN_SAMPLES_ALTA and tier_usado >= 3:
-            legado = (
-                "Aluguel: amostra municipal nos portais insuficiente; "
-                "usando benchmark ACAD/Sebrae — validar cotação local."
-            )
-            if legado not in fin["alertas"]:
-                fin["alertas"].append(legado)
 
     # Ressalva de fonte NÃO-determinística (tier != 0 = MRLR indisponível).
     # Se o guardrail de ocupação reprovou algum cenário com aluguel de fallback
@@ -1786,44 +1737,35 @@ async def analise_financeira_a4_completo(
                     ),
                 }
 
-    fin["aluguel_municipio_referencia"] = ref_municipio
+    fin["aluguel_municipio_referencia"] = {}
     fin["referencia_macro_bcb"] = referencia_macro_bcb
     fin["aluguel_pesquisa_detalhes"] = {
         "tier": tier_usado,
-        "tier1_vazio": n_validos_t1 == 0,
-        "tier1_suficiente": tier1_suficiente,
-        "n_validos_tier1": n_validos_t1,
-        "motivo_tier1": motivo_tier1,
+        "tier1_vazio": True,
+        "tier1_suficiente": False,
+        "n_validos_tier1": 0,
+        "motivo_tier1": motivo_degradacao,
         "mediana_r_m2": mediana,
         "min_r_m2": min_r,
         "max_r_m2": max_r,
         "queries_com_dados": queries_ok,
-        "valores_coletados": aluguel.get("valores_coletados", []),
+        "valores_coletados": [],
         "faixa_rs_m2": (
-            ref_municipio.get("faixa_rs_m2")
-            or municipio.get("faixa_rs_m2")
-            or (
-                {"p25": min_r, "mediana": mediana, "p75": max_r} if mediana
-                else None
-            )
+            {"p25": min_r, "mediana": mediana, "p75": max_r} if mediana
+            else None
         ),
-        "confianca_municipio": ref_municipio.get("confianca") or municipio.get("confianca"),
-        "classificacao_municipio": municipio.get("classificacao"),
+        "confianca_municipio": None,
+        "classificacao_municipio": None,
         "tier1_tentativa": {
-            "n_validos": n_validos_t1,
-            "confianca": municipio.get("confianca"),
-            "classificacao": municipio.get("classificacao"),
-            "aviso_portais": municipio.get("aviso"),
-            "erros_portais": municipio.get("erros", [])[:10],
-            "urls_por_portal": {
-                p: len(u) for p, u in (municipio.get("urls_consultadas") or {}).items()
-            },
+            "n_validos": 0,
+            "confianca": None,
+            "classificacao": None,
+            "aviso_portais": None,
+            "erros_portais": [],
+            "urls_por_portal": {},
         },
-        "fontes_resumo": [
-            {"portal": p, "n_urls": len(u)}
-            for p, u in (municipio.get("urls_consultadas") or {}).items()
-        ],
-        "erros_portais": municipio.get("erros", [])[:10],
+        "fontes_resumo": [],
+        "erros_portais": [],
     }
     # Schema v1.5: contexto do tamanho/tipo pro A4 redator referenciar
     # benchmarks corretos e pro markdown final mostrar a faixa.
