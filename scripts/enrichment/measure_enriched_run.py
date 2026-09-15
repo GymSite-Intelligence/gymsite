@@ -42,7 +42,7 @@ def _llm_available() -> bool:
 
 def llm_call_fn(prompt: str, *, model: str = DEFAULT_MODEL) -> dict:
     """Chamada LLM minima; retorna texto + usage + custo estimado."""
-    from tools._genai_client import build_genai_client
+    from tools.genai_client import build_genai_client
     from tools.pricing import compute_cost_brl
     from tools.token_telemetry import _extract_usage
 

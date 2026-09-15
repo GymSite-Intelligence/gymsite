@@ -154,7 +154,7 @@ def _executar_grounding_sync(query: str, cache_key_override: Optional[str] = Non
     _bump_stat("miss")
 
     from google.genai import types
-    from tools._genai_client import build_genai_client, generate_content_resilient
+    from tools.genai_client import build_genai_client, generate_content_resilient
 
     try:
         client = build_genai_client()

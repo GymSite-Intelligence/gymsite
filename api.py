@@ -468,7 +468,7 @@ async def lifespan(app: FastAPI):
     _register_signal_handlers(_shutdown_mgr)
 
     try:
-        from tools._genai_client import is_vertex_mode
+        from tools.genai_client import is_vertex_mode
 
         if is_vertex_mode():
             creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").strip()

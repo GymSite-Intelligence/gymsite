@@ -165,7 +165,7 @@ def _grounding_lancamento(query: str) -> dict:
         )
         return {"texto": "", "fontes": []}
     from google.genai import types
-    from tools._genai_client import build_genai_client, generate_content_resilient
+    from tools.genai_client import build_genai_client, generate_content_resilient
 
     client = build_genai_client()
     prompt = (
@@ -341,7 +341,7 @@ def _extrair_do_pdf(pdf_bytes: bytes) -> dict | None:
     if not _gemini_side_tools_ok():
         return None
     from google.genai import types
-    from tools._genai_client import build_genai_client, generate_content_resilient
+    from tools.genai_client import build_genai_client, generate_content_resilient
 
     client = build_genai_client()
     prompt = (
@@ -440,7 +440,7 @@ def _extrair_do_html(html: str) -> dict | None:
     """Gemini lê o texto da página do empreendimento → JSON estruturado."""
     if not _gemini_side_tools_ok():
         return None
-    from tools._genai_client import build_genai_client, generate_content_resilient
+    from tools.genai_client import build_genai_client, generate_content_resilient
 
     client = build_genai_client()
     texto = _html_para_texto(html)

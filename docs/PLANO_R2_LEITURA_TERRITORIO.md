@@ -14,7 +14,7 @@ mapa "falar" para qualquer pessoa, em segundos.
 
 ## 2. Por que o esforco e baixo (o que JA existe)
 
-- Cliente Gemini resiliente pronto: `tools/_genai_client.py` expoe
+- Cliente Gemini resiliente pronto: `tools/genai_client.py` expoe
   `build_genai_client()` e
   `generate_content_resilient(client, *, model, contents, config=None,
   max_retries=3, base_delay=4.0)` (retry + backoff + resource-exhausted).

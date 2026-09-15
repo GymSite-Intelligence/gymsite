@@ -126,9 +126,9 @@ This bypasses the _require_authenticated() JWT check at the endpoint level (api.
 ### A2. GEMINI_API_KEY não documentada em .env.production.example ✅ verificado adversarialmente
 
 - **Area:** env-config
-- **Onde:** `.env.production.example + api.py:322, tools/_genai_client.py:47`
-- **Evidencia:** api.py:322 — gkey = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip() | tools/_genai_client.py:47 — api_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")).strip() | .env.production.example contém apenas GOOGLE_API_KEY (linha 10), sem GEMINI_API_KEY
-- **Confirmacao do cetico:** Verified: .env.production.example (line 10) documents only GOOGLE_API_KEY, but api.py:322 and tools/_genai_client.py:47 both prioritize GEMINI_API_KEY (checked first via 'or' logic). The actual .env.production file DOES include GEMINI_API_KEY, as do architecture docs, but the template is incomplete. New deployments following .env.production.example would be missing the primary API key variable.
+- **Onde:** `.env.production.example + api.py:322, tools/genai_client.py:47`
+- **Evidencia:** api.py:322 — gkey = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip() | tools/genai_client.py:47 — api_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY", "")).strip() | .env.production.example contém apenas GOOGLE_API_KEY (linha 10), sem GEMINI_API_KEY
+- **Confirmacao do cetico:** Verified: .env.production.example (line 10) documents only GOOGLE_API_KEY, but api.py:322 and tools/genai_client.py:47 both prioritize GEMINI_API_KEY (checked first via 'or' logic). The actual .env.production file DOES include GEMINI_API_KEY, as do architecture docs, but the template is incomplete. New deployments following .env.production.example would be missing the primary API key variable.
 - **Acao:** Adicione GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE em .env.production.example e documente a precedência (GEMINI_API_KEY > GOOGLE_API_KEY).
 
 ### A3. 61 variáveis de backend em uso mas ausentes de .env.production.example ✅ verificado adversarialmente
@@ -144,7 +144,7 @@ This bypasses the _require_authenticated() JWT check at the endpoint level (api.
 - **Area:** env-config
 - **Onde:** `.env.production.example:10 + api.py:322`
 - **Evidencia:** .env.production.example linha 10 documenta GOOGLE_API_KEY=YOUR_GOOGLE_API_KEY_HERE | Mas api.py:322 usa fallback (GEMINI_API_KEY) || (GOOGLE_API_KEY) | Sem GEMINI_API_KEY no example, operador pode não saber qual usar em produção.
-- **Confirmacao do cetico:** Code at tools/_genai_client.py:47 and api.py:322 uses fallback pattern `GEMINI_API_KEY or GOOGLE_API_KEY`, but .env.production.example (line 10) documents ONLY GOOGLE_API_KEY without mentioning GEMINI_API_KEY or explaining precedence. Production .env.production (lines 12-13) defines both variables. Operators following the example file alone would not discover the GEMINI_API_KEY variable or its higher precedence.
+- **Confirmacao do cetico:** Code at tools/genai_client.py:47 and api.py:322 uses fallback pattern `GEMINI_API_KEY or GOOGLE_API_KEY`, but .env.production.example (line 10) documents ONLY GOOGLE_API_KEY without mentioning GEMINI_API_KEY or explaining precedence. Production .env.production (lines 12-13) defines both variables. Operators following the example file alone would not discover the GEMINI_API_KEY variable or its higher precedence.
 - **Acao:** Clarificar em .env.production.example: GEMINI_API_KEY sobrescreve GOOGLE_API_KEY; ou remover GEMINI_API_KEY e padronizar em GOOGLE_API_KEY apenas.
 
 ### A5. db/supabase_writer.py silencioso quando credenciais ausentes (sem falha visível) ✅ verificado adversarialmente

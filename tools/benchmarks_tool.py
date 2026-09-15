@@ -205,7 +205,7 @@ def _buscar_via_grounding() -> dict | None:
         if not gemini_side_tools_ok():
             return None
         from google.genai import types
-        from tools._genai_client import build_genai_client, generate_content_resilient
+        from tools.genai_client import build_genai_client, generate_content_resilient
 
         client = build_genai_client()
 

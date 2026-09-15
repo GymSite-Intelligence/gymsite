@@ -362,7 +362,7 @@ def classificar_dores_reviews_batch_gemini(
         if not gemini_side_tools_ok():
             return {}
         from google.genai import types as gtypes
-        from tools._genai_client import build_genai_client
+        from tools.genai_client import build_genai_client
 
         try:
             client = build_genai_client()
@@ -2881,7 +2881,7 @@ def _planos_precos_searchapi(nome: str, bairro: str, cidade: str) -> list | None
     try:
         import json as _json
 
-        from tools._genai_client import build_genai_client, generate_content_resilient
+        from tools.genai_client import build_genai_client, generate_content_resilient
 
         prompt = (
             "Resultados de busca sobre planos/mensalidades de uma academia. Extraia em "

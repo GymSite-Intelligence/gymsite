@@ -199,7 +199,7 @@ gymsite_intelligence/
 │   ├── a6_report_consolidator.py
 │   └── a7_market_research.py
 ├── tools/                       Wrappers de APIs externas + utilitários
-│   ├── _genai_client.py         centraliza Vertex/API key
+│   ├── genai_client.py          centraliza Vertex/API key
 │   ├── maps_tools.py            Places, Geocoding, Street View
 │   ├── distance_matrix_tools.py
 │   ├── competitor_tools.py

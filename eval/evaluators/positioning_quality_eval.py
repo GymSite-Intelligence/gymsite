@@ -42,7 +42,7 @@ def _call_judge(
 ) -> dict[str, Any]:
     from google.genai import types
 
-    from tools._genai_client import build_genai_client
+    from tools.genai_client import build_genai_client
 
     prompt = f"""Você audita saídas do agente A9 (posicionamento ERRC) do GymSite Intelligence.
 
