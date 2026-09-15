@@ -27,5 +27,5 @@ Objetivo: usuário ver o diagrama no Preview do Mermaid Chart **sem Generate IA*
 ## Exemplos
 
 - `/mermaid-preview`
-- `/mermaid-preview models/pipeline_schemas.mmd`
+- `/mermaid-preview docs/arquitetura/pipeline_schemas.mmd`
 - `/mermaid-preview @models/pipeline_schemas.py`
