@@ -1,6 +1,6 @@
 # GymSite Intelligence
 
-Plataforma de inteligência de mercado para academias: relatórios de viabilidade cruzando CNPJ, CNO, Google Maps e análise financeira (pipeline de agentes Google ADK A0–A9). Backend Python/FastAPI + Supabase; frontend React/Vite; **front** Cloudflare Pages (`wrangler`); **API** Cloud Run.
+Plataforma de inteligência de mercado para academias: relatórios de viabilidade cruzando CNPJ, CNO, Google Maps e análise financeira (pipeline de agentes Google ADK A0–A9). Backend Python/FastAPI + Supabase; frontend React/Vite; **front** Cloudflare Pages (`wrangler`); **API** Hetzner VPS + Cloudflare Tunnel (ADR-008).
 
 ## Como falar com o Marcelo
 
@@ -77,12 +77,7 @@ O cérebro do projeto vive em `.agent/` (compartilhado com Antigravity/Cursor/VS
   → `write-tree` → `commit-tree`. **`unset GIT_INDEX_FILE` ao terminar**: exportado, ele
   envenena todo `git` seguinte (um `git status` reportou 1276 arquivos staged que não
   existiam — quase "consertei" uma branch intacta). Conferir sempre com ambiente limpo.
-- Cloud Run: projeto `gen-lang-client-0106729343` ("Navi Vectra" — nome engana, é o do
-  GymSite), região `us-central1` (NÃO southamerica-east1). `gymsite-worker` compartilha
-  a imagem da api e NÃO auto-deploya — após rebuild da api:
-  `IMG=$(gcloud run services describe gymsite-api --region=us-central1 --project=gen-lang-client-0106729343 --format="value(spec.template.spec.containers[0].image)")`
-  e `gcloud run services update gymsite-worker --region=us-central1 --project=gen-lang-client-0106729343 --image $IMG`.
-  Existe um `gymsite-api` ÓRFÃO no projeto gen-lang-client-0662901510 ("GymSite") — não é a produção.
+- Deploy API+worker: Hetzner VPS (`/opt/gymsite`, `docker-compose.prod.yml`) via Cloudflare Tunnel (`api.getgymsite.com.br` / `api-hetzner.getgymsite.com.br`). Ver `ADR-008_PROD_HETZNER_ORPHAN_GCP.md` e `.agent/workflows/deploy.md`. Google Cloud Run está deprecado (billing desligado; projeto órfão `gen-lang-client-0662901510` ignorar). Projeto GCP `gen-lang-client-0106729343` ("Navi Vectra") permanece apenas para APIs de dados (Vertex/BigQuery/Discovery) quando necessário, não para deploy da API.
 - Front monorepo (`frontend/`): **Wrangler/Pages** projeto CF `gymsite` → `getgymsite.com.br` (`npx wrangler pages deploy ./dist` após build). Landing `gym-insight-hub` → `gymsite.com.br`. Ver P-000 §7–§8. `cloudbuild.frontend.yaml` e Actions `pages.yml` = legado/ignorar.
 
 ## Documentos vivos (ler quando o assunto aparecer)

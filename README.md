@@ -1,9 +1,10 @@
 # GymSite Intelligence
 
-Pipeline multi-agente que avalia viabilidade comercial de pontos para academias no Brasil. Cruza dados de mercado, demografia (IBGE), concorrência (Google Maps), horários de pico e cenário financeiro num único relatório executivo — gerado em ~5 min por ~R$ 4,45 de custo de API.
+Pipeline multi-agente que avalia viabilidade comercial de pontos para academias no Brasil. Cruza dados de mercado, demografia (IBGE), concorrência (Google Maps / SearchAPI), horários de pico e cenário financeiro num único relatório executivo — gerado em ~5 min por ~R$ 4,45 de custo de API.
 
 > **Status:** produto end-to-end pronto pra demos com testers externos.
-> Pipeline **A0 → A6** via **Gemini Developer API** (`GOOGLE_GENAI_USE_VERTEXAI=false`) — Deep Research no A0; frontend Vite em `:5174`, dashboard `/custos` por org, multi-tenant via Supabase RLS.
+> Pipeline **A0 → A9** via **Gemini Developer API** (`GOOGLE_GENAI_USE_VERTEXAI=false`) — Deep Research no A0; frontend Vite em `:5174`, dashboard `/custos` por org, multi-tenant via Supabase RLS.
+> Deploy de produção: **Hetzner VPS + Cloudflare Tunnel** (API e worker) e **Cloudflare Pages via Wrangler** (frontend) conforme ADR-008. Cloud Run deprecado.
 > Vertex AI fica **desligado por padrão** até o agente Deep Research existir no Vertex ([docs/VERTEX_SETUP.md](docs/VERTEX_SETUP.md)).
 
 ---
@@ -37,15 +38,16 @@ Backend FastAPI (api.py :8000)
         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ A0 ContextBuilder      → Deep Research (Interactions API)   │
-│ A1 GeoScout            → Places API + Distance Matrix +     │
-│                          listings OLX & ImovelWeb           │
+│ A1 GeoScout            → Places API + Distance Matrix       │
 │ A2 DemoAnalyst         → IBGE Censo 2022 (BigQuery)         │
-│ A3a CompetitorSearch   → Places textSearch (âncora bairro)  │
+│ A3a CompetitorSearch   → SearchAPI Maps (âncora bairro)     │
 │ A3b CompetitorAnalysis → Dores/gaps/score + oferta (det.)   │
-│ A4 FinancialEstimator  → Aluguel mediano + CAPEX + payback  │
-│ A5 ContactHunter       → Decisor + script SPIN              │
+│ A4 FinancialEstimator  → MRLR aluguel + CAPEX + payback     │
+│ A5 ContactHunter       → Decisor + script SPIN (CRM/lead)   │
 │ A6 ReportConsolidator  → Veredito + persist Supabase        │
-│ A7 MarketResearch      → Tendências macro (opcional)        │
+│ A7 MarketResearch      → Tendências macro / chat            │
+│ A8 Validator           → Validação cruzada pós-A6           │
+│ A9 PositioningStrategist → Oceano azul / ERRC               │
 └─────────────────────────────────────────────────────────────┘
         │
         ▼
@@ -58,9 +60,9 @@ Cada agente é um `LlmAgent` do Google ADK com **macro-tools consolidadas** (A1,
 
 ---
 
-## Agentes do Pipeline (A0 – A7)
+## Agentes do Pipeline (A0 – A9)
 
-O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline")` → sub-agentes especializados. A fase 2 (A2/A3/A4) roda em paralelo via `ParallelAgent`.
+O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline")` → sub-agentes especializados. A fase 2 (A2/A3/A4) roda em paralelo via `ParallelAgent`. A8 valida consistência cruzada e A9 entrega posicionamento estratégico (ERRC).
 
 ### A0 — ContextBuilder
 **Arquivo:** `agents/a0_context_builder.py`  
@@ -163,6 +165,22 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 - Acionado pelo root_agent quando o usuário pede pesquisa de mercado em tempo real OU quando o Playwright scraper falha em capturar horários de pico do Knowledge Panel.
 - Não faz parte do pipeline sequencial padrão (A0→A6). É chamado on-demand.
 
+### A8 — Validator
+**Arquivo:** `agents/a8_validator.py`  
+**Modelo:** Validação cruzada pós-A6 (determinístico / regras de negócio)  
+**Input:** outputs consolidados do pipeline  
+**Output:** checagem de invariantes entre agentes (ex.: aluguel A4 vs posicionamento)
+
+- Confere consistência entre dados demográficos, financeiros e concorrência antes da persistência final.
+
+### A9 — PositioningStrategist
+**Arquivo:** `agents/a9_positioning_strategist.py`  
+**Modelo:** Gemini 2.5 Pro  
+**Input:** inteligência competitiva e contexto consolidado  
+**Output:** matriz ERRC (Eliminar, Reduzir, Elevar, Criar), oceano azul, narrativa estratégica
+
+- Gera diferenciação competitiva e estratégia de oceano azul para o ponto comercial, com cache semântico via LangCache.
+
 ---
 
 ## Stack
@@ -172,9 +190,10 @@ O pipeline é orquestrado por `root_agent` → `SequentialAgent("GymSitePipeline
 | LLM         | Gemini 2.5 Flash (default) + Gemini 2.5 Pro (consolidação)    |
 | Orquestração | Google ADK (`google-adk>=1.3.0`)                              |
 | Compute LLM | Gemini Developer API (`GOOGLE_API_KEY`); Vertex opcional (`GOOGLE_GENAI_USE_VERTEXAI=true`) |
-| Backend     | FastAPI + Uvicorn, Python 3.12                                |
+| Backend     | FastAPI + Uvicorn, Python 3.11                                |
 | Banco       | Supabase Postgres (mesmo cluster do CFN), RLS multi-org       |
-| Dados ext.  | Google Maps Platform (Places, Distance Matrix, Street View) · IBGE Censo 2022 (REST `servicodados`) · PNAD/Atlas via Search Grounding · SearchAPI Tier 0 (horários de pico) · **OLX + ImovelWeb** (listings comerciais via Playwright headless — ver [docs/listing_sources.md](docs/listing_sources.md)) |
+| Deploy Prod | Hetzner VPS (Docker Compose + Cloudflare Tunnel) + Cloudflare Pages (Wrangler) |
+| Dados ext.  | Google Maps Platform (Places, Distance Matrix, Street View) · IBGE Censo 2022 (REST `servicodados`) · PNAD/Atlas via Search Grounding · SearchAPI Tier 0 (horários de pico) · MRLR Tier 0 (aluguel viabilidade) |
 | Frontend    | Vite 6 + React 18 + TypeScript + Tailwind + shadcn/ui + TanStack Router/Query |
 | Mapas UI    | `pigeon-maps` (OSM tiles, sem chave)                          |
 | Forms       | React Hook Form + Zod                                         |
@@ -197,7 +216,9 @@ gymsite_intelligence/
 │   ├── a4_financial_estimator.py
 │   ├── a5_contact_hunter.py
 │   ├── a6_report_consolidator.py
-│   └── a7_market_research.py
+│   ├── a7_market_research.py
+│   ├── a8_validator.py
+│   └── a9_positioning_strategist.py
 ├── tools/                       Wrappers de APIs externas + utilitários
 │   ├── genai_client.py          centraliza Vertex/API key
 │   ├── maps_tools.py            Places, Geocoding, Street View
@@ -228,7 +249,7 @@ gymsite_intelligence/
 
 ### Pré-requisitos
 
-- Python 3.12+
+- Python 3.11+
 - Node.js 20+ (pnpm/npm)
 - Acesso ao projeto Supabase `<SUPABASE_PROJECT>` (schema GymSite vive lá)
 - `GOOGLE_API_KEY` (Gemini Developer API — padrão atual)
@@ -375,8 +396,8 @@ Custos persistidos em `relatorios.custo_brl/tokens_total` e detalhados por agent
 - A3 ancorado no bairro + A3a determinístico (2026-06-15)
 
 **Próximas issues (Linear VEC):**
-- `#120` Dockerfile + deploy Cloud Run do backend
-- `#121` Suíte pytest cobrindo agentes
+- Deploy Hetzner VPS + Cloudflare Tunnel (entregue via ADR-008)
+- Suíte pytest cobrindo agentes
 - `#122` OrgDropdown (depende de **VEC-417** super-admin cross-org)
 - `#125` Backend validar JWT no POST
 - `#126` `run_id` ContextVar (multi-worker)

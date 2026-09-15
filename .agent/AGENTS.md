@@ -78,7 +78,7 @@ Antes de qualquer ação, identifique qual skill é mais relevante:
 | Buscar dados CNPJ, CNO, Google Maps, scraping de concorrentes | `gymsite-intelligence` |
 | Gerar/modificar PDF, gráfico, relatório | `gymsite-reporting` |
 | Pipeline de prospecção, webhooks, status de oportunidade | `gymsite-prospecting` |
-| Cloud Run, Wrangler/Pages, env, worker sync | `gymsite-devops` (+ workflows `/deploy` canônicos; skill pode estar stale) |
+| Hetzner VPS + Tunnel, Wrangler/Pages, env, worker sync | `gymsite-devops` (+ workflows `/deploy` canônicos; skill pode estar stale) |
 | E-mail transacional / drip degustação (Resend) | `gymsite-email` + MCP `resend` |
 | Auditoria de conformidade (políticas → gaps) | workflow `/audit` + `auditoria-conformidade.md` |
 
@@ -107,7 +107,7 @@ Workflows são procedimentos salvos que você ativa com `/` no chat do Antigravi
 |---|---|
 | `/prospect` | Executar engine de prospecção CNPJ×CNO |
 | `/report` | Gerar relatório de viabilidade completo (A0–A9) |
-| `/deploy` | Cloud Run API+worker + Wrangler Pages (P-000 §7) |
+| `/deploy` | Hetzner VPS (API+worker) + Wrangler Pages (P-000 §7 / ADR-008) |
 | `/test` | Gate: pytest no `.venv` + `tsc --noEmit` |
 | `/migrate` | Uma migration SQL (schema `gymsite` / views `public`) |
 | `/backup` | Dump Supabase + inventário de secrets (sem valores) |
@@ -226,7 +226,7 @@ Antes de mudar agentes, macros `tools/*_tools.py`, `agents_site/tools.py` ou `ba
 
 ```python
 # Nomes: snake_case
-# Tipos: SEMPRE anote (Python 3.14)
+# Tipos: SEMPRE anote (Python 3.11)
 # Docstrings: Google style (Args, Returns, Raises)
 
 from typing import Optional

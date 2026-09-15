@@ -21,7 +21,6 @@ tests/
 *.jpg
 *.jpeg
 docs/
-.next/
 artifacts/
 credentials/
 cloudflared/
@@ -48,7 +47,6 @@ audit-reports/
 Prints/
 
 # MCP dev template (fake token shapes trigger Trivy secret scan in image)
-mcp-config.template.json
 mcp-config.json
 # Os *.png/*.jpg globais acima removeriam os assets; re-incluir explicitamente.
 !pdf/assets/logo-gymsite.png
