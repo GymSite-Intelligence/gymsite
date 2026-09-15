@@ -36,5 +36,5 @@ Se não logado: parar e pedir login antes do Connect.
 ## Exemplos
 
 - `/mermaid-cloud`
-- `/mermaid-cloud models/pipeline_schemas.mmd`
+- `/mermaid-cloud docs/arquitetura/pipeline_schemas.mmd`
 - `/mermaid-cloud docs/arquitetura/infra_producao.mmd`
