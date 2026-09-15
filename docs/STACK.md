@@ -4,7 +4,7 @@ Catálogo de referência de tudo que roda no projeto: linguagens, bibliotecas, s
 
 > **Como ler:** cada item tem nome, versão (quando dá pra saber pelo repo) e uma linha explicando pra que serve. Coisas que eu não consegui confirmar 100% pelos arquivos estão marcadas com **(a confirmar)**.
 
-Em uma frase: é uma plataforma que gera **relatórios de viabilidade para academias**. O miolo é um **backend Python (FastAPI)** que roda uma **fila de agentes de IA (Google ADK, A0→A9)** cruzando dados de CNPJ, CNO, Google Maps e finanças; o resultado aparece num **site React** e vira **PDF**. Tudo guardado no **Supabase (Postgres)** e publicado no **Google Cloud Run**.
+Em uma frase: é uma plataforma que gera **relatórios de viabilidade para academias**. O miolo é um **backend Python (FastAPI)** que roda uma **fila de agentes de IA (Google ADK, A0→A9)** cruzando dados de CNPJ, CNO, Google Maps e finanças; o resultado aparece num **site React** e vira **PDF**. Tudo guardado no **Supabase (Postgres)** e publicado na **Hetzner VPS via Cloudflare Tunnel** (API/worker) e **Cloudflare Pages via Wrangler** (frontend).
 
 ---
 
@@ -48,7 +48,7 @@ Dependências de `requirements.txt` / `pyproject.toml`:
 
 ## Frontend
 
-App React SPA em `frontend/`. Node **22** no build (imagem `node:22-alpine`), servido em produção por **nginx** (`nginxinc/nginx-unprivileged:1.27-alpine`).
+App React SPA em `frontend/`. Node **22** no build, servido em produção via **Cloudflare Pages** (`npx wrangler pages deploy ./dist` — projeto `gymsite` para app `getgymsite.com.br`). O deploy via container nginx legado foi descontinuado em favor do Pages estático com proxy Cloudflare.
 
 **Núcleo e build:**
 
@@ -201,19 +201,15 @@ O pipeline é montado com o **Google ADK** em `gymsite_intelligence/agent.py`. O
 
 ## Infra / DevOps
 
-**Deploy principal: Google Cloud Run** (região `southamerica-east1` no app; artefatos em `us-central1`).
+**Deploy principal:** **Hetzner VPS** (`docker-compose.prod.yml`, `/opt/gymsite`) exposto via **Cloudflare Tunnel** para a API e worker (`api.getgymsite.com.br` / staging `api-hetzner.getgymsite.com.br`), e **Cloudflare Pages** (`wrangler`) para o frontend (`getgymsite.com.br`). Ver [ADR-008](arquitetura/ADR-008_PROD_HETZNER_ORPHAN_GCP.md) e [PLAN_HETZNER_VPS_TUNNEL.md](PLAN_HETZNER_VPS_TUNNEL.md). Google Cloud Run está deprecado (billing desligado).
 
 **Containers (Docker):**
-- **`Dockerfile` (backend):** base `python:3.11-slim`; instala Chromium (Playwright) e libs do WeasyPrint (Pango/cairo/gdk-pixbuf + fontes); sobe com `uvicorn api:app` na porta 8000. Roda como root por decisão consciente (tentativas non-root quebravam import no Cloud Run — risco mitigado pelo sandbox gVisor).
-- **`frontend/Dockerfile`:** build em `node:22-alpine` (Vite) → serve estático com `nginx-unprivileged:1.27-alpine` na porta 8080.
+- **`Dockerfile` (backend):** base `python:3.11-slim`; instala Chromium (Playwright) e libs do WeasyPrint (Pango/cairo/gdk-pixbuf + fontes); sobe com `uvicorn api:app` na porta 8000. Roda na VPS via Docker Compose para a API e o worker.
 
-**Serviços Cloud Run:**
-- `gymsite-api` — a API/backend.
-- `gymsite-worker` — **compartilha a mesma imagem da API** e **não auto-deploya**; depois de rebuildar a api é preciso rodar `gcloud run services update gymsite-worker --image <api_image>`.
-- `gymsite-frontend` — o site.
-
-**Cloud Build:**
-- `cloudbuild.frontend.yaml` — trigger `gymsite-frontend-main` em `^main$` com `includedFiles=frontend/**`; builda com build-args do Vite (URL/anon key/API base — publishable **não** é segredo) e faz deploy por tag no Cloud Run.
+**Serviços e Execução:**
+- `gymsite-api` — API backend rodando na VPS.
+- `gymsite-worker` — worker de relatórios em background rodando na mesma VPS via Docker Compose (`RUN_QUEUE_WORKER=1`). Compartilha a mesma imagem da API.
+- Frontend — servido diretamente no Cloudflare Pages.
 
 **Redis:** fila de jobs, cache e rate-limit (`tools/redis_*.py`). Em prod pode ser Redis Cloud; local via `redis://redis:6379/0` (`docker-compose`).
 
@@ -221,15 +217,13 @@ O pipeline é montado com o **Google ADK** em `gymsite_intelligence/agent.py`. O
 
 | Workflow | Pra que serve |
 |---|---|
-| `ci-cd.yml` | Build + lint (ruff) + tipos (mypy) + pytest + smoke em container; push GHCR e deploy (VPS/GCE). Inclui eval do golden dataset. |
+| `ci-cd.yml` | Build + lint (ruff) + tipos (mypy) + pytest + smoke em container; push GHCR. Inclui eval do golden dataset. |
 | `frontend-ci.yml` | Checagem do front (tsc). |
-| `docker-image.yml` | Build de imagem Docker. |
 | `weekly-market-batch.yml` | Cron semanal (domingo 06:00 UTC): monta market bundles/snapshots → Supabase. |
 | `monthly-receita-batch.yml` | Batch mensal de dados da Receita. |
-| `benchmark-frete.yml` | Benchmark de frete. |
 | `eval-positioning.yml` | Avaliação de qualidade do posicionamento (A9). |
 | `gitleaks.yml` | Varredura de segredos vazados. |
-| `pages.yml` | **Ignorar** — falha por billing (documentado no CLAUDE.md). |
+| `pages.yml` | **Ignorar** — falha por billing (documentado no CLAUDE.md; deploy canônico é via Wrangler CLI). |
 
 **Observabilidade:** OpenTelemetry (`OTEL_*`), com export OTLP para Grafana Cloud (a confirmar como padrão em prod). Versão do código bakeada na imagem via `GIT_SHA` (exposta em `/api/version`).
 

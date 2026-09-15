@@ -1,4 +1,20 @@
-# Deploy GymSite Intelligence — GCP + Cloudflare Tunnel
+# [DEPRECADO] Deploy GymSite Intelligence — GCP + Cloudflare Tunnel
+
+> ⚠️ **DOCUMENTO DEPRECADO (HISTÓRICO)**
+>
+> Este guia de deploy no Google Cloud (GCE/Cloud Run) foi totalmente substituído pela arquitetura **Hetzner VPS + Cloudflare Tunnel + Cloudflare Pages**.
+>
+> Para a documentação e procedimentos de deploy canônicos atuais, consulte:
+> - [ADR-008 — Produção = Hetzner/Tunnel; órfão GCP](arquitetura/ADR-008_PROD_HETZNER_ORPHAN_GCP.md)
+> - [CONVERGENCE_DEPLOY.md](CONVERGENCE_DEPLOY.md)
+> - [PLAN_HETZNER_VPS_TUNNEL.md](PLAN_HETZNER_VPS_TUNNEL.md)
+> - Workflow canônico: `.agent/workflows/deploy.md`
+>
+> O conteúdo abaixo é mantido exclusivamente para referência histórica da infraestrutura anterior.
+
+---
+
+# Histórico: Deploy GCP + Cloudflare Tunnel
 
 > Arquitetura: **GitHub Actions** → **GHCR** → **GCE VM** → **Docker Compose** → **Cloudflare Tunnel** → **Internet**
 >

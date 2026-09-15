@@ -1,7 +1,7 @@
 ## 🛠️ Ativação de Habilidades de IA e Dados
 * Use a skill `google-adk-agents` para debugar ou alterar o comportamento do pipeline A0-A9.
 * Use a skill `supabase-postgres` para garantir conformidade com tenancy e segurança em banco de dados.
-* **Ops/deploy:** `.agent/workflows/deploy.md` (Cloud Run + Wrangler) — não Docker/Cloudflared legado.
+* **Ops/deploy:** `.agent/workflows/deploy.md` (Hetzner VPS + Wrangler Pages) — ADR-008 / não Cloud Run nem Docker legado.
 
 ---
 
