@@ -2,7 +2,7 @@
  * useConsultorChat — hook do Consultor V2 (ADK async + poll).
  */
 import { useState, useCallback, useEffect, useRef } from 'react'
-import type { ChatMessageData } from '@/components/chat/ChatMessage'
+import type { ChatMessageData } from '@/types/chat'
 import type { CarimboCitacao } from '@/components/chat/CitationStamp'
 import type { AgenteApiId } from '@/config/site-agent-map'
 import { conversarConsultor, pollConsultorMensagens } from '@/lib/consultor-agent-client'

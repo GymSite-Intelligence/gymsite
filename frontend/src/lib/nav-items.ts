@@ -5,7 +5,6 @@ import {
   ClipboardListIcon,
   Building2Icon,
   CompassIcon,
-  CpuIcon,
   FileTextIcon,
   GitCompareIcon,
   InboxIcon,
@@ -71,12 +70,6 @@ export const custosNavItem: SidebarNavItem = {
   title: 'Custos',
   to: '/custos',
   icon: BarChart3Icon,
-}
-
-export const llmAdminNavItem: SidebarNavItem = {
-  title: 'Provedor de IA',
-  to: '/admin/llm',
-  icon: CpuIcon,
 }
 
 export function getSidebarNavItems(isOwnerOrAdmin: boolean): SidebarNavItem[] {

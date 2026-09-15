@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { ShieldCheck } from 'lucide-react'
-import { TurnstileWidget } from '@/components/landing/TurnstileWidget'
+import { TurnstileWidget } from '@/components/site/TurnstileWidget'
 import { ExplorarAddressSearch } from '@/components/explorar/ExplorarAddressSearch'
 import { ExplorarBottomBar } from '@/components/explorar/ExplorarBottomBar'
 import {

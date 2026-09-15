@@ -1,7 +1,9 @@
 import { renderRich } from '@/components/chat/render-rich'
 import { CitationStamp } from '@/components/chat/CitationStamp'
 import { especialistaDaMensagem, type Especialista } from '@/config/consultor-agentes'
-import type { ChatMessageData } from '@/components/chat/ChatMessage'
+import type { ChatMessageData } from '@/types/chat'
+
+export type { ChatMessageData } from '@/types/chat'
 
 interface ConsultorMessageProps {
   msg: ChatMessageData

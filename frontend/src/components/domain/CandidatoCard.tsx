@@ -9,7 +9,7 @@
  * pra placeholder visual sem quebrar layout.
  */
 import { useState } from 'react'
-import { MapPin, Eye, AlertCircle, Phone, Globe, Clock, MessageCircle, ExternalLink, Building, Mail } from 'lucide-react'
+import { MapPin, Eye, AlertCircle, Phone, Globe, Clock, ExternalLink, Building, Mail } from 'lucide-react'
 import { ScoreGauge } from './ScoreGauge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { API_BASE } from '@/lib/supabase'
-import { SHOW_WHATSAPP_UI } from '@/lib/feature-flags'
 import type { CandidatoJSON } from '@/hooks/useRelatorioDetail'
 
 function formatTelefoneBR(tel: string): string {
@@ -33,12 +32,6 @@ function formatTelefoneBR(tel: string): string {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
   }
   return tel  // formato desconhecido — devolve cru
-}
-
-function whatsappLink(tel: string): string {
-  const digits = tel.replace(/\D/g, '')
-  const num = digits.startsWith('55') ? digits : `55${digits}`
-  return `https://wa.me/${num}`
 }
 
 export interface CandidatoCardProps {
@@ -199,29 +192,14 @@ export function CandidatoCard({
         {(candidato.telefone || anuncioUrl || candidato.tem_24h) && (
           <div className="flex items-center gap-2 flex-wrap">
             {candidato.telefone && (
-              <>
-                <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
-                  <a href={`tel:${candidato.telefone}`} title="Ligar">
-                    <Phone size={12} />
-                    <span className="font-mono">
-                      {formatTelefoneBR(candidato.telefone)}
-                    </span>
-                  </a>
-                </Button>
-                {SHOW_WHATSAPP_UI && (
-                  <Button variant="success" size="sm" className="h-7 text-xs" asChild>
-                    <a
-                      href={whatsappLink(candidato.telefone)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="WhatsApp"
-                    >
-                      <MessageCircle size={12} />
-                      WhatsApp
-                    </a>
-                  </Button>
-                )}
-              </>
+              <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                <a href={`tel:${candidato.telefone}`} title="Ligar">
+                  <Phone size={12} />
+                  <span className="font-mono">
+                    {formatTelefoneBR(candidato.telefone)}
+                  </span>
+                </a>
+              </Button>
             )}
             {anuncioUrl && (
               <Button variant="outline" size="sm" className="h-7 text-xs" asChild>

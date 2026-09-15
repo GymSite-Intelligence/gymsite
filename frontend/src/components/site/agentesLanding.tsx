@@ -1,10 +1,8 @@
-import type { ComponentType, SVGProps } from "react";
-import { IconeDados, IconeContabilidade, IconeTecnico, IconeConhecimento, IconeFinanceiro } from "./gymsite-icons";
+import { IconeDados, IconeContabilidade, IconeTecnico, IconeConhecimento, IconeFinanceiro, type Icon as IconeComp } from "@/components/icons/gymsite-icons";
 import type { AgenteChat } from "@/lib/siteAgent";
 
-// Ícones robôs line-art custom (gymsite-icons.tsx). Textos trocam no chat
+// Ícones dos agentes (components/icons/gymsite-icons.tsx). Textos trocam no chat
 // conforme o agente selecionado.
-type IconeComp = ComponentType<SVGProps<SVGSVGElement> & { className?: string }>;
 
 export interface AgenteLanding {
   id: AgenteChat;

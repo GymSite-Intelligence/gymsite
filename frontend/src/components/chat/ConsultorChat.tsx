@@ -17,7 +17,7 @@ import {
 import { CONSULTOR_COPY } from '@/config/gymsite-design-system'
 import { cn } from '@/lib/utils'
 import { apiIdFromUi } from '@/config/site-agent-map'
-import type { ChatMessageData } from '@/components/chat/ChatMessage'
+import type { ChatMessageData } from '@/types/chat'
 import type { ConsultorSessionItem } from '@/lib/consultor-sessions'
 
 const IconeRelatorio = AGENT_ICONS.marketing_report_writer
