@@ -10,11 +10,11 @@ description: Agent configuration for GymSite Intelligence — a market intellige
 You are a senior software engineer pair-programming on **GymSite Intelligence**, a platform that generates viability reports for gyms by crossing CNPJ data, CNO construction data, Google Maps intelligence, and financial modeling.
 
 **Tech Stack:**
-- Backend: Python 3.14, FastAPI, Pydantic v2, Supabase (PostgreSQL)
-- Frontend: React 19, TypeScript, TanStack Router/Query, shadcn/ui, Tailwind
-- Agents: Google ADK (A0–A6 pipeline), Gemini Flash
-- PDF: ReportLab, matplotlib
-- Maps/Scraping: Google Maps Platform, Playwright, BeautifulSoup4
+- Backend: Python 3.11, FastAPI, Pydantic v2, Supabase (PostgreSQL), Hetzner VPS + Cloudflare Tunnel (ADR-008)
+- Frontend: React 18, TypeScript, TanStack Router/Query, shadcn/ui, Tailwind, Cloudflare Pages (Wrangler)
+- Agents: Google ADK (A0–A9 pipeline), Gemini Flash / Pro
+- PDF: ReportLab, WeasyPrint, matplotlib
+- Maps/Scraping: Google Maps Platform, SearchAPI, Playwright (legado)
 
 ## Workspace Structure
 
@@ -48,7 +48,7 @@ gymsite_intelligence/
 | Fetch CNPJ, CNO, Maps data | `gymsite-intelligence` |
 | Generate/modify PDF report | `gymsite-reporting` |
 | Work with prospecting pipeline | `gymsite-prospecting` |
-| Docker, deploy, Cloudflared | `gymsite-devops` |
+| Docker, deploy, Hetzner/Wrangler | `gymsite-devops` |
 
 ## Workflows Available
 
@@ -68,7 +68,7 @@ Type `/` in chat to see available workflows:
 1. **Minimalism** — Before adding a dependency, ask: "Can I do this with what already exists?"
 2. **Explicit over Implicit** — Prefer clear, debuggable code over clever abstractions
 3. **Lazy Imports** — Heavy/optional libs imported INSIDE functions, never at module top
-4. **Type Safety** — Python 3.14 annotations everywhere; TypeScript strict mode
+4. **Type Safety** — Python 3.11 annotations everywhere; TypeScript strict mode
 5. **Security** — No secrets in code; validate all inputs; never `eval()` user data
 
 ## Communication Style

@@ -80,11 +80,11 @@ SaaS). **Ingerir isso no store público `gymsite-market-docs` VAZA estratégia p
 | docs/metodologia/fig1_*.png · fig2_*.png · fig3_*.png (11 arquivos) | dups dos mesmos fig*.png em docs/arquitetura/ |
 | docs/metodologia/a9_positioning_strategist.py | cópia velha de agents/a9_positioning_strategist.py |
 
-### Transitórios / fora de escopo
+### Transitórios / fora de escopo (removidos)
 | arquivo | motivo |
 |---|---|
 | docs/reference/chat-export-1780439081874.json | export de chat transitório |
-| docs/FRETE_BENCHMARK.md | frete ANTT da Vectra Cargo — não é academia |
+| docs/FRETE_BENCHMARK.md | frete ANTT da Vectra Cargo — removido (#175) |
 
 ---
 
@@ -94,9 +94,8 @@ SPEC_*), deploy/infra (DEPLOY_GCP_CLOUDFLARE, GITHUB_ACTIONS_SETUP, CLOUDFLARE*,
 GOOGLE_MAPS_SETUP), PRDs e planos (MVP-PRD, PLANO_*, PLAN_*, produto/*), integrações (INTEGRACAO_VECTRA,
 INTEGRATION_KIMI, HANDOFF_*), schema/dados (SCHEMA_USER_PROJECT, COMPILADO_FONTES_DADOS, data_lineage,
 fontes_renda_bairro_capitais), telemetria/custo (TELEMETRIA_E_SANITIZACAO, GOVERNANCA_CUSTO,
-AUDITORIA_CUSTO_LLM, POLITICA_CUSTOS), A9_*_SPEC/design, código .py (docs/gymsite_a0_kimi_adapter,
-gymsite_a8_validator), SQL, mockups, langcache-api.yaml, csv de séries. São doc/infra interna —
-úteis ao time, irrelevantes/ruidosos como conhecimento de RAG.
+AUDITORIA_CUSTO_LLM, POLITICA_CUSTOS), A9_*_SPEC/design, SQL, mockups, csv de séries. São doc/infra interna —
+úteis ao time, irrelevantes/ruidosos como conhecimento de RAG. (Adapters legados gymsite_a0_kimi_adapter e gymsite_a8_validator e mockups HTML foram removidos no #175).
 
 > Charts `.png` em docs/arquitetura/ e docs/metodologia/analise_melhorias_bq/: KEEP-DEV (assets de
 > relatório). Os duplicados entre as duas pastas → ver DELETE.
