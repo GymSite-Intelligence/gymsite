@@ -1,4 +1,4 @@
-import type { ChatMessageData } from '@/components/chat/ChatMessage'
+import type { ChatMessageData } from '@/types/chat'
 import type { ConsultorProjeto } from '@/hooks/useConsultorChat'
 
 const STORAGE_KEY = 'consultor-sessions-v1'

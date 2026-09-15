@@ -12,6 +12,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { useSearch } from '@tanstack/react-router'
 import { FileDown, Printer, Building2, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { CenarioJSON } from '@/hooks/useRelatorioDetail'
@@ -125,7 +126,7 @@ export function ParecerPdfExport(props: ParecerPdfExportProps) {
     if (!props.cenarioA || !props.cenarioB) return
     const html = renderPrintHtml(props, modo, qrDataUrl)
     const popup = window.open('', '_blank', 'width=950,height=750,scrollbars=yes')
-    if (!popup) { alert('Permita popups para imprimir o parecer.'); return }
+    if (!popup) { toast.error('Permita popups para imprimir o parecer.'); return }
     popup.document.write(html)
     popup.document.close()
     setTimeout(() => { popup.focus(); popup.print() }, 500)
