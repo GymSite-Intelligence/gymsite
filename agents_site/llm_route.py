@@ -38,7 +38,7 @@ def is_vertex_dunning(exc: BaseException) -> bool:
 def mensagem_falha_turno(exc: BaseException) -> str:
     if is_vertex_dunning(exc):
         return _MSG_DUNNING
-    from tools._genai_client import is_resource_exhausted
+    from tools.genai_client import is_resource_exhausted
 
     if is_resource_exhausted(exc):
         return _MSG_QUOTA

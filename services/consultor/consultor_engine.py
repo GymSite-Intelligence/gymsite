@@ -65,7 +65,7 @@ logger = logging.getLogger("gymsite.consultor_engine")
 # faltar). NÃO no import: `import services.consultor.*` (ao montar o router) não
 # pode exigir credencial.
 def _client_gemini():
-    from tools._genai_client import build_genai_client
+    from tools.genai_client import build_genai_client
     return build_genai_client()
 
 _MODEL_ROUTER = "gemini-2.5-flash"   # router + respostas conversacionais

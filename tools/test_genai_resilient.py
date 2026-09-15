@@ -4,7 +4,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
 
-from tools._genai_client import (
+from tools.genai_client import (
     generate_content_resilient,
     is_resource_exhausted,
 )
@@ -25,7 +25,7 @@ class TestIsResourceExhausted(unittest.TestCase):
 
 
 class TestGenerateContentResilient(unittest.TestCase):
-    @patch("tools._genai_client.time.sleep")
+    @patch("tools.genai_client.time.sleep")
     def test_retries_on_429_then_succeeds(self, mock_sleep: MagicMock) -> None:
         client = MagicMock()
         ok = MagicMock()
@@ -46,7 +46,7 @@ class TestGenerateContentResilient(unittest.TestCase):
         self.assertEqual(client.models.generate_content.call_count, 3)
         self.assertEqual(mock_sleep.call_count, 2)
 
-    @patch("tools._genai_client.time.sleep")
+    @patch("tools.genai_client.time.sleep")
     def test_raises_after_max_retries(self, mock_sleep: MagicMock) -> None:
         client = MagicMock()
         client.models.generate_content.side_effect = RuntimeError(

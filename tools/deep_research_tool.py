@@ -170,7 +170,7 @@ ao final de cada seção. Foque em dados quantitativos (números, faixas, datas)
 def _interactions_disponivel() -> bool:
     """Deep Research agent só no Gemini Developer API (não Vertex ainda)."""
     try:
-        from tools._genai_client import is_vertex_mode
+        from tools.genai_client import is_vertex_mode
 
         return not is_vertex_mode()
     except Exception:
@@ -213,7 +213,7 @@ def _executar_deep_research_interactions(query: str, *, deadline: float) -> str:
 
     Ref: https://ai.google.dev/gemini-api/docs/interactions/deep-research
     """
-    from tools._genai_client import build_genai_client
+    from tools.genai_client import build_genai_client
 
     client = build_genai_client()
 
@@ -252,7 +252,7 @@ def _executar_deep_research_interactions(query: str, *, deadline: float) -> str:
 def _executar_grounded_fallback(query: str, *, deadline: float) -> str:
     """Tier 2: Flash + Search + URL context (pesquisa grounded 'lite')."""
     from google.genai import types
-    from tools._genai_client import (
+    from tools.genai_client import (
         build_genai_client,
         generate_content_resilient,
         is_resource_exhausted,

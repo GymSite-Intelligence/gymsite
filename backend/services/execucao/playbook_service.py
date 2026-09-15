@@ -664,7 +664,7 @@ def sugerir_passos(sb, tarefa_id: str, user_id: str) -> dict[str, Any]:
         '[{"descricao":"...","criterio_aceite":"..."}]'
     )
     try:
-        from tools._genai_client import build_genai_client, generate_content_resilient
+        from tools.genai_client import build_genai_client, generate_content_resilient
         client = build_genai_client()
         resp = generate_content_resilient(
             client,

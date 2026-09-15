@@ -11,7 +11,7 @@ Quando `GOOGLE_GENAI_USE_VERTEXAI=false` (ou ausente):
 - Cliente usa Gemini Developer API com `api_key`.
 
 Uso:
-    from tools._genai_client import build_genai_client, generate_content_resilient
+    from tools.genai_client import build_genai_client, generate_content_resilient
     client = build_genai_client()
     response = generate_content_resilient(client, model="gemini-2.5-flash", contents=...)
 """

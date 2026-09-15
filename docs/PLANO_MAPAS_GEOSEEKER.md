@@ -46,7 +46,7 @@ Camada de mapas (backend / tools):
 Camada de IA (Gemini) — multi-agente (Google ADK):
 - Agentes a0..a9 (`agents/`): GeoScout, ContextBuilder, CompetitorAnalysis,
   CompetitorMapper, ReportConsolidator, PositioningStrategist, etc.
-- `tools/_genai_client.py`: `generate_content_resilient` (retry + backoff +
+- `tools/genai_client.py`: `generate_content_resilient` (retry + backoff +
   tratamento de resource-exhausted) — robustez que o GeoSeeker nao tem.
 - Deep research, Google Search grounding e engine conversacional ja presentes.
 

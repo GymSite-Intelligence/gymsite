@@ -19,7 +19,7 @@ if str(ROOT_DIR) not in sys.path:
 # Imports dos seus módulos locais
 from scripts.enrichment.cache_enrichment import build_cache
 from scripts.enrichment.prompt_compressor import compress_from_cache
-from tools._genai_client import build_genai_client
+from tools.genai_client import build_genai_client
 from tools.pricing import compute_cost_brl
 
 def run_smoke_test(

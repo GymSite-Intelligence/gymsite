@@ -16,3 +16,10 @@ debug/
 market_context/investigations/*.md
 market_context/*.md
 
+# Local caches
+tools/cache/
+metrics/api_calls_pipeline.csv
+__pycache__/
+*.py[cod]
+*$py.class
+

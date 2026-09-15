@@ -130,7 +130,7 @@ def ler_territorio(resumo: dict[str, Any]) -> dict[str, Any]:
 
     try:
         from google.genai import types
-        from tools._genai_client import build_genai_client, generate_content_resilient
+        from tools.genai_client import build_genai_client, generate_content_resilient
 
         client = build_genai_client()
         config = types.GenerateContentConfig(
